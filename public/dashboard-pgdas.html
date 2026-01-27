@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard PGDAS - Empresas Brasileiras</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: {
+                            900: '#0F172A',
+                            800: '#1E293B',
+                            700: '#334155',
+                            600: '#475569',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chart-container {
+            min-height: 300px;
+        }
+        .kpi-value {
+            font-variant-numeric: tabular-nums;
+        }
+        /* Animação de entrada */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-400 { animation-delay: 0.4s; }
+    </style>
+</head>
+<body class="bg-dark-900 text-gray-100 min-h-screen">
+
+    <!-- HEADER -->
+    <header id="header" class="bg-dark-800 border-b border-dark-600 sticky top-0 z-50">
+        <div class="max-w-[1600px] mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Dashboard PGDAS</h1>
+                    <p class="text-gray-400 text-sm">Visibilidade de Empresas Brasileiras</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500">Última atualização</p>
+                        <p class="text-sm text-gray-300 font-medium">Janeiro 2026</p>
+                    </div>
+                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main id="main" class="max-w-[1600px] mx-auto px-6 py-8">
+
+        <!-- KPI CARDS ROW -->
+        <section id="kpi-section" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- KPI 1: Total Empresas -->
+            <div id="kpi-empresas" class="bg-dark-800 rounded-xl p-6 border border-dark-600 animate-fade-in">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-gray-400 text-sm font-medium">Total de Empresas</span>
+                    <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-3xl font-bold text-white kpi-value" data-target="65277300">65.277.300</p>
+                <p class="text-emerald-400 text-sm mt-2">+4.8M em 2024</p>
+            </div>
+
+            <!-- KPI 2: Estabelecimentos -->
+            <div id="kpi-estabelecimentos" class="bg-dark-800 rounded-xl p-6 border border-dark-600 animate-fade-in delay-100">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-gray-400 text-sm font-medium">Estabelecimentos</span>
+                    <div class="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-3xl font-bold text-white kpi-value" data-target="68448352">68.448.352</p>
+                <p class="text-gray-400 text-sm mt-2">Matriz + Filiais</p>
+            </div>
+
+            <!-- KPI 3: Simples Nacional -->
+            <div id="kpi-simples" class="bg-dark-800 rounded-xl p-6 border border-dark-600 animate-fade-in delay-200">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-gray-400 text-sm font-medium">Simples Nacional</span>
+                    <div class="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-3xl font-bold text-white kpi-value" data-target="24420112">24.420.112</p>
+                <p class="text-violet-400 text-sm mt-2">53% dos optantes</p>
+            </div>
+
+            <!-- KPI 4: MEI -->
+            <div id="kpi-mei" class="bg-dark-800 rounded-xl p-6 border border-dark-600 animate-fade-in delay-300">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-gray-400 text-sm font-medium">MEI Ativos</span>
+                    <div class="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                    </div>
+                </div>
+                <p class="text-3xl font-bold text-white kpi-value" data-target="16791976">16.791.976</p>
+                <p class="text-amber-400 text-sm mt-2">37% do Simples</p>
+            </div>
+        </section>
+
+        <!-- CHARTS ROW 1: Waterfall + Sankey -->
+        <section id="charts-row-1" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Waterfall Chart -->
+            <div id="waterfall-container" class="bg-dark-800 rounded-xl p-6 border border-dark-600">
+                <h3 class="text-lg font-semibold text-white mb-4">Evolução Anual de Aberturas</h3>
+                <div id="waterfall-chart" class="chart-container" style="height: 350px;"></div>
+            </div>
+
+            <!-- Sankey Diagram -->
+            <div id="sankey-container" class="bg-dark-800 rounded-xl p-6 border border-dark-600">
+                <h3 class="text-lg font-semibold text-white mb-4">Fluxo: Natureza → Porte → Regime</h3>
+                <div id="sankey-chart" class="chart-container" style="height: 350px;"></div>
+            </div>
+        </section>
+
+        <!-- CHARTS ROW 2: Treemap + Bar -->
+        <section id="charts-row-2" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Treemap UF -->
+            <div id="treemap-container" class="bg-dark-800 rounded-xl p-6 border border-dark-600">
+                <h3 class="text-lg font-semibold text-white mb-4">Distribuição por Estado (UF)</h3>
+                <div id="treemap-chart" class="chart-container" style="height: 350px;"></div>
+            </div>
+
+            <!-- Horizontal Bar CNAEs -->
+            <div id="bar-container" class="bg-dark-800 rounded-xl p-6 border border-dark-600">
+                <h3 class="text-lg font-semibold text-white mb-4">Top 10 Atividades (CNAE)</h3>
+                <div id="bar-chart" class="chart-container" style="height: 350px;"></div>
+            </div>
+        </section>
+
+        <!-- CHARTS ROW 3: Area + Funnel + Gauge -->
+        <section id="charts-row-3" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Area Chart Timeline -->
+            <div id="area-container" class="bg-dark-800 rounded-xl p-6 border border-dark-600">
+                <h3 class="text-lg font-semibold text-white mb-4">Série Temporal de Aberturas</h3>
+                <div id="area-chart" class="chart-container" style="height: 280px;"></div>
+            </div>
+
+            <!-- Funnel Capital -->
+            <div id="funnel-container" class="bg-dark-800 rounded-xl p-6 border border-dark-600">
+                <h3 class="text-lg font-semibold text-white mb-4">Distribuição por Capital</h3>
+                <div id="funnel-chart" class="chart-container" style="height: 280px;"></div>
+            </div>
+
+            <!-- Gauge Situação -->
+            <div id="gauge-container" class="bg-dark-800 rounded-xl p-6 border border-dark-600">
+                <h3 class="text-lg font-semibold text-white mb-4">Situação Cadastral</h3>
+                <div id="gauge-chart" class="chart-container" style="height: 280px;"></div>
+            </div>
+        </section>
+
+        <!-- STATS ROW -->
+        <section id="stats-section" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+            <div class="bg-dark-800/50 rounded-lg p-4 text-center border border-dark-700">
+                <p class="text-2xl font-bold text-blue-400 kpi-value">48.6M</p>
+                <p class="text-xs text-gray-500 mt-1">Micro Empresas</p>
+            </div>
+            <div class="bg-dark-800/50 rounded-lg p-4 text-center border border-dark-700">
+                <p class="text-2xl font-bold text-emerald-400 kpi-value">27.4M</p>
+                <p class="text-xs text-gray-500 mt-1">Ativas</p>
+            </div>
+            <div class="bg-dark-800/50 rounded-lg p-4 text-center border border-dark-700">
+                <p class="text-2xl font-bold text-violet-400 kpi-value">42M</p>
+                <p class="text-xs text-gray-500 mt-1">Empresário Individual</p>
+            </div>
+            <div class="bg-dark-800/50 rounded-lg p-4 text-center border border-dark-700">
+                <p class="text-2xl font-bold text-amber-400 kpi-value">19.7M</p>
+                <p class="text-xs text-gray-500 mt-1">São Paulo</p>
+            </div>
+            <div class="bg-dark-800/50 rounded-lg p-4 text-center border border-dark-700">
+                <p class="text-2xl font-bold text-rose-400 kpi-value">31.8M</p>
+                <p class="text-xs text-gray-500 mt-1">Baixadas</p>
+            </div>
+            <div class="bg-dark-800/50 rounded-lg p-4 text-center border border-dark-700">
+                <p class="text-2xl font-bold text-cyan-400 kpi-value">3.6M</p>
+                <p class="text-xs text-gray-500 mt-1">Comércio Vestuário</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer id="footer" class="bg-dark-800 border-t border-dark-600 py-6">
+        <div class="max-w-[1600px] mx-auto px-6">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-gray-500 text-sm">Dashboard PGDAS © 2026 - Dados da Receita Federal</p>
+                <div class="flex items-center gap-6">
+                    <span class="text-gray-500 text-sm">65M+ empresas indexadas</span>
+                    <span class="text-gray-500 text-sm">•</span>
+                    <span class="text-gray-500 text-sm">Atualização mensal</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS DOS GRÁFICOS -->
+    <script>
+        // Configuração global ECharts
+        const chartTheme = {
+            backgroundColor: 'transparent',
+            textStyle: {
+                color: '#94a3b8'
+            },
+            title: {
+                textStyle: {
+                    color: '#f1f5f9'
+                }
+            }
+        };
+
+        // =====================================
+        // KPI CARDS - ANIMAÇÃO COUNT-UP
+        // =====================================
+
+        const kpiData = [
+            { id: 'kpi-empresas', value: 65277300, prefix: '', suffix: '' },
+            { id: 'kpi-estabelecimentos', value: 68448352, prefix: '', suffix: '' },
+            { id: 'kpi-simples', value: 24420112, prefix: '', suffix: '' },
+            { id: 'kpi-mei', value: 16791976, prefix: '', suffix: '' }
+        ];
+
+        // Função para animar contagem
+        function animateCounter(element, target, duration = 2000) {
+            const start = 0;
+            const startTime = performance.now();
+
+            function easeOutQuart(x) {
+                return 1 - Math.pow(1 - x, 4);
+            }
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easedProgress = easeOutQuart(progress);
+                const current = Math.floor(start + (target - start) * easedProgress);
+
+                element.textContent = current.toLocaleString('pt-BR');
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        // Função para formatar números grandes
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(0) + 'K';
+            }
+            return num.toString();
+        }
+
+        // Inicializar KPIs com Intersection Observer
+        function initKPIAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const kpiId = entry.target.id;
+                        const kpi = kpiData.find(k => k.id === kpiId);
+
+                        if (kpi) {
+                            const valueElement = entry.target.querySelector('.kpi-value, .text-3xl');
+                            if (valueElement && !valueElement.dataset.animated) {
+                                valueElement.dataset.animated = 'true';
+                                animateCounter(valueElement, kpi.value);
+                            }
+                        }
+
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            kpiData.forEach(kpi => {
+                const element = document.getElementById(kpi.id);
+                if (element) {
+                    // Iniciar com 0
+                    const valueElement = element.querySelector('.kpi-value, .text-3xl');
+                    if (valueElement) {
+                        valueElement.textContent = '0';
+                    }
+                    observer.observe(element);
+                }
+            });
+        }
+
+        // Adicionar efeitos de hover aos cards
+        function initKPIHoverEffects() {
+            document.querySelectorAll('[id^="kpi-"]').forEach(card => {
+                card.style.transition = 'all 0.3s ease';
+                card.style.cursor = 'pointer';
+
+                card.addEventListener('mouseenter', () => {
+                    card.style.transform = 'translateY(-4px)';
+                    card.style.boxShadow = '0 12px 40px rgba(0,0,0,0.3)';
+                    card.style.borderColor = '#3b82f6';
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'translateY(0)';
+                    card.style.boxShadow = 'none';
+                    card.style.borderColor = '#475569';
+                });
+            });
+        }
+
+        // =====================================
+        // WATERFALL CHART - EVOLUÇÃO ANUAL
+        // =====================================
+
+        function initWaterfallChart() {
+            const chartDom = document.getElementById('waterfall-chart');
+            if (!chartDom) return;
+
+            const chart = echarts.init(chartDom);
+
+            // Dados reais do banco PGDAS
+            const anos = ['2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
+            const valores = [2128074, 2654532, 2372636, 2762931, 3272548, 4013395, 4139087, 3977000, 3984073, 4842530, 4589927];
+
+            // Calcular variações
+            const variacoes = valores.map((v, i) => i === 0 ? 0 : v - valores[i-1]);
+
+            // Preparar dados para waterfall
+            const dataUp = [];
+            const dataDown = [];
+            const dataBase = [];
+
+            for (let i = 0; i < valores.length; i++) {
+                if (i === 0) {
+                    dataBase.push(0);
+                    dataUp.push(valores[i]);
+                    dataDown.push(0);
+                } else {
+                    const variacao = variacoes[i];
+                    if (variacao >= 0) {
+                        dataBase.push(valores[i-1]);
+                        dataUp.push(variacao);
+                        dataDown.push(0);
+                    } else {
+                        dataBase.push(valores[i]);
+                        dataUp.push(0);
+                        dataDown.push(Math.abs(variacao));
+                    }
+                }
+            }
+
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    backgroundColor: '#1e293b',
+                    borderColor: '#475569',
+                    textStyle: { color: '#f1f5f9' },
+                    formatter: function(params) {
+                        const idx = params[0].dataIndex;
+                        const total = valores[idx];
+                        const var_ = idx === 0 ? 'Base' : (variacoes[idx] >= 0 ? '+' : '') + variacoes[idx].toLocaleString('pt-BR');
+                        return `<strong>${anos[idx]}</strong><br/>` +
+                               `Aberturas: <strong>${total.toLocaleString('pt-BR')}</strong><br/>` +
+                               `Variação: <span style="color:${variacoes[idx] >= 0 ? '#10b981' : '#ef4444'}">${var_}</span>`;
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '8%',
+                    top: '10%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: anos,
+                    axisLine: { lineStyle: { color: '#475569' } },
+                    axisLabel: { color: '#94a3b8', fontSize: 11 }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLine: { show: false },
+                    splitLine: { lineStyle: { color: '#334155', type: 'dashed' } },
+                    axisLabel: {
+                        color: '#94a3b8',
+                        formatter: function(v) { return (v/1000000).toFixed(1) + 'M'; }
+                    }
+                },
+                series: [
+                    {
+                        name: 'Base',
+                        type: 'bar',
+                        stack: 'Total',
+                        itemStyle: { color: 'transparent' },
+                        emphasis: { itemStyle: { color: 'transparent' } },
+                        data: dataBase
+                    },
+                    {
+                        name: 'Crescimento',
+                        type: 'bar',
+                        stack: 'Total',
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#10b981' },
+                                { offset: 1, color: '#059669' }
+                            ]),
+                            borderRadius: [4, 4, 0, 0]
+                        },
+                        label: {
+                            show: true,
+                            position: 'top',
+                            formatter: function(p) {
+                                return p.value > 0 ? '+' + (p.value/1000).toFixed(0) + 'K' : '';
+                            },
+                            color: '#10b981',
+                            fontSize: 10
+                        },
+                        data: dataUp
+                    },
+                    {
+                        name: 'Queda',
+                        type: 'bar',
+                        stack: 'Total',
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#f87171' },
+                                { offset: 1, color: '#ef4444' }
+                            ]),
+                            borderRadius: [4, 4, 0, 0]
+                        },
+                        label: {
+                            show: true,
+                            position: 'top',
+                            formatter: function(p) {
+                                return p.value > 0 ? '-' + (p.value/1000).toFixed(0) + 'K' : '';
+                            },
+                            color: '#ef4444',
+                            fontSize: 10
+                        },
+                        data: dataDown
+                    }
+                ],
+                animationDuration: 1500,
+                animationEasing: 'elasticOut'
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+            return chart;
+        }
+
+        // =====================================
+        // SANKEY DIAGRAM - FLUXO DE EMPRESAS
+        // =====================================
+
+        function initSankeyChart() {
+            const chartDom = document.getElementById('sankey-chart');
+            if (!chartDom) return;
+
+            const chart = echarts.init(chartDom);
+
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    triggerOn: 'mousemove',
+                    backgroundColor: '#1e293b',
+                    borderColor: '#475569',
+                    textStyle: { color: '#f1f5f9' },
+                    formatter: function(params) {
+                        if (params.dataType === 'edge') {
+                            return `${params.data.source} → ${params.data.target}<br/>` +
+                                   `<strong>${(params.data.value / 1000000).toFixed(1)}M</strong> empresas`;
+                        }
+                        return `<strong>${params.name}</strong><br/>${(params.value / 1000000).toFixed(1)}M empresas`;
+                    }
+                },
+                series: [
+                    {
+                        type: 'sankey',
+                        layout: 'none',
+                        emphasis: {
+                            focus: 'adjacency'
+                        },
+                        nodeAlign: 'left',
+                        nodeGap: 12,
+                        nodeWidth: 20,
+                        lineStyle: {
+                            color: 'gradient',
+                            curveness: 0.5,
+                            opacity: 0.4
+                        },
+                        itemStyle: {
+                            borderWidth: 0
+                        },
+                        label: {
+                            color: '#e2e8f0',
+                            fontSize: 11,
+                            fontWeight: 500
+                        },
+                        data: [
+                            // Naturezas (coluna 1)
+                            { name: 'Empresário Individual', itemStyle: { color: '#3b82f6' } },
+                            { name: 'Sociedade Ltda', itemStyle: { color: '#8b5cf6' } },
+                            { name: 'Outros', itemStyle: { color: '#6b7280' } },
+
+                            // Porte (coluna 2)
+                            { name: 'Micro Empresa', itemStyle: { color: '#10b981' } },
+                            { name: 'EPP', itemStyle: { color: '#f59e0b' } },
+                            { name: 'Demais', itemStyle: { color: '#ef4444' } },
+
+                            // Regime (coluna 3)
+                            { name: 'Simples Nacional', itemStyle: { color: '#06b6d4' } },
+                            { name: 'Outros Regimes', itemStyle: { color: '#ec4899' } }
+                        ],
+                        links: [
+                            // Empresário Individual -> Portes (42M total)
+                            { source: 'Empresário Individual', target: 'Micro Empresa', value: 38000000 },
+                            { source: 'Empresário Individual', target: 'EPP', value: 1000000 },
+                            { source: 'Empresário Individual', target: 'Demais', value: 3000000 },
+
+                            // Sociedade Ltda -> Portes (15.5M total)
+                            { source: 'Sociedade Ltda', target: 'Micro Empresa', value: 8000000 },
+                            { source: 'Sociedade Ltda', target: 'EPP', value: 800000 },
+                            { source: 'Sociedade Ltda', target: 'Demais', value: 6700000 },
+
+                            // Outros -> Portes (7.7M total)
+                            { source: 'Outros', target: 'Micro Empresa', value: 2600000 },
+                            { source: 'Outros', target: 'EPP', value: 100000 },
+                            { source: 'Outros', target: 'Demais', value: 5000000 },
+
+                            // Micro Empresa -> Regimes (48.6M total)
+                            { source: 'Micro Empresa', target: 'Simples Nacional', value: 22000000 },
+                            { source: 'Micro Empresa', target: 'Outros Regimes', value: 26600000 },
+
+                            // EPP -> Regimes (1.9M total)
+                            { source: 'EPP', target: 'Simples Nacional', value: 1500000 },
+                            { source: 'EPP', target: 'Outros Regimes', value: 400000 },
+
+                            // Demais -> Regimes (14.7M total)
+                            { source: 'Demais', target: 'Simples Nacional', value: 920112 },
+                            { source: 'Demais', target: 'Outros Regimes', value: 13779888 }
+                        ]
+                    }
+                ],
+                animationDuration: 1500,
+                animationEasing: 'cubicInOut'
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+            return chart;
+        }
+
+        // =====================================
+        // TREEMAP - DISTRIBUIÇÃO POR UF
+        // =====================================
+
+        function initTreemapChart() {
+            const chartDom = document.getElementById('treemap-chart');
+            if (!chartDom) return;
+
+            const chart = echarts.init(chartDom);
+
+            // Dados reais do banco PGDAS
+            const ufData = [
+                { name: 'SP', value: 19773030 },
+                { name: 'MG', value: 7441405 },
+                { name: 'RJ', value: 5813261 },
+                { name: 'RS', value: 4708472 },
+                { name: 'PR', value: 4649096 },
+                { name: 'BA', value: 3406011 },
+                { name: 'SC', value: 3294485 },
+                { name: 'GO', value: 2454701 },
+                { name: 'PE', value: 2050734 },
+                { name: 'CE', value: 1938529 },
+                { name: 'ES', value: 1441113 },
+                { name: 'PA', value: 1389383 },
+                { name: 'MT', value: 1310979 },
+                { name: 'DF', value: 1181187 },
+                { name: 'MA', value: 1023926 },
+                { name: 'Outros', value: 6000000 }
+            ];
+
+            const colors = [
+                '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
+                '#06b6d4', '#6366f1', '#84cc16', '#f97316', '#14b8a6',
+                '#a855f7', '#22d3d8', '#eab308', '#ef4444', '#64748b',
+                '#475569'
+            ];
+
+            const option = {
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    borderColor: '#475569',
+                    textStyle: { color: '#f1f5f9' },
+                    formatter: function(params) {
+                        const pct = (params.value / 68448352 * 100).toFixed(1);
+                        return `<strong>${params.name}</strong><br/>` +
+                               `${(params.value / 1000000).toFixed(2)}M estabelecimentos<br/>` +
+                               `<span style="color:#94a3b8">${pct}% do total</span>`;
+                    }
+                },
+                series: [
+                    {
+                        type: 'treemap',
+                        width: '100%',
+                        height: '100%',
+                        roam: false,
+                        nodeClick: false,
+                        breadcrumb: { show: false },
+                        label: {
+                            show: true,
+                            formatter: function(params) {
+                                return `${params.name}\n${(params.value/1000000).toFixed(1)}M`;
+                            },
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: '#fff'
+                        },
+                        itemStyle: {
+                            borderColor: '#1e293b',
+                            borderWidth: 2,
+                            gapWidth: 2
+                        },
+                        levels: [
+                            {
+                                itemStyle: {
+                                    borderColor: '#1e293b',
+                                    borderWidth: 0,
+                                    gapWidth: 2
+                                }
+                            }
+                        ],
+                        data: ufData.map((item, idx) => ({
+                            ...item,
+                            itemStyle: { color: colors[idx] || '#475569' }
+                        }))
+                    }
+                ],
+                animationDuration: 1200,
+                animationEasing: 'cubicOut'
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+            return chart;
+        }
+
+        // =====================================
+        // HORIZONTAL BAR - TOP CNAEs
+        // =====================================
+
+        function initBarChart() {
+            const chartDom = document.getElementById('bar-chart');
+            if (!chartDom) return;
+
+            const chart = echarts.init(chartDom);
+
+            // Dados reais do banco PGDAS
+            const cnaes = [
+                'Comércio Vestuário',
+                'Org. Políticas',
+                'Lanchonetes',
+                'Cabeleireiros',
+                'Minimercados',
+                'Promoção Vendas',
+                'Alvenaria',
+                'Restaurantes',
+                'Apoio Admin.',
+                'Transporte Carga'
+            ].reverse();
+
+            const valores = [
+                3593784, 3304856, 1958505, 1885659, 1684170,
+                1625274, 1293593, 1212877, 1061662, 1015889
+            ].reverse();
+
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    backgroundColor: '#1e293b',
+                    borderColor: '#475569',
+                    textStyle: { color: '#f1f5f9' },
+                    formatter: function(params) {
+                        const v = params[0].value;
+                        return `<strong>${params[0].name}</strong><br/>` +
+                               `${(v / 1000000).toFixed(2)}M empresas`;
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '10%',
+                    bottom: '3%',
+                    top: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'value',
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    splitLine: { lineStyle: { color: '#334155', type: 'dashed' } },
+                    axisLabel: {
+                        color: '#94a3b8',
+                        formatter: function(v) { return (v/1000000).toFixed(1) + 'M'; }
+                    }
+                },
+                yAxis: {
+                    type: 'category',
+                    data: cnaes,
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: '#e2e8f0',
+                        fontSize: 11,
+                        width: 100,
+                        overflow: 'truncate'
+                    }
+                },
+                series: [
+                    {
+                        type: 'bar',
+                        data: valores.map((v, i) => ({
+                            value: v,
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                    { offset: 0, color: '#3b82f6' },
+                                    { offset: 1, color: '#8b5cf6' }
+                                ]),
+                                borderRadius: [0, 4, 4, 0]
+                            }
+                        })),
+                        barWidth: '60%',
+                        label: {
+                            show: true,
+                            position: 'right',
+                            formatter: function(p) { return (p.value/1000000).toFixed(1) + 'M'; },
+                            color: '#94a3b8',
+                            fontSize: 10
+                        }
+                    }
+                ],
+                animationDuration: 1500,
+                animationEasing: 'elasticOut'
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+            return chart;
+        }
+
+        // =====================================
+        // AREA CHART - SÉRIE TEMPORAL
+        // =====================================
+
+        function initAreaChart() {
+            const chartDom = document.getElementById('area-chart');
+            if (!chartDom) return;
+
+            const chart = echarts.init(chartDom);
+
+            const anos = ['2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
+            const valores = [2128074, 2654532, 2372636, 2762931, 3272548, 4013395, 4139087, 3977000, 3984073, 4842530, 4589927];
+
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: '#1e293b',
+                    borderColor: '#475569',
+                    textStyle: { color: '#f1f5f9' },
+                    formatter: function(params) {
+                        return `<strong>${params[0].name}</strong><br/>` +
+                               `Aberturas: ${(params[0].value / 1000000).toFixed(2)}M`;
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '10%',
+                    top: '10%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: anos,
+                    axisLine: { lineStyle: { color: '#475569' } },
+                    axisLabel: { color: '#94a3b8', fontSize: 10 }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLine: { show: false },
+                    splitLine: { lineStyle: { color: '#334155', type: 'dashed' } },
+                    axisLabel: {
+                        color: '#94a3b8',
+                        formatter: function(v) { return (v/1000000).toFixed(0) + 'M'; }
+                    }
+                },
+                series: [
+                    {
+                        type: 'line',
+                        smooth: true,
+                        symbol: 'circle',
+                        symbolSize: 8,
+                        lineStyle: {
+                            color: '#8b5cf6',
+                            width: 3
+                        },
+                        itemStyle: {
+                            color: '#8b5cf6',
+                            borderColor: '#1e293b',
+                            borderWidth: 2
+                        },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(139, 92, 246, 0.4)' },
+                                { offset: 1, color: 'rgba(139, 92, 246, 0.05)' }
+                            ])
+                        },
+                        data: valores
+                    }
+                ],
+                animationDuration: 1500
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+            return chart;
+        }
+
+        // =====================================
+        // FUNNEL CHART - FAIXAS DE CAPITAL
+        // =====================================
+
+        function initFunnelChart() {
+            const chartDom = document.getElementById('funnel-chart');
+            if (!chartDom) return;
+
+            const chart = echarts.init(chartDom);
+
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: '#1e293b',
+                    borderColor: '#475569',
+                    textStyle: { color: '#f1f5f9' },
+                    formatter: function(params) {
+                        return `<strong>${params.name}</strong><br/>` +
+                               `${(params.value / 1000000).toFixed(2)}M empresas<br/>` +
+                               `<span style="color:#94a3b8">${params.percent}%</span>`;
+                    }
+                },
+                series: [
+                    {
+                        type: 'funnel',
+                        left: '10%',
+                        top: '5%',
+                        bottom: '5%',
+                        width: '80%',
+                        min: 0,
+                        max: 20000000,
+                        minSize: '10%',
+                        maxSize: '100%',
+                        sort: 'descending',
+                        gap: 4,
+                        label: {
+                            show: true,
+                            position: 'inside',
+                            formatter: '{b}',
+                            color: '#fff',
+                            fontSize: 10
+                        },
+                        itemStyle: {
+                            borderColor: '#1e293b',
+                            borderWidth: 2
+                        },
+                        emphasis: {
+                            label: {
+                                fontSize: 12,
+                                fontWeight: 'bold'
+                            }
+                        },
+                        data: [
+                            { value: 19644647, name: '1mil-10mil', itemStyle: { color: '#3b82f6' } },
+                            { value: 17531880, name: 'Sem capital', itemStyle: { color: '#6366f1' } },
+                            { value: 15104922, name: 'Até 1mil', itemStyle: { color: '#8b5cf6' } },
+                            { value: 7899180, name: '10mil-50mil', itemStyle: { color: '#a855f7' } },
+                            { value: 2739230, name: '50mil-100mil', itemStyle: { color: '#d946ef' } },
+                            { value: 1722350, name: '100mil-500mil', itemStyle: { color: '#ec4899' } },
+                            { value: 635091, name: '500mil+', itemStyle: { color: '#f43f5e' } }
+                        ]
+                    }
+                ],
+                animationDuration: 1500,
+                animationEasing: 'cubicOut'
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+            return chart;
+        }
+
+        // =====================================
+        // GAUGE CHART - SITUAÇÃO CADASTRAL
+        // =====================================
+
+        function initGaugeChart() {
+            const chartDom = document.getElementById('gauge-chart');
+            if (!chartDom) return;
+
+            const chart = echarts.init(chartDom);
+
+            // 27.4M ativas de 68.4M = 40%
+            const percentAtivas = 40.1;
+
+            const option = {
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    borderColor: '#475569',
+                    textStyle: { color: '#f1f5f9' },
+                    formatter: 'Empresas Ativas: 27.4M de 68.4M'
+                },
+                series: [
+                    {
+                        type: 'gauge',
+                        startAngle: 200,
+                        endAngle: -20,
+                        min: 0,
+                        max: 100,
+                        splitNumber: 10,
+                        center: ['50%', '60%'],
+                        radius: '85%',
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                { offset: 0, color: '#10b981' },
+                                { offset: 0.5, color: '#f59e0b' },
+                                { offset: 1, color: '#ef4444' }
+                            ])
+                        },
+                        progress: {
+                            show: true,
+                            width: 20,
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                                    { offset: 0, color: '#10b981' },
+                                    { offset: 1, color: '#3b82f6' }
+                                ])
+                            }
+                        },
+                        pointer: {
+                            show: true,
+                            length: '60%',
+                            width: 6,
+                            itemStyle: { color: '#e2e8f0' }
+                        },
+                        axisLine: {
+                            lineStyle: {
+                                width: 20,
+                                color: [[1, '#334155']]
+                            }
+                        },
+                        axisTick: {
+                            distance: -30,
+                            splitNumber: 5,
+                            lineStyle: { width: 1, color: '#64748b' }
+                        },
+                        splitLine: {
+                            distance: -35,
+                            length: 10,
+                            lineStyle: { width: 2, color: '#64748b' }
+                        },
+                        axisLabel: {
+                            distance: -20,
+                            color: '#94a3b8',
+                            fontSize: 10,
+                            formatter: '{value}%'
+                        },
+                        anchor: {
+                            show: true,
+                            showAbove: true,
+                            size: 18,
+                            itemStyle: { borderColor: '#64748b', borderWidth: 2 }
+                        },
+                        title: {
+                            show: true,
+                            offsetCenter: [0, '85%'],
+                            fontSize: 12,
+                            color: '#94a3b8'
+                        },
+                        detail: {
+                            valueAnimation: true,
+                            fontSize: 28,
+                            fontWeight: 'bold',
+                            offsetCenter: [0, '40%'],
+                            formatter: '{value}%',
+                            color: '#10b981'
+                        },
+                        data: [
+                            {
+                                value: percentAtivas,
+                                name: 'Empresas Ativas'
+                            }
+                        ]
+                    }
+                ],
+                animationDuration: 2000,
+                animationEasing: 'bounceOut'
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+            return chart;
+        }
+
+        // =====================================
+        // INICIALIZAÇÃO GERAL
+        // =====================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard PGDAS carregado!');
+            console.log('ECharts version:', echarts.version);
+
+            // Inicializar KPIs
+            initKPIAnimations();
+            initKPIHoverEffects();
+
+            // Inicializar gráficos principais
+            initWaterfallChart();
+            initSankeyChart();
+            initTreemapChart();
+            initBarChart();
+
+            // Inicializar gráficos complementares
+            initAreaChart();
+            initFunnelChart();
+            initGaugeChart();
+
+            console.log('Todos os gráficos inicializados!');
+        });
+    </script>
+
+</body>
+</html>

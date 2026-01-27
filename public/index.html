@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Orchestrator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1>Claude Orchestrator</h1>
+    <div class="header-actions">
+      <button class="btn btn-secondary" onclick="openModal('workflows-list-modal')">Ver Workflows</button>
+      <button class="btn btn-secondary" onclick="openModal('workflow-modal')">Novo Workflow</button>
+      <button class="btn btn-primary" onclick="openModal('conversation-modal')">Nova Conversa</button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>Conversas</h2>
+      </div>
+      <div id="conversation-list" class="conversation-list">
+        <p class="empty-message">Carregando...</p>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div id="chat-container" class="chat-container">
+        <div class="empty-state">
+          <h3>Selecione ou crie uma conversa</h3>
+          <p>Escolha uma conversa na barra lateral ou crie uma nova</p>
+        </div>
+      </div>
+
+      <div id="input-container" class="input-container hidden">
+        <div class="input-wrapper">
+          <textarea
+            id="message-input"
+            placeholder="Digite sua mensagem..."
+            rows="1"
+            onkeydown="handleMessageKeydown(event)"
+          ></textarea>
+          <button id="send-btn" class="btn btn-primary" onclick="sendMessage()">Enviar</button>
+          <button id="cancel-btn" class="btn btn-danger hidden" onclick="cancelExecution()">Cancelar</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Workflow Panel -->
+    <aside id="workflow-panel" class="workflow-panel hidden">
+      <div class="panel-header">
+        <h2>Workflow</h2>
+      </div>
+      <div id="workflow-info" class="workflow-info"></div>
+      <div id="steps-list" class="steps-list"></div>
+      <div id="panel-actions" class="panel-actions"></div>
+    </aside>
+  </div>
+
+  <!-- Workflows List Modal -->
+  <div id="workflows-list-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Workflows</h2>
+        <button class="btn-icon" onclick="closeModal('workflows-list-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="workflows-list" class="workflows-list">
+          <p class="empty-message">Carregando...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('workflows-list-modal')">Fechar</button>
+        <button class="btn btn-primary" onclick="closeModal('workflows-list-modal'); openModal('workflow-modal')">Criar Novo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workflow Modal -->
+  <div id="workflow-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="workflow-modal-title">Criar Workflow</h2>
+        <button class="btn-icon" onclick="resetWorkflowForm(); closeModal('workflow-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="workflow-name">Nome</label>
+          <input type="text" id="workflow-name" placeholder="Nome do workflow">
+        </div>
+        <div class="form-group">
+          <label for="workflow-description">Descricao (opcional)</label>
+          <textarea id="workflow-description" placeholder="Descricao do workflow"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="workflow-type">Tipo</label>
+          <select id="workflow-type">
+            <option value="sequential">Sequencial - Passa automaticamente por todos os steps</option>
+            <option value="step_by_step">Passo a Passo - Conversa com cada step individualmente</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="workflow-project-path">Caminho do Projeto (opcional)</label>
+          <input type="text" id="workflow-project-path" placeholder="/home/usuario/meu-projeto">
+          <small style="color: var(--text-secondary); font-size: 0.8em;">O Claude vai executar dentro deste diretório</small>
+        </div>
+        <div class="form-group">
+          <label>Steps</label>
+          <div id="workflow-steps-editor" class="steps-editor"></div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addWorkflowStep()" style="margin-top: 8px">
+            + Adicionar Step
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="resetWorkflowForm(); closeModal('workflow-modal')">Cancelar</button>
+        <button id="workflow-modal-submit" class="btn btn-primary" onclick="createWorkflow()">Criar Workflow</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conversation Modal -->
+  <div id="conversation-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Nova Conversa</h2>
+        <button class="btn-icon" onclick="closeModal('conversation-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="workflow-select">Workflow</label>
+          <select id="workflow-select">
+            <option value="">Selecione um workflow</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="conversation-title">Titulo (opcional)</label>
+          <input type="text" id="conversation-title" placeholder="Titulo da conversa">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('conversation-modal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="createConversation()">Criar Conversa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Selection Modal -->
+  <div id="context-modal" class="modal-overlay hidden">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Selecionar Contexto para Próximo Step</h2>
+        <button class="btn-icon" onclick="closeModal('context-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="context-modal-info">Selecione as mensagens que deseja levar como contexto para o próximo step:</p>
+        <div class="context-actions-bar">
+          <button class="btn btn-sm btn-secondary" onclick="selectAllContextMessages()">Selecionar Todas</button>
+          <button class="btn btn-sm btn-secondary" onclick="deselectAllContextMessages()">Desmarcar Todas</button>
+          <span class="context-selected-count">0 selecionadas</span>
+        </div>
+        <div id="context-messages-list" class="context-messages-list">
+          <p class="empty-message">Carregando mensagens...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('context-modal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmAdvanceStep()">Avançar Step</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js?v=5"></script>
+</body>
+</html>
