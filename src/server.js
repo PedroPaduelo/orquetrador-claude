@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
@@ -8,6 +9,7 @@ import { runMigrations } from './services/database.js';
 import workflowRoutes from './routes/workflows.js';
 import conversationRoutes from './routes/conversations.js';
 import messageRoutes from './routes/messages.js';
+import smartNotesRoutes from './routes/smart-notes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,6 +33,7 @@ await fastify.register(fastifyStatic, {
 await fastify.register(workflowRoutes);
 await fastify.register(conversationRoutes);
 await fastify.register(messageRoutes);
+await fastify.register(smartNotesRoutes);
 
 // Rota de health check
 fastify.get('/api/health', async () => {

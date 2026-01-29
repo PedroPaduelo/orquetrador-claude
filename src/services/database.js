@@ -64,6 +64,39 @@ export async function runMigrations() {
       );
     `);
 
+    // Add new columns for Smart Notes integration and conditions
+    await client.query(`
+      DO $$
+      BEGIN
+        -- Smart Notes integration columns
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'workflow_steps' AND column_name = 'system_prompt_note_id') THEN
+          ALTER TABLE workflow_steps ADD COLUMN system_prompt_note_id TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'workflow_steps' AND column_name = 'context_note_ids') THEN
+          ALTER TABLE workflow_steps ADD COLUMN context_note_ids TEXT[];
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'workflow_steps' AND column_name = 'memory_note_ids') THEN
+          ALTER TABLE workflow_steps ADD COLUMN memory_note_ids TEXT[];
+        END IF;
+
+        -- Conditions columns
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'workflow_steps' AND column_name = 'conditions') THEN
+          ALTER TABLE workflow_steps ADD COLUMN conditions JSONB DEFAULT '{}';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'workflow_steps' AND column_name = 'max_retries') THEN
+          ALTER TABLE workflow_steps ADD COLUMN max_retries INTEGER DEFAULT 0;
+        END IF;
+
+        -- Multi-backend support
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'workflow_steps' AND column_name = 'backend') THEN
+          ALTER TABLE workflow_steps ADD COLUMN backend TEXT DEFAULT 'claude';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'workflow_steps' AND column_name = 'model') THEN
+          ALTER TABLE workflow_steps ADD COLUMN model TEXT;
+        END IF;
+      END $$;
+    `);
+
     // Tabela conversations
     await client.query(`
       CREATE TABLE IF NOT EXISTS conversations (

@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import { getSystemPrompt, getContextNotes, getMemoryNotes } from './smart-notes.js';
 
 // Store active processes for cancellation
 const activeProcesses = new Map();
@@ -31,7 +32,10 @@ export function getActiveProcesses() {
  * @param {object} options - Opções de execução
  * @param {string} options.baseUrl - URL base do endpoint Claude
  * @param {string} options.message - Mensagem do usuário
- * @param {string} options.systemPrompt - Prompt de sistema opcional
+ * @param {string} options.systemPrompt - Prompt de sistema opcional (texto direto)
+ * @param {string} options.systemPromptNoteId - ID da nota do Smart Notes com system prompt
+ * @param {string[]} options.contextNoteIds - IDs das notas de contexto do Smart Notes
+ * @param {string[]} options.memoryNoteIds - IDs das notas de memória do Smart Notes
  * @param {string} options.projectPath - Caminho do projeto para executar o Claude
  * @param {string} options.claudeSessionId - ID da sessão Claude para continuar (null para nova sessão)
  * @param {string[]} options.initialContext - Contexto inicial para nova sessão (mensagens do step anterior)
@@ -44,12 +48,54 @@ export async function executeClaudeWithSession(options) {
     baseUrl,
     message,
     systemPrompt = null,
+    systemPromptNoteId = null,
+    contextNoteIds = [],
+    memoryNoteIds = [],
     projectPath = null,
     claudeSessionId = null,
     initialContext = [],
     processId = null,
     onData = null,
   } = options;
+
+  // Build the final system prompt from Smart Notes and/or direct text
+  let finalSystemPrompt = systemPrompt || '';
+
+  // Fetch system prompt from Smart Notes if provided
+  if (systemPromptNoteId) {
+    try {
+      const notePrompt = await getSystemPrompt(systemPromptNoteId);
+      if (notePrompt) {
+        finalSystemPrompt = notePrompt;
+      }
+    } catch (error) {
+      console.error('Error fetching system prompt from Smart Notes:', error.message);
+    }
+  }
+
+  // Fetch and prepend context notes
+  if (contextNoteIds && contextNoteIds.length > 0) {
+    try {
+      const contextContent = await getContextNotes(contextNoteIds);
+      if (contextContent) {
+        finalSystemPrompt = contextContent + '\n\n---\n\n' + finalSystemPrompt;
+      }
+    } catch (error) {
+      console.error('Error fetching context notes:', error.message);
+    }
+  }
+
+  // Fetch and prepend memory notes
+  if (memoryNoteIds && memoryNoteIds.length > 0) {
+    try {
+      const memoryContent = await getMemoryNotes(memoryNoteIds);
+      if (memoryContent) {
+        finalSystemPrompt = memoryContent + '\n\n---\n\n' + finalSystemPrompt;
+      }
+    } catch (error) {
+      console.error('Error fetching memory notes:', error.message);
+    }
+  }
 
   return new Promise((resolve, reject) => {
     const env = {
@@ -66,13 +112,18 @@ export async function executeClaudeWithSession(options) {
       '--dangerously-skip-permissions',
     ];
 
+    // stream-json com --print requer --verbose
+    if (outputFormat === 'stream-json') {
+      args.push('--verbose');
+    }
+
     // Se já tem sessão, usar --resume para continuar
     if (claudeSessionId) {
       args.push('--resume', claudeSessionId);
     }
 
-    if (systemPrompt) {
-      args.push('--system-prompt', systemPrompt);
+    if (finalSystemPrompt) {
+      args.push('--system-prompt', finalSystemPrompt);
     }
 
     const spawnOptions = { env };
@@ -237,9 +288,14 @@ export async function executeClaudeWithSession(options) {
     }
 
     claude.stderr.on('data', (data) => {
-      stderr += data.toString();
-      if (onData) {
-        onData({ type: 'action', action: { type: 'stderr', content: data.toString() } });
+      const stderrContent = data.toString();
+      stderr += stderrContent;
+
+      // Filtrar apenas avisos de pre-flight check (manter erros reais)
+      const isPreflightWarning = stderrContent.includes('Pre-flight check is taking longer than expected');
+
+      if (onData && !isPreflightWarning) {
+        onData({ type: 'action', action: { type: 'stderr', content: stderrContent } });
       }
     });
 

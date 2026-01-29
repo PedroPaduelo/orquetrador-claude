@@ -159,7 +159,13 @@ async function editWorkflow(id) {
     workflowSteps = (workflow.steps || []).map(s => ({
       name: s.name,
       base_url: s.base_url,
-      system_prompt: s.system_prompt || ''
+      system_prompt: s.system_prompt || '',
+      system_prompt_note_id: s.system_prompt_note_id || null,
+      context_note_ids: s.context_note_ids || [],
+      memory_note_ids: s.memory_note_ids || [],
+      conditions: s.conditions || { rules: [], default: 'next' },
+      max_retries: s.max_retries || 3,
+      backend: s.backend || 'claude',
     }));
     renderWorkflowSteps();
 
@@ -543,6 +549,16 @@ async function sendMessage() {
         streamingActions = [];
         updateStepStatus(data.step, data.step_order, 'processing');
         createStreamingMessage(data.step);
+
+        // Update progress bar
+        if (data.total_steps) {
+          const steps = state.currentConversation?.steps || [];
+          if (steps.length > 0) {
+            showWorkflowProgress(steps);
+          }
+          const retryInfo = data.retry ? { current: data.retry, max: data.max_retries || 3 } : null;
+          updateWorkflowProgress(data.step_order - 1, data.total_steps, 'running', retryInfo);
+        }
         break;
 
       case 'stream':
@@ -581,6 +597,33 @@ async function sendMessage() {
 
       case 'step_complete':
         updateStepStatus(data.step, data.step_order, 'completed');
+        if (data.step_order && state.currentConversation?.steps?.length) {
+          updateWorkflowProgress(data.step_order - 1, state.currentConversation.steps.length, 'completed');
+        }
+        if (data.finished) {
+          setTimeout(hideWorkflowProgress, 2000);
+        }
+        break;
+
+      case 'condition_retry':
+        // Condition triggered a retry
+        showToast(`Retry ${data.retry}/${data.max_retries}: ${data.condition_matched}`, 'info');
+        updateWorkflowProgress(
+          state.currentConversation?.steps?.findIndex(s => s.name === data.step) || 0,
+          state.currentConversation?.steps?.length || 1,
+          'retry',
+          { current: data.retry, max: data.max_retries }
+        );
+        break;
+
+      case 'condition_jump':
+        // Condition triggered a jump to another step
+        showToast(`Condição "${data.condition_matched}" → ${data.to_step}`, 'info');
+        break;
+
+      case 'max_retries_reached':
+        // Max retries reached
+        showToast(`Max retries (${data.max_retries}) atingido no step ${data.step}`, 'warning');
         break;
 
       case 'step_error':
@@ -598,6 +641,7 @@ async function sendMessage() {
       case 'complete':
         // All done
         console.log('Stream complete');
+        setTimeout(hideWorkflowProgress, 1500);
         break;
 
       default:
@@ -1025,8 +1069,17 @@ function closeModal(modalId) {
 let workflowSteps = [];
 
 function addWorkflowStep() {
-  const index = workflowSteps.length;
-  workflowSteps.push({ name: '', base_url: '', system_prompt: '' });
+  workflowSteps.push({
+    name: '',
+    base_url: '',
+    system_prompt: '',
+    system_prompt_note_id: null,
+    context_note_ids: [],
+    memory_note_ids: [],
+    conditions: { rules: [], default: 'next' },
+    max_retries: 3,
+    backend: 'claude',
+  });
   renderWorkflowSteps();
 }
 
@@ -1148,10 +1201,512 @@ function handleMessageKeydown(event) {
   }
 }
 
+// ============================================
+// SMART NOTES INTEGRATION
+// ============================================
+
+let allNotes = [];
+let allFolders = [];
+let selectedNoteIds = new Set();
+let notesModalMode = 'single'; // 'single' or 'multiple'
+let notesModalCallback = null;
+let currentEditingStepIndex = null;
+let currentNoteField = null; // 'system_prompt', 'context', 'memory'
+
+// Load Smart Notes data
+async function loadSmartNotesData() {
+  try {
+    const [foldersRes, notesRes] = await Promise.all([
+      fetch('/api/smart-notes/folders').then(r => r.json()).catch(() => []),
+      fetch('/api/smart-notes/notes').then(r => r.json()).catch(() => []),
+    ]);
+    allFolders = Array.isArray(foldersRes) ? foldersRes : [];
+    allNotes = Array.isArray(notesRes) ? notesRes : [];
+  } catch (error) {
+    console.error('Error loading Smart Notes:', error);
+    allFolders = [];
+    allNotes = [];
+  }
+}
+
+// Open notes modal
+function openNotesModal(mode = 'single', field = 'system_prompt', stepIndex = null, callback = null) {
+  notesModalMode = mode;
+  notesModalCallback = callback;
+  currentEditingStepIndex = stepIndex;
+  currentNoteField = field;
+  selectedNoteIds.clear();
+
+  // Pre-select existing notes if editing
+  if (stepIndex !== null && workflowSteps[stepIndex]) {
+    const step = workflowSteps[stepIndex];
+    if (field === 'system_prompt' && step.system_prompt_note_id) {
+      selectedNoteIds.add(step.system_prompt_note_id);
+    } else if (field === 'context' && step.context_note_ids) {
+      step.context_note_ids.forEach(id => selectedNoteIds.add(id));
+    } else if (field === 'memory' && step.memory_note_ids) {
+      step.memory_note_ids.forEach(id => selectedNoteIds.add(id));
+    }
+  }
+
+  const titleMap = {
+    'system_prompt': 'Selecionar System Prompt',
+    'context': 'Selecionar Notas de Contexto',
+    'memory': 'Selecionar Notas de Memória',
+  };
+  document.getElementById('notes-modal-title').textContent = titleMap[field] || 'Selecionar Nota';
+
+  renderFolderFilter();
+  renderNotesList();
+  updateNotesSelectedCount();
+  openModal('notes-modal');
+}
+
+function closeNotesModal() {
+  closeModal('notes-modal');
+  hideNotePreview();
+}
+
+function renderFolderFilter() {
+  const select = document.getElementById('notes-folder-filter');
+  select.innerHTML = `
+    <option value="">Todas as pastas</option>
+    ${allFolders.map(f => `<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('')}
+  `;
+}
+
+function renderNotesList(filteredNotes = null) {
+  const list = document.getElementById('notes-list');
+  const notes = filteredNotes || allNotes;
+
+  if (notes.length === 0) {
+    list.innerHTML = '<p class="empty-message">Nenhuma nota encontrada</p>';
+    return;
+  }
+
+  list.innerHTML = notes.map(note => {
+    const folder = allFolders.find(f => f.id === note.folderId);
+    const isSelected = selectedNoteIds.has(note.id);
+    const preview = (note.content || note.contentPreview || '').substring(0, 100);
+
+    return `
+      <div class="note-item ${isSelected ? 'selected' : ''}" data-note-id="${note.id}" onclick="toggleNoteSelection('${note.id}')">
+        <div class="note-item-checkbox">
+          <input type="${notesModalMode === 'single' ? 'radio' : 'checkbox'}"
+                 name="note-selection"
+                 ${isSelected ? 'checked' : ''}
+                 onclick="event.stopPropagation(); toggleNoteSelection('${note.id}')">
+        </div>
+        <div class="note-item-content">
+          <div class="note-item-title">${escapeHtml(note.title)}</div>
+          ${folder ? `<div class="note-item-folder">📁 ${escapeHtml(folder.name)}</div>` : ''}
+          <div class="note-item-preview">${escapeHtml(preview)}${preview.length >= 100 ? '...' : ''}</div>
+        </div>
+        <div class="note-item-actions">
+          <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); previewNote('${note.id}')">Preview</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleNoteSelection(noteId) {
+  if (notesModalMode === 'single') {
+    selectedNoteIds.clear();
+    selectedNoteIds.add(noteId);
+  } else {
+    if (selectedNoteIds.has(noteId)) {
+      selectedNoteIds.delete(noteId);
+    } else {
+      selectedNoteIds.add(noteId);
+    }
+  }
+  renderNotesList();
+  updateNotesSelectedCount();
+}
+
+function updateNotesSelectedCount() {
+  document.getElementById('notes-selected-count').textContent =
+    `${selectedNoteIds.size} selecionada(s)`;
+}
+
+function filterNotes(query) {
+  if (!query) {
+    renderNotesList();
+    return;
+  }
+  const filtered = allNotes.filter(n =>
+    n.title.toLowerCase().includes(query.toLowerCase()) ||
+    (n.content || '').toLowerCase().includes(query.toLowerCase())
+  );
+  renderNotesList(filtered);
+}
+
+function filterNotesByFolder(folderId) {
+  if (!folderId) {
+    renderNotesList();
+    return;
+  }
+  const filtered = allNotes.filter(n => n.folderId === folderId);
+  renderNotesList(filtered);
+}
+
+async function previewNote(noteId) {
+  try {
+    const note = await fetch(`/api/smart-notes/notes/${noteId}`).then(r => r.json());
+    document.getElementById('note-preview-content').textContent = note.content || 'Sem conteúdo';
+    document.getElementById('note-preview').classList.remove('hidden');
+  } catch {
+    showToast('Erro ao carregar preview', 'error');
+  }
+}
+
+function hideNotePreview() {
+  document.getElementById('note-preview').classList.add('hidden');
+}
+
+function confirmNoteSelection() {
+  if (currentEditingStepIndex !== null && workflowSteps[currentEditingStepIndex]) {
+    const step = workflowSteps[currentEditingStepIndex];
+    const ids = Array.from(selectedNoteIds);
+
+    if (currentNoteField === 'system_prompt') {
+      step.system_prompt_note_id = ids[0] || null;
+      step.system_prompt = ''; // Clear text prompt when using note
+    } else if (currentNoteField === 'context') {
+      step.context_note_ids = ids;
+    } else if (currentNoteField === 'memory') {
+      step.memory_note_ids = ids;
+    }
+
+    renderWorkflowSteps();
+  }
+
+  if (notesModalCallback) {
+    notesModalCallback(Array.from(selectedNoteIds));
+  }
+
+  closeNotesModal();
+}
+
+// ============================================
+// CONDITIONS EDITOR
+// ============================================
+
+let editingConditionsStepIndex = null;
+let conditionRules = [];
+
+function openConditionsModal(stepIndex) {
+  editingConditionsStepIndex = stepIndex;
+  const step = workflowSteps[stepIndex];
+
+  // Load existing conditions
+  if (step.conditions && step.conditions.rules) {
+    conditionRules = JSON.parse(JSON.stringify(step.conditions.rules));
+  } else {
+    conditionRules = [];
+  }
+
+  // Set default action
+  const defaultAction = step.conditions?.default || 'next';
+  document.getElementById('conditions-default-action').value = defaultAction;
+
+  // Populate steps dropdown for goto options
+  renderConditionRules();
+  openModal('conditions-modal');
+}
+
+function closeConditionsModal() {
+  closeModal('conditions-modal');
+  editingConditionsStepIndex = null;
+  conditionRules = [];
+}
+
+function renderConditionRules() {
+  const container = document.getElementById('conditions-rules');
+
+  if (conditionRules.length === 0) {
+    container.innerHTML = '<p class="empty-message">Nenhuma regra configurada. Clique em "Adicionar Regra" para começar.</p>';
+    return;
+  }
+
+  container.innerHTML = conditionRules.map((rule, index) => `
+    <div class="condition-rule" data-index="${index}">
+      <div class="condition-rule-header">
+        <span>Regra ${index + 1}</span>
+        <button class="btn btn-sm btn-danger" onclick="removeConditionRule(${index})">Remover</button>
+      </div>
+      <div class="condition-rule-fields">
+        <div class="form-group">
+          <label>Tipo de condição</label>
+          <select onchange="updateConditionRule(${index}, 'type', this.value)">
+            <option value="contains" ${rule.type === 'contains' ? 'selected' : ''}>Output contém</option>
+            <option value="not_contains" ${rule.type === 'not_contains' ? 'selected' : ''}>Output NÃO contém</option>
+            <option value="equals" ${rule.type === 'equals' ? 'selected' : ''}>Output igual a</option>
+            <option value="starts_with" ${rule.type === 'starts_with' ? 'selected' : ''}>Output começa com</option>
+            <option value="ends_with" ${rule.type === 'ends_with' ? 'selected' : ''}>Output termina com</option>
+            <option value="regex" ${rule.type === 'regex' ? 'selected' : ''}>Regex</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Valor para corresponder</label>
+          <input type="text" value="${escapeHtml(rule.match || '')}"
+                 onchange="updateConditionRule(${index}, 'match', this.value)"
+                 placeholder="Ex: FAIL, ERRO, PASS">
+        </div>
+        <div class="form-group">
+          <label>Ação quando corresponder</label>
+          <select onchange="updateConditionRule(${index}, 'goto', this.value)">
+            <option value="next" ${rule.goto === 'next' ? 'selected' : ''}>Avançar para próximo</option>
+            <option value="retry" ${rule.goto === 'retry' ? 'selected' : ''}>Repetir este step (retry)</option>
+            <option value="previous" ${rule.goto === 'previous' ? 'selected' : ''}>Voltar para anterior</option>
+            <option value="finish" ${rule.goto === 'finish' ? 'selected' : ''}>Finalizar workflow</option>
+            ${workflowSteps.map((s, i) =>
+              `<option value="${i + 1}" ${rule.goto === String(i + 1) ? 'selected' : ''}>Ir para Step ${i + 1}: ${escapeHtml(s.name || 'Sem nome')}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Max retries (se retry)</label>
+          <input type="number" value="${rule.max_retries || 3}" min="1" max="10"
+                 onchange="updateConditionRule(${index}, 'max_retries', parseInt(this.value))">
+        </div>
+        <textarea placeholder="Mensagem de retry (opcional). Use {error} para incluir o output."
+                  onchange="updateConditionRule(${index}, 'retry_message', this.value)">${escapeHtml(rule.retry_message || '')}</textarea>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addConditionRule() {
+  conditionRules.push({
+    type: 'contains',
+    match: '',
+    goto: 'next',
+    max_retries: 3,
+    retry_message: '',
+  });
+  renderConditionRules();
+}
+
+function removeConditionRule(index) {
+  conditionRules.splice(index, 1);
+  renderConditionRules();
+}
+
+function updateConditionRule(index, field, value) {
+  conditionRules[index][field] = value;
+}
+
+function saveConditions() {
+  if (editingConditionsStepIndex === null) return;
+
+  const defaultAction = document.getElementById('conditions-default-action').value;
+
+  workflowSteps[editingConditionsStepIndex].conditions = {
+    rules: conditionRules,
+    default: defaultAction,
+  };
+
+  renderWorkflowSteps();
+  closeConditionsModal();
+  showToast('Condições salvas', 'success');
+}
+
+// ============================================
+// WORKFLOW PROGRESS BAR
+// ============================================
+
+function showWorkflowProgress(steps) {
+  const progressContainer = document.getElementById('workflow-progress');
+  const stepsContainer = document.getElementById('progress-steps');
+
+  stepsContainer.innerHTML = steps.map((step, i) => `
+    <div class="progress-step pending" data-step-index="${i}">
+      <div class="progress-step-number">${i + 1}</div>
+      <div class="progress-step-name">${escapeHtml(step.name)}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('progress-status').textContent = 'Iniciando...';
+  progressContainer.classList.remove('hidden');
+}
+
+function updateWorkflowProgress(stepIndex, totalSteps, status, retryInfo = null) {
+  const stepsContainer = document.getElementById('progress-steps');
+  const progressBar = document.getElementById('progress-bar');
+  const progressStatus = document.getElementById('progress-status');
+
+  // Update step statuses
+  const stepElements = stepsContainer.querySelectorAll('.progress-step');
+  stepElements.forEach((el, i) => {
+    el.classList.remove('pending', 'running', 'completed', 'retry', 'failed');
+    if (i < stepIndex) {
+      el.classList.add('completed');
+    } else if (i === stepIndex) {
+      el.classList.add(status);
+      if (retryInfo) {
+        let retryLabel = el.querySelector('.progress-step-retry');
+        if (!retryLabel) {
+          retryLabel = document.createElement('span');
+          retryLabel.className = 'progress-step-retry';
+          el.appendChild(retryLabel);
+        }
+        retryLabel.textContent = `(${retryInfo.current}/${retryInfo.max})`;
+      }
+    } else {
+      el.classList.add('pending');
+    }
+  });
+
+  // Update progress bar
+  const progress = ((stepIndex + (status === 'completed' ? 1 : 0.5)) / totalSteps) * 100;
+  progressBar.style.width = `${Math.min(progress, 100)}%`;
+
+  // Update status text
+  const statusMessages = {
+    running: `Executando step ${stepIndex + 1} de ${totalSteps}...`,
+    retry: `Retry no step ${stepIndex + 1}...`,
+    completed: stepIndex + 1 === totalSteps ? 'Workflow completo!' : `Step ${stepIndex + 1} completo`,
+    failed: `Erro no step ${stepIndex + 1}`,
+  };
+  progressStatus.textContent = statusMessages[status] || '';
+}
+
+function hideWorkflowProgress() {
+  document.getElementById('workflow-progress').classList.add('hidden');
+}
+
+// ============================================
+// ENHANCED STEP EDITOR
+// ============================================
+
+function renderWorkflowSteps() {
+  const container = document.getElementById('workflow-steps-editor');
+
+  container.innerHTML = workflowSteps.map((step, index) => {
+    const hasSystemPromptNote = !!step.system_prompt_note_id;
+    const systemPromptNote = hasSystemPromptNote ? allNotes.find(n => n.id === step.system_prompt_note_id) : null;
+    const contextNotes = (step.context_note_ids || []).map(id => allNotes.find(n => n.id === id)).filter(Boolean);
+    const hasConditions = step.conditions && step.conditions.rules && step.conditions.rules.length > 0;
+
+    return `
+      <div class="step-editor-item">
+        <div class="step-editor-header">
+          <span>Step ${index + 1}</span>
+          <button type="button" class="btn btn-sm btn-danger" onclick="removeWorkflowStep(${index})">Remover</button>
+        </div>
+        <div class="step-editor-fields">
+          <div class="step-editor-row">
+            <input type="text" placeholder="Nome do step" value="${escapeHtml(step.name)}"
+                   onchange="updateWorkflowStep(${index}, 'name', this.value)">
+            <input type="text" placeholder="URL base" value="${escapeHtml(step.base_url)}"
+                   onchange="updateWorkflowStep(${index}, 'base_url', this.value)">
+          </div>
+
+          <div class="form-group">
+            <label style="font-size: 0.75rem; color: var(--text-secondary);">System Prompt</label>
+            <div class="step-prompt-source">
+              <label>
+                <input type="radio" name="prompt-source-${index}"
+                       ${!hasSystemPromptNote ? 'checked' : ''}
+                       onchange="setPromptSource(${index}, 'text')">
+                Texto direto
+              </label>
+              <label>
+                <input type="radio" name="prompt-source-${index}"
+                       ${hasSystemPromptNote ? 'checked' : ''}
+                       onchange="setPromptSource(${index}, 'note')">
+                Smart Notes
+              </label>
+            </div>
+
+            ${!hasSystemPromptNote ? `
+              <textarea placeholder="System prompt (opcional)"
+                        onchange="updateWorkflowStep(${index}, 'system_prompt', this.value)">${escapeHtml(step.system_prompt || '')}</textarea>
+            ` : `
+              <div class="step-note-selector">
+                <div class="selected-note has-note">
+                  📝 ${systemPromptNote ? escapeHtml(systemPromptNote.title) : 'Nota selecionada'}
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="openNotesModal('single', 'system_prompt', ${index})">
+                  Trocar
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="clearStepNote(${index}, 'system_prompt')">
+                  Limpar
+                </button>
+              </div>
+            `}
+          </div>
+
+          <div class="form-group">
+            <label style="font-size: 0.75rem; color: var(--text-secondary);">
+              Contexto (Smart Notes)
+              <button type="button" class="btn btn-sm btn-secondary" style="margin-left: 8px;"
+                      onclick="openNotesModal('multiple', 'context', ${index})">
+                + Adicionar
+              </button>
+            </label>
+            ${contextNotes.length > 0 ? `
+              <div class="step-context-tags">
+                ${contextNotes.map(n => `
+                  <span class="context-tag">
+                    ${escapeHtml(n.title)}
+                    <button type="button" onclick="removeContextNote(${index}, '${n.id}')">&times;</button>
+                  </span>
+                `).join('')}
+              </div>
+            ` : '<small style="color: var(--text-secondary);">Nenhuma nota de contexto selecionada</small>'}
+          </div>
+
+          <div class="step-editor-actions">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="openConditionsModal(${index})">
+              ${hasConditions ? '✓ ' : ''}Condições${hasConditions ? ` (${step.conditions.rules.length})` : ''}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function setPromptSource(index, source) {
+  if (source === 'text') {
+    workflowSteps[index].system_prompt_note_id = null;
+  } else {
+    workflowSteps[index].system_prompt = '';
+    openNotesModal('single', 'system_prompt', index);
+  }
+  renderWorkflowSteps();
+}
+
+function clearStepNote(index, field) {
+  if (field === 'system_prompt') {
+    workflowSteps[index].system_prompt_note_id = null;
+  } else if (field === 'context') {
+    workflowSteps[index].context_note_ids = [];
+  } else if (field === 'memory') {
+    workflowSteps[index].memory_note_ids = [];
+  }
+  renderWorkflowSteps();
+}
+
+function removeContextNote(stepIndex, noteId) {
+  const ids = workflowSteps[stepIndex].context_note_ids || [];
+  workflowSteps[stepIndex].context_note_ids = ids.filter(id => id !== noteId);
+  renderWorkflowSteps();
+}
+
+// ============================================
+// INITIALIZATION
+// ============================================
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await loadWorkflows();
   await loadConversations();
+  await loadSmartNotesData();
 
   // Auto-resize textarea
   const textarea = document.getElementById('message-input');

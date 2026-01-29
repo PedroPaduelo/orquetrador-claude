@@ -1,8 +1,12 @@
 import { query } from '../services/database.js';
 import { executeClaudeWithSession, cancelClaudeProcess } from '../services/claude.js';
+import { evaluateConditions, resolveNextStep, formatRetryMessage } from '../services/conditions.js';
 
 // Track active executions per conversation
 const activeExecutions = new Map();
+
+// Track retry counts per conversation per step
+const retryCounters = new Map();
 
 export default async function messageRoutes(fastify) {
   // Cancel active execution for a conversation
@@ -149,10 +153,18 @@ export default async function messageRoutes(fastify) {
 
       try {
         if (conversation.workflow_type === 'sequential') {
-          // Modo sequencial: passa por todos os steps
+          // Modo sequencial: passa por todos os steps com suporte a condicionais
           let currentInput = content;
+          let i = 0;
 
-          for (let i = 0; i < steps.length; i++) {
+          // Initialize retry counter for this conversation
+          const retryKey = `${id}`;
+          if (!retryCounters.has(retryKey)) {
+            retryCounters.set(retryKey, new Map());
+          }
+          const stepRetries = retryCounters.get(retryKey);
+
+          while (i < steps.length) {
             const step = steps[i];
 
             if (!activeExecutions.has(id)) {
@@ -160,7 +172,19 @@ export default async function messageRoutes(fastify) {
               break;
             }
 
-            sendSSE('step_start', { step: step.name, step_order: i + 1, total_steps: steps.length });
+            // Get retry count for this step
+            const stepRetryKey = step.id;
+            const currentRetryCount = stepRetries.get(stepRetryKey) || 0;
+            const maxRetries = step.max_retries || step.conditions?.max_retries || 3;
+            const isRetry = currentRetryCount > 0;
+
+            sendSSE('step_start', {
+              step: step.name,
+              step_order: i + 1,
+              total_steps: steps.length,
+              retry: isRetry ? currentRetryCount : undefined,
+              max_retries: isRetry ? maxRetries : undefined,
+            });
 
             // Buscar sessão existente para este step
             const claudeSessionId = await getOrCreateSession(id, step.id);
@@ -172,12 +196,15 @@ export default async function messageRoutes(fastify) {
               baseUrl: step.base_url,
               message: currentInput,
               systemPrompt: step.system_prompt,
+              systemPromptNoteId: step.system_prompt_note_id,
+              contextNoteIds: step.context_note_ids,
+              memoryNoteIds: step.memory_note_ids,
               projectPath: conversation.project_path,
               claudeSessionId,
               initialContext,
               processId,
               onData: (event) => {
-                sendSSE('stream', { ...event, step: step.name, step_order: i + 1 });
+                sendSSE('stream', { ...event, step: step.name, step_order: i + 1, retry: isRetry ? currentRetryCount : undefined });
               },
             });
 
@@ -206,15 +233,90 @@ export default async function messageRoutes(fastify) {
               break;
             }
 
+            // Save assistant message
             const assistantMsg = await query(
               'INSERT INTO messages (conversation_id, step_id, role, content, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-              [id, step.id, 'assistant', result.content, JSON.stringify({ step_name: step.name, step_order: i + 1, actions: result.actions, sessionId: result.sessionId })]
+              [id, step.id, 'assistant', result.content, JSON.stringify({
+                step_name: step.name,
+                step_order: i + 1,
+                actions: result.actions,
+                sessionId: result.sessionId,
+                retry: isRetry ? currentRetryCount : undefined,
+              })]
             );
             sendSSE('message_saved', assistantMsg.rows[0]);
-            sendSSE('step_complete', { step: step.name, step_order: i + 1 });
 
-            currentInput = result.content;
+            // Evaluate conditions to determine next step
+            const conditionResult = evaluateConditions(result.content, step.conditions);
+            const nextStep = resolveNextStep(conditionResult.action, steps, i, step.id);
+
+            if (nextStep.isRetry) {
+              // Handle retry
+              const newRetryCount = currentRetryCount + 1;
+              const maxRetriesForStep = conditionResult.rule?.max_retries || maxRetries;
+
+              if (newRetryCount >= maxRetriesForStep) {
+                // Max retries reached, move to next step or fail
+                sendSSE('max_retries_reached', {
+                  step: step.name,
+                  retries: newRetryCount,
+                  max_retries: maxRetriesForStep,
+                });
+                stepRetries.delete(stepRetryKey);
+
+                // Move to next step after max retries
+                i++;
+                currentInput = result.content;
+              } else {
+                // Retry the step
+                stepRetries.set(stepRetryKey, newRetryCount);
+
+                // Format retry message
+                const retryMessage = formatRetryMessage(
+                  conditionResult.retryMessage,
+                  result.content,
+                  conditionResult.rule
+                );
+
+                sendSSE('condition_retry', {
+                  step: step.name,
+                  retry: newRetryCount,
+                  max_retries: maxRetriesForStep,
+                  condition_matched: conditionResult.rule?.match,
+                  message: retryMessage,
+                });
+
+                // Update input for retry
+                currentInput = retryMessage;
+
+                // Don't increment i - stay on same step
+              }
+            } else if (nextStep.isFinished) {
+              // Workflow finished
+              sendSSE('step_complete', { step: step.name, step_order: i + 1, finished: true });
+              stepRetries.delete(stepRetryKey);
+              break;
+            } else {
+              // Normal progression or jump to specific step
+              sendSSE('step_complete', { step: step.name, step_order: i + 1 });
+              stepRetries.delete(stepRetryKey);
+
+              if (conditionResult.matched && nextStep.nextStepIndex !== i + 1) {
+                // Condition matched, jumping to specific step
+                sendSSE('condition_jump', {
+                  from_step: step.name,
+                  to_step: steps[nextStep.nextStepIndex]?.name,
+                  condition_matched: conditionResult.rule?.match,
+                });
+              }
+
+              i = nextStep.nextStepIndex;
+              currentInput = result.content;
+            }
           }
+
+          // Clean up retry counters for this conversation
+          retryCounters.delete(retryKey);
         } else {
           // Modo step-by-step: envia apenas para step atual
           const currentStep = steps.find(s => s.id === conversation.current_step_id);
@@ -237,6 +339,9 @@ export default async function messageRoutes(fastify) {
             baseUrl: currentStep.base_url,
             message: content,
             systemPrompt: currentStep.system_prompt,
+            systemPromptNoteId: currentStep.system_prompt_note_id,
+            contextNoteIds: currentStep.context_note_ids,
+            memoryNoteIds: currentStep.memory_note_ids,
             projectPath: conversation.project_path,
             claudeSessionId,
             initialContext,
@@ -349,6 +454,9 @@ export default async function messageRoutes(fastify) {
         baseUrl: currentStep.base_url,
         message: content,
         systemPrompt: currentStep.system_prompt,
+        systemPromptNoteId: currentStep.system_prompt_note_id,
+        contextNoteIds: currentStep.context_note_ids,
+        memoryNoteIds: currentStep.memory_note_ids,
         projectPath: conversation.project_path,
         claudeSessionId,
         initialContext,

@@ -1125,3 +1125,471 @@ body {
 .context-message-item.selected .context-message-text::after {
   background: linear-gradient(transparent, rgba(129, 140, 248, 0.1));
 }
+
+/* Workflow Progress Bar */
+.workflow-progress {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+}
+
+.workflow-progress.hidden {
+  display: none;
+}
+
+.progress-steps {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.progress-step.pending {
+  opacity: 0.5;
+}
+
+.progress-step.running {
+  border-color: var(--warning);
+  background: rgba(251, 191, 36, 0.1);
+  animation: pulse 1.5s infinite;
+}
+
+.progress-step.completed {
+  border-color: var(--success);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.progress-step.retry {
+  border-color: var(--warning);
+  background: rgba(251, 191, 36, 0.2);
+}
+
+.progress-step.failed {
+  border-color: var(--error);
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.progress-step-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.75rem;
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.progress-step.running .progress-step-number {
+  background: var(--warning);
+  color: var(--background);
+}
+
+.progress-step.completed .progress-step-number {
+  background: var(--success);
+  color: var(--background);
+}
+
+.progress-step.retry .progress-step-number {
+  background: var(--warning);
+  color: var(--background);
+}
+
+.progress-step-name {
+  font-weight: 500;
+}
+
+.progress-step-retry {
+  font-size: 0.7rem;
+  color: var(--warning);
+  margin-left: 4px;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--primary-color);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.progress-status {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Notes Selector Modal */
+.notes-search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.notes-search-bar input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.notes-search-bar select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  min-width: 180px;
+}
+
+.notes-list {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.note-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.note-item:hover {
+  background: var(--surface-hover);
+}
+
+.note-item.selected {
+  border-color: var(--primary-color);
+  background: rgba(129, 140, 248, 0.1);
+}
+
+.note-item-checkbox {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.note-item-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
+.note-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.note-item-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.note-item-folder {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.note-item-preview {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-item-actions {
+  flex-shrink: 0;
+}
+
+.note-preview {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--background);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.note-preview.hidden {
+  display: none;
+}
+
+.note-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.note-preview-header h4 {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.note-preview-content {
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  color: var(--text-secondary);
+}
+
+.notes-selected-info {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* Conditions Editor */
+.conditions-info {
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+}
+
+.conditions-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.condition-rule {
+  padding: 16px;
+  background: var(--background);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.condition-rule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.condition-rule-header span {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.condition-rule-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.condition-rule-fields .form-group {
+  margin-bottom: 0;
+}
+
+.condition-rule-fields label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.condition-rule-fields input,
+.condition-rule-fields select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.condition-rule-fields textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  resize: vertical;
+  min-height: 60px;
+  grid-column: span 2;
+}
+
+.conditions-default {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.conditions-default label {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.conditions-default select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  width: 100%;
+}
+
+/* Step Editor Enhanced */
+.step-editor-item {
+  padding: 16px;
+  background: var(--background);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+}
+
+.step-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.step-editor-header span {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.step-editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.step-editor-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.step-editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.step-prompt-source {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.step-prompt-source label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.step-prompt-source input[type="radio"] {
+  accent-color: var(--primary-color);
+}
+
+.step-note-selector {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.step-note-selector .selected-note {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.step-note-selector .selected-note.has-note {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.step-context-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.context-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(129, 140, 248, 0.2);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--primary-color);
+}
+
+.context-tag button {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.context-tag button:hover {
+  color: var(--error);
+}

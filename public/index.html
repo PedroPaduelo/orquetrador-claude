@@ -31,6 +31,15 @@
 
     <!-- Main Content -->
     <main class="main-content">
+      <!-- Workflow Progress Bar -->
+      <div id="workflow-progress" class="workflow-progress hidden">
+        <div class="progress-steps" id="progress-steps"></div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="progress-status" id="progress-status"></div>
+      </div>
+
       <div id="chat-container" class="chat-container">
         <div class="empty-state">
           <h3>Selecione ou crie uma conversa</h3>
@@ -116,6 +125,9 @@
           <button type="button" class="btn btn-secondary btn-sm" onclick="addWorkflowStep()" style="margin-top: 8px">
             + Adicionar Step
           </button>
+          <small style="color: var(--text-secondary); font-size: 0.75em; display: block; margin-top: 8px;">
+            Dica: Use o Smart Notes para armazenar System Prompts reutilizáveis
+          </small>
         </div>
       </div>
       <div class="modal-footer">
@@ -176,9 +188,77 @@
     </div>
   </div>
 
+  <!-- Notes Selector Modal -->
+  <div id="notes-modal" class="modal-overlay hidden">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2 id="notes-modal-title">Selecionar Nota</h2>
+        <button class="btn-icon" onclick="closeNotesModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="notes-search-bar">
+          <input type="text" id="notes-search" placeholder="Buscar notas..." oninput="filterNotes(this.value)">
+          <select id="notes-folder-filter" onchange="filterNotesByFolder(this.value)">
+            <option value="">Todas as pastas</option>
+          </select>
+        </div>
+        <div id="notes-list" class="notes-list">
+          <p class="empty-message">Carregando notas...</p>
+        </div>
+        <div id="note-preview" class="note-preview hidden">
+          <div class="note-preview-header">
+            <h4>Preview</h4>
+            <button class="btn btn-sm btn-secondary" onclick="hideNotePreview()">Fechar Preview</button>
+          </div>
+          <div id="note-preview-content" class="note-preview-content"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="notes-selected-info">
+          <span id="notes-selected-count">0 selecionada(s)</span>
+        </div>
+        <button class="btn btn-secondary" onclick="closeNotesModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmNoteSelection()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Conditions Editor Modal -->
+  <div id="conditions-modal" class="modal-overlay hidden">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2>Editor de Condições</h2>
+        <button class="btn-icon" onclick="closeConditionsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="conditions-info">Configure regras para determinar o próximo passo baseado no output do Claude.</p>
+
+        <div id="conditions-rules" class="conditions-rules">
+          <!-- Rules will be rendered here -->
+        </div>
+
+        <button class="btn btn-secondary btn-sm" onclick="addConditionRule()" style="margin-top: 12px">
+          + Adicionar Regra
+        </button>
+
+        <div class="conditions-default">
+          <label>Ação padrão (se nenhuma regra corresponder):</label>
+          <select id="conditions-default-action">
+            <option value="next">Avançar para próximo step</option>
+            <option value="finish">Finalizar workflow</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeConditionsModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveConditions()">Salvar Condições</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

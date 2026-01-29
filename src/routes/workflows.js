@@ -36,8 +36,25 @@ export default async function workflowRoutes(fastify) {
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
         await query(
-          'INSERT INTO workflow_steps (workflow_id, name, base_url, step_order, system_prompt) VALUES ($1, $2, $3, $4, $5)',
-          [workflow.id, step.name, step.base_url, i + 1, step.system_prompt || null]
+          `INSERT INTO workflow_steps (
+            workflow_id, name, base_url, step_order, system_prompt,
+            system_prompt_note_id, context_note_ids, memory_note_ids,
+            conditions, max_retries, backend, model
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            workflow.id,
+            step.name,
+            step.base_url,
+            i + 1,
+            step.system_prompt || null,
+            step.system_prompt_note_id || null,
+            step.context_note_ids || null,
+            step.memory_note_ids || null,
+            step.conditions ? JSON.stringify(step.conditions) : '{}',
+            step.max_retries || 0,
+            step.backend || 'claude',
+            step.model || null,
+          ]
         );
       }
     }
@@ -107,8 +124,25 @@ export default async function workflowRoutes(fastify) {
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
         await query(
-          'INSERT INTO workflow_steps (workflow_id, name, base_url, step_order, system_prompt) VALUES ($1, $2, $3, $4, $5)',
-          [id, step.name, step.base_url, i + 1, step.system_prompt || null]
+          `INSERT INTO workflow_steps (
+            workflow_id, name, base_url, step_order, system_prompt,
+            system_prompt_note_id, context_note_ids, memory_note_ids,
+            conditions, max_retries, backend, model
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            id,
+            step.name,
+            step.base_url,
+            i + 1,
+            step.system_prompt || null,
+            step.system_prompt_note_id || null,
+            step.context_note_ids || null,
+            step.memory_note_ids || null,
+            step.conditions ? JSON.stringify(step.conditions) : '{}',
+            step.max_retries || 0,
+            step.backend || 'claude',
+            step.model || null,
+          ]
         );
       }
     }
@@ -140,7 +174,18 @@ export default async function workflowRoutes(fastify) {
   // Adicionar step a um workflow
   fastify.post('/api/workflows/:id/steps', async (request, reply) => {
     const { id } = request.params;
-    const { name, base_url, system_prompt } = request.body;
+    const {
+      name,
+      base_url,
+      system_prompt,
+      system_prompt_note_id,
+      context_note_ids,
+      memory_note_ids,
+      conditions,
+      max_retries,
+      backend,
+      model,
+    } = request.body;
 
     if (!name || !base_url) {
       return reply.status(400).send({ error: 'name and base_url are required' });
@@ -161,8 +206,25 @@ export default async function workflowRoutes(fastify) {
     const stepOrder = maxOrder.rows[0].max_order + 1;
 
     const result = await query(
-      'INSERT INTO workflow_steps (workflow_id, name, base_url, step_order, system_prompt) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [id, name, base_url, stepOrder, system_prompt || null]
+      `INSERT INTO workflow_steps (
+        workflow_id, name, base_url, step_order, system_prompt,
+        system_prompt_note_id, context_note_ids, memory_note_ids,
+        conditions, max_retries, backend, model
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [
+        id,
+        name,
+        base_url,
+        stepOrder,
+        system_prompt || null,
+        system_prompt_note_id || null,
+        context_note_ids || null,
+        memory_note_ids || null,
+        conditions ? JSON.stringify(conditions) : '{}',
+        max_retries || 0,
+        backend || 'claude',
+        model || null,
+      ]
     );
 
     return reply.status(201).send(result.rows[0]);
