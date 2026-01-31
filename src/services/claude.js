@@ -27,17 +27,6 @@ export function getActiveProcesses() {
   return Array.from(activeProcesses.keys());
 }
 
-// Instruções padrão para lidar com comandos long-running
-const LONG_RUNNING_INSTRUCTIONS = `
-IMPORTANTE - Comandos Long-Running:
-Quando precisar executar comandos que rodam indefinidamente (servidores, watch mode, etc):
-- Use 'run_in_background: true' no Bash tool
-- Exemplos: npm run dev, yarn start, python -m http.server, docker-compose up
-- NUNCA execute esses comandos em foreground pois travará a execução
-- Após iniciar em background, verifique se o processo iniciou corretamente
-- Informe ao usuário como verificar os logs ou parar o processo
-`;
-
 // Timeout padrão para execuções (5 minutos)
 const DEFAULT_EXECUTION_TIMEOUT = 5 * 60 * 1000;
 
@@ -113,9 +102,6 @@ export async function executeClaudeWithSession(options) {
     }
   }
 
-  // Sempre adicionar instruções para comandos long-running
-  finalSystemPrompt = LONG_RUNNING_INSTRUCTIONS + '\n\n' + finalSystemPrompt;
-
   return new Promise((resolve, reject) => {
     const env = {
       ...process.env,
@@ -129,7 +115,6 @@ export async function executeClaudeWithSession(options) {
       '--print',
       '--output-format', outputFormat,
       '--dangerously-skip-permissions',
-      '--max-turns', '50',  // Limite de iterações para evitar loops infinitos
     ];
 
     // stream-json com --print requer --verbose
