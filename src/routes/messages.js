@@ -1,41 +1,28 @@
 import { query } from '../services/database.js';
-import { executeClaudeWithSession, cancelClaudeProcess } from '../services/claude.js';
-import { evaluateConditions, resolveNextStep, formatRetryMessage } from '../services/conditions.js';
-
-// Track active executions per conversation
-const activeExecutions = new Map();
-
-// Track retry counts per conversation per step
-const retryCounters = new Map();
+import { orchestrator, ErrorCatalog } from '../services/orchestrator.js';
 
 export default async function messageRoutes(fastify) {
   // Cancel active execution for a conversation
   fastify.post('/api/conversations/:id/cancel', async (request, reply) => {
     const { id } = request.params;
 
-    const processId = activeExecutions.get(id);
-    if (!processId) {
-      return reply.status(404).send({ error: 'No active execution for this conversation' });
-    }
-
-    const cancelled = cancelClaudeProcess(processId);
-    activeExecutions.delete(id);
+    const cancelled = await orchestrator.cancelExecution(id);
 
     if (cancelled) {
       return { success: true, message: 'Execution cancelled' };
     } else {
-      return reply.status(404).send({ error: 'Process not found or already finished' });
+      return reply.status(ErrorCatalog.EXECUTION_NOT_FOUND.status).send({
+        error: ErrorCatalog.EXECUTION_NOT_FOUND.message,
+        code: ErrorCatalog.EXECUTION_NOT_FOUND.code,
+      });
     }
   });
 
   // Get execution status
   fastify.get('/api/conversations/:id/status', async (request, reply) => {
     const { id } = request.params;
-    const processId = activeExecutions.get(id);
-    return {
-      executing: !!processId,
-      processId: processId || null,
-    };
+    const status = orchestrator.getExecutionStatus(id);
+    return status;
   });
 
   // Get messages for a specific step (for context selection modal)
@@ -54,40 +41,45 @@ export default async function messageRoutes(fastify) {
     return result.rows;
   });
 
-  // Get session for a step
-  async function getOrCreateSession(conversationId, stepId) {
-    const existing = await query(
-      'SELECT claude_session_id FROM conversation_sessions WHERE conversation_id = $1 AND step_id = $2',
-      [conversationId, stepId]
-    );
+  // Get execution history for a conversation
+  fastify.get('/api/conversations/:id/executions', async (request, reply) => {
+    const { id } = request.params;
+    const { limit = 10 } = request.query;
 
-    if (existing.rows.length > 0) {
-      return existing.rows[0].claude_session_id;
-    }
+    const result = await query(`
+      SELECT DISTINCT ON (execution_id)
+        execution_id,
+        state,
+        current_step_index,
+        metadata,
+        created_at,
+        updated_at
+      FROM execution_state
+      WHERE conversation_id = $1
+      ORDER BY execution_id, updated_at DESC
+      LIMIT $2
+    `, [id, limit]);
 
-    return null; // Will be created on first message
-  }
+    return result.rows;
+  });
 
-  // Save session for a step
-  async function saveSession(conversationId, stepId, claudeSessionId) {
-    await query(`
-      INSERT INTO conversation_sessions (conversation_id, step_id, claude_session_id)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (conversation_id, step_id)
-      DO UPDATE SET claude_session_id = $3
-    `, [conversationId, stepId, claudeSessionId]);
-  }
+  // Get execution logs for an execution
+  fastify.get('/api/executions/:executionId/logs', async (request, reply) => {
+    const { executionId } = request.params;
+    const { limit = 100 } = request.query;
 
-  // Get initial context for a new step (selected messages from previous step)
-  async function getInitialContext(conversationId) {
-    const result = await query(
-      'SELECT content, role FROM messages WHERE conversation_id = $1 AND selected_for_context = true ORDER BY created_at',
-      [conversationId]
-    );
-    return result.rows.map(m => `${m.role}: ${m.content}`);
-  }
+    const result = await query(`
+      SELECT *
+      FROM execution_logs
+      WHERE execution_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2
+    `, [executionId, limit]);
 
-  // Enviar mensagem com streaming (SSE)
+    return result.rows;
+  });
+
+  // Enviar mensagem com streaming (SSE) - REFATORADO PARA USAR ORCHESTRATOR
   fastify.post('/api/conversations/:id/messages/stream', async (request, reply) => {
     const { id } = request.params;
     const { content } = request.body;
@@ -109,286 +101,118 @@ export default async function messageRoutes(fastify) {
     };
 
     try {
-      // Obter conversa com workflow
+      // Obter tipo de workflow
       const conversationResult = await query(`
-        SELECT c.*, w.type as workflow_type, w.project_path
+        SELECT c.*, w.type as workflow_type
         FROM conversations c
         JOIN workflows w ON c.workflow_id = w.id
         WHERE c.id = $1
       `, [id]);
 
       if (conversationResult.rows.length === 0) {
-        sendSSE('error', { error: 'Conversation not found' });
+        sendSSE('error', { error: ErrorCatalog.CONVERSATION_NOT_FOUND.message });
         reply.raw.end();
         return;
       }
 
       const conversation = conversationResult.rows[0];
 
-      // Obter steps do workflow
-      const stepsResult = await query(
-        'SELECT * FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order',
-        [conversation.workflow_id]
-      );
+      // Handler de eventos do orchestrator
+      const onEvent = (eventName, data) => {
+        // Mapear eventos internos para formato SSE esperado pelo frontend
+        switch (eventName) {
+          case 'user_message':
+            sendSSE('user_message', data.message);
+            break;
 
-      if (stepsResult.rows.length === 0) {
-        sendSSE('error', { error: 'Workflow has no steps' });
-        reply.raw.end();
-        return;
-      }
-
-      const steps = stepsResult.rows;
-
-      // Salvar mensagem do usuário
-      const userMessage = await query(
-        'INSERT INTO messages (conversation_id, step_id, role, content) VALUES ($1, $2, $3, $4) RETURNING *',
-        [id, conversation.current_step_id, 'user', content]
-      );
-
-      sendSSE('user_message', userMessage.rows[0]);
-
-      // Generate process ID
-      const processId = `exec_${id}_${Date.now()}`;
-      activeExecutions.set(id, processId);
-
-      try {
-        if (conversation.workflow_type === 'sequential') {
-          // Modo sequencial: passa por todos os steps com suporte a condicionais
-          let currentInput = content;
-          let i = 0;
-
-          // Initialize retry counter for this conversation
-          const retryKey = `${id}`;
-          if (!retryCounters.has(retryKey)) {
-            retryCounters.set(retryKey, new Map());
-          }
-          const stepRetries = retryCounters.get(retryKey);
-
-          while (i < steps.length) {
-            const step = steps[i];
-
-            if (!activeExecutions.has(id)) {
-              sendSSE('cancelled', { step: step.name });
-              break;
-            }
-
-            // Get retry count for this step
-            const stepRetryKey = step.id;
-            const currentRetryCount = stepRetries.get(stepRetryKey) || 0;
-            const maxRetries = step.max_retries || step.conditions?.max_retries || 3;
-            const isRetry = currentRetryCount > 0;
-
+          case 'step:start':
             sendSSE('step_start', {
-              step: step.name,
-              step_order: i + 1,
-              total_steps: steps.length,
-              retry: isRetry ? currentRetryCount : undefined,
-              max_retries: isRetry ? maxRetries : undefined,
+              step: data.step.name,
+              step_order: data.step.step_order,
+              total_steps: data.totalSteps,
+              retry: data.retryCount > 0 ? data.retryCount : undefined,
+              max_retries: data.retryCount > 0 ? data.maxRetries : undefined,
             });
+            break;
 
-            // Buscar sessão existente para este step
-            const claudeSessionId = await getOrCreateSession(id, step.id);
-
-            // Se primeira mensagem no step, buscar contexto inicial
-            const initialContext = claudeSessionId ? [] : await getInitialContext(id);
-
-            const result = await executeClaudeWithSession({
-              baseUrl: step.base_url,
-              message: currentInput,
-              systemPrompt: step.system_prompt,
-              systemPromptNoteId: step.system_prompt_note_id,
-              contextNoteIds: step.context_note_ids,
-              memoryNoteIds: step.memory_note_ids,
-              projectPath: conversation.project_path,
-              claudeSessionId,
-              initialContext,
-              processId,
-              onData: (event) => {
-                sendSSE('stream', { ...event, step: step.name, step_order: i + 1, retry: isRetry ? currentRetryCount : undefined });
-              },
+          case 'step:stream':
+            sendSSE('stream', {
+              ...data.event,
+              step: data.step.name,
+              step_order: data.step.step_order,
+              retry: data.retryCount > 0 ? data.retryCount : undefined,
             });
+            break;
 
-            // Salvar sessão se nova
-            if (result.sessionId && result.sessionId !== claudeSessionId) {
-              await saveSession(id, step.id, result.sessionId);
-              sendSSE('session_created', { step: step.name, sessionId: result.sessionId });
-            }
+          case 'step:complete':
+            sendSSE('step_complete', {
+              step: data.step.name,
+              step_order: data.step.step_order,
+              finished: data.finished,
+            });
+            break;
 
-            if (result.cancelled) {
-              const cancelledMsg = await query(
-                'INSERT INTO messages (conversation_id, step_id, role, content, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-                [id, step.id, 'system', '[Execução cancelada]', JSON.stringify({ cancelled: true, step_name: step.name })]
-              );
-              sendSSE('message_saved', cancelledMsg.rows[0]);
-              break;
-            }
+          case 'step:error':
+            sendSSE('step_error', {
+              step: data.step.name,
+              error: data.error,
+            });
+            break;
 
-            if (result.error) {
-              const errorMsg = await query(
-                'INSERT INTO messages (conversation_id, step_id, role, content, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-                [id, step.id, 'assistant', `[Erro]: ${result.error}`, JSON.stringify({ error: true, step_name: step.name, actions: result.actions })]
-              );
-              sendSSE('message_saved', errorMsg.rows[0]);
-              sendSSE('step_error', { step: step.name, error: result.error });
-              break;
-            }
+          case 'session:created':
+            sendSSE('session_created', {
+              step: data.step.name,
+              sessionId: data.sessionId,
+            });
+            break;
 
-            // Save assistant message
-            const assistantMsg = await query(
-              'INSERT INTO messages (conversation_id, step_id, role, content, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-              [id, step.id, 'assistant', result.content, JSON.stringify({
-                step_name: step.name,
-                step_order: i + 1,
-                actions: result.actions,
-                sessionId: result.sessionId,
-                retry: isRetry ? currentRetryCount : undefined,
-              })]
-            );
-            sendSSE('message_saved', assistantMsg.rows[0]);
+          case 'message:saved':
+            sendSSE('message_saved', data.message);
+            break;
 
-            // Evaluate conditions to determine next step
-            const conditionResult = evaluateConditions(result.content, step.conditions);
-            const nextStep = resolveNextStep(conditionResult.action, steps, i, step.id);
+          case 'condition_retry':
+            sendSSE('condition_retry', data);
+            break;
 
-            if (nextStep.isRetry) {
-              // Handle retry
-              const newRetryCount = currentRetryCount + 1;
-              const maxRetriesForStep = conditionResult.rule?.max_retries || maxRetries;
+          case 'condition_jump':
+            sendSSE('condition_jump', data);
+            break;
 
-              if (newRetryCount >= maxRetriesForStep) {
-                // Max retries reached, move to next step or fail
-                sendSSE('max_retries_reached', {
-                  step: step.name,
-                  retries: newRetryCount,
-                  max_retries: maxRetriesForStep,
-                });
-                stepRetries.delete(stepRetryKey);
+          case 'max_retries_reached':
+            sendSSE('max_retries_reached', data);
+            break;
 
-                // Move to next step after max retries
-                i++;
-                currentInput = result.content;
-              } else {
-                // Retry the step
-                stepRetries.set(stepRetryKey, newRetryCount);
+          case 'cancelled':
+            sendSSE('cancelled', data);
+            break;
 
-                // Format retry message
-                const retryMessage = formatRetryMessage(
-                  conditionResult.retryMessage,
-                  result.content,
-                  conditionResult.rule
-                );
+          case 'complete':
+            sendSSE('complete', data);
+            break;
 
-                sendSSE('condition_retry', {
-                  step: step.name,
-                  retry: newRetryCount,
-                  max_retries: maxRetriesForStep,
-                  condition_matched: conditionResult.rule?.match,
-                  message: retryMessage,
-                });
-
-                // Update input for retry
-                currentInput = retryMessage;
-
-                // Don't increment i - stay on same step
-              }
-            } else if (nextStep.isFinished) {
-              // Workflow finished
-              sendSSE('step_complete', { step: step.name, step_order: i + 1, finished: true });
-              stepRetries.delete(stepRetryKey);
-              break;
-            } else {
-              // Normal progression or jump to specific step
-              sendSSE('step_complete', { step: step.name, step_order: i + 1 });
-              stepRetries.delete(stepRetryKey);
-
-              if (conditionResult.matched && nextStep.nextStepIndex !== i + 1) {
-                // Condition matched, jumping to specific step
-                sendSSE('condition_jump', {
-                  from_step: step.name,
-                  to_step: steps[nextStep.nextStepIndex]?.name,
-                  condition_matched: conditionResult.rule?.match,
-                });
-              }
-
-              i = nextStep.nextStepIndex;
-              currentInput = result.content;
-            }
-          }
-
-          // Clean up retry counters for this conversation
-          retryCounters.delete(retryKey);
-        } else {
-          // Modo step-by-step: envia apenas para step atual
-          const currentStep = steps.find(s => s.id === conversation.current_step_id);
-
-          if (!currentStep) {
-            sendSSE('error', { error: 'Current step not found' });
-            reply.raw.end();
-            return;
-          }
-
-          sendSSE('step_start', { step: currentStep.name, step_order: currentStep.step_order });
-
-          // Buscar sessão existente para este step
-          const claudeSessionId = await getOrCreateSession(id, currentStep.id);
-
-          // Se primeira mensagem no step, buscar contexto inicial (mensagens selecionadas)
-          const initialContext = claudeSessionId ? [] : await getInitialContext(id);
-
-          const result = await executeClaudeWithSession({
-            baseUrl: currentStep.base_url,
-            message: content,
-            systemPrompt: currentStep.system_prompt,
-            systemPromptNoteId: currentStep.system_prompt_note_id,
-            contextNoteIds: currentStep.context_note_ids,
-            memoryNoteIds: currentStep.memory_note_ids,
-            projectPath: conversation.project_path,
-            claudeSessionId,
-            initialContext,
-            processId,
-            onData: (event) => {
-              sendSSE('stream', { ...event, step: currentStep.name });
-            },
-          });
-
-          // Salvar sessão se nova
-          if (result.sessionId && result.sessionId !== claudeSessionId) {
-            await saveSession(id, currentStep.id, result.sessionId);
-            sendSSE('session_created', { step: currentStep.name, sessionId: result.sessionId });
-          }
-
-          if (result.cancelled) {
-            const cancelledMsg = await query(
-              'INSERT INTO messages (conversation_id, step_id, role, content, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-              [id, currentStep.id, 'system', '[Execução cancelada]', JSON.stringify({ cancelled: true, step_name: currentStep.name })]
-            );
-            sendSSE('message_saved', cancelledMsg.rows[0]);
-          } else if (result.error) {
-            const errorMsg = await query(
-              'INSERT INTO messages (conversation_id, step_id, role, content, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-              [id, currentStep.id, 'assistant', `[Erro]: ${result.error}`, JSON.stringify({ error: true, step_name: currentStep.name, actions: result.actions })]
-            );
-            sendSSE('message_saved', errorMsg.rows[0]);
-          } else {
-            const assistantMsg = await query(
-              'INSERT INTO messages (conversation_id, step_id, role, content, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-              [id, currentStep.id, 'assistant', result.content, JSON.stringify({ step_name: currentStep.name, actions: result.actions, sessionId: result.sessionId })]
-            );
-            sendSSE('message_saved', assistantMsg.rows[0]);
-          }
-
-          sendSSE('step_complete', { step: currentStep.name });
+          case 'error':
+            sendSSE('error', data);
+            break;
         }
+      };
 
-        await query('UPDATE conversations SET updated_at = NOW() WHERE id = $1', [id]);
-        sendSSE('complete', { success: true });
-
-      } finally {
-        activeExecutions.delete(id);
+      // Executar baseado no tipo de workflow
+      if (conversation.workflow_type === 'sequential') {
+        await orchestrator.executeSequential(id, content, onEvent);
+      } else {
+        await orchestrator.executeStepByStep(id, content, onEvent);
       }
 
     } catch (error) {
-      sendSSE('error', { error: error.message });
+      // Tratar erros padronizados do orchestrator
+      if (error.code && error.status) {
+        sendSSE('error', {
+          error: error.message,
+          code: error.code,
+        });
+      } else {
+        sendSSE('error', { error: error.message });
+      }
     }
 
     reply.raw.end();
@@ -403,96 +227,49 @@ export default async function messageRoutes(fastify) {
       return reply.status(400).send({ error: 'content is required' });
     }
 
-    // Redirecionar para streaming internamente
-    const conversationResult = await query(`
-      SELECT c.*, w.type as workflow_type, w.project_path
-      FROM conversations c
-      JOIN workflows w ON c.workflow_id = w.id
-      WHERE c.id = $1
-    `, [id]);
-
-    if (conversationResult.rows.length === 0) {
-      return reply.status(404).send({ error: 'Conversation not found' });
-    }
-
-    const conversation = conversationResult.rows[0];
-
-    const stepsResult = await query(
-      'SELECT * FROM workflow_steps WHERE workflow_id = $1 ORDER BY step_order',
-      [conversation.workflow_id]
-    );
-
-    if (stepsResult.rows.length === 0) {
-      return reply.status(400).send({ error: 'Workflow has no steps' });
-    }
-
-    const steps = stepsResult.rows;
-
-    // Salvar mensagem do usuário
-    const userMessage = await query(
-      'INSERT INTO messages (conversation_id, step_id, role, content) VALUES ($1, $2, $3, $4) RETURNING *',
-      [id, conversation.current_step_id, 'user', content]
-    );
-
-    const messages = [userMessage.rows[0]];
-
-    const processId = `exec_${id}_${Date.now()}`;
-    activeExecutions.set(id, processId);
-
     try {
-      const currentStep = steps.find(s => s.id === conversation.current_step_id);
+      const conversationResult = await query(`
+        SELECT c.*, w.type as workflow_type
+        FROM conversations c
+        JOIN workflows w ON c.workflow_id = w.id
+        WHERE c.id = $1
+      `, [id]);
 
-      if (!currentStep) {
-        activeExecutions.delete(id);
-        return reply.status(400).send({ error: 'Current step not found' });
+      if (conversationResult.rows.length === 0) {
+        return reply.status(404).send({ error: 'Conversation not found' });
       }
 
-      const claudeSessionId = await getOrCreateSession(id, currentStep.id);
-      const initialContext = claudeSessionId ? [] : await getInitialContext(id);
+      const conversation = conversationResult.rows[0];
+      const messages = [];
 
-      const result = await executeClaudeWithSession({
-        baseUrl: currentStep.base_url,
-        message: content,
-        systemPrompt: currentStep.system_prompt,
-        systemPromptNoteId: currentStep.system_prompt_note_id,
-        contextNoteIds: currentStep.context_note_ids,
-        memoryNoteIds: currentStep.memory_note_ids,
-        projectPath: conversation.project_path,
-        claudeSessionId,
-        initialContext,
-        processId,
-      });
+      // Coletar mensagens dos eventos
+      const onEvent = (eventName, data) => {
+        if (eventName === 'user_message' || eventName === 'message:saved') {
+          messages.push(data.message || data);
+        }
+      };
 
-      if (result.sessionId && result.sessionId !== claudeSessionId) {
-        await saveSession(id, currentStep.id, result.sessionId);
-      }
-
-      if (result.cancelled) {
-        const cancelledMessage = await query(
-          'INSERT INTO messages (conversation_id, step_id, role, content, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-          [id, currentStep.id, 'system', '[Execução cancelada pelo usuário]', JSON.stringify({ cancelled: true, step_name: currentStep.name })]
-        );
-        messages.push(cancelledMessage.rows[0]);
-      } else if (result.error) {
-        const errorMessage = await query(
-          'INSERT INTO messages (conversation_id, step_id, role, content, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-          [id, currentStep.id, 'assistant', `[Erro]: ${result.error}`, JSON.stringify({ error: true, step_name: currentStep.name })]
-        );
-        messages.push(errorMessage.rows[0]);
+      // Executar baseado no tipo
+      if (conversation.workflow_type === 'sequential') {
+        await orchestrator.executeSequential(id, content, onEvent);
       } else {
-        const assistantMessage = await query(
-          'INSERT INTO messages (conversation_id, step_id, role, content, metadata) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-          [id, currentStep.id, 'assistant', result.content, JSON.stringify({ step_name: currentStep.name, step_order: currentStep.step_order, sessionId: result.sessionId })]
-        );
-        messages.push(assistantMessage.rows[0]);
+        const result = await orchestrator.executeStepByStep(id, content, onEvent);
+        if (result.message) {
+          messages.push(result.message);
+        }
       }
-    } finally {
-      activeExecutions.delete(id);
+
+      return { messages };
+
+    } catch (error) {
+      if (error.status) {
+        return reply.status(error.status).send({
+          error: error.message,
+          code: error.code,
+        });
+      }
+      throw error;
     }
-
-    await query('UPDATE conversations SET updated_at = NOW() WHERE id = $1', [id]);
-
-    return { messages };
   });
 
   // Marcar/desmarcar mensagem para contexto
@@ -565,5 +342,35 @@ export default async function messageRoutes(fastify) {
     }
 
     return { success: true, deleted: result.rows[0] };
+  });
+
+  // Atualizar ações de uma mensagem
+  fastify.put('/api/messages/:id/actions', async (request, reply) => {
+    const { id } = request.params;
+    const { actions } = request.body;
+
+    if (!Array.isArray(actions)) {
+      return reply.status(400).send({ error: 'actions must be an array' });
+    }
+
+    const current = await query('SELECT metadata FROM messages WHERE id = $1', [id]);
+    if (current.rows.length === 0) {
+      return reply.status(404).send({ error: 'Message not found' });
+    }
+
+    const currentMetadata = current.rows[0].metadata || {};
+    const newMetadata = {
+      ...currentMetadata,
+      actions: actions,
+    };
+
+    const result = await query(
+      'UPDATE messages SET metadata = $1 WHERE id = $2 RETURNING *',
+      [JSON.stringify(newMetadata), id]
+    );
+
+    console.log(`[Messages] Ações atualizadas para mensagem ${id}: ${actions.length} ações`);
+
+    return result.rows[0];
   });
 }

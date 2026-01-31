@@ -397,11 +397,57 @@ body {
   font-weight: 500;
 }
 
+.action-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-top: 4px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
 .action-detail {
   color: var(--text-secondary);
   font-size: 0.75rem;
   margin-top: 2px;
   word-break: break-all;
+}
+
+/* Botão de expandir/colapsar ação */
+.action-expand-btn {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  color: var(--primary-color);
+  background: rgba(129, 140, 248, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.action-expand-btn:hover {
+  background: rgba(129, 140, 248, 0.2);
+}
+
+/* Ação expandida */
+.action-item[data-collapsed="false"] .action-detail {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 600px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+
+/* Destaque visual ao expandir */
+.action-item:hover {
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 /* Input Area */

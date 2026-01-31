@@ -7,6 +7,25 @@ let state = {
   isExecuting: false,
 };
 
+// Cache de ações por mensagem (para preservar após reload)
+const actionsCache = new Map();
+
+// Função para salvar ações no banco de dados
+async function saveActionsToDatabase(messageId, actions) {
+  if (!messageId || !actions || actions.length === 0) return;
+
+  try {
+    console.log(`[saveActionsToDatabase] Salvando ${actions.length} ações para mensagem ${messageId}`);
+    await api(`/messages/${messageId}/actions`, {
+      method: 'PUT',
+      body: JSON.stringify({ actions }),
+    });
+    console.log(`[saveActionsToDatabase] ✓ Ações salvas com sucesso`);
+  } catch (error) {
+    console.error(`[saveActionsToDatabase] Erro ao salvar ações:`, error);
+  }
+}
+
 // API helper
 async function api(endpoint, options = {}) {
   const headers = { ...options.headers };
@@ -327,28 +346,55 @@ function renderChat() {
     return;
   }
 
-  container.innerHTML = messages.map(msg => `
-    <div class="message ${msg.role}">
-      <div class="message-avatar">${msg.role === 'user' ? 'U' : 'C'}</div>
-      <div class="message-content">
-        <div class="message-header">
-          <span class="message-role">${msg.role === 'user' ? 'Você' : 'Claude'}</span>
-          ${msg.step_name ? `<span class="message-step">${escapeHtml(msg.step_name)}</span>` : ''}
-        </div>
-        <div class="message-text">${escapeHtml(msg.content)}</div>
-        ${msg.role === 'assistant' && state.currentConversation.workflow_type === 'step_by_step' ? `
-          <div class="message-actions">
-            <label class="message-select">
-              <input type="checkbox"
-                     ${msg.selected_for_context ? 'checked' : ''}
-                     onchange="toggleMessageContext('${msg.id}', this.checked)">
-              Incluir no contexto
-            </label>
+  container.innerHTML = messages.map(msg => {
+    // Parse metadata para extrair actions
+    let actions = [];
+    if (msg.metadata) {
+      try {
+        const meta = typeof msg.metadata === 'string'
+          ? JSON.parse(msg.metadata)
+          : msg.metadata;
+        actions = meta.actions || [];
+
+        // Debug: mostrar quantas ações foram encontradas
+        if (msg.role === 'assistant' && actions.length > 0) {
+          console.log(`[renderChat] Mensagem ${msg.id}: ${actions.length} ações encontradas no metadata`, actions);
+        }
+      } catch (e) {
+        console.error('Error parsing metadata:', e);
+      }
+    }
+
+    // IMPORTANTE: Se não há ações no metadata, verificar cache
+    if (msg.role === 'assistant' && actions.length === 0 && actionsCache.has(msg.id)) {
+      actions = actionsCache.get(msg.id);
+      console.log(`[renderChat] Mensagem ${msg.id}: ${actions.length} ações RECUPERADAS do cache`);
+    }
+
+    return `
+      <div class="message ${msg.role}">
+        <div class="message-avatar">${msg.role === 'user' ? 'U' : 'C'}</div>
+        <div class="message-content">
+          <div class="message-header">
+            <span class="message-role">${msg.role === 'user' ? 'Você' : 'Claude'}</span>
+            ${msg.step_name ? `<span class="message-step">${escapeHtml(msg.step_name)}</span>` : ''}
           </div>
-        ` : ''}
+          <div class="message-text">${escapeHtml(msg.content)}</div>
+          ${msg.role === 'assistant' ? renderActionsLog(actions) : ''}
+          ${msg.role === 'assistant' && state.currentConversation.workflow_type === 'step_by_step' ? `
+            <div class="message-actions">
+              <label class="message-select">
+                <input type="checkbox"
+                       ${msg.selected_for_context ? 'checked' : ''}
+                       onchange="toggleMessageContext('${msg.id}', this.checked)">
+                Incluir no contexto
+              </label>
+            </div>
+          ` : ''}
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   // Scroll to bottom
   container.scrollTop = container.scrollHeight;
@@ -494,6 +540,7 @@ async function sendMessage() {
     input.focus();
 
     // Reload conversation to get final state
+    // O cache de ações (actionsCache) garante que as ações serão preservadas
     await loadConversation(state.currentConversation.id);
   }
 
@@ -536,6 +583,9 @@ async function sendMessage() {
   function handleStreamEvent(eventType, data) {
     const container = document.getElementById('chat-container');
 
+    // LOG TODOS OS EVENTOS
+    console.log(`[SSE] ${eventType}:`, data);
+
     switch (eventType) {
       case 'user_message':
         // User message saved
@@ -546,7 +596,8 @@ async function sendMessage() {
         // New step starting
         currentStepName = data.step;
         streamingContent = '';
-        streamingActions = [];
+        // NÃO resetar streamingActions aqui - o reset acontece após message_saved
+        // Isso evita perder ações se os eventos chegarem fora de ordem
         updateStepStatus(data.step, data.step_order, 'processing');
         createStreamingMessage(data.step);
 
@@ -579,17 +630,64 @@ async function sendMessage() {
           streamingContent += data.content;
           updateStreamingMessage(streamingContent, streamingActions, data.step || currentStepName);
         } else if (data.type === 'action' && data.action) {
+          // Ação explícita do backend
+          console.log('[AÇÃO DETECTADA - action]', data.action.type, data.action);
           streamingActions.push(data.action);
+          console.log('[streamingActions] Total de ações:', streamingActions.length);
+          updateStreamingMessage(streamingContent, streamingActions, data.step || currentStepName);
+        }
+        // Captura adicional: detectar ações em outros formatos
+        else if (data.tool_name || data.name) {
+          // Evento de tool_use direto
+          const action = {
+            type: 'tool_use',
+            name: data.tool_name || data.name,
+            input: data.tool_input || data.input || {},
+            id: data.id,
+          };
+          console.log('[AÇÃO DETECTADA - tool_use direto]', action);
+          streamingActions.push(action);
+          updateStreamingMessage(streamingContent, streamingActions, data.step || currentStepName);
+        }
+        else if (data.output || data.result) {
+          // Evento de tool_result direto
+          const action = {
+            type: 'tool_result',
+            name: data.tool_name || 'tool',
+            output: data.output || data.result || '',
+            id: data.tool_use_id || data.id,
+          };
+          console.log('[AÇÃO DETECTADA - tool_result direto]', action);
+          streamingActions.push(action);
           updateStreamingMessage(streamingContent, streamingActions, data.step || currentStepName);
         }
         break;
 
       case 'message_saved':
         // Message was saved to database
+        console.log('[message_saved] Mensagem salva:', data);
+        console.log('[message_saved] streamingActions atual:', streamingActions.length, 'ações');
+
         if (data.role === 'assistant') {
+          const messageId = data.id;
+          const actionsToSave = [...streamingActions]; // Copiar antes de resetar
+
+          console.log(`[message_saved] Mensagem ID: ${messageId}, Ações coletadas: ${actionsToSave.length}`);
+
+          // IMPORTANTE: Salvar ações no cache E no banco
+          if (messageId && actionsToSave.length > 0) {
+            console.log(`[message_saved] ✓ Salvando ${actionsToSave.length} ações para mensagem ${messageId}`);
+            actionsCache.set(messageId, actionsToSave);
+
+            // PERSISTIR NO BANCO - enviar ações para o backend
+            saveActionsToDatabase(messageId, actionsToSave);
+          } else {
+            console.warn(`[message_saved] ⚠️ Nenhuma ação para salvar. ID: ${messageId}, Ações: ${actionsToSave.length}`);
+          }
+
           finalizeStreamingMessage(data);
           streamingContent = '';
-          streamingActions = [];
+          streamingActions = []; // Resetar DEPOIS de salvar
         } else if (data.role === 'system') {
           addSystemMessage(data);
         }
@@ -738,8 +836,16 @@ async function sendMessage() {
     const actionsEl = msgDiv.querySelector('.actions-log-content');
     if (actionsEl) {
       if (actions && actions.length > 0) {
-        actionsEl.innerHTML = actions.map(action => renderAction(action)).join('');
+        console.log(`[updateStreamingMessage] Renderizando ${actions.length} ações:`, actions.map(a => a.type));
+        const html = actions.map((action, index) => renderAction(action, index)).join('');
+        actionsEl.innerHTML = html;
         actionsEl.scrollTop = actionsEl.scrollHeight;
+
+        // Garantir visibilidade
+        const actionsLog = msgDiv.querySelector('.actions-log');
+        if (actionsLog) {
+          actionsLog.style.display = '';
+        }
       } else {
         actionsEl.innerHTML = '<div class="action-item"><em>Aguardando ações...</em></div>';
       }
@@ -767,18 +873,105 @@ async function sendMessage() {
       const cursor = streamingDiv.querySelector('.streaming-cursor');
       if (cursor) cursor.remove();
 
-      // Update actions from metadata
+      // IMPORTANTE: Sempre manter o container de ações visível
+      // Update actions from metadata - GARANTIR que as ações permanecem
+      let actionsContainer = streamingDiv.querySelector('.actions-log');
+
+      // PROTEÇÃO: Verificar se já existem ações do streaming
+      let hasStreamingActions = false;
+      if (actionsContainer) {
+        const actionsEl = actionsContainer.querySelector('.actions-log-content');
+        if (actionsEl) {
+          const content = actionsEl.innerHTML;
+          hasStreamingActions = content.includes('action-item tool-use') ||
+                               content.includes('action-item tool-result') ||
+                               content.includes('action-item thinking');
+          if (hasStreamingActions) {
+            console.log('[finalizeStreamingMessage] ⚠️ Container já tem ações do streaming, preservando');
+          }
+        }
+      }
+
       if (msg.metadata) {
         try {
           const meta = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+          console.log('[finalizeStreamingMessage] Metadata recebido:', meta);
+
           if (meta.actions && meta.actions.length > 0) {
-            const actionsEl = streamingDiv.querySelector('.actions-log-content');
-            if (actionsEl) {
-              actionsEl.innerHTML = meta.actions.map(action => renderAction(action)).join('');
+            console.log(`[finalizeStreamingMessage] ${meta.actions.length} ações encontradas no metadata, atualizando`);
+
+            // Se não existe container, criar
+            if (!actionsContainer) {
+              console.log('[finalizeStreamingMessage] Container não existe, criando novo');
+              const messageContent = streamingDiv.querySelector('.message-content');
+              if (messageContent) {
+                const actionsHtml = renderActionsLog(meta.actions);
+                messageContent.insertAdjacentHTML('beforeend', actionsHtml);
+                console.log('[finalizeStreamingMessage] Container criado e ações renderizadas');
+              }
+            } else {
+              // Atualizar container existente
+              console.log('[finalizeStreamingMessage] Atualizando container existente');
+              const actionsEl = actionsContainer.querySelector('.actions-log-content');
+              if (actionsEl) {
+                actionsEl.innerHTML = meta.actions.map((action, index) => renderAction(action, index)).join('');
+                console.log('[finalizeStreamingMessage] Ações atualizadas no container');
+              }
+              // CRÍTICO: Garantir que o container está visível!
+              actionsContainer.style.display = '';
+              const actionsContent = actionsContainer.querySelector('.actions-log-content');
+              if (actionsContent) {
+                actionsContent.classList.remove('collapsed');
+              }
+            }
+          } else if (hasStreamingActions) {
+            // PROTEÇÃO: Se metadata não tem ações MAS streaming tinha, MANTER as do streaming!
+            console.log('[finalizeStreamingMessage] ⚠️ Metadata sem ações, mas streaming tinha - PRESERVANDO ações do streaming');
+            if (actionsContainer) {
+              actionsContainer.style.display = '';
+              const actionsContent = actionsContainer.querySelector('.actions-log-content');
+              if (actionsContent) {
+                actionsContent.classList.remove('collapsed');
+              }
+            }
+          } else {
+            console.log('[finalizeStreamingMessage] Nenhuma ação no metadata');
+            // IMPORTANTE: Só ocultar se REALMENTE não há ações
+            if (actionsContainer) {
+              const actionsEl = actionsContainer.querySelector('.actions-log-content');
+              // Só ocultar se tiver APENAS o placeholder
+              if (actionsEl) {
+                const content = actionsEl.innerHTML.trim();
+                const hasOnlyPlaceholder = content.includes('Aguardando ações') && !content.includes('action-item tool-use') && !content.includes('action-item tool-result') && !content.includes('action-item thinking');
+                if (hasOnlyPlaceholder) {
+                  console.log('[finalizeStreamingMessage] Ocultando container (apenas placeholder)');
+                  actionsContainer.style.display = 'none';
+                } else {
+                  console.log('[finalizeStreamingMessage] Mantendo container visível (tem ações reais)');
+                  actionsContainer.style.display = '';
+                }
+              }
             }
           }
         } catch (e) {
-          console.error('Error parsing metadata:', e);
+          console.error('[finalizeStreamingMessage] Error parsing metadata:', e);
+        }
+      } else {
+        console.log('[finalizeStreamingMessage] Nenhum metadata');
+        // Se não há metadata, verificar se há ações do streaming
+        if (actionsContainer) {
+          const actionsEl = actionsContainer.querySelector('.actions-log-content');
+          if (actionsEl) {
+            const content = actionsEl.innerHTML.trim();
+            const hasOnlyPlaceholder = content.includes('Aguardando ações') && !content.includes('action-item tool-use') && !content.includes('action-item tool-result') && !content.includes('action-item thinking');
+            if (hasOnlyPlaceholder) {
+              console.log('[finalizeStreamingMessage] Ocultando container (sem metadata e apenas placeholder)');
+              actionsContainer.style.display = 'none';
+            } else {
+              console.log('[finalizeStreamingMessage] Mantendo container visível (tem ações do streaming)');
+              actionsContainer.style.display = '';
+            }
+          }
         }
       }
 
@@ -793,6 +986,36 @@ async function sendMessage() {
       const stepTag = streamingDiv.querySelector('.message-step');
       if (stepTag && stepName) {
         stepTag.textContent = stepName;
+      }
+
+      // VERIFICAÇÃO FINAL: Container de ações ainda está visível?
+      const finalCheck = streamingDiv.querySelector('.actions-log');
+      if (finalCheck) {
+        console.log('[finalizeStreamingMessage] ✓ Container de ações CONFIRMADO visível após finalização');
+        console.log('[finalizeStreamingMessage] Display:', finalCheck.style.display);
+        console.log('[finalizeStreamingMessage] Conteúdo:', finalCheck.querySelector('.actions-log-content')?.innerHTML.substring(0, 200));
+
+        // PROTEÇÃO ABSOLUTA: Adicionar observer para detectar qualquer tentativa de remover/ocultar
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+              const display = finalCheck.style.display;
+              if (display === 'none') {
+                console.error('🚨 ALERTA: Algo tentou ocultar o container de ações! Revertendo...');
+                finalCheck.style.display = '';
+              }
+            }
+          });
+        });
+
+        observer.observe(finalCheck, { attributes: true, attributeFilter: ['style'] });
+
+        // FORÇAR visibilidade absoluta
+        finalCheck.style.display = '';
+        finalCheck.style.visibility = 'visible';
+        finalCheck.style.opacity = '1';
+      } else {
+        console.error('[finalizeStreamingMessage] ✗ Container de ações NÃO ENCONTRADO após finalização!');
       }
     }
   }
@@ -825,29 +1048,66 @@ async function sendMessage() {
   }
 }
 
-function renderAction(action) {
+// Render actions log container
+function renderActionsLog(actions) {
+  if (!actions || actions.length === 0) {
+    console.log('[renderActionsLog] Nenhuma ação para renderizar');
+    return '';
+  }
+
+  console.log(`[renderActionsLog] Renderizando ${actions.length} ações`);
+
+  return `
+    <div class="actions-log">
+      <div class="actions-log-header" onclick="toggleActionsLog(this)">
+        <span>Ações do Claude</span>
+        <span class="actions-log-toggle">▼</span>
+      </div>
+      <div class="actions-log-content">
+        ${actions.map((action, index) => renderAction(action, index)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderAction(action, index = 0) {
   let className = 'action-item';
   let typeLabel = '';
   let content = '';
+  let fullContent = '';
+  let truncatedContent = '';
+  let limit = 0;
+  let needsExpand = false;
+  const actionId = `action-${Date.now()}-${index}`;
 
   switch (action.type) {
     case 'tool_use':
       className += ' tool-use';
-      typeLabel = 'Tool';
+      typeLabel = '🔧 Tool';
       content = `<span class="action-name">${escapeHtml(action.name)}</span>`;
       if (action.input) {
-        const inputStr = typeof action.input === 'string' ? action.input : JSON.stringify(action.input);
-        content += `<div class="action-detail">${escapeHtml(inputStr.substring(0, 200))}${inputStr.length > 200 ? '...' : ''}</div>`;
+        const inputStr = typeof action.input === 'string' ? action.input : JSON.stringify(action.input, null, 2);
+        limit = 300;
+        fullContent = inputStr;
+        truncatedContent = inputStr.substring(0, limit);
+        needsExpand = inputStr.length > limit;
+        content += `<div class="action-subtitle">Input:</div>`;
+        content += `<div class="action-detail">${escapeHtml(truncatedContent)}${needsExpand ? '...' : ''}</div>`;
       }
       break;
 
     case 'tool_result':
       className += ' tool-result';
-      typeLabel = 'Result';
+      typeLabel = '✅ Result';
       content = `<span class="action-name">${escapeHtml(action.name || 'Output')}</span>`;
       if (action.output) {
-        const outputStr = typeof action.output === 'string' ? action.output : JSON.stringify(action.output);
-        content += `<div class="action-detail">${escapeHtml(outputStr.substring(0, 200))}${outputStr.length > 200 ? '...' : ''}</div>`;
+        const outputStr = typeof action.output === 'string' ? action.output : JSON.stringify(action.output, null, 2);
+        limit = 300;
+        fullContent = outputStr;
+        truncatedContent = outputStr.substring(0, limit);
+        needsExpand = outputStr.length > limit;
+        content += `<div class="action-subtitle">Output:</div>`;
+        content += `<div class="action-detail">${escapeHtml(truncatedContent)}${needsExpand ? '...' : ''}</div>`;
       }
       break;
 
@@ -855,7 +1115,11 @@ function renderAction(action) {
       className += ' thinking';
       typeLabel = 'Thinking';
       if (action.content) {
-        content = `<div class="action-detail">${escapeHtml(action.content.substring(0, 300))}${action.content.length > 300 ? '...' : ''}</div>`;
+        limit = 300;
+        fullContent = action.content;
+        truncatedContent = action.content.substring(0, limit);
+        needsExpand = action.content.length > limit;
+        content = `<div class="action-detail">${escapeHtml(truncatedContent)}${needsExpand ? '...' : ''}</div>`;
       }
       break;
 
@@ -873,13 +1137,23 @@ function renderAction(action) {
 
     default:
       typeLabel = action.type || 'Event';
-      content = `<div class="action-detail">${escapeHtml(JSON.stringify(action).substring(0, 200))}</div>`;
+      const jsonStr = JSON.stringify(action, null, 2);
+      limit = 200;
+      fullContent = jsonStr;
+      truncatedContent = jsonStr.substring(0, limit);
+      needsExpand = jsonStr.length > limit;
+      content = `<div class="action-detail">${escapeHtml(truncatedContent)}${needsExpand ? '...' : ''}</div>`;
   }
 
+  const expandButton = needsExpand ? `
+    <div class="action-expand-btn" onclick="toggleAction('${actionId}')">▶ Expandir</div>
+  ` : '';
+
   return `
-    <div class="${className}">
+    <div class="${className}" id="${actionId}" data-collapsed="true" data-full-content="${escapeHtml(fullContent)}" data-truncated-content="${escapeHtml(truncatedContent)}">
       <div class="action-type">${typeLabel}</div>
       ${content}
+      ${expandButton}
     </div>
   `;
 }
@@ -893,6 +1167,27 @@ function toggleActionsLog(header) {
   } else {
     content.classList.add('collapsed');
     toggle.textContent = '▶';
+  }
+}
+
+function toggleAction(actionId) {
+  const actionItem = document.getElementById(actionId);
+  if (!actionItem) return;
+
+  const detailDiv = actionItem.querySelector('.action-detail');
+  const toggleBtn = actionItem.querySelector('.action-expand-btn');
+  const isCollapsed = actionItem.dataset.collapsed === 'true';
+
+  if (isCollapsed) {
+    // Expandir
+    detailDiv.textContent = actionItem.dataset.fullContent;
+    toggleBtn.textContent = '▼ Colapsar';
+    actionItem.dataset.collapsed = 'false';
+  } else {
+    // Colapsar
+    detailDiv.textContent = actionItem.dataset.truncatedContent + '...';
+    toggleBtn.textContent = '▶ Expandir';
+    actionItem.dataset.collapsed = 'true';
   }
 }
 

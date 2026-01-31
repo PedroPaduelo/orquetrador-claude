@@ -27,6 +27,20 @@ export function getActiveProcesses() {
   return Array.from(activeProcesses.keys());
 }
 
+// Instruções padrão para lidar com comandos long-running
+const LONG_RUNNING_INSTRUCTIONS = `
+IMPORTANTE - Comandos Long-Running:
+Quando precisar executar comandos que rodam indefinidamente (servidores, watch mode, etc):
+- Use 'run_in_background: true' no Bash tool
+- Exemplos: npm run dev, yarn start, python -m http.server, docker-compose up
+- NUNCA execute esses comandos em foreground pois travará a execução
+- Após iniciar em background, verifique se o processo iniciou corretamente
+- Informe ao usuário como verificar os logs ou parar o processo
+`;
+
+// Timeout padrão para execuções (5 minutos)
+const DEFAULT_EXECUTION_TIMEOUT = 5 * 60 * 1000;
+
 /**
  * Executa uma mensagem no Claude CLI com suporte a sessões nativas
  * @param {object} options - Opções de execução
@@ -41,7 +55,8 @@ export function getActiveProcesses() {
  * @param {string[]} options.initialContext - Contexto inicial para nova sessão (mensagens do step anterior)
  * @param {string} options.processId - ID do processo para cancelamento
  * @param {function} options.onData - Callback para streaming de dados
- * @returns {Promise<{content: string, sessionId: string, actions: array, error?: string, cancelled?: boolean}>}
+ * @param {number} options.timeout - Timeout em ms (padrão: 5 minutos)
+ * @returns {Promise<{content: string, sessionId: string, actions: array, error?: string, cancelled?: boolean, timedOut?: boolean}>}
  */
 export async function executeClaudeWithSession(options) {
   const {
@@ -56,6 +71,7 @@ export async function executeClaudeWithSession(options) {
     initialContext = [],
     processId = null,
     onData = null,
+    timeout = DEFAULT_EXECUTION_TIMEOUT,
   } = options;
 
   // Build the final system prompt from Smart Notes and/or direct text
@@ -97,6 +113,9 @@ export async function executeClaudeWithSession(options) {
     }
   }
 
+  // Sempre adicionar instruções para comandos long-running
+  finalSystemPrompt = LONG_RUNNING_INSTRUCTIONS + '\n\n' + finalSystemPrompt;
+
   return new Promise((resolve, reject) => {
     const env = {
       ...process.env,
@@ -110,6 +129,7 @@ export async function executeClaudeWithSession(options) {
       '--print',
       '--output-format', outputFormat,
       '--dangerously-skip-permissions',
+      '--max-turns', '50',  // Limite de iterações para evitar loops infinitos
     ];
 
     // stream-json com --print requer --verbose
@@ -142,8 +162,22 @@ export async function executeClaudeWithSession(options) {
     let actions = [];
     let buffer = '';
     let capturedSessionId = claudeSessionId; // Manter o existente ou capturar novo
+    let timedOut = false;
+    let lastActivityTime = Date.now();
+
+    // Timeout handler - mata o processo se ficar muito tempo sem atividade
+    const timeoutCheck = setInterval(() => {
+      const inactiveTime = Date.now() - lastActivityTime;
+      if (inactiveTime > timeout) {
+        console.log(`[Claude] Timeout após ${timeout}ms de inatividade. Matando processo.`);
+        timedOut = true;
+        claude.kill('SIGTERM');
+        clearInterval(timeoutCheck);
+      }
+    }, 5000); // Verifica a cada 5 segundos
 
     claude.stdout.on('data', (data) => {
+      lastActivityTime = Date.now(); // Reset timeout on activity
       buffer += data.toString();
 
       if (onData) {
@@ -162,17 +196,23 @@ export async function executeClaudeWithSession(options) {
       try {
         const parsed = JSON.parse(line);
 
-        // Capturar session_id se disponível
-        if (parsed.session_id && !capturedSessionId) {
-          capturedSessionId = parsed.session_id;
+        // DEBUG: Log TODO o JSON recebido para entender o formato
+        console.log(`[Claude Stream] RAW: ${line.substring(0, 500)}`);
+
+        // Capturar session_id se disponível (pode estar em vários lugares)
+        const sessionId = parsed.session_id || parsed.sessionId;
+        if (sessionId && !capturedSessionId) {
+          capturedSessionId = sessionId;
           if (onData) {
             onData({ type: 'session', sessionId: capturedSessionId });
           }
         }
 
-        // Handle Claude CLI message format (full message object)
-        if (parsed.type === 'message' && Array.isArray(parsed.content)) {
-          for (const block of parsed.content) {
+        // Função helper para extrair ações de um array de content blocks
+        function extractActionsFromContent(contentArray) {
+          if (!Array.isArray(contentArray)) return;
+
+          for (const block of contentArray) {
             if (block.type === 'text' && block.text) {
               fullContent += block.text;
               if (onData) {
@@ -184,6 +224,7 @@ export async function executeClaudeWithSession(options) {
                 content: block.thinking,
               };
               actions.push(action);
+              console.log(`[Claude] Ação capturada: thinking`);
               if (onData) {
                 onData({ type: 'action', action });
               }
@@ -195,6 +236,7 @@ export async function executeClaudeWithSession(options) {
                 id: block.id,
               };
               actions.push(action);
+              console.log(`[Claude] Ação capturada: tool_use - ${action.name}`);
               if (onData) {
                 onData({ type: 'action', action });
               }
@@ -206,18 +248,49 @@ export async function executeClaudeWithSession(options) {
                 id: block.tool_use_id,
               };
               actions.push(action);
+              console.log(`[Claude] Ação capturada: tool_result`);
               if (onData) {
                 onData({ type: 'action', action });
               }
             }
           }
         }
-        // Handle assistant message format
-        else if (parsed.type === 'assistant' && parsed.message) {
-          fullContent += parsed.message;
-          if (onData) {
-            onData({ type: 'content', content: parsed.message });
+
+        // Handle Claude CLI assistant message format: { type: "assistant", message: { content: [...] } }
+        if (parsed.type === 'assistant' && parsed.message) {
+          if (typeof parsed.message === 'object' && Array.isArray(parsed.message.content)) {
+            console.log(`[Claude] Processando assistant message com ${parsed.message.content.length} blocos`);
+            extractActionsFromContent(parsed.message.content);
+          } else if (typeof parsed.message === 'string') {
+            fullContent += parsed.message;
+            if (onData) {
+              onData({ type: 'content', content: parsed.message });
+            }
           }
+        }
+        // Handle Claude CLI user message format (contém tool_result): { type: "user", message: { content: [...] } }
+        else if (parsed.type === 'user' && parsed.message && Array.isArray(parsed.message.content)) {
+          console.log(`[Claude] Processando user message (tool_result) com ${parsed.message.content.length} blocos`);
+          // Extrair tool_result
+          for (const block of parsed.message.content) {
+            if (block.type === 'tool_result') {
+              const action = {
+                type: 'tool_result',
+                name: 'tool',
+                output: block.content || '',
+                id: block.tool_use_id,
+              };
+              actions.push(action);
+              console.log(`[Claude] Ação capturada: tool_result para ${block.tool_use_id}`);
+              if (onData) {
+                onData({ type: 'action', action });
+              }
+            }
+          }
+        }
+        // Handle legacy format: { type: "message", content: [...] }
+        else if (parsed.type === 'message' && Array.isArray(parsed.content)) {
+          extractActionsFromContent(parsed.content);
         }
         // Handle content block streaming
         else if (parsed.type === 'content_block_start' || parsed.type === 'content_block_delta') {
@@ -228,35 +301,61 @@ export async function executeClaudeWithSession(options) {
               onData({ type: 'content', content: text });
             }
           }
+          // Capturar tool_use de content_block_start
+          if (parsed.content_block?.type === 'tool_use') {
+            const action = {
+              type: 'tool_use',
+              name: parsed.content_block.name || 'unknown',
+              input: parsed.content_block.input || {},
+              id: parsed.content_block.id,
+            };
+            actions.push(action);
+            console.log(`[Claude] Ação capturada (content_block): tool_use - ${action.name}`);
+            if (onData) {
+              onData({ type: 'action', action });
+            }
+          }
         }
-        // Handle tool use event
+        // Handle tool use event (standalone)
         else if (parsed.type === 'tool_use' || parsed.tool_name) {
           const action = {
             type: 'tool_use',
             name: parsed.tool_name || parsed.name || 'unknown',
             input: parsed.tool_input || parsed.input || {},
+            id: parsed.id,
           };
           actions.push(action);
+          console.log(`[Claude] Ação capturada (standalone): tool_use - ${action.name}`);
           if (onData) {
             onData({ type: 'action', action });
           }
         }
-        // Handle tool result event
+        // Handle tool result event (standalone)
         else if (parsed.type === 'tool_result') {
           const action = {
             type: 'tool_result',
-            name: parsed.tool_name || 'unknown',
-            output: parsed.output || parsed.result || '',
+            name: parsed.tool_name || parsed.name || 'unknown',
+            output: parsed.output || parsed.content || parsed.result || '',
+            id: parsed.tool_use_id || parsed.id,
           };
           actions.push(action);
+          console.log(`[Claude] Ação capturada (standalone): tool_result`);
           if (onData) {
             onData({ type: 'action', action });
           }
         }
-        // Handle result/final event - captura session_id aqui também
+        // Handle result/final event
         else if (parsed.type === 'result') {
           if (parsed.session_id) {
             capturedSessionId = parsed.session_id;
+          }
+          // Extrair ações do resultado final se existirem
+          if (parsed.messages && Array.isArray(parsed.messages)) {
+            for (const msg of parsed.messages) {
+              if (msg.content && Array.isArray(msg.content)) {
+                extractActionsFromContent(msg.content);
+              }
+            }
           }
           if (parsed.result && typeof parsed.result === 'string') {
             fullContent = parsed.result;
@@ -264,6 +363,10 @@ export async function executeClaudeWithSession(options) {
           if (onData) {
             onData({ type: 'done', content: fullContent, actions, sessionId: capturedSessionId });
           }
+        }
+        // Handle system event (pode conter informações úteis)
+        else if (parsed.type === 'system') {
+          console.log(`[Claude] System event: ${JSON.stringify(parsed).substring(0, 200)}`);
         }
         // Handle error event
         else if (parsed.type === 'error') {
@@ -275,6 +378,10 @@ export async function executeClaudeWithSession(options) {
           if (onData) {
             onData({ type: 'action', action });
           }
+        }
+        // Log eventos não tratados para debug
+        else {
+          console.log(`[Claude] Evento não tratado: type=${parsed.type}, keys=${Object.keys(parsed).join(', ')}`);
         }
       } catch {
         // Not JSON, might be raw text output
@@ -288,6 +395,7 @@ export async function executeClaudeWithSession(options) {
     }
 
     claude.stderr.on('data', (data) => {
+      lastActivityTime = Date.now(); // Reset timeout on activity
       const stderrContent = data.toString();
       stderr += stderrContent;
 
@@ -300,6 +408,7 @@ export async function executeClaudeWithSession(options) {
     });
 
     claude.on('close', (code, signal) => {
+      clearInterval(timeoutCheck); // Limpar timeout check
       activeProcesses.delete(pid);
 
       // Processar buffer restante
@@ -322,7 +431,23 @@ export async function executeClaudeWithSession(options) {
         }
       }
 
-      if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+      // Log das ações coletadas para debug
+      console.log(`[Claude] Processo finalizado. Ações coletadas: ${actions.length}`);
+      if (actions.length > 0) {
+        console.log(`[Claude] Tipos de ações: ${actions.map(a => a.type).join(', ')}`);
+      }
+
+      if (timedOut) {
+        if (onData) {
+          onData({ type: 'timeout', message: 'Execução excedeu o tempo limite' });
+        }
+        resolve({
+          content: fullContent || 'Execução excedeu o tempo limite. Verifique se o comando está rodando em background.',
+          sessionId: capturedSessionId,
+          actions,
+          timedOut: true,
+        });
+      } else if (signal === 'SIGTERM' || signal === 'SIGKILL') {
         if (onData) {
           onData({ type: 'cancelled' });
         }

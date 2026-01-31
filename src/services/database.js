@@ -135,6 +135,34 @@ export async function runMigrations() {
       );
     `);
 
+    // Tabela execution_state - Estado persistente de execução (inspirado no vibe-kanban)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS execution_state (
+        id TEXT PRIMARY KEY,
+        conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+        state VARCHAR(20) NOT NULL DEFAULT 'queued',
+        current_step_index INTEGER DEFAULT 0,
+        retry_counts JSONB DEFAULT '{}',
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // Tabela execution_logs - Histórico de execuções (audit trail)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS execution_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        execution_id TEXT NOT NULL,
+        conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+        event_type VARCHAR(50) NOT NULL,
+        step_id UUID REFERENCES workflow_steps(id) ON DELETE SET NULL,
+        step_name TEXT,
+        data JSONB DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
     // Índices para melhor performance
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_workflow_steps_workflow_id ON workflow_steps(workflow_id);
@@ -147,6 +175,15 @@ export async function runMigrations() {
     `);
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_execution_state_conversation ON execution_state(conversation_id);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_execution_logs_execution ON execution_logs(execution_id);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_execution_logs_conversation ON execution_logs(conversation_id);
     `);
 
     await client.query('COMMIT');
