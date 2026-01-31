@@ -2,6 +2,7 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
+import fastifyMultipart from '@fastify/multipart';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -10,6 +11,7 @@ import workflowRoutes from './routes/workflows.js';
 import conversationRoutes from './routes/conversations.js';
 import messageRoutes from './routes/messages.js';
 import smartNotesRoutes from './routes/smart-notes.js';
+import transcribeRoutes from './routes/transcribe.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -23,6 +25,13 @@ await fastify.register(cors, {
   origin: true,
 });
 
+// Registrar multipart para upload de arquivos
+await fastify.register(fastifyMultipart, {
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB
+  },
+});
+
 // Servir arquivos estáticos
 await fastify.register(fastifyStatic, {
   root: join(__dirname, '../public'),
@@ -34,6 +43,7 @@ await fastify.register(workflowRoutes);
 await fastify.register(conversationRoutes);
 await fastify.register(messageRoutes);
 await fastify.register(smartNotesRoutes);
+await fastify.register(transcribeRoutes);
 
 // Rota de health check
 fastify.get('/api/health', async () => {

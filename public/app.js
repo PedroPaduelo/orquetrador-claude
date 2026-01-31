@@ -1087,7 +1087,7 @@ function renderAction(action, index = 0) {
       content = `<span class="action-name">${escapeHtml(action.name)}</span>`;
       if (action.input) {
         const inputStr = typeof action.input === 'string' ? action.input : JSON.stringify(action.input, null, 2);
-        limit = 300;
+        limit = 10000;
         fullContent = inputStr;
         truncatedContent = inputStr.substring(0, limit);
         needsExpand = inputStr.length > limit;
@@ -1102,7 +1102,7 @@ function renderAction(action, index = 0) {
       content = `<span class="action-name">${escapeHtml(action.name || 'Output')}</span>`;
       if (action.output) {
         const outputStr = typeof action.output === 'string' ? action.output : JSON.stringify(action.output, null, 2);
-        limit = 300;
+        limit = 10000;
         fullContent = outputStr;
         truncatedContent = outputStr.substring(0, limit);
         needsExpand = outputStr.length > limit;
@@ -1115,7 +1115,7 @@ function renderAction(action, index = 0) {
       className += ' thinking';
       typeLabel = 'Thinking';
       if (action.content) {
-        limit = 300;
+        limit = 10000;
         fullContent = action.content;
         truncatedContent = action.content.substring(0, limit);
         needsExpand = action.content.length > limit;
@@ -1138,7 +1138,7 @@ function renderAction(action, index = 0) {
     default:
       typeLabel = action.type || 'Event';
       const jsonStr = JSON.stringify(action, null, 2);
-      limit = 200;
+      limit = 10000;
       fullContent = jsonStr;
       truncatedContent = jsonStr.substring(0, limit);
       needsExpand = jsonStr.length > limit;
@@ -1179,13 +1179,13 @@ function toggleAction(actionId) {
   const isCollapsed = actionItem.dataset.collapsed === 'true';
 
   if (isCollapsed) {
-    // Expandir
-    detailDiv.textContent = actionItem.dataset.fullContent;
+    // Expandir - aplicar stripAnsi para limpar códigos ANSI
+    detailDiv.textContent = stripAnsi(actionItem.dataset.fullContent);
     toggleBtn.textContent = '▼ Colapsar';
     actionItem.dataset.collapsed = 'false';
   } else {
     // Colapsar
-    detailDiv.textContent = actionItem.dataset.truncatedContent + '...';
+    detailDiv.textContent = stripAnsi(actionItem.dataset.truncatedContent) + '...';
     toggleBtn.textContent = '▶ Expandir';
     actionItem.dataset.collapsed = 'true';
   }
@@ -1387,27 +1387,6 @@ function updateWorkflowStep(index, field, value) {
   workflowSteps[index][field] = value;
 }
 
-function renderWorkflowSteps() {
-  const container = document.getElementById('workflow-steps-editor');
-
-  container.innerHTML = workflowSteps.map((step, index) => `
-    <div class="step-editor-item">
-      <div class="step-editor-header">
-        <span>Step ${index + 1}</span>
-        <button type="button" class="btn btn-sm btn-danger" onclick="removeWorkflowStep(${index})">Remover</button>
-      </div>
-      <div class="step-editor-fields">
-        <input type="text" placeholder="Nome do step" value="${escapeHtml(step.name)}"
-               onchange="updateWorkflowStep(${index}, 'name', this.value)">
-        <input type="text" placeholder="URL base (ex: https://api.example.com)" value="${escapeHtml(step.base_url)}"
-               onchange="updateWorkflowStep(${index}, 'base_url', this.value)">
-        <textarea placeholder="System prompt (opcional)"
-                  onchange="updateWorkflowStep(${index}, 'system_prompt', this.value)">${escapeHtml(step.system_prompt)}</textarea>
-      </div>
-    </div>
-  `).join('');
-}
-
 async function createWorkflow() {
   // Use saveWorkflow for both create and update
   await saveWorkflow();
@@ -1481,10 +1460,25 @@ async function deleteConversation(id) {
 }
 
 // Escape HTML
+// Remove ANSI escape codes from text (terminal colors, formatting, etc.)
+function stripAnsi(text) {
+  if (!text) return '';
+  // Matches ANSI escape sequences: ESC[ followed by params and command letter
+  // Also handles unicode escape symbol ␛ that may appear in some outputs
+  return text
+    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')  // Standard ANSI: \x1b[...
+    .replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '') // Unicode ESC
+    .replace(/␛\[[0-9;]*[a-zA-Z]/g, '')      // Escaped ESC symbol ␛
+    .replace(/\x1b\]/g, '')                   // OSC sequences
+    .replace(/\x07/g, '');                    // Bell character
+}
+
 function escapeHtml(text) {
   if (!text) return '';
+  // First strip ANSI codes, then escape HTML
+  const cleanText = stripAnsi(text);
   const div = document.createElement('div');
-  div.textContent = text;
+  div.textContent = cleanText;
   return div.innerHTML;
 }
 
@@ -2010,3 +2004,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
   });
 });
+
+// ============================================
+// VOICE RECORDING
+// ============================================
+
+let isRecording = false;
+let speechService = null;
+
+function toggleVoiceRecording() {
+  if (!isGroqSpeechSupported()) {
+    showToast('Seu navegador não suporta gravação de áudio', 'error');
+    return;
+  }
+
+  if (!speechService) {
+    speechService = getSpeechService();
+  }
+
+  if (isRecording) {
+    stopVoiceRecording();
+  } else {
+    startVoiceRecording();
+  }
+}
+
+async function startVoiceRecording() {
+  const micBtn = document.getElementById('mic-btn');
+  const voiceStatus = document.getElementById('voice-status');
+  const messageInput = document.getElementById('message-input');
+
+  const started = await speechService.start({
+    onStart: () => {
+      isRecording = true;
+      micBtn.classList.add('recording');
+      voiceStatus.classList.remove('hidden');
+      voiceStatus.classList.add('recording');
+      voiceStatus.textContent = 'Gravando...';
+    },
+    onEnd: () => {
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      voiceStatus.classList.add('hidden');
+      voiceStatus.classList.remove('recording');
+    },
+    onResult: (text, isFinal) => {
+      if (isFinal) {
+        // Append to existing text
+        const currentText = messageInput.value.trim();
+        messageInput.value = currentText ? `${currentText} ${text}` : text;
+        voiceStatus.textContent = 'Transcrição completa';
+        setTimeout(() => {
+          voiceStatus.classList.add('hidden');
+        }, 2000);
+      } else {
+        // Show interim result
+        voiceStatus.textContent = text || 'Ouvindo...';
+      }
+    },
+    onError: (error) => {
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      voiceStatus.classList.remove('hidden', 'recording');
+      voiceStatus.classList.add('error');
+      voiceStatus.textContent = error;
+      showToast(error, 'error');
+      setTimeout(() => {
+        voiceStatus.classList.add('hidden');
+        voiceStatus.classList.remove('error');
+      }, 3000);
+    },
+  });
+
+  if (!started) {
+    isRecording = false;
+    micBtn.classList.remove('recording');
+  }
+}
+
+function stopVoiceRecording() {
+  if (speechService) {
+    speechService.stop();
+  }
+}
