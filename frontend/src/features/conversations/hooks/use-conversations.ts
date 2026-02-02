@@ -1,0 +1,65 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { conversationsApi } from '../api'
+import type { CreateConversationInput } from '../types'
+
+export function useConversations(workflowId?: string) {
+  return useQuery({
+    queryKey: ['conversations', workflowId],
+    queryFn: () => conversationsApi.list(workflowId),
+  })
+}
+
+export function useConversation(id: string | undefined) {
+  return useQuery({
+    queryKey: ['conversations', id, 'detail'],
+    queryFn: () => conversationsApi.get(id!),
+    enabled: !!id,
+    refetchInterval: false,
+  })
+}
+
+export function useCreateConversation() {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+
+  return useMutation({
+    mutationFn: (input: CreateConversationInput) => conversationsApi.create(input),
+    onSuccess: (conversation) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      toast.success('Conversa criada!')
+      navigate(`/conversations/${conversation.id}`)
+    },
+    onError: () => {
+      toast.error('Erro ao criar conversa')
+    },
+  })
+}
+
+export function useDeleteConversation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: conversationsApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      toast.success('Conversa excluida!')
+    },
+    onError: () => {
+      toast.error('Erro ao excluir conversa')
+    },
+  })
+}
+
+export function useCancelExecution(conversationId: string) {
+  return useMutation({
+    mutationFn: () => conversationsApi.cancel(conversationId),
+    onSuccess: () => {
+      toast.info('Execucao cancelada')
+    },
+    onError: () => {
+      toast.error('Erro ao cancelar execucao')
+    },
+  })
+}
