@@ -29,6 +29,7 @@ import {
   deleteConversation,
   cancelExecution,
   getConversationStatus,
+  advanceStep,
 } from './http/routes/conversations/index.js'
 
 // Message routes
@@ -136,6 +137,7 @@ async function registerRoutes() {
   await app.register(deleteConversation)
   await app.register(cancelExecution)
   await app.register(getConversationStatus)
+  await app.register(advanceStep)
 
   // Messages
   await app.register(sendMessageStream)
