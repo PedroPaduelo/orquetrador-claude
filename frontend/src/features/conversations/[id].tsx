@@ -164,6 +164,7 @@ export default function ConversationDetailPage() {
             currentStepIndex={currentStepIndex}
             isExecuting={isStreaming}
             workflowType={conversation.workflow?.type}
+            conversationId={conversation.id}
           />
         )}
       </aside>

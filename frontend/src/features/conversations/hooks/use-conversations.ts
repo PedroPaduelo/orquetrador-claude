@@ -63,3 +63,18 @@ export function useCancelExecution(conversationId: string) {
     },
   })
 }
+
+export function useAdvanceStep(conversationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => conversationsApi.advanceStep(conversationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
+      toast.success('Avancou para o proximo step!')
+    },
+    onError: () => {
+      toast.error('Erro ao avancar step')
+    },
+  })
+}

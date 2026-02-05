@@ -1,19 +1,29 @@
 import { cn } from '@/shared/lib/utils'
-import { Check, Loader2, AlertCircle, RotateCcw, ChevronRight } from 'lucide-react'
+import { Check, Loader2, AlertCircle, RotateCcw, ChevronRight, SkipForward } from 'lucide-react'
 import { ScrollArea } from '@/shared/components/ui/scroll-area'
 import { Badge } from '@/shared/components/ui/badge'
+import { Button } from '@/shared/components/ui/button'
 import type { WorkflowStepSummary } from '../types'
 import { useConversationsStore } from '../store'
+import { useAdvanceStep } from '../hooks/use-conversations'
 
 interface StepPanelProps {
   steps: WorkflowStepSummary[]
   currentStepIndex: number
   isExecuting: boolean
   workflowType?: 'sequential' | 'step_by_step'
+  conversationId: string
 }
 
-export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType }: StepPanelProps) {
+export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, conversationId }: StepPanelProps) {
   const { stepStatuses } = useConversationsStore()
+  const advanceStepMutation = useAdvanceStep(conversationId)
+
+  const canAdvance = workflowType === 'step_by_step' &&
+    !isExecuting &&
+    currentStepIndex < steps.length - 1
+
+  const isFinished = currentStepIndex >= steps.length
 
   if (steps.length === 0) {
     return (
@@ -32,7 +42,7 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType }
         </p>
         <div className="flex items-center gap-2 mt-2">
           <Badge variant="outline" className="text-xs">
-            {currentStepIndex + 1} / {steps.length}
+            {Math.min(currentStepIndex + 1, steps.length)} / {steps.length}
           </Badge>
           {isExecuting && (
             <Badge variant="default" className="text-xs">
@@ -40,7 +50,29 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType }
               Executando
             </Badge>
           )}
+          {isFinished && (
+            <Badge variant="secondary" className="text-xs">
+              Concluido
+            </Badge>
+          )}
         </div>
+
+        {/* Botao de avancar */}
+        {canAdvance && (
+          <Button
+            className="w-full mt-3"
+            size="sm"
+            onClick={() => advanceStepMutation.mutate()}
+            disabled={advanceStepMutation.isPending}
+          >
+            {advanceStepMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <SkipForward className="h-4 w-4 mr-2" />
+            )}
+            Avancar para proximo step
+          </Button>
+        )}
       </div>
 
       <ScrollArea className="flex-1">

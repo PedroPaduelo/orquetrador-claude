@@ -45,4 +45,9 @@ export const conversationsApi = {
   updateMessageActions: async (messageId: string, actions: unknown[]): Promise<void> => {
     await apiClient.put(`/messages/${messageId}/actions`, { actions })
   },
+
+  advanceStep: async (id: string): Promise<Conversation> => {
+    const { data } = await apiClient.post(`/conversations/${id}/advance-step`)
+    return data
+  },
 }
