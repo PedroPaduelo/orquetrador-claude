@@ -1,8 +1,8 @@
 import { useRef, useEffect } from 'react'
 import { toast } from 'sonner'
+import { MessageSquare } from 'lucide-react'
 import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
-import { ProgressBar } from './progress-bar'
 import { useSSEStream } from '../hooks/use-sse-stream'
 import { useConversationsStore } from '../store'
 import type { Conversation } from '../types'
@@ -49,18 +49,13 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Progress bar */}
-      <ProgressBar
-        steps={steps}
-        currentStepIndex={currentStepIndex}
-        isExecuting={isStreaming}
-      />
-
       {/* Messages */}
       <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && !isStreaming && (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <p>Envie uma mensagem para comecar</p>
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <MessageSquare className="h-12 w-12 mb-4 opacity-50" />
+            <p className="text-lg font-medium">Nenhuma mensagem ainda</p>
+            <p className="text-sm">Envie uma mensagem para comecar a conversa</p>
           </div>
         )}
 
