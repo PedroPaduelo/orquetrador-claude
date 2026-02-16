@@ -11,11 +11,11 @@ datasource db {
 // WORKFLOWS
 // ============================================
 model Workflow {
-  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String       @db.VarChar(255)
-  description String?      @db.Text
-  type        WorkflowType
-  projectPath String?      @map("project_path") @db.Text
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  type        String       @default("sequential")
+  projectPath String?      @map("project_path")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @default(now()) @updatedAt @map("updated_at")
 
@@ -25,33 +25,28 @@ model Workflow {
   @@map("workflows")
 }
 
-enum WorkflowType {
-  sequential
-  step_by_step
-}
-
 model WorkflowStep {
-  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workflowId String @map("workflow_id") @db.Uuid
-  name       String @db.VarChar(255)
-  baseUrl    String @map("base_url") @db.Text
+  id         String @id @default(uuid())
+  workflowId String @map("workflow_id")
+  name       String
+  baseUrl    String @map("base_url")
   stepOrder  Int    @map("step_order")
 
   // Prompts
-  systemPrompt       String? @map("system_prompt") @db.Text
-  systemPromptNoteId String? @map("system_prompt_note_id") @db.Text
+  systemPrompt       String? @map("system_prompt")
+  systemPromptNoteId String? @map("system_prompt_note_id")
 
-  // Smart Notes arrays (PostgreSQL native TEXT arrays)
-  contextNoteIds String[] @map("context_note_ids") @db.Text
-  memoryNoteIds  String[] @map("memory_note_ids") @db.Text
+  // Smart Notes arrays (stored as JSON in SQLite)
+  contextNoteIds String @default("[]") @map("context_note_ids")
+  memoryNoteIds  String @default("[]") @map("memory_note_ids")
 
   // Conditions
-  conditions Json @default("{}") @db.JsonB
-  maxRetries Int  @default(0) @map("max_retries")
+  conditions String @default("{}")
+  maxRetries Int    @default(0) @map("max_retries")
 
   // Multi-backend support
-  backend String  @default("claude") @db.Text
-  model   String? @db.Text
+  backend String  @default("claude")
+  model   String?
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -70,15 +65,15 @@ model WorkflowStep {
 // CONVERSATIONS
 // ============================================
 model Conversation {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title     String?  @db.VarChar(255)
+  id        String   @id @default(uuid())
+  title     String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   // Relations
-  workflowId    String        @map("workflow_id") @db.Uuid
-  workflow      Workflow      @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  currentStepId String?       @map("current_step_id") @db.Uuid
+  workflowId    String       @map("workflow_id")
+  workflow      Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  currentStepId String?      @map("current_step_id")
   currentStep   WorkflowStep? @relation("CurrentStep", fields: [currentStepId], references: [id], onDelete: SetNull)
 
   // Reverse relations
@@ -95,41 +90,35 @@ model Conversation {
 // MESSAGES
 // ============================================
 model Message {
-  id                 String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  role               MessageRole
-  content            String      @db.Text
-  selectedForContext Boolean     @default(false) @map("selected_for_context")
-  metadata           Json?       @db.JsonB
-  createdAt          DateTime    @default(now()) @map("created_at")
+  id                 String  @id @default(uuid())
+  role               String
+  content            String
+  selectedForContext Boolean @default(false) @map("selected_for_context")
+  metadata           String?
+  createdAt          DateTime @default(now()) @map("created_at")
 
   // Relations
-  conversationId String        @map("conversation_id") @db.Uuid
-  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  stepId         String?       @map("step_id") @db.Uuid
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  stepId         String?      @map("step_id")
   step           WorkflowStep? @relation(fields: [stepId], references: [id], onDelete: SetNull)
 
   @@index([conversationId])
   @@map("messages")
 }
 
-enum MessageRole {
-  user
-  assistant
-  system
-}
-
 // ============================================
 // SESSIONS (Claude CLI)
 // ============================================
 model ConversationSession {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  claudeSessionId String   @map("claude_session_id") @db.Text
+  id              String   @id @default(uuid())
+  claudeSessionId String   @map("claude_session_id")
   createdAt       DateTime @default(now()) @map("created_at")
 
   // Relations
-  conversationId String       @map("conversation_id") @db.Uuid
+  conversationId String       @map("conversation_id")
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  stepId         String       @map("step_id") @db.Uuid
+  stepId         String       @map("step_id")
   step           WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, stepId])
@@ -141,45 +130,36 @@ model ConversationSession {
 // EXECUTION STATE (Orchestrator)
 // ============================================
 model ExecutionState {
-  id               String          @id @db.Text
-  state            ExecutionStatus @default(queued)
-  currentStepIndex Int             @default(0) @map("current_step_index")
-  retryCounts      Json            @default("{}") @map("retry_counts") @db.JsonB
-  metadata         Json            @default("{}") @db.JsonB
-  createdAt        DateTime        @default(now()) @map("created_at")
-  updatedAt        DateTime        @default(now()) @updatedAt @map("updated_at")
+  id               String   @id
+  state            String   @default("queued")
+  currentStepIndex Int      @default(0) @map("current_step_index")
+  retryCounts      String   @default("{}") @map("retry_counts")
+  metadata         String   @default("{}")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
 
   // Relations
-  conversationId String       @map("conversation_id") @db.Uuid
+  conversationId String       @map("conversation_id")
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
   @@map("execution_state")
 }
 
-enum ExecutionStatus {
-  queued
-  running
-  paused
-  completed
-  failed
-  cancelled
-}
-
 // ============================================
 // EXECUTION LOGS (Audit Trail)
 // ============================================
 model ExecutionLog {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  executionId String   @map("execution_id") @db.Text
-  eventType   String   @map("event_type") @db.VarChar(50)
-  stepId      String?  @map("step_id") @db.Uuid
-  stepName    String?  @map("step_name") @db.Text
-  data        Json     @default("{}") @db.JsonB
+  id          String   @id @default(uuid())
+  executionId String   @map("execution_id")
+  eventType   String   @map("event_type")
+  stepId      String?  @map("step_id")
+  stepName    String?  @map("step_name")
+  data        String   @default("{}")
   createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
-  conversationId String        @map("conversation_id") @db.Uuid
+  conversationId String        @map("conversation_id")
   conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   step           WorkflowStep? @relation(fields: [stepId], references: [id], onDelete: SetNull)
 

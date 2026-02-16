@@ -58,7 +58,7 @@ export async function listMessages(app: FastifyInstance) {
         stepId: m.stepId,
         stepName: m.step?.name || null,
         selectedForContext: m.selectedForContext,
-        metadata: m.metadata,
+        metadata: m.metadata ? (typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata) : null,
         createdAt: m.createdAt.toISOString(),
       }))
     }

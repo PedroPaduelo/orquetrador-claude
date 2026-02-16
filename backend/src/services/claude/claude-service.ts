@@ -9,6 +9,8 @@ export interface ExecuteOptions {
   systemPrompt?: string
   baseUrl?: string
   projectPath?: string
+  backend?: string
+  model?: string
   onEvent?: (event: StreamEvent) => void
 }
 
@@ -33,6 +35,7 @@ export class ClaudeService {
       systemPrompt,
       baseUrl,
       projectPath,
+      model,
       onEvent,
     } = options
 
@@ -45,6 +48,8 @@ export class ClaudeService {
     let timedOut = false
     let cancelled = false
     let error: string | undefined
+    let rawStdout = ''
+    let rawStderr = ''
 
     // Get existing session ID if any
     const existingSessionId = await sessionManager.getSession(conversationId, stepId)
@@ -66,6 +71,10 @@ export class ClaudeService {
       args.push('--system-prompt', systemPrompt)
     }
 
+    if (model) {
+      args.push('--model', model)
+    }
+
     // Build the full message with context
     let fullMessage = message
     if (initialContext.length > 0 && !existingSessionId) {
@@ -77,35 +86,76 @@ export class ClaudeService {
 
     args.push(fullMessage)
 
-    // Set environment
+    // Set environment - remove all Claude Code env vars to allow nested sessions
     const env = { ...process.env }
+    delete env.CLAUDECODE
+    delete env.CLAUDE_CODE_ENTRYPOINT
+
     if (baseUrl) {
       env.ANTHROPIC_BASE_URL = baseUrl
     }
 
+    // Log full execution details
+    const logPrefix = `[Claude][${processId.substring(0, 8)}]`
+    console.log(`${logPrefix} ========== EXECUTION START ==========`)
+    console.log(`${logPrefix} CWD: ${projectPath || process.cwd()}`)
+    console.log(`${logPrefix} Session: ${existingSessionId || 'new'}`)
+    console.log(`${logPrefix} Base URL: ${baseUrl || 'default (no override)'}`)
+    console.log(`${logPrefix} Model: ${model || 'default'}`)
+    console.log(`${logPrefix} Message length: ${fullMessage.length} chars`)
+    console.log(`${logPrefix} System prompt: ${systemPrompt ? systemPrompt.substring(0, 100) + '...' : 'none'}`)
+    console.log(`${logPrefix} ANTHROPIC_API_KEY set: ${!!env.ANTHROPIC_API_KEY}`)
+    console.log(`${logPrefix} ANTHROPIC_AUTH_TOKEN set: ${!!env.ANTHROPIC_AUTH_TOKEN}`)
+    console.log(`${logPrefix} ANTHROPIC_BASE_URL: ${env.ANTHROPIC_BASE_URL || 'not set'}`)
+    console.log(`${logPrefix} Args (sanitized): claude ${args.map(a => a.length > 80 ? a.substring(0, 80) + '...' : a).join(' ')}`)
+
+    // Emit debug info through SSE so frontend can see it
+    const emitDebug = (msg: string) => {
+      console.log(`${logPrefix} ${msg}`)
+      onEvent?.({
+        type: 'action',
+        action: {
+          type: 'stderr',
+          content: `[debug] ${msg}`,
+        },
+      })
+    }
+
+    emitDebug(`Starting claude CLI - session: ${existingSessionId || 'new'}, baseUrl: ${baseUrl || 'default'}, model: ${model || 'default'}, apiKey: ${!!env.ANTHROPIC_API_KEY}, authToken: ${!!env.ANTHROPIC_AUTH_TOKEN}`)
+
     return new Promise((resolve) => {
-      const process = spawn('claude', args, {
+      const childProcess = spawn('claude', args, {
         cwd: projectPath || undefined,
         env,
         stdio: ['pipe', 'pipe', 'pipe'],
+        shell: true,
       })
 
-      this.activeProcesses.set(processId, process)
+      this.activeProcesses.set(processId, childProcess)
+
+      emitDebug(`Process spawned PID: ${childProcess.pid}`)
 
       // Timeout handling
       let lastActivity = Date.now()
       const timeoutCheck = setInterval(() => {
-        if (Date.now() - lastActivity > this.timeout) {
+        const elapsed = Date.now() - lastActivity
+        if (elapsed > this.timeout) {
+          emitDebug(`TIMEOUT after ${Math.round(elapsed / 1000)}s of inactivity. stdout: ${rawStdout.length} chars, stderr: ${rawStderr.length} chars`)
           timedOut = true
-          process.kill('SIGTERM')
+          childProcess.kill('SIGTERM')
           clearInterval(timeoutCheck)
         }
       }, 5000)
 
-      // Handle stdout
-      process.stdout?.on('data', (data: Buffer) => {
+      // Handle stdout - log ALL raw data
+      childProcess.stdout?.on('data', (data: Buffer) => {
         lastActivity = Date.now()
         const chunk = data.toString()
+        rawStdout += chunk
+
+        // Log raw stdout for debugging (truncate if too long)
+        const logChunk = chunk.length > 500 ? chunk.substring(0, 500) + `... (${chunk.length} total chars)` : chunk
+        console.log(`${logPrefix}[stdout] ${logChunk.replace(/\n/g, '\\n')}`)
 
         const events = parser.parse(chunk)
         for (const event of events) {
@@ -113,18 +163,25 @@ export class ClaudeService {
             content += event.content
           } else if (event.type === 'session' && event.sessionId) {
             sessionId = event.sessionId
+            emitDebug(`Got session ID: ${sessionId}`)
           } else if (event.type === 'action' && event.action) {
             actions.push(event.action)
+          } else if (event.type === 'error' && event.error) {
+            error = event.error
+            emitDebug(`Stream error: ${event.error}`)
           }
 
           onEvent?.(event)
         }
       })
 
-      // Handle stderr
-      process.stderr?.on('data', (data: Buffer) => {
+      // Handle stderr - log ALL raw data
+      childProcess.stderr?.on('data', (data: Buffer) => {
         lastActivity = Date.now()
         const stderrContent = data.toString()
+        rawStderr += stderrContent
+
+        console.log(`${logPrefix}[stderr] ${stderrContent}`)
 
         // Check for errors
         if (stderrContent.includes('Error') || stderrContent.includes('error')) {
@@ -141,31 +198,66 @@ export class ClaudeService {
       })
 
       // Handle process close
-      process.on('close', async (code) => {
+      childProcess.on('close', async (code, signal) => {
         clearInterval(timeoutCheck)
         this.activeProcesses.delete(processId)
         parser.reset()
+
+        console.log(`${logPrefix} ========== EXECUTION END ==========`)
+        console.log(`${logPrefix} Exit code: ${code}, Signal: ${signal}`)
+        console.log(`${logPrefix} Content length: ${content.length} chars`)
+        console.log(`${logPrefix} Session ID: ${sessionId}`)
+        console.log(`${logPrefix} Actions count: ${actions.length}`)
+        console.log(`${logPrefix} Timed out: ${timedOut}, Cancelled: ${cancelled}`)
+        console.log(`${logPrefix} Raw stdout total: ${rawStdout.length} chars`)
+        console.log(`${logPrefix} Raw stderr total: ${rawStderr.length} chars`)
+
+        // If empty content, log full raw output for debugging
+        if (content.length === 0) {
+          console.log(`${logPrefix} WARNING: Empty content!`)
+          console.log(`${logPrefix} Full raw stdout: ${rawStdout.substring(0, 2000)}`)
+          console.log(`${logPrefix} Full raw stderr: ${rawStderr.substring(0, 2000)}`)
+        }
 
         // Save session if we got a new one
         if (sessionId) {
           await sessionManager.saveSession(conversationId, stepId, sessionId)
         }
 
+        // Determine error - FIX: properly handle timeout and empty content cases
+        let finalError: string | undefined
+        if (timedOut) {
+          finalError = `Timeout após ${this.timeout / 1000}s sem atividade. stderr: ${rawStderr.substring(0, 500) || 'vazio'}. stdout: ${rawStdout.substring(0, 200) || 'vazio'}`
+        } else if (cancelled) {
+          finalError = undefined
+        } else if (code !== 0) {
+          finalError = error || `Processo saiu com código ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
+        } else if (content.length === 0 && rawStdout.length === 0) {
+          finalError = `Processo completou mas não produziu output. Exit code: ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
+        } else if (content.length === 0 && rawStdout.length > 0) {
+          finalError = `Processo produziu output (${rawStdout.length} chars) mas parser não extraiu conteúdo. Raw: ${rawStdout.substring(0, 500)}`
+        }
+
+        // If we have raw stdout but no parsed content, use raw as fallback
+        const finalContent = content || (rawStdout.length > 0 ? `[output não parseado]\n${rawStdout}` : '')
+
         resolve({
-          content,
+          content: finalContent,
           sessionId,
           actions,
           timedOut,
           cancelled,
-          error: code !== 0 && !cancelled && !timedOut ? error || `Process exited with code ${code}` : undefined,
+          error: finalError,
         })
       })
 
-      // Handle process error
-      process.on('error', (err) => {
+      // Handle process error (e.g., command not found)
+      childProcess.on('error', (err) => {
         clearInterval(timeoutCheck)
         this.activeProcesses.delete(processId)
         parser.reset()
+
+        console.log(`${logPrefix} Process spawn error: ${err.message}`)
 
         resolve({
           content,
@@ -173,7 +265,7 @@ export class ClaudeService {
           actions,
           timedOut: false,
           cancelled: false,
-          error: err.message,
+          error: `Erro ao iniciar processo: ${err.message}`,
         })
       })
     })
@@ -182,9 +274,9 @@ export class ClaudeService {
   cancel(conversationId: string): boolean {
     let cancelled = false
 
-    for (const [processId, process] of this.activeProcesses) {
+    for (const [processId, childProcess] of this.activeProcesses) {
       if (processId.startsWith(conversationId)) {
-        process.kill('SIGTERM')
+        childProcess.kill('SIGTERM')
         this.activeProcesses.delete(processId)
         cancelled = true
       }

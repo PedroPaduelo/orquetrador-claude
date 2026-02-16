@@ -23,6 +23,8 @@ const stepSchema = z.object({
     default: z.string().default('next'),
   }).default({ rules: [], default: 'next' }),
   maxRetries: z.number().default(0),
+  backend: z.enum(['claude', 'api']).default('claude'),
+  model: z.string().optional(),
 })
 
 export async function updateWorkflow(app: FastifyInstance) {
@@ -83,10 +85,12 @@ export async function updateWorkflow(app: FastifyInstance) {
                 stepOrder: index + 1,
                 systemPrompt: step.systemPrompt,
                 systemPromptNoteId: step.systemPromptNoteId,
-                contextNoteIds: step.contextNoteIds,
-                memoryNoteIds: step.memoryNoteIds,
-                conditions: step.conditions,
+                contextNoteIds: JSON.stringify(step.contextNoteIds),
+                memoryNoteIds: JSON.stringify(step.memoryNoteIds),
+                conditions: JSON.stringify(step.conditions),
                 maxRetries: step.maxRetries,
+                backend: step.backend,
+                model: step.model,
               })),
             },
           }),

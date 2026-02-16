@@ -55,12 +55,38 @@ export class StreamParser {
 
     const obj = data as Record<string, unknown>
 
-    // Handle result event (contains session ID)
-    if (obj.type === 'result' && obj.session_id) {
-      events.push({
-        type: 'session',
-        sessionId: obj.session_id as string,
-      })
+    // Log every JSON event type for debugging
+    console.log(`[StreamParser] Event type: ${obj.type}${obj.subtype ? '/' + obj.subtype : ''} keys: ${Object.keys(obj).join(',')}`)
+
+    // Handle system events (init, etc.) - these contain session_id too
+    if (obj.type === 'system') {
+      if (obj.session_id) {
+        events.push({
+          type: 'session',
+          sessionId: obj.session_id as string,
+        })
+      }
+      return events
+    }
+
+    // Handle result event (final event, contains session ID and cost info)
+    if (obj.type === 'result') {
+      if (obj.session_id) {
+        events.push({
+          type: 'session',
+          sessionId: obj.session_id as string,
+        })
+      }
+
+      // Check for error in result
+      if (obj.subtype === 'error' || obj.is_error) {
+        const errorMsg = (obj.error as string) || (obj.result as string) || 'Unknown error in result'
+        events.push({
+          type: 'error',
+          error: errorMsg,
+        })
+        return events
+      }
 
       if (obj.result) {
         events.push({
@@ -109,6 +135,7 @@ export class StreamParser {
           }
         }
       }
+      return events
     }
 
     // Handle user message (tool results)
@@ -131,6 +158,7 @@ export class StreamParser {
           }
         }
       }
+      return events
     }
 
     // Handle content block deltas (streaming)
@@ -142,7 +170,26 @@ export class StreamParser {
           content: delta.text as string,
         })
       }
+      return events
     }
+
+    // Handle stream_event wrapper (when using --include-partial-messages or newer CLI versions)
+    if (obj.type === 'stream_event' && obj.event) {
+      const event = obj.event as Record<string, unknown>
+      if (event.type === 'content_block_delta' && event.delta) {
+        const delta = event.delta as Record<string, unknown>
+        if (delta.type === 'text_delta' && delta.text) {
+          events.push({
+            type: 'content',
+            content: delta.text as string,
+          })
+        }
+      }
+      return events
+    }
+
+    // Unknown event type - log it
+    console.log(`[StreamParser] Unhandled event type: ${obj.type}, full: ${JSON.stringify(obj).substring(0, 300)}`)
 
     return events
   }

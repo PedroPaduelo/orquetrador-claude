@@ -34,15 +34,15 @@ export async function updateMessageActions(app: FastifyInstance) {
         throw new NotFoundError('Message not found')
       }
 
-      const currentMetadata = (message.metadata as Record<string, unknown>) || {}
+      const currentMetadata = typeof message.metadata === 'string' ? JSON.parse(message.metadata) : (message.metadata || {})
 
       await prisma.message.update({
         where: { id },
         data: {
-          metadata: {
+          metadata: JSON.stringify({
             ...currentMetadata,
-            actions: actions as object[],
-          },
+            actions,
+          }),
         },
       })
 

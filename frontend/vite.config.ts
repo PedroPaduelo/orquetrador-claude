@@ -11,11 +11,13 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: true,
+    host: '0.0.0.0',
+    allowedHosts: true,
     watch: {
       usePolling: true,
       interval: 1000,
     },
+    cors: true,
     proxy: {
       '/api': {
         target: 'http://localhost:3333',
@@ -23,5 +25,10 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
+  },
+  preview: {
+    host: '0.0.0.0',
+    allowedHosts: true,
+    cors: true,
   },
 })

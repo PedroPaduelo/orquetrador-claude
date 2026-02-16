@@ -96,6 +96,8 @@ export class TaskOrchestrator {
           systemPrompt,
           baseUrl: step.baseUrl,
           projectPath,
+          backend: step.backend || 'claude',
+          model: step.model || undefined,
           onEvent: (event) => {
             if (event.type === 'content' && event.content) {
               orchestratorEvents.emitStepStream({
@@ -143,12 +145,12 @@ export class TaskOrchestrator {
             stepId: step.id,
             role: 'assistant',
             content: result.content,
-            metadata: {
-              actions: result.actions as object[],
+            metadata: JSON.stringify({
+              actions: result.actions,
               sessionId: result.sessionId,
               stepName: step.name,
               stepOrder: i + 1,
-            },
+            }),
           },
         })
 
@@ -162,7 +164,8 @@ export class TaskOrchestrator {
         })
 
         // Evaluate conditions
-        const conditions = (step.conditions || { rules: [], default: 'continue' }) as unknown as StepConditions
+        const conditionsData = typeof step.conditions === 'string' ? JSON.parse(step.conditions) : step.conditions
+        const conditions = (conditionsData || { rules: [], default: 'continue' }) as unknown as StepConditions
         const conditionResult = conditionsEvaluator.evaluate(result.content, conditions)
 
         // Resolve next step
@@ -324,6 +327,8 @@ export class TaskOrchestrator {
         systemPrompt,
         baseUrl: step.baseUrl,
         projectPath,
+        backend: step.backend || 'claude',
+        model: step.model || undefined,
         onEvent: (event) => {
           if (event.type === 'content' && event.content) {
             orchestratorEvents.emitStepStream({
@@ -362,12 +367,12 @@ export class TaskOrchestrator {
           stepId: step.id,
           role: 'assistant',
           content: result.content,
-          metadata: {
-            actions: result.actions as object[],
+          metadata: JSON.stringify({
+            actions: result.actions,
             sessionId: result.sessionId,
             stepName: step.name,
             stepOrder: stepIndex + 1,
-          },
+          }),
         },
       })
 

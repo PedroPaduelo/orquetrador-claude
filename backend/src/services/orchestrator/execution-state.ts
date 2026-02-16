@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma.js'
-import type { ExecutionStatus } from '@prisma/client'
+
+type ExecutionStatus = 'queued' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled'
 
 export interface ExecutionStateData {
   id: string
@@ -20,20 +21,20 @@ export class ExecutionStateManager {
         conversationId,
         state: 'running',
         currentStepIndex: 0,
-        retryCounts: {},
-        metadata: {
+        retryCounts: JSON.stringify({}),
+        metadata: JSON.stringify({
           startedAt: new Date().toISOString(),
-        },
+        }),
       },
     })
 
     return {
       id: state.id,
       conversationId: state.conversationId,
-      state: state.state,
+      state: state.state as ExecutionStatus,
       currentStepIndex: state.currentStepIndex,
-      retryCounts: state.retryCounts as Record<string, number>,
-      metadata: state.metadata as Record<string, unknown>,
+      retryCounts: typeof state.retryCounts === 'string' ? JSON.parse(state.retryCounts) : state.retryCounts,
+      metadata: typeof state.metadata === 'string' ? JSON.parse(state.metadata) : state.metadata,
     }
   }
 
@@ -47,10 +48,10 @@ export class ExecutionStateManager {
     return {
       id: state.id,
       conversationId: state.conversationId,
-      state: state.state,
+      state: state.state as ExecutionStatus,
       currentStepIndex: state.currentStepIndex,
-      retryCounts: state.retryCounts as Record<string, number>,
-      metadata: state.metadata as Record<string, unknown>,
+      retryCounts: typeof state.retryCounts === 'string' ? JSON.parse(state.retryCounts) : state.retryCounts,
+      metadata: typeof state.metadata === 'string' ? JSON.parse(state.metadata) : state.metadata,
     }
   }
 
@@ -68,10 +69,10 @@ export class ExecutionStateManager {
     return {
       id: state.id,
       conversationId: state.conversationId,
-      state: state.state,
+      state: state.state as ExecutionStatus,
       currentStepIndex: state.currentStepIndex,
-      retryCounts: state.retryCounts as Record<string, number>,
-      metadata: state.metadata as Record<string, unknown>,
+      retryCounts: typeof state.retryCounts === 'string' ? JSON.parse(state.retryCounts) : state.retryCounts,
+      metadata: typeof state.metadata === 'string' ? JSON.parse(state.metadata) : state.metadata,
     }
   }
 
@@ -85,7 +86,7 @@ export class ExecutionStateManager {
   async updateRetryCounts(executionId: string, retryCounts: Record<string, number>): Promise<void> {
     await prisma.executionState.update({
       where: { id: executionId },
-      data: { retryCounts },
+      data: { retryCounts: JSON.stringify(retryCounts) },
     })
   }
 
@@ -96,14 +97,15 @@ export class ExecutionStateManager {
         select: { metadata: true },
       })
 
+      const currentMeta = typeof current?.metadata === 'string' ? JSON.parse(current.metadata) : (current?.metadata || {})
       const mergedMetadata = {
-        ...(current?.metadata as Record<string, unknown> || {}),
+        ...currentMeta,
         ...metadata,
-      } as object
+      }
 
       await prisma.executionState.update({
         where: { id: executionId },
-        data: { state, metadata: mergedMetadata },
+        data: { state, metadata: JSON.stringify(mergedMetadata) },
       })
     } else {
       await prisma.executionState.update({
@@ -147,7 +149,7 @@ export class ExecutionStateManager {
         eventType,
         stepId,
         stepName,
-        data: data as object,
+        data: JSON.stringify(data),
       },
     })
   }
