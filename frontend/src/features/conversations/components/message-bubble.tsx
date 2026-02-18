@@ -4,17 +4,37 @@ import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/components/ui/collapsible'
+import { UserQuestionCard } from './user-question-card'
 import type { Message, Action } from '../types'
 
 interface MessageBubbleProps {
   message: Message | { id: string; role: 'assistant'; content: string; metadata?: { actions?: Action[] } }
   isStreaming?: boolean
+  onSendAnswer?: (answer: string) => void
 }
 
-export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
+// Extract AskUserQuestion tool_use actions from the actions list
+function extractUserQuestions(actions: Action[]): { questions: Action[]; otherActions: Action[] } {
+  const questions: Action[] = []
+  const otherActions: Action[] = []
+
+  for (const action of actions) {
+    if (action.type === 'tool_use' && action.name === 'AskUserQuestion' && action.input) {
+      questions.push(action)
+    } else {
+      otherActions.push(action)
+    }
+  }
+
+  return { questions, otherActions }
+}
+
+export function MessageBubble({ message, isStreaming, onSendAnswer }: MessageBubbleProps) {
   const [actionsOpen, setActionsOpen] = useState(false)
   const isUser = message.role === 'user'
   const actions = (message.metadata?.actions || []) as Action[]
+
+  const { questions, otherActions } = extractUserQuestions(actions)
 
   return (
     <div className={cn('flex gap-3', isUser ? 'flex-row-reverse' : 'flex-row')}>
@@ -29,7 +49,7 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
       </div>
 
       {/* Content */}
-      <div className={cn('flex flex-col gap-1 max-w-[80%]', isUser && 'items-end')}>
+      <div className={cn('flex flex-col gap-2 max-w-[80%]', isUser && 'items-end')}>
         {/* Step badge */}
         {'stepName' in message && message.stepName && (
           <Badge variant="outline" className="text-xs w-fit">
@@ -49,8 +69,27 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
           {isStreaming && <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1" />}
         </div>
 
-        {/* Actions log */}
-        {!isUser && actions.length > 0 && (
+        {/* AskUserQuestion - Interactive question cards */}
+        {!isUser && questions.length > 0 && onSendAnswer && (
+          <div className="w-full space-y-2">
+            {questions.map((q, i) => {
+              const input = q.input as { questions?: Array<{ question: string; header?: string; options: Array<{ label: string; description?: string }>; multiSelect?: boolean }> }
+              if (!input?.questions) return null
+
+              return (
+                <UserQuestionCard
+                  key={i}
+                  questions={input.questions}
+                  onAnswer={onSendAnswer}
+                  disabled={isStreaming}
+                />
+              )
+            })}
+          </div>
+        )}
+
+        {/* Actions log (non-AskUserQuestion actions) */}
+        {!isUser && otherActions.length > 0 && (
           <Collapsible open={actionsOpen} onOpenChange={setActionsOpen}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
@@ -59,12 +98,12 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
                 ) : (
                   <ChevronRight className="h-3 w-3 mr-1" />
                 )}
-                {actions.length} acoes
+                {otherActions.length} acoes
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="mt-2 space-y-1 text-xs">
-                {actions.map((action, i) => (
+                {otherActions.map((action, i) => (
                   <ActionItem key={i} action={action} />
                 ))}
               </div>

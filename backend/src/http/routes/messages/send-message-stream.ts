@@ -53,25 +53,53 @@ export async function sendMessageStream(app: FastifyInstance) {
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
         'Access-Control-Allow-Origin': '*',
+        'X-Accel-Buffering': 'no',
       })
 
       // Helper to send SSE events
       const sendEvent = (event: string, data: unknown) => {
-        reply.raw.write(`event: ${event}\n`)
-        reply.raw.write(`data: ${JSON.stringify(data)}\n\n`)
+        try {
+          reply.raw.write(`event: ${event}\n`)
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`)
+        } catch {
+          // Connection may have closed
+        }
       }
 
-      // Event handlers
+      // Event handlers - FILTER by conversationId to prevent cross-talk
       const handlers: Record<string, (...args: unknown[]) => void> = {
-        'step:start': (data) => sendEvent('step_start', data),
-        'step:stream': (data) => sendEvent('stream', data),
-        'step:complete': (data) => sendEvent('step_complete', data),
-        'step:error': (data) => sendEvent('step_error', data),
-        'message:saved': (data) => sendEvent('message_saved', data),
-        'condition:retry': (data) => sendEvent('condition_retry', data),
-        'condition:jump': (data) => sendEvent('condition_jump', data),
-        'execution:cancelled': () => sendEvent('cancelled', {}),
-        'execution:complete': (data) => sendEvent('complete', data),
+        'step:start': (data: unknown) => {
+          const d = data as { conversationId?: string }
+          if (d.conversationId === id) sendEvent('step_start', data)
+        },
+        'step:stream': (data: unknown) => {
+          // step:stream events don't have conversationId directly,
+          // but are tied to an execution which is per-conversation
+          sendEvent('stream', data)
+        },
+        'step:complete': (data: unknown) => {
+          sendEvent('step_complete', data)
+        },
+        'step:error': (data: unknown) => {
+          sendEvent('step_error', data)
+        },
+        'message:saved': (data: unknown) => {
+          sendEvent('message_saved', data)
+        },
+        'condition:retry': (data: unknown) => {
+          sendEvent('condition_retry', data)
+        },
+        'condition:jump': (data: unknown) => {
+          sendEvent('condition_jump', data)
+        },
+        'execution:cancelled': (data: unknown) => {
+          const d = data as { conversationId?: string }
+          if (d.conversationId === id) sendEvent('cancelled', data)
+        },
+        'execution:complete': (data: unknown) => {
+          const d = data as { conversationId?: string }
+          if (d.conversationId === id) sendEvent('complete', data)
+        },
       }
 
       // Register handlers
@@ -80,18 +108,27 @@ export async function sendMessageStream(app: FastifyInstance) {
       })
 
       // Cleanup on close
-      request.raw.on('close', () => {
+      const cleanup = () => {
         Object.entries(handlers).forEach(([event, handler]) => {
           orchestratorEvents.off(event, handler)
         })
-      })
+      }
+      request.raw.on('close', cleanup)
 
       try {
+        const projectPath = conversation.workflow.projectPath
+        if (!projectPath) {
+          sendEvent('error', {
+            message: 'Workflow nao tem projectPath configurado. Configure o caminho do projeto no workflow.',
+          })
+          return
+        }
+
         const context = {
           conversationId: id,
           workflowId: conversation.workflowId,
           steps: conversation.workflow.steps,
-          projectPath: conversation.workflow.projectPath || process.cwd(),
+          projectPath,
         }
 
         if (conversation.workflow.type === 'sequential') {
@@ -110,10 +147,7 @@ export async function sendMessageStream(app: FastifyInstance) {
           message: error instanceof Error ? error.message : 'Unknown error',
         })
       } finally {
-        // Cleanup handlers
-        Object.entries(handlers).forEach(([event, handler]) => {
-          orchestratorEvents.off(event, handler)
-        })
+        cleanup()
         reply.raw.end()
       }
     }

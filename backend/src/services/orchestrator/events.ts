@@ -31,6 +31,7 @@ export interface StepCompleteEvent {
   content: string
   sessionId?: string
   finished: boolean
+  needsUserInput?: boolean
 }
 
 export interface StepErrorEvent {

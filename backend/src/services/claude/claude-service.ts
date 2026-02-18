@@ -1,4 +1,5 @@
 import { spawn, ChildProcess } from 'child_process'
+import { existsSync } from 'fs'
 import { StreamParser, type StreamEvent, type Action } from './stream-parser.js'
 import { sessionManager } from './session-manager.js'
 
@@ -14,12 +15,19 @@ export interface ExecuteOptions {
   onEvent?: (event: StreamEvent) => void
 }
 
+// Tools that require user input - when detected, we kill the process
+// so the user can answer before Claude continues with auto-answers
+const USER_INPUT_TOOLS = new Set([
+  'AskUserQuestion',
+])
+
 export interface ExecuteResult {
   content: string
   sessionId: string | null
   actions: Action[]
   timedOut: boolean
   cancelled: boolean
+  needsUserInput: boolean
   error?: string
 }
 
@@ -47,6 +55,7 @@ export class ClaudeService {
     let actions: Action[] = []
     let timedOut = false
     let cancelled = false
+    let needsUserInput = false
     let error: string | undefined
     let rawStdout = ''
     let rawStderr = ''
@@ -60,8 +69,22 @@ export class ClaudeService {
       initialContext = await sessionManager.getInitialContext(conversationId)
     }
 
-    // Build command arguments
-    const args = ['--print', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions']
+    // Build the full message with context
+    let fullMessage = message
+    if (initialContext.length > 0 && !existingSessionId) {
+      const contextStr = initialContext
+        .map((m) => `${m.role === 'user' ? 'Usuario' : 'Assistente'}: ${m.content}`)
+        .join('\n\n')
+      fullMessage = `Contexto anterior:\n${contextStr}\n\n---\n\nMensagem atual: ${message}`
+    }
+
+    // Build command arguments - DO NOT use shell:true, pass args as array
+    const args = [
+      '--print',
+      '--output-format', 'stream-json',
+      '--verbose',
+      '--dangerously-skip-permissions',
+    ]
 
     if (existingSessionId) {
       args.push('--resume', existingSessionId)
@@ -75,19 +98,16 @@ export class ClaudeService {
       args.push('--model', model)
     }
 
-    // Build the full message with context
-    let fullMessage = message
-    if (initialContext.length > 0 && !existingSessionId) {
-      const contextStr = initialContext
-        .map((m) => `${m.role === 'user' ? 'Usuario' : 'Assistente'}: ${m.content}`)
-        .join('\n\n')
-      fullMessage = `Contexto anterior:\n${contextStr}\n\n---\n\nMensagem atual: ${message}`
-    }
-
+    // The message is the last positional argument
     args.push(fullMessage)
 
-    // Set environment - remove all Claude Code env vars to allow nested sessions
-    const env = { ...process.env }
+    // Set environment - remove Claude Code internal env vars to allow nested sessions
+    const env: Record<string, string> = {}
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) {
+        env[key] = value
+      }
+    }
     delete env.CLAUDECODE
     delete env.CLAUDE_CODE_ENTRYPOINT
 
@@ -95,19 +115,39 @@ export class ClaudeService {
       env.ANTHROPIC_BASE_URL = baseUrl
     }
 
+    // Validate and resolve projectPath
+    const resolvedCwd = projectPath || process.cwd()
+    if (projectPath && !existsSync(projectPath)) {
+      return {
+        content: '',
+        sessionId: null,
+        actions: [],
+        timedOut: false,
+        cancelled: false,
+        needsUserInput: false,
+        error: `O diretorio do projeto nao existe: ${projectPath}. Verifique o projectPath do workflow.`,
+      }
+    }
+
+    // Resolve the claude binary path
+    const claudeBin = process.env.CLAUDE_BIN || 'claude'
+
     // Log full execution details
     const logPrefix = `[Claude][${processId.substring(0, 8)}]`
     console.log(`${logPrefix} ========== EXECUTION START ==========`)
-    console.log(`${logPrefix} CWD: ${projectPath || process.cwd()}`)
+    console.log(`${logPrefix} CWD: ${resolvedCwd}`)
+    console.log(`${logPrefix} Binary: ${claudeBin}`)
     console.log(`${logPrefix} Session: ${existingSessionId || 'new'}`)
-    console.log(`${logPrefix} Base URL: ${baseUrl || 'default (no override)'}`)
+    console.log(`${logPrefix} Base URL: ${baseUrl || env.ANTHROPIC_BASE_URL || 'default'}`)
     console.log(`${logPrefix} Model: ${model || 'default'}`)
     console.log(`${logPrefix} Message length: ${fullMessage.length} chars`)
     console.log(`${logPrefix} System prompt: ${systemPrompt ? systemPrompt.substring(0, 100) + '...' : 'none'}`)
     console.log(`${logPrefix} ANTHROPIC_API_KEY set: ${!!env.ANTHROPIC_API_KEY}`)
     console.log(`${logPrefix} ANTHROPIC_AUTH_TOKEN set: ${!!env.ANTHROPIC_AUTH_TOKEN}`)
     console.log(`${logPrefix} ANTHROPIC_BASE_URL: ${env.ANTHROPIC_BASE_URL || 'not set'}`)
-    console.log(`${logPrefix} Args (sanitized): claude ${args.map(a => a.length > 80 ? a.substring(0, 80) + '...' : a).join(' ')}`)
+
+    const sanitizedArgs = args.map(a => a.length > 80 ? a.substring(0, 80) + '...' : a)
+    console.log(`${logPrefix} Args: ${claudeBin} ${sanitizedArgs.join(' ')}`)
 
     // Emit debug info through SSE so frontend can see it
     const emitDebug = (msg: string) => {
@@ -121,21 +161,24 @@ export class ClaudeService {
       })
     }
 
-    emitDebug(`Starting claude CLI - session: ${existingSessionId || 'new'}, baseUrl: ${baseUrl || 'default'}, model: ${model || 'default'}, apiKey: ${!!env.ANTHROPIC_API_KEY}, authToken: ${!!env.ANTHROPIC_AUTH_TOKEN}`)
+    emitDebug(`Starting claude CLI - cwd: ${resolvedCwd}, session: ${existingSessionId || 'new'}, baseUrl: ${baseUrl || env.ANTHROPIC_BASE_URL || 'default'}, model: ${model || 'default'}, apiKey: ${!!env.ANTHROPIC_API_KEY}, authToken: ${!!env.ANTHROPIC_AUTH_TOKEN}`)
 
     return new Promise((resolve) => {
-      const childProcess = spawn('claude', args, {
-        cwd: projectPath || undefined,
+      // Spawn WITHOUT shell:true - args are passed as an array which handles escaping
+      const childProcess = spawn(claudeBin, args, {
+        cwd: resolvedCwd,
         env,
         stdio: ['pipe', 'pipe', 'pipe'],
-        shell: true,
       })
 
       this.activeProcesses.set(processId, childProcess)
 
       emitDebug(`Process spawned PID: ${childProcess.pid}`)
 
-      // Timeout handling
+      // Close stdin immediately - we pass the message as a CLI argument, not via stdin
+      childProcess.stdin?.end()
+
+      // Timeout handling - reset on any stdout/stderr activity
       let lastActivity = Date.now()
       const timeoutCheck = setInterval(() => {
         const elapsed = Date.now() - lastActivity
@@ -143,11 +186,15 @@ export class ClaudeService {
           emitDebug(`TIMEOUT after ${Math.round(elapsed / 1000)}s of inactivity. stdout: ${rawStdout.length} chars, stderr: ${rawStderr.length} chars`)
           timedOut = true
           childProcess.kill('SIGTERM')
+          // Force kill after 5 seconds if SIGTERM doesn't work
+          setTimeout(() => {
+            try { childProcess.kill('SIGKILL') } catch { /* ignore */ }
+          }, 5000)
           clearInterval(timeoutCheck)
         }
       }, 5000)
 
-      // Handle stdout - log ALL raw data
+      // Handle stdout - parse NDJSON stream
       childProcess.stdout?.on('data', (data: Buffer) => {
         lastActivity = Date.now()
         const chunk = data.toString()
@@ -166,6 +213,17 @@ export class ClaudeService {
             emitDebug(`Got session ID: ${sessionId}`)
           } else if (event.type === 'action' && event.action) {
             actions.push(event.action)
+
+            // Detect tools that need user input - kill process immediately
+            // to prevent Claude from auto-answering and continuing
+            if (event.action.type === 'tool_use' && event.action.name && USER_INPUT_TOOLS.has(event.action.name)) {
+              needsUserInput = true
+              emitDebug(`${event.action.name} detected - killing process to wait for user input`)
+              childProcess.kill('SIGTERM')
+              setTimeout(() => {
+                try { childProcess.kill('SIGKILL') } catch { /* ignore */ }
+              }, 2000)
+            }
           } else if (event.type === 'error' && event.error) {
             error = event.error
             emitDebug(`Stream error: ${event.error}`)
@@ -175,7 +233,7 @@ export class ClaudeService {
         }
       })
 
-      // Handle stderr - log ALL raw data
+      // Handle stderr
       childProcess.stderr?.on('data', (data: Buffer) => {
         lastActivity = Date.now()
         const stderrContent = data.toString()
@@ -183,9 +241,15 @@ export class ClaudeService {
 
         console.log(`${logPrefix}[stderr] ${stderrContent}`)
 
-        // Check for errors
-        if (stderrContent.includes('Error') || stderrContent.includes('error')) {
-          error = stderrContent
+        // Check for actual errors (not just warnings/info)
+        const isActualError = stderrContent.includes('Error:') ||
+          stderrContent.includes('ENOENT') ||
+          stderrContent.includes('EACCES') ||
+          stderrContent.includes('Cannot find') ||
+          stderrContent.includes('Authentication') ||
+          stderrContent.includes('API key')
+        if (isActualError) {
+          error = stderrContent.trim()
         }
 
         onEvent?.({
@@ -208,7 +272,7 @@ export class ClaudeService {
         console.log(`${logPrefix} Content length: ${content.length} chars`)
         console.log(`${logPrefix} Session ID: ${sessionId}`)
         console.log(`${logPrefix} Actions count: ${actions.length}`)
-        console.log(`${logPrefix} Timed out: ${timedOut}, Cancelled: ${cancelled}`)
+        console.log(`${logPrefix} Timed out: ${timedOut}, Cancelled: ${cancelled}, Needs user input: ${needsUserInput}`)
         console.log(`${logPrefix} Raw stdout total: ${rawStdout.length} chars`)
         console.log(`${logPrefix} Raw stderr total: ${rawStderr.length} chars`)
 
@@ -224,22 +288,25 @@ export class ClaudeService {
           await sessionManager.saveSession(conversationId, stepId, sessionId)
         }
 
-        // Determine error - FIX: properly handle timeout and empty content cases
+        // Determine error
         let finalError: string | undefined
-        if (timedOut) {
-          finalError = `Timeout após ${this.timeout / 1000}s sem atividade. stderr: ${rawStderr.substring(0, 500) || 'vazio'}. stdout: ${rawStdout.substring(0, 200) || 'vazio'}`
+        if (needsUserInput) {
+          // Not an error - process was killed to wait for user input
+          finalError = undefined
+        } else if (timedOut) {
+          finalError = `Timeout apos ${this.timeout / 1000}s sem atividade. stderr: ${rawStderr.substring(0, 500) || 'vazio'}. stdout: ${rawStdout.substring(0, 200) || 'vazio'}`
         } else if (cancelled) {
           finalError = undefined
-        } else if (code !== 0) {
-          finalError = error || `Processo saiu com código ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
+        } else if (code !== null && code !== 0) {
+          finalError = error || `Processo saiu com codigo ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
         } else if (content.length === 0 && rawStdout.length === 0) {
-          finalError = `Processo completou mas não produziu output. Exit code: ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
+          finalError = `Processo completou mas nao produziu output. Exit code: ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
         } else if (content.length === 0 && rawStdout.length > 0) {
-          finalError = `Processo produziu output (${rawStdout.length} chars) mas parser não extraiu conteúdo. Raw: ${rawStdout.substring(0, 500)}`
+          finalError = `Processo produziu output (${rawStdout.length} chars) mas parser nao extraiu conteudo. Raw: ${rawStdout.substring(0, 500)}`
         }
 
         // If we have raw stdout but no parsed content, use raw as fallback
-        const finalContent = content || (rawStdout.length > 0 ? `[output não parseado]\n${rawStdout}` : '')
+        const finalContent = content || (rawStdout.length > 0 ? `[output nao parseado]\n${rawStdout}` : '')
 
         resolve({
           content: finalContent,
@@ -247,6 +314,7 @@ export class ClaudeService {
           actions,
           timedOut,
           cancelled,
+          needsUserInput,
           error: finalError,
         })
       })
@@ -265,6 +333,7 @@ export class ClaudeService {
           actions,
           timedOut: false,
           cancelled: false,
+          needsUserInput: false,
           error: `Erro ao iniciar processo: ${err.message}`,
         })
       })

@@ -10,7 +10,7 @@ interface ConversationsState {
   totalSteps: number
 
   // Step statuses
-  stepStatuses: Map<string, 'pending' | 'running' | 'completed' | 'error' | 'retry'>
+  stepStatuses: Map<string, 'pending' | 'running' | 'active' | 'completed' | 'error' | 'retry'>
 
   // Actions cache (persisted per message)
   actionsCache: Map<string, Action[]>
@@ -23,7 +23,7 @@ interface ConversationsState {
   clearStreaming: () => void
 
   setProgress: (stepIndex: number, totalSteps: number) => void
-  setStepStatus: (stepId: string, status: 'pending' | 'running' | 'completed' | 'error' | 'retry') => void
+  setStepStatus: (stepId: string, status: 'pending' | 'running' | 'active' | 'completed' | 'error' | 'retry') => void
   initStepStatuses: (steps: WorkflowStepSummary[]) => void
 
   cacheActions: (messageId: string, actions: Action[]) => void
@@ -68,7 +68,7 @@ export const useConversationsStore = create<ConversationsState>((set, get) => ({
 
   initStepStatuses: (steps) =>
     set(() => {
-      const statuses = new Map<string, 'pending' | 'running' | 'completed' | 'error' | 'retry'>()
+      const statuses = new Map<string, 'pending' | 'running' | 'active' | 'completed' | 'error' | 'retry'>()
       steps.forEach((step) => statuses.set(step.id, 'pending'))
       return { stepStatuses: statuses }
     }),

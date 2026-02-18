@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { MessageSquare } from 'lucide-react'
 import { MessageBubble } from './message-bubble'
@@ -23,12 +23,24 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
     useSSEStream({
       conversationId: conversation.id,
       onComplete: () => {
-        toast.success('Execucao concluida!')
+        if (conversation.workflow?.type === 'step_by_step') {
+          // Don't show "execution complete" for step_by_step - the chat continues
+        } else {
+          toast.success('Execucao concluida!')
+        }
       },
       onError: (error) => {
         toast.error(`Erro: ${error}`)
       },
     })
+
+  // Handle answers from AskUserQuestion cards
+  const handleSendAnswer = useCallback(
+    (answer: string) => {
+      sendMessage(answer, currentStepIndex)
+    },
+    [sendMessage, currentStepIndex]
+  )
 
   // Initialize step statuses
   useEffect(() => {
@@ -60,7 +72,11 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
         )}
 
         {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
+          <MessageBubble
+            key={message.id}
+            message={message}
+            onSendAnswer={!isStreaming ? handleSendAnswer : undefined}
+          />
         ))}
 
         {/* Streaming message */}

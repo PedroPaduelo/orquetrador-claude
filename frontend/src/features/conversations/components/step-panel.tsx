@@ -1,5 +1,5 @@
 import { cn } from '@/shared/lib/utils'
-import { Check, Loader2, AlertCircle, RotateCcw, ChevronRight, SkipForward } from 'lucide-react'
+import { Check, Loader2, AlertCircle, RotateCcw, ChevronRight, SkipForward, MessageCircle } from 'lucide-react'
 import { ScrollArea } from '@/shared/components/ui/scroll-area'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -79,9 +79,10 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
         <div className="p-2 space-y-1">
           {steps.map((step, index) => {
             const status = stepStatuses.get(step.id) || 'pending'
-            const isActive = index === currentStepIndex && isExecuting
+            const isExecutingStep = index === currentStepIndex && isExecuting
             const isCompleted = status === 'completed' || index < currentStepIndex
             const isCurrent = index === currentStepIndex
+            const isActiveChat = status === 'active' && isCurrent
 
             return (
               <div
@@ -98,16 +99,19 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
                   className={cn(
                     'flex items-center justify-center w-8 h-8 rounded-full border-2 flex-shrink-0 transition-all',
                     isCompleted && 'bg-primary border-primary text-primary-foreground',
-                    isActive && 'border-primary animate-pulse',
+                    isExecutingStep && 'border-primary animate-pulse',
+                    isActiveChat && !isExecutingStep && 'bg-blue-500/20 border-blue-500',
                     status === 'error' && 'border-destructive bg-destructive/10',
                     status === 'retry' && 'border-yellow-500 bg-yellow-500/10',
-                    !isCompleted && !isActive && status !== 'error' && status !== 'retry' && 'border-muted-foreground/30'
+                    !isCompleted && !isExecutingStep && !isActiveChat && status !== 'error' && status !== 'retry' && 'border-muted-foreground/30'
                   )}
                 >
                   {isCompleted ? (
                     <Check className="h-4 w-4" />
-                  ) : isActive ? (
+                  ) : isExecutingStep ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isActiveChat ? (
+                    <MessageCircle className="h-4 w-4 text-blue-500" />
                   ) : status === 'error' ? (
                     <AlertCircle className="h-4 w-4 text-destructive" />
                   ) : status === 'retry' ? (
@@ -127,7 +131,8 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {isCompleted ? 'Concluido' :
-                     isActive ? 'Executando...' :
+                     isExecutingStep ? 'Executando...' :
+                     isActiveChat ? 'Em conversa' :
                      status === 'error' ? 'Erro' :
                      status === 'retry' ? 'Tentando novamente' :
                      'Pendente'}

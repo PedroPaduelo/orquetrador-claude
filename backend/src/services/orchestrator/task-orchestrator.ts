@@ -348,7 +348,7 @@ export class TaskOrchestrator {
         },
       })
 
-      // Handle errors
+      // Handle errors (but NOT needsUserInput - that's normal flow)
       if (result.error) {
         orchestratorEvents.emitStepError({
           executionId,
@@ -360,41 +360,38 @@ export class TaskOrchestrator {
         return
       }
 
-      // Save assistant message
-      const assistantMessage = await prisma.message.create({
-        data: {
-          conversationId,
-          stepId: step.id,
+      // Save assistant message (even if partial due to user input needed)
+      if (result.content) {
+        const assistantMessage = await prisma.message.create({
+          data: {
+            conversationId,
+            stepId: step.id,
+            role: 'assistant',
+            content: result.content,
+            metadata: JSON.stringify({
+              actions: result.actions,
+              sessionId: result.sessionId,
+              stepName: step.name,
+              stepOrder: stepIndex + 1,
+              needsUserInput: result.needsUserInput,
+            }),
+          },
+        })
+
+        orchestratorEvents.emitMessageSaved({
+          executionId,
+          messageId: assistantMessage.id,
           role: 'assistant',
           content: result.content,
-          metadata: JSON.stringify({
-            actions: result.actions,
-            sessionId: result.sessionId,
-            stepName: step.name,
-            stepOrder: stepIndex + 1,
-          }),
-        },
-      })
-
-      orchestratorEvents.emitMessageSaved({
-        executionId,
-        messageId: assistantMessage.id,
-        role: 'assistant',
-        content: result.content,
-        stepId: step.id,
-        metadata: { sessionId: result.sessionId },
-      })
-
-      // Update conversation current step
-      const nextStepIndex = stepIndex + 1
-      if (nextStepIndex < steps.length) {
-        await prisma.conversation.update({
-          where: { id: conversationId },
-          data: { currentStepId: steps[nextStepIndex].id },
+          stepId: step.id,
+          metadata: { sessionId: result.sessionId, needsUserInput: result.needsUserInput },
         })
       }
 
-      // Emit completion
+      // Do NOT auto-advance currentStepId - the user controls step advancement
+      // via the advance-step endpoint. Each step is an open chat session.
+
+      // Emit step complete (this message round-trip is done, but the step stays active)
       orchestratorEvents.emitStepComplete({
         executionId,
         stepId: step.id,
@@ -402,7 +399,8 @@ export class TaskOrchestrator {
         stepOrder: stepIndex + 1,
         content: result.content,
         sessionId: result.sessionId || undefined,
-        finished: nextStepIndex >= steps.length,
+        finished: false, // step_by_step: never auto-finish, user controls advancement
+        needsUserInput: result.needsUserInput,
       })
 
       await executionStateManager.markCompleted(executionId)

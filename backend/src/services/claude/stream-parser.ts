@@ -25,9 +25,9 @@ export class StreamParser {
     this.buffer += chunk
     const events: StreamEvent[] = []
 
-    // Split by newlines and process each line
+    // Split by newlines and process each complete line
     const lines = this.buffer.split('\n')
-    this.buffer = lines.pop() || '' // Keep incomplete line in buffer
+    this.buffer = lines.pop() || '' // Keep incomplete last line in buffer
 
     for (const line of lines) {
       const trimmedLine = line.trim()
@@ -38,7 +38,7 @@ export class StreamParser {
         const parsedEvents = this.parseJsonEvent(data)
         events.push(...parsedEvents)
       } catch {
-        // Not JSON, might be raw output
+        // Not valid JSON - might be raw text output
         if (trimmedLine) {
           events.push({ type: 'content', content: trimmedLine })
         }
@@ -54,12 +54,13 @@ export class StreamParser {
     if (!data || typeof data !== 'object') return events
 
     const obj = data as Record<string, unknown>
+    const type = obj.type as string
 
     // Log every JSON event type for debugging
-    console.log(`[StreamParser] Event type: ${obj.type}${obj.subtype ? '/' + obj.subtype : ''} keys: ${Object.keys(obj).join(',')}`)
+    console.log(`[StreamParser] Event type: ${type}${obj.subtype ? '/' + obj.subtype : ''} keys: ${Object.keys(obj).join(',')}`)
 
-    // Handle system events (init, etc.) - these contain session_id too
-    if (obj.type === 'system') {
+    // ---- system events (init, compact_boundary) ----
+    if (type === 'system') {
       if (obj.session_id) {
         events.push({
           type: 'session',
@@ -69,8 +70,8 @@ export class StreamParser {
       return events
     }
 
-    // Handle result event (final event, contains session ID and cost info)
-    if (obj.type === 'result') {
+    // ---- result event (terminal event with metrics) ----
+    if (type === 'result') {
       if (obj.session_id) {
         events.push({
           type: 'session',
@@ -79,8 +80,11 @@ export class StreamParser {
       }
 
       // Check for error in result
-      if (obj.subtype === 'error' || obj.is_error) {
-        const errorMsg = (obj.error as string) || (obj.result as string) || 'Unknown error in result'
+      if (obj.subtype === 'error_during_execution' ||
+          obj.subtype === 'error_max_turns' ||
+          obj.subtype === 'error_max_budget_usd' ||
+          obj.is_error === true) {
+        const errorMsg = (obj.error as string) || (obj.result as string) || `Error: ${obj.subtype}`
         events.push({
           type: 'error',
           error: errorMsg,
@@ -97,13 +101,13 @@ export class StreamParser {
       return events
     }
 
-    // Handle assistant message
-    if (obj.type === 'assistant' && obj.message) {
+    // ---- assistant message (text + tool_use + thinking blocks) ----
+    if (type === 'assistant' && obj.message) {
       const message = obj.message as Record<string, unknown>
-      const content = message.content as Array<Record<string, unknown>>
+      const contentBlocks = message.content as Array<Record<string, unknown>>
 
-      if (Array.isArray(content)) {
-        for (const block of content) {
+      if (Array.isArray(contentBlocks)) {
+        for (const block of contentBlocks) {
           if (block.type === 'text' && block.text) {
             events.push({
               type: 'content',
@@ -138,13 +142,13 @@ export class StreamParser {
       return events
     }
 
-    // Handle user message (tool results)
-    if (obj.type === 'user' && obj.message) {
+    // ---- user message (tool results) ----
+    if (type === 'user' && obj.message) {
       const message = obj.message as Record<string, unknown>
-      const content = message.content as Array<Record<string, unknown>>
+      const contentBlocks = message.content as Array<Record<string, unknown>>
 
-      if (Array.isArray(content)) {
-        for (const block of content) {
+      if (Array.isArray(contentBlocks)) {
+        for (const block of contentBlocks) {
           if (block.type === 'tool_result') {
             events.push({
               type: 'action',
@@ -161,8 +165,46 @@ export class StreamParser {
       return events
     }
 
-    // Handle content block deltas (streaming)
-    if (obj.type === 'content_block_delta' && obj.delta) {
+    // ---- stream_event (token-level streaming with --include-partial-messages) ----
+    if (type === 'stream_event' && obj.event) {
+      const event = obj.event as Record<string, unknown>
+
+      // content_block_delta - incremental text/tool_input/thinking
+      if (event.type === 'content_block_delta' && event.delta) {
+        const delta = event.delta as Record<string, unknown>
+        if (delta.type === 'text_delta' && delta.text) {
+          events.push({
+            type: 'content',
+            content: delta.text as string,
+          })
+        } else if (delta.type === 'thinking_delta' && delta.thinking) {
+          events.push({
+            type: 'action',
+            action: {
+              type: 'thinking',
+              content: delta.thinking as string,
+            },
+          })
+        }
+      }
+
+      // content_block_start - beginning of a tool_use block
+      if (event.type === 'content_block_start') {
+        const contentBlock = event.content_block as Record<string, unknown> | undefined
+        if (contentBlock?.type === 'tool_use') {
+          this.currentToolUse = {
+            name: contentBlock.name as string,
+            input: '',
+            id: contentBlock.id as string,
+          }
+        }
+      }
+
+      return events
+    }
+
+    // ---- content_block_delta (direct, not wrapped in stream_event) ----
+    if (type === 'content_block_delta' && obj.delta) {
       const delta = obj.delta as Record<string, unknown>
       if (delta.type === 'text_delta' && delta.text) {
         events.push({
@@ -173,23 +215,13 @@ export class StreamParser {
       return events
     }
 
-    // Handle stream_event wrapper (when using --include-partial-messages or newer CLI versions)
-    if (obj.type === 'stream_event' && obj.event) {
-      const event = obj.event as Record<string, unknown>
-      if (event.type === 'content_block_delta' && event.delta) {
-        const delta = event.delta as Record<string, unknown>
-        if (delta.type === 'text_delta' && delta.text) {
-          events.push({
-            type: 'content',
-            content: delta.text as string,
-          })
-        }
-      }
+    // ---- progress events (hook progress, etc.) - ignore silently ----
+    if (type === 'progress') {
       return events
     }
 
-    // Unknown event type - log it
-    console.log(`[StreamParser] Unhandled event type: ${obj.type}, full: ${JSON.stringify(obj).substring(0, 300)}`)
+    // Unknown event type - log but don't treat as error
+    console.log(`[StreamParser] Unhandled event type: ${type}, keys: ${Object.keys(obj).join(',')}`)
 
     return events
   }

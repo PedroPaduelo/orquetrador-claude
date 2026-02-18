@@ -115,7 +115,9 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           break
 
         case 'step_complete':
-          setStepStatus(data.stepId as string, 'completed')
+          // Mark as 'active' (not 'completed') - the step stays open for more messages.
+          // Steps only become 'completed' when the user advances past them.
+          setStepStatus(data.stepId as string, 'active')
           break
 
         case 'step_error':
