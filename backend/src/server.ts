@@ -53,6 +53,51 @@ import {
   previewSmartNotesContext,
 } from './http/routes/smart-notes/index.js'
 
+// MCP Servers routes
+import {
+  listMcpServers,
+  createMcpServer,
+  getMcpServer,
+  updateMcpServer,
+  deleteMcpServer,
+  testMcpServer,
+  toggleMcpServer,
+} from './http/routes/mcp-servers/index.js'
+
+// Skills routes
+import {
+  listSkills,
+  createSkill,
+  getSkill,
+  updateSkill,
+  deleteSkill,
+  toggleSkill,
+} from './http/routes/skills/index.js'
+
+// Agents routes
+import {
+  listAgents,
+  createAgent,
+  getAgent,
+  updateAgent,
+  deleteAgent,
+  toggleAgent,
+} from './http/routes/agents/index.js'
+
+// Plugins routes
+import {
+  listPlugins,
+  installPlugin,
+  deletePlugin,
+  togglePlugin,
+} from './http/routes/plugins/index.js'
+
+// Settings routes
+import {
+  getSettings,
+  updateSettings,
+} from './http/routes/settings/index.js'
+
 // Health routes
 import { healthCheck } from './http/routes/health/index.js'
 
@@ -109,6 +154,11 @@ async function registerPlugins() {
         { name: 'Conversations', description: 'Conversation management' },
         { name: 'Messages', description: 'Message handling and streaming' },
         { name: 'Smart Notes', description: 'Smart Notes integration' },
+        { name: 'MCP Servers', description: 'MCP Server management' },
+        { name: 'Skills', description: 'Skills management' },
+        { name: 'Agents', description: 'Agents management' },
+        { name: 'Plugins', description: 'Plugin management' },
+        { name: 'Settings', description: 'Application settings' },
       ],
     },
     transform: jsonSchemaTransform,
@@ -155,6 +205,41 @@ async function registerRoutes() {
   await app.register(searchSmartNotes)
   await app.register(getSmartNote)
   await app.register(previewSmartNotesContext)
+
+  // MCP Servers
+  await app.register(listMcpServers)
+  await app.register(createMcpServer)
+  await app.register(getMcpServer)
+  await app.register(updateMcpServer)
+  await app.register(deleteMcpServer)
+  await app.register(testMcpServer)
+  await app.register(toggleMcpServer)
+
+  // Skills
+  await app.register(listSkills)
+  await app.register(createSkill)
+  await app.register(getSkill)
+  await app.register(updateSkill)
+  await app.register(deleteSkill)
+  await app.register(toggleSkill)
+
+  // Agents
+  await app.register(listAgents)
+  await app.register(createAgent)
+  await app.register(getAgent)
+  await app.register(updateAgent)
+  await app.register(deleteAgent)
+  await app.register(toggleAgent)
+
+  // Plugins
+  await app.register(listPlugins)
+  await app.register(installPlugin)
+  await app.register(deletePlugin)
+  await app.register(togglePlugin)
+
+  // Settings
+  await app.register(getSettings)
+  await app.register(updateSettings)
 }
 
 // Start server

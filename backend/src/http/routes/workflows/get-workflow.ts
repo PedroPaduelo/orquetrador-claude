@@ -35,6 +35,9 @@ export async function getWorkflow(app: FastifyInstance) {
               maxRetries: z.number(),
               backend: z.string(),
               model: z.string().nullable(),
+              mcpServerIds: z.array(z.string()),
+              skillIds: z.array(z.string()),
+              agentIds: z.array(z.string()),
             })),
             createdAt: z.string(),
             updatedAt: z.string(),
@@ -50,6 +53,11 @@ export async function getWorkflow(app: FastifyInstance) {
         include: {
           steps: {
             orderBy: { stepOrder: 'asc' },
+            include: {
+              mcpServers: { select: { serverId: true } },
+              skills: { select: { skillId: true } },
+              agents: { select: { agentId: true } },
+            },
           },
         },
       })
@@ -77,6 +85,9 @@ export async function getWorkflow(app: FastifyInstance) {
           maxRetries: s.maxRetries,
           backend: s.backend,
           model: s.model,
+          mcpServerIds: s.mcpServers.map((m) => m.serverId),
+          skillIds: s.skills.map((sk) => sk.skillId),
+          agentIds: s.agents.map((a) => a.agentId),
         })),
         createdAt: workflow.createdAt.toISOString(),
         updatedAt: workflow.updatedAt.toISOString(),

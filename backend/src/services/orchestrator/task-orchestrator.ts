@@ -4,6 +4,7 @@ import { conditionsEvaluator, type StepConditions } from './conditions-evaluator
 import { executionStateManager } from './execution-state.js'
 import { orchestratorEvents } from './events.js'
 import { smartNotesService } from '../smart-notes/context-builder.js'
+import { fileSyncService } from '../file-sync/file-sync-service.js'
 import type { WorkflowStep } from '@prisma/client'
 
 export interface ExecutionContext {
@@ -88,6 +89,14 @@ export class TaskOrchestrator {
         // Build system prompt with Smart Notes
         const systemPrompt = await smartNotesService.buildSystemPrompt(step)
 
+        // Sync files (skills, agents, .mcp.json) for this step
+        if (projectPath) {
+          await fileSyncService.syncForStep(projectPath, step.id)
+        }
+
+        // Get HTTP/SSE MCP servers for CLI flags
+        const httpServers = await fileSyncService.getHttpServersForStep(step.id)
+
         // Execute Claude
         const result = await claudeService.execute({
           conversationId,
@@ -98,6 +107,7 @@ export class TaskOrchestrator {
           projectPath,
           backend: step.backend || 'claude',
           model: step.model || undefined,
+          mcpServers: httpServers,
           onEvent: (event) => {
             if (event.type === 'content' && event.content) {
               orchestratorEvents.emitStepStream({
@@ -322,6 +332,14 @@ export class TaskOrchestrator {
       // Build system prompt
       const systemPrompt = await smartNotesService.buildSystemPrompt(step)
 
+      // Sync files (skills, agents, .mcp.json) for this step
+      if (projectPath) {
+        await fileSyncService.syncForStep(projectPath, step.id)
+      }
+
+      // Get HTTP/SSE MCP servers for CLI flags
+      const httpServers = await fileSyncService.getHttpServersForStep(step.id)
+
       // Execute Claude
       const result = await claudeService.execute({
         conversationId,
@@ -332,6 +350,7 @@ export class TaskOrchestrator {
         projectPath,
         backend: step.backend || 'claude',
         model: step.model || undefined,
+        mcpServers: httpServers,
         onEvent: (event) => {
           if (event.type === 'content' && event.content) {
             orchestratorEvents.emitStepStream({

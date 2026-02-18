@@ -26,6 +26,9 @@ const defaultStep: WorkflowStep = {
   memoryNoteIds: [],
   conditions: { rules: [], default: 'next' },
   maxRetries: 0,
+  mcpServerIds: [],
+  skillIds: [],
+  agentIds: [],
 }
 
 export const useWorkflowsStore = create<WorkflowsState>((set) => ({

@@ -22,6 +22,9 @@ export interface WorkflowStep {
   memoryNoteIds: string[]
   conditions: StepConditions
   maxRetries: number
+  mcpServerIds: string[]
+  skillIds: string[]
+  agentIds: string[]
 }
 
 export interface StepConditions {

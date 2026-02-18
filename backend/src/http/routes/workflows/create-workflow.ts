@@ -23,6 +23,9 @@ const stepSchema = z.object({
   maxRetries: z.number().default(0),
   backend: z.enum(['claude', 'api']).default('claude'),
   model: z.string().optional(),
+  mcpServerIds: z.array(z.string()).default([]),
+  skillIds: z.array(z.string()).default([]),
+  agentIds: z.array(z.string()).default([]),
 })
 
 export async function createWorkflow(app: FastifyInstance) {
@@ -73,6 +76,15 @@ export async function createWorkflow(app: FastifyInstance) {
               maxRetries: step.maxRetries,
               backend: step.backend,
               model: step.model,
+              mcpServers: {
+                create: step.mcpServerIds.map((serverId) => ({ serverId })),
+              },
+              skills: {
+                create: step.skillIds.map((skillId) => ({ skillId })),
+              },
+              agents: {
+                create: step.agentIds.map((agentId) => ({ agentId })),
+              },
             })),
           },
         },

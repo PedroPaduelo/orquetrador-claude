@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, Server, Sparkles, Bot } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
@@ -14,8 +14,13 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { Badge } from '@/shared/components/ui/badge'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/components/ui/collapsible'
 import { useWorkflowsStore } from '../store'
 import { useCreateWorkflow, useUpdateWorkflow } from '../hooks/use-workflows'
+import { useMcpServers } from '@/features/mcp-servers/hooks/use-mcp-servers'
+import { useSkills } from '@/features/skills/hooks/use-skills'
+import { useAgents } from '@/features/agents/hooks/use-agents'
 import type { WorkflowInput } from '../types'
 
 const formSchema = z.object({
@@ -33,6 +38,11 @@ export function WorkflowForm() {
 
   const createMutation = useCreateWorkflow()
   const updateMutation = useUpdateWorkflow()
+
+  // Fetch available resources for assignment
+  const { data: mcpServers } = useMcpServers()
+  const { data: skills } = useSkills()
+  const { data: agents } = useAgents()
 
   const {
     register,
@@ -64,6 +74,9 @@ export function WorkflowForm() {
         memoryNoteIds: step.memoryNoteIds,
         conditions: step.conditions,
         maxRetries: step.maxRetries,
+        mcpServerIds: step.mcpServerIds,
+        skillIds: step.skillIds,
+        agentIds: step.agentIds,
       })),
     }
 
@@ -194,6 +207,109 @@ export function WorkflowForm() {
                     onChange={(e) => updateStep(index, { maxRetries: parseInt(e.target.value) || 0 })}
                   />
                 </div>
+
+                {/* Resource Assignment Sections */}
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1">
+                    <ChevronDown className="h-3 w-3" />
+                    <Server className="h-3 w-3" />
+                    MCP Servers
+                    {step.mcpServerIds.length > 0 && (
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0">{step.mcpServerIds.length}</Badge>
+                    )}
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {mcpServers?.filter((s) => s.enabled).map((server) => (
+                        <label key={server.id} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 rounded border hover:bg-muted/50 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={step.mcpServerIds.includes(server.id)}
+                            onChange={(e) => {
+                              const ids = e.target.checked
+                                ? [...step.mcpServerIds, server.id]
+                                : step.mcpServerIds.filter((id) => id !== server.id)
+                              updateStep(index, { mcpServerIds: ids })
+                            }}
+                            className="rounded"
+                          />
+                          {server.name}
+                        </label>
+                      ))}
+                      {(!mcpServers || mcpServers.filter((s) => s.enabled).length === 0) && (
+                        <p className="text-xs text-muted-foreground">Nenhum servidor disponivel</p>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1">
+                    <ChevronDown className="h-3 w-3" />
+                    <Sparkles className="h-3 w-3" />
+                    Skills
+                    {step.skillIds.length > 0 && (
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0">{step.skillIds.length}</Badge>
+                    )}
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {skills?.filter((s) => s.enabled).map((skill) => (
+                        <label key={skill.id} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 rounded border hover:bg-muted/50 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={step.skillIds.includes(skill.id)}
+                            onChange={(e) => {
+                              const ids = e.target.checked
+                                ? [...step.skillIds, skill.id]
+                                : step.skillIds.filter((id) => id !== skill.id)
+                              updateStep(index, { skillIds: ids })
+                            }}
+                            className="rounded"
+                          />
+                          {skill.name}
+                        </label>
+                      ))}
+                      {(!skills || skills.filter((s) => s.enabled).length === 0) && (
+                        <p className="text-xs text-muted-foreground">Nenhuma skill disponivel</p>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1">
+                    <ChevronDown className="h-3 w-3" />
+                    <Bot className="h-3 w-3" />
+                    Agents
+                    {step.agentIds.length > 0 && (
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0">{step.agentIds.length}</Badge>
+                    )}
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {agents?.filter((a) => a.enabled).map((agent) => (
+                        <label key={agent.id} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 rounded border hover:bg-muted/50 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={step.agentIds.includes(agent.id)}
+                            onChange={(e) => {
+                              const ids = e.target.checked
+                                ? [...step.agentIds, agent.id]
+                                : step.agentIds.filter((id) => id !== agent.id)
+                              updateStep(index, { agentIds: ids })
+                            }}
+                            className="rounded"
+                          />
+                          {agent.name}
+                        </label>
+                      ))}
+                      {(!agents || agents.filter((a) => a.enabled).length === 0) && (
+                        <p className="text-xs text-muted-foreground">Nenhum agent disponivel</p>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </CardContent>
             </Card>
           ))}

@@ -25,6 +25,9 @@ const stepSchema = z.object({
   maxRetries: z.number().default(0),
   backend: z.enum(['claude', 'api']).default('claude'),
   model: z.string().optional(),
+  mcpServerIds: z.array(z.string()).default([]),
+  skillIds: z.array(z.string()).default([]),
+  agentIds: z.array(z.string()).default([]),
 })
 
 export async function updateWorkflow(app: FastifyInstance) {
@@ -67,6 +70,12 @@ export async function updateWorkflow(app: FastifyInstance) {
 
       // If steps are provided, delete existing and recreate
       if (steps) {
+        // Delete join table entries first, then steps
+        const existingSteps = await prisma.workflowStep.findMany({ where: { workflowId: id }, select: { id: true } })
+        const stepIds = existingSteps.map((s) => s.id)
+        await prisma.workflowStepMcpServer.deleteMany({ where: { stepId: { in: stepIds } } })
+        await prisma.workflowStepSkill.deleteMany({ where: { stepId: { in: stepIds } } })
+        await prisma.workflowStepAgent.deleteMany({ where: { stepId: { in: stepIds } } })
         await prisma.workflowStep.deleteMany({ where: { workflowId: id } })
       }
 
@@ -91,6 +100,15 @@ export async function updateWorkflow(app: FastifyInstance) {
                 maxRetries: step.maxRetries,
                 backend: step.backend,
                 model: step.model,
+                mcpServers: {
+                  create: step.mcpServerIds.map((serverId) => ({ serverId })),
+                },
+                skills: {
+                  create: step.skillIds.map((skillId) => ({ skillId })),
+                },
+                agents: {
+                  create: step.agentIds.map((agentId) => ({ agentId })),
+                },
               })),
             },
           }),

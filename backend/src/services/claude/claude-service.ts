@@ -3,6 +3,11 @@ import { existsSync } from 'fs'
 import { StreamParser, type StreamEvent, type Action } from './stream-parser.js'
 import { sessionManager } from './session-manager.js'
 
+export interface McpServerRef {
+  type: string
+  uri?: string | null
+}
+
 export interface ExecuteOptions {
   conversationId: string
   stepId: string
@@ -12,6 +17,7 @@ export interface ExecuteOptions {
   projectPath?: string
   backend?: string
   model?: string
+  mcpServers?: McpServerRef[]
   onEvent?: (event: StreamEvent) => void
 }
 
@@ -96,6 +102,15 @@ export class ClaudeService {
 
     if (model) {
       args.push('--model', model)
+    }
+
+    // Add MCP server URIs for HTTP/SSE servers
+    if (options.mcpServers) {
+      for (const server of options.mcpServers) {
+        if ((server.type === 'http' || server.type === 'sse') && server.uri) {
+          args.push('--mcp-server-uri', server.uri)
+        }
+      }
     }
 
     // The message is the last positional argument

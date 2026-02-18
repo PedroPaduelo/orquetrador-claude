@@ -36,7 +36,7 @@ model WorkflowStep {
   systemPrompt       String? @map("system_prompt")
   systemPromptNoteId String? @map("system_prompt_note_id")
 
-  // Smart Notes arrays (stored as JSON in SQLite)
+  // Smart Notes arrays (stored as JSON)
   contextNoteIds String @default("[]") @map("context_note_ids")
   memoryNoteIds  String @default("[]") @map("memory_note_ids")
 
@@ -56,6 +56,11 @@ model WorkflowStep {
   conversationSessions ConversationSession[]
   currentConversations Conversation[]        @relation("CurrentStep")
   executionLogs        ExecutionLog[]
+
+  // Join tables for MCP/Skills/Agents
+  mcpServers WorkflowStepMcpServer[]
+  skills     WorkflowStepSkill[]
+  agents     WorkflowStepAgent[]
 
   @@index([workflowId])
   @@map("workflow_steps")
@@ -167,4 +172,150 @@ model ExecutionLog {
   @@index([executionId])
   @@index([conversationId])
   @@map("execution_logs")
+}
+
+// ============================================
+// MCP SERVERS
+// ============================================
+model McpServer {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  type        String   @default("http") // http | sse | stdio
+  uri         String?
+  command     String?
+  args        String   @default("[]")
+  envVars     String   @default("{}") @map("env_vars")
+  enabled     Boolean  @default(true)
+  isGlobal    Boolean  @default(true) @map("is_global")
+  toolsCache  String?  @map("tools_cache")
+  lastTestAt  DateTime? @map("last_test_at")
+  lastTestOk  Boolean?  @map("last_test_ok")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  stepServers WorkflowStepMcpServer[]
+  pluginId    String?  @map("plugin_id")
+  plugin      Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
+
+  @@map("mcp_servers")
+}
+
+// ============================================
+// SKILLS
+// ============================================
+model Skill {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  description  String?
+  frontmatter  String   @default("{}")
+  body         String   @default("")
+  allowedTools String   @default("[]") @map("allowed_tools")
+  model        String?
+  enabled      Boolean  @default(true)
+  isGlobal     Boolean  @default(true) @map("is_global")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  stepSkills WorkflowStepSkill[]
+  pluginId   String?  @map("plugin_id")
+  plugin     Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
+
+  @@map("skills")
+}
+
+// ============================================
+// AGENTS
+// ============================================
+model Agent {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  description     String?
+  systemPrompt    String   @default("") @map("system_prompt")
+  tools           String   @default("[]")
+  disallowedTools String   @default("[]") @map("disallowed_tools")
+  model           String?
+  permissionMode  String   @default("default") @map("permission_mode")
+  maxTurns        Int?     @map("max_turns")
+  skills          String   @default("[]")
+  enabled         Boolean  @default(true)
+  isGlobal        Boolean  @default(true) @map("is_global")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  stepAgents WorkflowStepAgent[]
+  pluginId   String?  @map("plugin_id")
+  plugin     Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
+
+  @@map("agents")
+}
+
+// ============================================
+// PLUGINS
+// ============================================
+model Plugin {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  version     String?
+  author      String?
+  manifest    String   @default("{}")
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  mcpServers McpServer[]
+  skills     Skill[]
+  agents     Agent[]
+
+  @@map("plugins")
+}
+
+// ============================================
+// APP SETTINGS
+// ============================================
+model AppSettings {
+  id                 String   @id @default("singleton")
+  defaultModel       String?  @map("default_model")
+  defaultProjectPath String?  @map("default_project_path")
+  claudeBinPath      String?  @map("claude_bin_path")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+// ============================================
+// JOIN TABLES
+// ============================================
+model WorkflowStepMcpServer {
+  id       String       @id @default(uuid())
+  stepId   String       @map("step_id")
+  serverId String       @map("server_id")
+  step     WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  server   McpServer    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([stepId, serverId])
+  @@map("workflow_step_mcp_servers")
+}
+
+model WorkflowStepSkill {
+  id      String       @id @default(uuid())
+  stepId  String       @map("step_id")
+  skillId String       @map("skill_id")
+  step    WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  skill   Skill        @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([stepId, skillId])
+  @@map("workflow_step_skills")
+}
+
+model WorkflowStepAgent {
+  id      String       @id @default(uuid())
+  stepId  String       @map("step_id")
+  agentId String       @map("agent_id")
+  step    WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  agent   Agent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([stepId, agentId])
+  @@map("workflow_step_agents")
 }
