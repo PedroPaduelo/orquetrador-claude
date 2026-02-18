@@ -63,19 +63,19 @@ export class ClaudeService {
     // Get existing session ID if any
     const existingSessionId = await sessionManager.getSession(conversationId, stepId)
 
-    // Get initial context if no existing session
-    let initialContext: Array<{ role: string; content: string }> = []
+    // Get user-selected context only on cold start (no session yet)
+    let selectedContext: Array<{ role: string; content: string }> = []
     if (!existingSessionId) {
-      initialContext = await sessionManager.getInitialContext(conversationId)
+      selectedContext = await sessionManager.getSelectedContext(conversationId)
     }
 
-    // Build the full message with compact context summary
+    // Build message: only include context if user explicitly selected messages
     let fullMessage = message
-    if (initialContext.length > 0 && !existingSessionId) {
-      const contextStr = initialContext
+    if (selectedContext.length > 0 && !existingSessionId) {
+      const contextStr = selectedContext
         .map((m) => `[${m.role === 'user' ? 'User' : 'Assistant'}]: ${m.content}`)
-        .join('\n')
-      fullMessage = `<context-summary>\n${contextStr}\n</context-summary>\n\n${message}`
+        .join('\n\n')
+      fullMessage = `<selected-context>\n${contextStr}\n</selected-context>\n\n${message}`
     }
 
     // Build command arguments - DO NOT use shell:true, pass args as array

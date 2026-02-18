@@ -49,28 +49,26 @@ export class SessionManager {
   }
 
   /**
-   * Get a compact summary of prior context instead of sending all messages.
-   * Only used when there's no existing Claude session to resume.
-   * Returns at most the last 3 exchanges (6 messages) truncated.
+   * Get context messages that the USER explicitly selected via selectedForContext toggle.
+   * Used only on cold start of a new step (no existing session to resume).
+   * Returns exactly what the user chose — no truncation, no limits.
    */
-  async getInitialContext(conversationId: string): Promise<Array<{ role: string; content: string }>> {
+  async getSelectedContext(conversationId: string): Promise<Array<{ role: string; content: string }>> {
     const messages = await prisma.message.findMany({
       where: {
         conversationId,
         selectedForContext: true,
       },
-      orderBy: { createdAt: 'desc' },
-      take: 6, // Last 3 exchanges max
+      orderBy: { createdAt: 'asc' },
       select: {
         role: true,
         content: true,
       },
     })
 
-    // Reverse to chronological order and truncate long messages
-    return messages.reverse().map((m) => ({
+    return messages.map((m) => ({
       role: m.role,
-      content: m.content.length > 500 ? m.content.substring(0, 500) + '...' : m.content,
+      content: m.content,
     }))
   }
 }
