@@ -1,6 +1,7 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import { toast } from 'sonner'
-import { Zap, Send } from 'lucide-react'
+import { Zap, Send, ArrowDown, MessageSquare } from 'lucide-react'
+import { Button } from '@/shared/components/ui/button'
 import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
 import { useSSEStream } from '../hooks/use-sse-stream'
@@ -11,9 +12,17 @@ interface ChatContainerProps {
   conversation: Conversation
 }
 
+const SUGGESTED_PROMPTS = [
+  'Analise a estrutura do projeto',
+  'Documente os arquivos principais',
+  'Identifique bugs potenciais',
+  'Sugira melhorias de performance',
+]
+
 export function ChatContainer({ conversation }: ChatContainerProps) {
   const chatRef = useRef<HTMLDivElement>(null)
   const { initStepStatuses } = useConversationsStore()
+  const [showScrollBtn, setShowScrollBtn] = useState(false)
 
   const steps = conversation.workflow?.steps || []
   const messages = conversation.messages || []
@@ -52,17 +61,34 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
   // Auto-scroll
   useEffect(() => {
     if (chatRef.current) {
-      chatRef.current.scrollTop = chatRef.current.scrollHeight
+      chatRef.current.scrollTo({
+        top: chatRef.current.scrollHeight,
+        behavior: 'smooth',
+      })
     }
   }, [messages, streamingContent])
+
+  // Track scroll position for scroll-to-bottom button
+  const handleScroll = useCallback(() => {
+    if (!chatRef.current) return
+    const { scrollTop, scrollHeight, clientHeight } = chatRef.current
+    setShowScrollBtn(scrollHeight - scrollTop - clientHeight > 200)
+  }, [])
+
+  const scrollToBottom = useCallback(() => {
+    chatRef.current?.scrollTo({
+      top: chatRef.current.scrollHeight,
+      behavior: 'smooth',
+    })
+  }, [])
 
   const isWorkflowFinished =
     conversation.workflow?.type === 'step_by_step' && currentStepIndex >= steps.length
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
       {/* Messages */}
-      <div ref={chatRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
+      <div ref={chatRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5">
         {messages.length === 0 && !isStreaming && (
           <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto">
             <div className="relative mb-6">
@@ -84,6 +110,20 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
               <Send className="h-3 w-3" />
               <span>Enter para enviar, Shift+Enter para nova linha</span>
             </div>
+
+            {/* Suggested prompts */}
+            <div className="flex flex-wrap justify-center gap-2 mt-6">
+              {SUGGESTED_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => sendMessage(prompt, currentStepIndex)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/50 bg-muted/30 hover:bg-muted/60 hover:border-primary/30 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <MessageSquare className="h-3 w-3" />
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -95,8 +135,8 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
           />
         ))}
 
-        {/* Streaming message */}
-        {isStreaming && streamingContent && (
+        {/* Streaming message - show even without content for thinking indicator */}
+        {isStreaming && (
           <MessageBubble
             message={{
               id: 'streaming',
@@ -108,6 +148,18 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
           />
         )}
       </div>
+
+      {/* Scroll to bottom - absolute, no layout impact */}
+      {showScrollBtn && (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={scrollToBottom}
+          className="absolute bottom-20 right-6 rounded-full shadow-lg z-10 h-8 w-8 p-0"
+        >
+          <ArrowDown className="h-4 w-4" />
+        </Button>
+      )}
 
       {/* Input */}
       <MessageInput

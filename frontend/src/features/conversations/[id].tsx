@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Trash2, PanelRightOpen, PanelRightClose, FolderOpen, Workflow } from 'lucide-react'
+import { ArrowLeft, Trash2, PanelRightOpen, PanelRightClose, FolderOpen } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -15,12 +15,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/shared/components/ui/alert-dialog'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/shared/components/ui/tooltip'
 import { ChatContainer } from './components/chat-container'
 import { StepPanel } from './components/step-panel'
 import { useConversation, useDeleteConversation } from './hooks/use-conversations'
@@ -57,6 +51,7 @@ export default function ConversationDetailPage() {
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
         </div>
       </div>
     )
@@ -79,57 +74,41 @@ export default function ConversationDetailPage() {
 
   const steps = conversation.workflow?.steps || []
   const currentStepIndex = conversation.currentStepIndex || 0
-  const isStreaming =
-    stepStatuses.size > 0 &&
-    Array.from(stepStatuses.values()).some((s) => s === 'running')
+  const isStreaming = stepStatuses.size > 0 && Array.from(stepStatuses.values()).some(s => s === 'running')
 
   return (
     <div className="flex h-full">
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="border-b border-border/50 bg-background/80 backdrop-blur-md px-4 py-2.5 shrink-0 z-10">
+        <header className="border-b bg-background/95 backdrop-blur-sm px-4 py-3 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => navigate('/conversations')}
-                      className="shrink-0 h-8 w-8 rounded-lg"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Voltar</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/conversations')}
+                className="shrink-0 h-8 w-8"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
 
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h1 className="font-semibold truncate text-sm">
                     {conversation.title || 'Conversa sem título'}
                   </h1>
-                  {conversation.workflow?.type === 'step_by_step' &&
-                    steps.length > 0 && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] shrink-0 h-5 px-2 font-mono border-primary/20"
-                      >
-                        {Math.min(currentStepIndex + 1, steps.length)}/{steps.length}
-                      </Badge>
-                    )}
+                  {conversation.workflow?.type === 'step_by_step' && steps.length > 0 && (
+                    <Badge variant="outline" className="text-[10px] shrink-0 h-5 px-2">
+                      Step {currentStepIndex + 1}/{steps.length}
+                    </Badge>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground/70">
-                  <span className="flex items-center gap-1 truncate">
-                    <Workflow className="h-3 w-3 shrink-0" />
-                    {conversation.workflow?.name || 'Workflow'}
-                  </span>
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="truncate">{conversation.workflow?.name || 'Workflow'}</span>
                   {conversation.workflow?.projectPath && (
                     <>
-                      <span className="text-border">·</span>
+                      <span className="text-border">|</span>
                       <span className="flex items-center gap-1 truncate">
                         <FolderOpen className="h-3 w-3 shrink-0" />
                         {conversation.workflow.projectPath}
@@ -141,40 +120,23 @@ export default function ConversationDetailPage() {
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
-              {steps.length > 0 && (
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowStepPanel(!showStepPanel)}
-                        className={cn(
-                          'h-8 w-8 rounded-lg',
-                          showStepPanel && 'bg-muted/50'
-                        )}
-                      >
-                        {showStepPanel ? (
-                          <PanelRightClose className="h-4 w-4" />
-                        ) : (
-                          <PanelRightOpen className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      {showStepPanel ? 'Ocultar steps' : 'Mostrar steps'}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowStepPanel(!showStepPanel)}
+                title={showStepPanel ? 'Ocultar steps' : 'Mostrar steps'}
+                className="h-8 w-8"
+              >
+                {showStepPanel ? (
+                  <PanelRightClose className="h-4 w-4" />
+                ) : (
+                  <PanelRightOpen className="h-4 w-4" />
+                )}
+              </Button>
 
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive"
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </AlertDialogTrigger>
@@ -208,24 +170,22 @@ export default function ConversationDetailPage() {
       </div>
 
       {/* Step Panel */}
-      {steps.length > 0 && (
-        <aside
-          className={cn(
-            'border-l border-border/50 bg-card/20 transition-all duration-300 shrink-0 overflow-hidden',
-            showStepPanel ? 'w-72' : 'w-0'
-          )}
-        >
-          {showStepPanel && (
-            <StepPanel
-              steps={steps}
-              currentStepIndex={currentStepIndex}
-              isExecuting={isStreaming}
-              workflowType={conversation.workflow?.type}
-              conversationId={conversation.id}
-            />
-          )}
-        </aside>
-      )}
+      <aside
+        className={cn(
+          'border-l bg-card/30 transition-all duration-300 shrink-0 overflow-hidden',
+          showStepPanel ? 'w-72' : 'w-0'
+        )}
+      >
+        {showStepPanel && (
+          <StepPanel
+            steps={steps}
+            currentStepIndex={currentStepIndex}
+            isExecuting={isStreaming}
+            workflowType={conversation.workflow?.type}
+            conversationId={conversation.id}
+          />
+        )}
+      </aside>
     </div>
   )
 }

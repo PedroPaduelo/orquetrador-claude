@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Square, Mic, MicOff, Loader2 } from 'lucide-react'
+import { Send, Square, Mic, MicOff } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Textarea } from '@/shared/components/ui/textarea'
 
@@ -195,7 +195,11 @@ export function MessageInput({ onSend, onCancel, isStreaming, disabled }: Messag
 
       {isStreaming && (
         <p className="text-xs text-muted-foreground mt-2 flex items-center gap-2 max-w-4xl mx-auto">
-          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+          <span className="thinking-dots flex gap-0.5">
+            <span className="w-1 h-1 rounded-full bg-primary" />
+            <span className="w-1 h-1 rounded-full bg-primary" />
+            <span className="w-1 h-1 rounded-full bg-primary" />
+          </span>
           Claude está trabalhando...
         </p>
       )}
