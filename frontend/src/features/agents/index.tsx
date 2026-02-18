@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Plus, Bot, Download } from 'lucide-react'
+import { Plus, Bot, Download, GitBranch } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
+import { ImportRepoDialog } from '@/shared/components/common/import-repo-dialog'
 import { AgentCard } from './components/agent-card'
 import { AgentModal } from './components/agent-modal'
 import { ImportAgentDialog } from './components/import-agent-dialog'
@@ -18,6 +19,7 @@ export default function AgentsPage() {
   const { openCreateModal, openEditModal } = useAgentsStore()
 
   const [importOpen, setImportOpen] = useState(false)
+  const [repoOpen, setRepoOpen] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; agent: Agent | null }>({
     open: false,
     agent: null,
@@ -40,13 +42,17 @@ export default function AgentsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setRepoOpen(true)}>
+            <GitBranch className="h-4 w-4 mr-2" />
+            Importar Repo
+          </Button>
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <Download className="h-4 w-4 mr-2" />
-            Importar
+            Importar URL
           </Button>
           <Button onClick={openCreateModal}>
             <Plus className="h-4 w-4 mr-2" />
-            Criar Manual
+            Criar
           </Button>
         </div>
       </div>
@@ -70,16 +76,16 @@ export default function AgentsPage() {
         <EmptyState
           icon={Bot}
           title="Nenhum Agente"
-          description="Importe agentes da comunidade ou crie manualmente."
+          description="Importe agentes de um repositorio GitHub ou crie manualmente."
           action={
             <div className="flex gap-2">
-              <Button onClick={() => setImportOpen(true)}>
-                <Download className="h-4 w-4 mr-2" />
-                Importar
+              <Button onClick={() => setRepoOpen(true)}>
+                <GitBranch className="h-4 w-4 mr-2" />
+                Importar Repo
               </Button>
               <Button variant="outline" onClick={openCreateModal}>
                 <Plus className="h-4 w-4 mr-2" />
-                Criar Manual
+                Criar
               </Button>
             </div>
           }
@@ -88,6 +94,7 @@ export default function AgentsPage() {
 
       <AgentModal />
       <ImportAgentDialog open={importOpen} onOpenChange={setImportOpen} />
+      <ImportRepoDialog open={repoOpen} onOpenChange={setRepoOpen} />
 
       <ConfirmDialog
         open={deleteDialog.open}

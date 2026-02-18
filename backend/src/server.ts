@@ -102,6 +102,9 @@ import {
   updateSettings,
 } from './http/routes/settings/index.js'
 
+// Import repo (bulk import)
+import { importRepo } from './http/routes/import-repo.js'
+
 // Health routes
 import { healthCheck } from './http/routes/health/index.js'
 
@@ -248,6 +251,9 @@ async function registerRoutes() {
   // Settings
   await app.register(getSettings)
   await app.register(updateSettings)
+
+  // Import repo (bulk)
+  await app.register(importRepo)
 }
 
 // Start server
