@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -21,13 +22,14 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>
 
 export function SkillForm() {
-  const { editingSkill, closeModal } = useSkillsStore()
+  const { editingSkill, isLoadingEdit, closeModal } = useSkillsStore()
   const createMutation = useCreateSkill()
   const updateMutation = useUpdateSkill()
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -40,6 +42,20 @@ export function SkillForm() {
       isGlobal: editingSkill?.isGlobal ?? true,
     },
   })
+
+  // Re-sync form when full skill data arrives
+  useEffect(() => {
+    if (editingSkill && !isLoadingEdit) {
+      reset({
+        name: editingSkill.name || '',
+        description: editingSkill.description || '',
+        body: editingSkill.body || '',
+        allowedToolsStr: editingSkill.allowedTools ? editingSkill.allowedTools.join(', ') : '',
+        model: editingSkill.model || '',
+        isGlobal: editingSkill.isGlobal ?? true,
+      })
+    }
+  }, [editingSkill, isLoadingEdit, reset])
 
   const onSubmit = (data: FormData) => {
     const allowedTools = data.allowedToolsStr
@@ -63,6 +79,17 @@ export function SkillForm() {
   }
 
   const isLoading = createMutation.isPending || updateMutation.isPending
+
+  if (isLoadingEdit) {
+    return (
+      <div className="space-y-4 py-8">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="text-sm">Carregando dados da skill...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

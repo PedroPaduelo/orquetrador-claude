@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -30,7 +31,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>
 
 export function ServerForm() {
-  const { editingServer, closeModal } = useMcpServersStore()
+  const { editingServer, isLoadingEdit, closeModal } = useMcpServersStore()
   const createMutation = useCreateMcpServer()
   const updateMutation = useUpdateMcpServer()
 
@@ -39,6 +40,7 @@ export function ServerForm() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -53,6 +55,21 @@ export function ServerForm() {
       isGlobal: editingServer?.isGlobal ?? true,
     },
   })
+
+  useEffect(() => {
+    if (editingServer && !isLoadingEdit) {
+      reset({
+        name: editingServer.name || '',
+        description: editingServer.description || '',
+        type: editingServer.type || 'http',
+        uri: editingServer.uri || '',
+        command: editingServer.command || '',
+        argsStr: editingServer.args ? editingServer.args.join(', ') : '',
+        envVarsStr: editingServer.envVars ? Object.entries(editingServer.envVars).map(([k, v]) => `${k}=${v}`).join('\n') : '',
+        isGlobal: editingServer.isGlobal ?? true,
+      })
+    }
+  }, [editingServer, isLoadingEdit, reset])
 
   const serverType = watch('type')
 
@@ -90,6 +107,17 @@ export function ServerForm() {
   }
 
   const isLoading = createMutation.isPending || updateMutation.isPending
+
+  if (isLoadingEdit) {
+    return (
+      <div className="space-y-4 py-8">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="text-sm">Carregando dados do servidor...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

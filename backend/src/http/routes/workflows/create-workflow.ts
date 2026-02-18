@@ -3,26 +3,28 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import { prisma } from '../../../lib/prisma.js'
 
+const conditionsSchema = z.object({
+  rules: z.array(z.object({
+    type: z.enum(['contains', 'not_contains', 'equals', 'starts_with', 'ends_with', 'regex', 'length_gt', 'length_lt']),
+    match: z.string(),
+    goto: z.string(),
+    maxRetries: z.number().optional(),
+    retryMessage: z.string().optional(),
+  })).default([]),
+  default: z.string().default('next'),
+})
+
 const stepSchema = z.object({
   name: z.string().min(1),
-  baseUrl: z.string().url(),
-  systemPrompt: z.string().optional(),
-  systemPromptNoteId: z.string().optional(),
+  baseUrl: z.string().default(''),
+  systemPrompt: z.string().nullable().optional(),
+  systemPromptNoteId: z.string().nullable().optional(),
   contextNoteIds: z.array(z.string()).default([]),
   memoryNoteIds: z.array(z.string()).default([]),
-  conditions: z.object({
-    rules: z.array(z.object({
-      type: z.enum(['contains', 'not_contains', 'equals', 'starts_with', 'ends_with', 'regex', 'length_gt', 'length_lt']),
-      match: z.string(),
-      goto: z.string(),
-      maxRetries: z.number().optional(),
-      retryMessage: z.string().optional(),
-    })).default([]),
-    default: z.string().default('next'),
-  }).default({ rules: [], default: 'next' }),
+  conditions: conditionsSchema.nullable().default({ rules: [], default: 'next' }).transform((v) => v ?? { rules: [], default: 'next' }),
   maxRetries: z.number().default(0),
   backend: z.enum(['claude', 'api']).default('claude'),
-  model: z.string().optional(),
+  model: z.string().nullable().optional(),
   mcpServerIds: z.array(z.string()).default([]),
   skillIds: z.array(z.string()).default([]),
   agentIds: z.array(z.string()).default([]),

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -32,7 +33,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>
 
 export function AgentForm() {
-  const { editingAgent, closeModal } = useAgentsStore()
+  const { editingAgent, isLoadingEdit, closeModal } = useAgentsStore()
   const createMutation = useCreateAgent()
   const updateMutation = useUpdateAgent()
 
@@ -41,6 +42,7 @@ export function AgentForm() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -57,6 +59,24 @@ export function AgentForm() {
       isGlobal: editingAgent?.isGlobal ?? true,
     },
   })
+
+  // Re-sync form when full agent data arrives
+  useEffect(() => {
+    if (editingAgent && !isLoadingEdit) {
+      reset({
+        name: editingAgent.name || '',
+        description: editingAgent.description || '',
+        model: editingAgent.model || '',
+        permissionMode: editingAgent.permissionMode || 'default',
+        maxTurns: editingAgent.maxTurns ?? '',
+        toolsStr: editingAgent.tools ? editingAgent.tools.join(', ') : '',
+        disallowedToolsStr: editingAgent.disallowedTools ? editingAgent.disallowedTools.join(', ') : '',
+        skillsStr: editingAgent.skills ? editingAgent.skills.join(', ') : '',
+        systemPrompt: editingAgent.systemPrompt || '',
+        isGlobal: editingAgent.isGlobal ?? true,
+      })
+    }
+  }, [editingAgent, isLoadingEdit, reset])
 
   const permissionMode = watch('permissionMode')
 
@@ -85,6 +105,17 @@ export function AgentForm() {
   }
 
   const isLoading = createMutation.isPending || updateMutation.isPending
+
+  if (isLoadingEdit) {
+    return (
+      <div className="space-y-4 py-8">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="text-sm">Carregando dados do agent...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

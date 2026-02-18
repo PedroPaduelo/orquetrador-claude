@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -33,7 +34,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>
 
 export function WorkflowForm() {
-  const { editingWorkflow, formSteps, addStep, removeStep, updateStep, closeModal } =
+  const { editingWorkflow, formSteps, isLoadingEdit, addStep, removeStep, updateStep, closeModal } =
     useWorkflowsStore()
 
   const createMutation = useCreateWorkflow()
@@ -49,6 +50,7 @@ export function WorkflowForm() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -59,6 +61,18 @@ export function WorkflowForm() {
       projectPath: editingWorkflow?.projectPath || '',
     },
   })
+
+  // Re-sync form when editingWorkflow data arrives (async fetch)
+  useEffect(() => {
+    if (editingWorkflow && !isLoadingEdit) {
+      reset({
+        name: editingWorkflow.name || '',
+        description: editingWorkflow.description || '',
+        type: editingWorkflow.type || 'sequential',
+        projectPath: editingWorkflow.projectPath || '',
+      })
+    }
+  }, [editingWorkflow, isLoadingEdit, reset])
 
   const workflowType = watch('type')
 
@@ -88,6 +102,17 @@ export function WorkflowForm() {
   }
 
   const isLoading = createMutation.isPending || updateMutation.isPending
+
+  if (isLoadingEdit) {
+    return (
+      <div className="space-y-4 py-8">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="text-sm">Carregando dados do workflow...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

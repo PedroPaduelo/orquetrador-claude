@@ -35,14 +35,20 @@ export async function importAgent(app: FastifyInstance) {
       let markdown: string
 
       if (url) {
+        const fetchUrl = toRawUrl(url)
+
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 15000)
         try {
-          const response = await fetch(url, { signal: controller.signal })
+          const response = await fetch(fetchUrl, { signal: controller.signal })
           if (!response.ok) {
             throw new Error(`Erro ao buscar URL: ${response.status} ${response.statusText}`)
           }
           markdown = await response.text()
+
+          if (markdown.trimStart().startsWith('<!') || markdown.trimStart().startsWith('<html')) {
+            throw new Error('A URL retornou HTML ao inves de markdown. Use a URL raw do arquivo.')
+          }
         } finally {
           clearTimeout(timeout)
         }
@@ -152,7 +158,12 @@ function extractNameFromUrl(url?: string): string | null {
   if (!url) return null
   try {
     const pathname = new URL(url).pathname
-    const filename = pathname.split('/').pop()
+    const parts = pathname.split('/')
+    const mdIndex = parts.findIndex((p) => /\.(md|markdown)$/i.test(p))
+    if (mdIndex > 0) {
+      return parts[mdIndex - 1].toLowerCase()
+    }
+    const filename = parts.pop()
     if (filename) {
       return filename.replace(/\.(md|markdown|txt)$/i, '').toLowerCase()
     }
@@ -160,4 +171,18 @@ function extractNameFromUrl(url?: string): string | null {
     // ignore
   }
   return null
+}
+
+function toRawUrl(url: string): string {
+  const ghMatch = url.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/)
+  if (ghMatch) {
+    return `https://raw.githubusercontent.com/${ghMatch[1]}/${ghMatch[2]}/${ghMatch[3]}`
+  }
+
+  const glMatch = url.match(/^https?:\/\/gitlab\.com\/(.+)\/-\/blob\/(.+)$/)
+  if (glMatch) {
+    return `https://gitlab.com/${glMatch[1]}/-/raw/${glMatch[2]}`
+  }
+
+  return url
 }

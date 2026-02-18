@@ -85,10 +85,9 @@ export class FileSyncService {
       ...globalAgents.filter((s) => !stepAgentIds.has(s.id)),
     ]
 
-    // Write stdio MCP servers to .mcp.json
-    const stdioServers = allServers.filter((s) => s.type === 'stdio')
-    if (stdioServers.length > 0) {
-      this.writeMcpConfig(projectPath, stdioServers)
+    // Write ALL MCP servers to .mcp.json (stdio, http, sse)
+    if (allServers.length > 0) {
+      this.writeMcpConfig(projectPath, allServers)
     }
 
     // Write skill files
@@ -100,60 +99,38 @@ export class FileSyncService {
     for (const agent of allAgents) {
       this.writeAgentFile(projectPath, agent)
     }
-
-    // Return HTTP/SSE servers for CLI flags (they don't need filesystem)
-    // This is handled by the caller via getHttpServers()
   }
 
   /**
-   * Get HTTP/SSE MCP servers for a step (to pass as --mcp-server-uri flags)
-   */
-  async getHttpServersForStep(stepId: string): Promise<McpServerData[]> {
-    const step = await prisma.workflowStep.findUnique({
-      where: { id: stepId },
-      include: {
-        mcpServers: { include: { server: true } },
-      },
-    })
-
-    if (!step) return []
-
-    const globalServers = await prisma.mcpServer.findMany({
-      where: { enabled: true, isGlobal: true },
-    })
-
-    const stepServerIds = new Set(step.mcpServers.map((s) => s.serverId))
-    const allServers = [
-      ...step.mcpServers.map((s) => s.server).filter((s) => s.enabled),
-      ...globalServers.filter((s) => !stepServerIds.has(s.id)),
-    ]
-
-    return allServers.filter((s) => s.type === 'http' || s.type === 'sse')
-  }
-
-  /**
-   * Write .mcp.json for stdio MCP servers
+   * Write .mcp.json with all MCP server types.
+   * - stdio: command + args
+   * - http/sse: type + url
    */
   writeMcpConfig(projectPath: string, servers: McpServerData[]): void {
-    const mcpConfig: Record<string, unknown> = {
-      mcpServers: {} as Record<string, unknown>,
-    }
+    const mcpServers: Record<string, unknown> = {}
 
     for (const server of servers) {
-      if (server.type !== 'stdio' || !server.command) continue
-
-      const args = safeJsonParse<string[]>(server.args, [])
       const env = safeJsonParse<Record<string, string>>(server.envVars, {})
+      const envObj = Object.keys(env).length > 0 ? env : undefined
 
-      ;(mcpConfig.mcpServers as Record<string, unknown>)[server.name] = {
-        command: server.command,
-        args,
-        env: Object.keys(env).length > 0 ? env : undefined,
+      if (server.type === 'stdio' && server.command) {
+        const args = safeJsonParse<string[]>(server.args, [])
+        mcpServers[server.name] = {
+          command: server.command,
+          args,
+          env: envObj,
+        }
+      } else if ((server.type === 'http' || server.type === 'sse') && server.uri) {
+        mcpServers[server.name] = {
+          type: server.type === 'http' ? 'url' : 'sse',
+          url: server.uri,
+          env: envObj,
+        }
       }
     }
 
     const configPath = join(projectPath, '.mcp.json')
-    writeFileSync(configPath, JSON.stringify(mcpConfig, null, 2), 'utf-8')
+    writeFileSync(configPath, JSON.stringify({ mcpServers }, null, 2), 'utf-8')
   }
 
   /**

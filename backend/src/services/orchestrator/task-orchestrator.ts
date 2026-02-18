@@ -94,9 +94,6 @@ export class TaskOrchestrator {
           await fileSyncService.syncForStep(projectPath, step.id)
         }
 
-        // Get HTTP/SSE MCP servers for CLI flags
-        const httpServers = await fileSyncService.getHttpServersForStep(step.id)
-
         // Execute Claude
         const result = await claudeService.execute({
           conversationId,
@@ -107,7 +104,6 @@ export class TaskOrchestrator {
           projectPath,
           backend: step.backend || 'claude',
           model: step.model || undefined,
-          mcpServers: httpServers,
           onEvent: (event) => {
             if (event.type === 'content' && event.content) {
               orchestratorEvents.emitStepStream({
@@ -337,9 +333,6 @@ export class TaskOrchestrator {
         await fileSyncService.syncForStep(projectPath, step.id)
       }
 
-      // Get HTTP/SSE MCP servers for CLI flags
-      const httpServers = await fileSyncService.getHttpServersForStep(step.id)
-
       // Execute Claude
       const result = await claudeService.execute({
         conversationId,
@@ -350,7 +343,6 @@ export class TaskOrchestrator {
         projectPath,
         backend: step.backend || 'claude',
         model: step.model || undefined,
-        mcpServers: httpServers,
         onEvent: (event) => {
           if (event.type === 'content' && event.content) {
             orchestratorEvents.emitStepStream({

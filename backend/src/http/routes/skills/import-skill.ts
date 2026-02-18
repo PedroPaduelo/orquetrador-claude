@@ -35,15 +35,22 @@ export async function importSkill(app: FastifyInstance) {
       let markdown: string
 
       if (url) {
-        // Fetch from URL
+        // Auto-convert GitHub page URLs to raw URLs
+        const fetchUrl = toRawUrl(url)
+
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 15000)
         try {
-          const response = await fetch(url, { signal: controller.signal })
+          const response = await fetch(fetchUrl, { signal: controller.signal })
           if (!response.ok) {
             throw new Error(`Erro ao buscar URL: ${response.status} ${response.statusText}`)
           }
           markdown = await response.text()
+
+          // Safety check: if we got HTML back, the URL was wrong
+          if (markdown.trimStart().startsWith('<!') || markdown.trimStart().startsWith('<html')) {
+            throw new Error('A URL retornou HTML ao inves de markdown. Use a URL raw do arquivo (ex: raw.githubusercontent.com).')
+          }
         } finally {
           clearTimeout(timeout)
         }
@@ -156,13 +163,42 @@ function extractNameFromUrl(url?: string): string | null {
   if (!url) return null
   try {
     const pathname = new URL(url).pathname
-    const filename = pathname.split('/').pop()
+    // For skill URLs, try to extract the skill folder name
+    // e.g. /vercel-labs/agent-skills/blob/main/skills/web-design-guidelines/SKILL.md → web-design-guidelines
+    const parts = pathname.split('/')
+    const mdIndex = parts.findIndex((p) => /\.(md|markdown)$/i.test(p))
+    if (mdIndex > 0) {
+      return parts[mdIndex - 1].toLowerCase()
+    }
+    const filename = parts.pop()
     if (filename) {
-      // Remove extension
       return filename.replace(/\.(md|markdown|txt)$/i, '').toLowerCase()
     }
   } catch {
     // ignore
   }
   return null
+}
+
+/**
+ * Convert GitHub/GitLab page URLs to raw content URLs.
+ *
+ * GitHub:  https://github.com/user/repo/blob/branch/path → https://raw.githubusercontent.com/user/repo/branch/path
+ * GitLab:  https://gitlab.com/user/repo/-/blob/branch/path → https://gitlab.com/user/repo/-/raw/branch/path
+ */
+function toRawUrl(url: string): string {
+  // GitHub: github.com/user/repo/blob/branch/path
+  const ghMatch = url.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/)
+  if (ghMatch) {
+    return `https://raw.githubusercontent.com/${ghMatch[1]}/${ghMatch[2]}/${ghMatch[3]}`
+  }
+
+  // GitLab: gitlab.com/user/repo/-/blob/branch/path
+  const glMatch = url.match(/^https?:\/\/gitlab\.com\/(.+)\/-\/blob\/(.+)$/)
+  if (glMatch) {
+    return `https://gitlab.com/${glMatch[1]}/-/raw/${glMatch[2]}`
+  }
+
+  // Already a raw URL or other provider
+  return url
 }

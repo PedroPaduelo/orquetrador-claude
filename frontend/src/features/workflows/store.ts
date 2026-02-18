@@ -1,17 +1,19 @@
 import { create } from 'zustand'
+import { workflowsApi } from './api'
 import type { Workflow, WorkflowStep } from './types'
 
 interface WorkflowsState {
   // Modal state
   isModalOpen: boolean
   editingWorkflow: Workflow | null
+  isLoadingEdit: boolean
 
   // Form state
   formSteps: WorkflowStep[]
 
   // Actions
   openCreateModal: () => void
-  openEditModal: (workflow: Workflow) => void
+  openEditModal: (workflow: Workflow) => Promise<void>
   closeModal: () => void
   setFormSteps: (steps: WorkflowStep[]) => void
   addStep: () => void
@@ -34,26 +36,59 @@ const defaultStep: WorkflowStep = {
 export const useWorkflowsStore = create<WorkflowsState>((set) => ({
   isModalOpen: false,
   editingWorkflow: null,
+  isLoadingEdit: false,
   formSteps: [{ ...defaultStep }],
 
   openCreateModal: () =>
     set({
       isModalOpen: true,
       editingWorkflow: null,
+      isLoadingEdit: false,
       formSteps: [{ ...defaultStep }],
     }),
 
-  openEditModal: (workflow) =>
+  openEditModal: async (workflow) => {
+    // Open modal immediately with loading state
     set({
       isModalOpen: true,
       editingWorkflow: workflow,
-      formSteps: workflow.steps?.map((s) => ({ ...s })) || [{ ...defaultStep }],
-    }),
+      isLoadingEdit: true,
+      formSteps: [],
+    })
+
+    try {
+      // Fetch full workflow with steps
+      const full = await workflowsApi.get(workflow.id)
+      const steps = full.steps?.map((s) => ({
+        ...s,
+        mcpServerIds: s.mcpServerIds || [],
+        skillIds: s.skillIds || [],
+        agentIds: s.agentIds || [],
+        contextNoteIds: s.contextNoteIds || [],
+        memoryNoteIds: s.memoryNoteIds || [],
+        conditions: s.conditions || { rules: [], default: 'next' },
+        maxRetries: s.maxRetries ?? 0,
+      })) || [{ ...defaultStep }]
+
+      set({
+        editingWorkflow: full,
+        isLoadingEdit: false,
+        formSteps: steps,
+      })
+    } catch {
+      // Fallback: use whatever data we have
+      set({
+        isLoadingEdit: false,
+        formSteps: workflow.steps?.map((s) => ({ ...s })) || [{ ...defaultStep }],
+      })
+    }
+  },
 
   closeModal: () =>
     set({
       isModalOpen: false,
       editingWorkflow: null,
+      isLoadingEdit: false,
       formSteps: [{ ...defaultStep }],
     }),
 
