@@ -93,20 +93,25 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
         {/* Message content */}
         <div
           className={cn(
-            'relative rounded-xl px-4 py-3 text-sm',
+            'relative rounded-xl text-sm',
             isUser
-              ? 'bg-primary text-primary-foreground rounded-br-sm'
-              : 'bg-muted/60 border border-border/50 rounded-bl-sm',
+              ? 'bg-primary text-primary-foreground rounded-br-sm px-4 py-3'
+              : 'bg-muted/60 border border-border/50 rounded-bl-sm px-5 py-4',
           )}
         >
           {isUser ? (
             <p className="whitespace-pre-wrap break-words">{message.content}</p>
           ) : message.content ? (
-            <div className="prose prose-sm prose-invert max-w-none break-words
-              prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-ol:my-1.5
-              prose-li:my-0.5 prose-pre:my-2 prose-code:text-teal-300
+            <div className="prose prose-invert max-w-none break-words
+              prose-p:my-2.5 prose-p:leading-relaxed
+              prose-headings:mt-5 prose-headings:mb-2.5 prose-headings:first:mt-0
+              prose-h1:text-lg prose-h2:text-base prose-h3:text-sm prose-h3:font-semibold
+              prose-ul:my-2.5 prose-ol:my-2.5 prose-li:my-1 prose-li:leading-relaxed
+              prose-pre:my-3 prose-code:text-teal-300
               prose-pre:bg-background/50 prose-pre:border prose-pre:border-border
-              prose-a:text-teal-400 prose-strong:text-foreground">
+              prose-a:text-teal-400 prose-strong:text-foreground
+              prose-blockquote:my-3 prose-hr:my-4
+              text-[14px] leading-[1.7]">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
