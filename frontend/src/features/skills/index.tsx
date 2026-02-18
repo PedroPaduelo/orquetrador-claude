@@ -5,6 +5,7 @@ import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import { ImportRepoDialog } from '@/shared/components/common/import-repo-dialog'
+import { useSearchPagination, SearchBar, Pagination } from '@/shared/components/common/search-pagination'
 import { SkillCard } from './components/skill-card'
 import { SkillModal } from './components/skill-modal'
 import { ImportSkillDialog } from './components/import-skill-dialog'
@@ -12,11 +13,18 @@ import { useSkills, useDeleteSkill, useToggleSkill } from './hooks/use-skills'
 import { useSkillsStore } from './store'
 import type { Skill } from './types'
 
+const searchFields: (keyof Skill)[] = ['name', 'description']
+
 export default function SkillsPage() {
   const { data: skills, isLoading } = useSkills()
   const deleteMutation = useDeleteSkill()
   const toggleMutation = useToggleSkill()
   const { openCreateModal, openEditModal } = useSkillsStore()
+
+  const { paged, search, setSearch, page, setPage, totalPages, total } = useSearchPagination({
+    data: skills,
+    searchFields,
+  })
 
   const [importOpen, setImportOpen] = useState(false)
   const [repoOpen, setRepoOpen] = useState(false)
@@ -60,18 +68,22 @@ export default function SkillsPage() {
       {isLoading ? (
         <ListSkeleton count={4} />
       ) : skills && skills.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {skills.map((skill, index) => (
-            <div key={skill.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
-              <SkillCard
-                skill={skill}
-                onEdit={() => openEditModal(skill)}
-                onDelete={() => setDeleteDialog({ open: true, skill })}
-                onToggle={() => toggleMutation.mutate(skill.id)}
-              />
-            </div>
-          ))}
-        </div>
+        <>
+          <SearchBar value={search} onChange={setSearch} placeholder="Buscar skills..." total={total} />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {paged.map((skill, index) => (
+              <div key={skill.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
+                <SkillCard
+                  skill={skill}
+                  onEdit={() => openEditModal(skill)}
+                  onDelete={() => setDeleteDialog({ open: true, skill })}
+                  onToggle={() => toggleMutation.mutate(skill.id)}
+                />
+              </div>
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
       ) : (
         <EmptyState
           icon={Sparkles}

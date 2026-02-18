@@ -5,6 +5,7 @@ import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import { ImportRepoDialog } from '@/shared/components/common/import-repo-dialog'
+import { useSearchPagination, SearchBar, Pagination } from '@/shared/components/common/search-pagination'
 import { PluginCard } from './components/plugin-card'
 import { PluginModal } from './components/plugin-modal'
 import { InstallDialog } from './components/install-dialog'
@@ -12,12 +13,19 @@ import { usePlugins, useDeletePlugin, useTogglePlugin, useResyncPlugin } from '.
 import { usePluginsStore } from './store'
 import type { Plugin } from './types'
 
+const searchFields: (keyof Plugin)[] = ['name', 'description', 'author']
+
 export default function PluginsPage() {
   const { data: plugins, isLoading } = usePlugins()
   const deleteMutation = useDeletePlugin()
   const toggleMutation = useTogglePlugin()
   const resyncMutation = useResyncPlugin()
   const { openEditModal } = usePluginsStore()
+
+  const { paged, search, setSearch, page, setPage, totalPages, total } = useSearchPagination({
+    data: plugins,
+    searchFields,
+  })
 
   const [installOpen, setInstallOpen] = useState(false)
   const [repoOpen, setRepoOpen] = useState(false)
@@ -57,19 +65,23 @@ export default function PluginsPage() {
       {isLoading ? (
         <ListSkeleton count={4} />
       ) : plugins && plugins.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {plugins.map((plugin, index) => (
-            <div key={plugin.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
-              <PluginCard
-                plugin={plugin}
-                onEdit={() => openEditModal(plugin)}
-                onDelete={() => setDeleteDialog({ open: true, plugin })}
-                onToggle={() => toggleMutation.mutate(plugin.id)}
-                onResync={() => resyncMutation.mutate({ id: plugin.id })}
-              />
-            </div>
-          ))}
-        </div>
+        <>
+          <SearchBar value={search} onChange={setSearch} placeholder="Buscar plugins..." total={total} />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {paged.map((plugin, index) => (
+              <div key={plugin.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
+                <PluginCard
+                  plugin={plugin}
+                  onEdit={() => openEditModal(plugin)}
+                  onDelete={() => setDeleteDialog({ open: true, plugin })}
+                  onToggle={() => toggleMutation.mutate(plugin.id)}
+                  onResync={() => resyncMutation.mutate({ id: plugin.id })}
+                />
+              </div>
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
       ) : (
         <EmptyState
           icon={Package}

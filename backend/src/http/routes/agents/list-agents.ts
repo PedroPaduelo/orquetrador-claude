@@ -3,6 +3,19 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import { prisma } from '../../../lib/prisma.js'
 
+function safeParseArray(val: string | null | undefined): string[] {
+  if (!val) return []
+  try {
+    const parsed = JSON.parse(val)
+    if (Array.isArray(parsed)) return parsed
+    if (typeof parsed === 'string') return parsed.split(',').map((s) => s.trim()).filter(Boolean)
+    return []
+  } catch {
+    // Not JSON — might be comma-separated string
+    return val.split(',').map((s) => s.trim()).filter(Boolean)
+  }
+}
+
 export async function listAgents(app: FastifyInstance) {
   app.withTypeProvider<ZodTypeProvider>().get(
     '/agents',
@@ -38,7 +51,7 @@ export async function listAgents(app: FastifyInstance) {
         model: a.model,
         permissionMode: a.permissionMode,
         maxTurns: a.maxTurns,
-        tools: JSON.parse(a.tools || '[]'),
+        tools: safeParseArray(a.tools),
         enabled: a.enabled,
         isGlobal: a.isGlobal,
         pluginId: a.pluginId,

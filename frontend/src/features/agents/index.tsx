@@ -5,6 +5,7 @@ import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import { ImportRepoDialog } from '@/shared/components/common/import-repo-dialog'
+import { useSearchPagination, SearchBar, Pagination } from '@/shared/components/common/search-pagination'
 import { AgentCard } from './components/agent-card'
 import { AgentModal } from './components/agent-modal'
 import { ImportAgentDialog } from './components/import-agent-dialog'
@@ -12,11 +13,18 @@ import { useAgents, useDeleteAgent, useToggleAgent } from './hooks/use-agents'
 import { useAgentsStore } from './store'
 import type { Agent } from './types'
 
+const searchFields: (keyof Agent)[] = ['name', 'description', 'model']
+
 export default function AgentsPage() {
   const { data: agents, isLoading } = useAgents()
   const deleteMutation = useDeleteAgent()
   const toggleMutation = useToggleAgent()
   const { openCreateModal, openEditModal } = useAgentsStore()
+
+  const { paged, search, setSearch, page, setPage, totalPages, total } = useSearchPagination({
+    data: agents,
+    searchFields,
+  })
 
   const [importOpen, setImportOpen] = useState(false)
   const [repoOpen, setRepoOpen] = useState(false)
@@ -60,18 +68,22 @@ export default function AgentsPage() {
       {isLoading ? (
         <ListSkeleton count={4} />
       ) : agents && agents.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {agents.map((agent, index) => (
-            <div key={agent.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
-              <AgentCard
-                agent={agent}
-                onEdit={() => openEditModal(agent)}
-                onDelete={() => setDeleteDialog({ open: true, agent })}
-                onToggle={() => toggleMutation.mutate(agent.id)}
-              />
-            </div>
-          ))}
-        </div>
+        <>
+          <SearchBar value={search} onChange={setSearch} placeholder="Buscar agentes..." total={total} />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {paged.map((agent, index) => (
+              <div key={agent.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
+                <AgentCard
+                  agent={agent}
+                  onEdit={() => openEditModal(agent)}
+                  onDelete={() => setDeleteDialog({ open: true, agent })}
+                  onToggle={() => toggleMutation.mutate(agent.id)}
+                />
+              </div>
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
       ) : (
         <EmptyState
           icon={Bot}
