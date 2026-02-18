@@ -90,10 +90,13 @@ import {
 // Plugins routes
 import {
   listPlugins,
+  getPlugin,
   installPlugin,
+  updatePlugin,
   deletePlugin,
   togglePlugin,
   importPluginUrl,
+  resyncPlugin,
 } from './http/routes/plugins/index.js'
 
 // Settings routes
@@ -243,10 +246,13 @@ async function registerRoutes() {
 
   // Plugins
   await app.register(listPlugins)
+  await app.register(getPlugin)
   await app.register(installPlugin)
+  await app.register(updatePlugin)
   await app.register(deletePlugin)
   await app.register(togglePlugin)
   await app.register(importPluginUrl)
+  await app.register(resyncPlugin)
 
   // Settings
   await app.register(getSettings)

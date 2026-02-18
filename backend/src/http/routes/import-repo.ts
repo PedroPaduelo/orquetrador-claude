@@ -52,13 +52,19 @@ export async function importRepo(app: FastifyInstance) {
     async (request) => {
       const { url, projectPath, saveToDb } = request.body
 
-      // Parse GitHub URL
+      // Parse GitHub URL (repo, tree, or blob)
       const parsed = parseGitHubUrl(url)
       if (!parsed) {
-        throw new Error('URL invalida. Use uma URL do GitHub (ex: https://github.com/user/repo ou https://github.com/user/repo/tree/main/path)')
+        throw new Error('URL invalida. Use uma URL do GitHub (ex: https://github.com/user/repo, .../tree/main/path, ou .../blob/main/file.md)')
       }
 
-      const { owner, repo, branch, subpath } = parsed
+      const { owner, repo, branch, subpath, isFile } = parsed
+
+      // If it's a single file URL (blob), import just that file directly
+      if (isFile && subpath) {
+        const result = await importSingleFile(owner, repo, branch, subpath, projectPath, saveToDb)
+        return result
+      }
 
       // Get repo tree via GitHub API
       const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
@@ -282,8 +288,8 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
           name: item.name,
           description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
           systemPrompt: body,
-          tools: JSON.stringify(frontmatter.tools || []),
-          disallowedTools: JSON.stringify(frontmatter.disallowedTools || frontmatter['disallowed-tools'] || []),
+          tools: toJsonArray(frontmatter.tools),
+          disallowedTools: toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']),
           model: (frontmatter.model as string) || null,
           permissionMode: (frontmatter.permissionMode as string) || (frontmatter['permission-mode'] as string) || 'default',
           maxTurns: frontmatter.maxTurns ? parseInt(String(frontmatter.maxTurns), 10) || null : null,
@@ -304,15 +310,144 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
 
 // ---- Helpers ----
 
-function parseGitHubUrl(url: string): { owner: string; repo: string; branch: string; subpath: string } | null {
-  const match = url.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/tree\/([^/]+)(?:\/(.+))?)?(?:\/?$)/)
-  if (!match) return null
-  return {
-    owner: match[1],
-    repo: match[2],
-    branch: match[3] || 'main',
-    subpath: match[4] || '',
+function parseGitHubUrl(url: string): { owner: string; repo: string; branch: string; subpath: string; isFile: boolean } | null {
+  // Blob URL (single file): github.com/user/repo/blob/branch/path/to/file.md
+  const blobMatch = url.match(/github\.com\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+?)(?:\/?$)/)
+  if (blobMatch) {
+    return { owner: blobMatch[1], repo: blobMatch[2], branch: blobMatch[3], subpath: blobMatch[4], isFile: true }
   }
+
+  // Tree URL (directory): github.com/user/repo/tree/branch/path
+  const treeMatch = url.match(/github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)(?:\/(.+?))?(?:\/?$)/)
+  if (treeMatch) {
+    return { owner: treeMatch[1], repo: treeMatch[2], branch: treeMatch[3], subpath: treeMatch[4] || '', isFile: false }
+  }
+
+  // Repo root: github.com/user/repo
+  const repoMatch = url.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/?$)/)
+  if (repoMatch) {
+    return { owner: repoMatch[1], repo: repoMatch[2], branch: 'main', subpath: '', isFile: false }
+  }
+
+  return null
+}
+
+/**
+ * Import a single file (skill SKILL.md or agent .md) from a blob URL.
+ */
+async function importSingleFile(
+  owner: string, repo: string, branch: string, filePath: string,
+  projectPath: string, saveToDb: boolean
+) {
+  const rawFileUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`
+  const content = await fetchText(rawFileUrl)
+
+  if (content.trimStart().startsWith('<!')) {
+    throw new Error('URL retornou HTML. Verifique se o arquivo e publico.')
+  }
+
+  const filename = filePath.split('/').pop()?.toLowerCase() || ''
+  const { frontmatter, body } = parseFrontmatter(content)
+
+  const imported: Array<{ type: string; name: string; filesCount: number }> = []
+  const errors: Array<{ path: string; error: string }> = []
+
+  // Determine type by filename
+  if (filename === 'skill.md') {
+    // It's a skill — get parent folder name
+    const dir = filePath.substring(0, filePath.lastIndexOf('/'))
+    const skillName = (frontmatter.name as string) || dir.split('/').pop() || 'unnamed-skill'
+
+    // Also fetch all sibling files in same directory via tree API
+    if (projectPath) {
+      try {
+        const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
+        const treeResponse = await fetchJson<{ tree: GitHubTreeItem[] }>(treeUrl)
+        const siblingFiles = (treeResponse?.tree || [])
+          .filter((f) => f.type === 'blob' && f.path.startsWith(dir + '/'))
+
+        for (const sf of siblingFiles) {
+          try {
+            const sfContent = await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${sf.path}`)
+            const relativePath = sf.path.substring(dir.length + 1)
+            const targetPath = join(projectPath, '.claude', 'skills', skillName, relativePath)
+            mkdirSync(dirname(targetPath), { recursive: true })
+            writeFileSync(targetPath, sfContent, 'utf-8')
+          } catch { /* skip */ }
+        }
+        imported.push({ type: 'skill', name: skillName, filesCount: siblingFiles.length })
+      } catch {
+        // Fallback: write just the SKILL.md
+        const targetPath = join(projectPath, '.claude', 'skills', skillName, 'SKILL.md')
+        mkdirSync(dirname(targetPath), { recursive: true })
+        writeFileSync(targetPath, content, 'utf-8')
+        imported.push({ type: 'skill', name: skillName, filesCount: 1 })
+      }
+    }
+
+    if (saveToDb) {
+      try {
+        const existing = await prisma.skill.findUnique({ where: { name: skillName } })
+        if (!existing) {
+          await prisma.skill.create({
+            data: {
+              name: skillName,
+              description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
+              body,
+              allowedTools: JSON.stringify(frontmatter['allowed-tools'] || frontmatter.allowedTools || []),
+              model: (frontmatter.model as string) || null,
+              frontmatter: JSON.stringify(frontmatter),
+              enabled: true,
+              isGlobal: false,
+              source: 'imported',
+              repoUrl: `https://github.com/${owner}/${repo}/tree/${branch}/${dir}`,
+              projectPath,
+            },
+          })
+        }
+      } catch { /* non-fatal */ }
+    }
+  } else if (filename.endsWith('.md')) {
+    // It's an agent .md file
+    const agentName = (frontmatter.name as string) || filename.replace(/\.md$/i, '')
+
+    if (projectPath) {
+      const targetPath = join(projectPath, '.claude', 'agents', `${agentName}.md`)
+      mkdirSync(dirname(targetPath), { recursive: true })
+      writeFileSync(targetPath, content, 'utf-8')
+      imported.push({ type: 'agent', name: agentName, filesCount: 1 })
+    }
+
+    if (saveToDb) {
+      try {
+        const existing = await prisma.agent.findUnique({ where: { name: agentName } })
+        if (!existing) {
+          await prisma.agent.create({
+            data: {
+              name: agentName,
+              description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
+              systemPrompt: body,
+              tools: toJsonArray(frontmatter.tools),
+              disallowedTools: toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']),
+              model: (frontmatter.model as string) || null,
+              permissionMode: (frontmatter.permissionMode as string) || (frontmatter['permission-mode'] as string) || 'default',
+              maxTurns: frontmatter.maxTurns ? parseInt(String(frontmatter.maxTurns), 10) || null : null,
+              skills: JSON.stringify(frontmatter.skills || []),
+              enabled: true,
+              isGlobal: false,
+              source: 'imported',
+              repoUrl: `https://github.com/${owner}/${repo}/blob/${branch}/${filePath}`,
+              projectPath,
+            },
+          })
+        }
+      } catch { /* non-fatal */ }
+    }
+  } else {
+    errors.push({ path: filePath, error: 'Tipo de arquivo nao reconhecido (esperava .md)' })
+  }
+
+  return { imported, skipped: [], errors }
 }
 
 interface Frontmatter { [key: string]: unknown }
@@ -350,6 +485,19 @@ function parseFrontmatter(markdown: string): { frontmatter: Frontmatter; body: s
   }
   if (currentArray && currentKey) frontmatter[currentKey] = currentArray
   return { frontmatter, body }
+}
+
+/**
+ * Convert a frontmatter value to a JSON array string.
+ * Handles: string[] (already array), comma-separated string, or fallback to [].
+ */
+function toJsonArray(val: unknown): string {
+  if (Array.isArray(val)) return JSON.stringify(val)
+  if (typeof val === 'string' && val.trim()) {
+    // "Read, Write, Bash" → ["Read","Write","Bash"]
+    return JSON.stringify(val.split(',').map((s) => s.trim()).filter(Boolean))
+  }
+  return '[]'
 }
 
 async function fetchJson<T>(url: string): Promise<T> {

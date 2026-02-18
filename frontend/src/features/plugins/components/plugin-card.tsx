@@ -1,4 +1,4 @@
-import { Package, MoreVertical, Trash2, Power, PowerOff } from 'lucide-react'
+import { Package, MoreVertical, Trash2, Power, PowerOff, Pencil, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -12,11 +12,13 @@ import type { Plugin } from '../types'
 
 interface PluginCardProps {
   plugin: Plugin
+  onEdit: () => void
   onDelete: () => void
   onToggle: () => void
+  onResync?: () => void
 }
 
-export function PluginCard({ plugin, onDelete, onToggle }: PluginCardProps) {
+export function PluginCard({ plugin, onEdit, onDelete, onToggle, onResync }: PluginCardProps) {
   return (
     <Card className={!plugin.enabled ? 'opacity-60' : ''}>
       <CardHeader className="py-3">
@@ -32,6 +34,16 @@ export function PluginCard({ plugin, onDelete, onToggle }: PluginCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onEdit}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              {plugin.source === 'imported' && onResync && (
+                <DropdownMenuItem onClick={onResync}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Re-sincronizar
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={onToggle}>
                 {plugin.enabled ? (
                   <><PowerOff className="h-4 w-4 mr-2" />Desativar</>
@@ -49,6 +61,7 @@ export function PluginCard({ plugin, onDelete, onToggle }: PluginCardProps) {
       </CardHeader>
       <CardContent className="py-3 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
+          {plugin.source === 'imported' && <Badge variant="default" className="text-[10px]">Importado</Badge>}
           {plugin.version && <Badge variant="secondary">v{plugin.version}</Badge>}
           {plugin.author && <Badge variant="outline">{plugin.author}</Badge>}
         </div>
@@ -58,17 +71,17 @@ export function PluginCard({ plugin, onDelete, onToggle }: PluginCardProps) {
         <div className="flex items-center gap-2 flex-wrap">
           {plugin.mcpServersCount > 0 && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {plugin.mcpServersCount} MCP Server(s)
+              {plugin.mcpServersCount} MCP
             </Badge>
           )}
           {plugin.skillsCount > 0 && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {plugin.skillsCount} Skill(s)
+              {plugin.skillsCount} Skills
             </Badge>
           )}
           {plugin.agentsCount > 0 && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {plugin.agentsCount} Agente(s)
+              {plugin.agentsCount} Agents
             </Badge>
           )}
         </div>

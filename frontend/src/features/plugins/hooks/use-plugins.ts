@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { pluginsApi } from '../api'
+import { usePluginsStore } from '../store'
 import type { PluginInput } from '../types'
 
 export function usePlugins() {
@@ -8,6 +9,32 @@ export function usePlugins() {
     queryKey: ['plugins'],
     queryFn: pluginsApi.list,
     staleTime: 30000,
+  })
+}
+
+export function usePlugin(id: string | undefined) {
+  return useQuery({
+    queryKey: ['plugins', id],
+    queryFn: () => pluginsApi.get(id!),
+    enabled: !!id,
+  })
+}
+
+export function useUpdatePlugin() {
+  const queryClient = useQueryClient()
+  const { closeModal } = usePluginsStore()
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof pluginsApi.update>[1] }) =>
+      pluginsApi.update(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plugins'] })
+      toast.success('Plugin atualizado!')
+      closeModal()
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar plugin')
+    },
   })
 }
 
@@ -54,6 +81,23 @@ export function useTogglePlugin() {
     mutationFn: pluginsApi.toggle,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plugins'] })
+    },
+  })
+}
+
+export function useResyncPlugin() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, projectPath }: { id: string; projectPath?: string }) =>
+      pluginsApi.resync(id, projectPath),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['plugins'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+      toast.success(`Re-sincronizado! ${data.filesUpdated} arquivo(s), ${data.skillsFound} skill(s)`)
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Erro ao re-sincronizar')
     },
   })
 }

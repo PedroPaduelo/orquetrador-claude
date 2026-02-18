@@ -36,6 +36,7 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
   const installMutation = useInstallPlugin()
   const importUrlMutation = useImportPluginUrl()
   const [manifestUrl, setManifestUrl] = useState('')
+  const [projectPath, setProjectPath] = useState('')
 
   const {
     register,
@@ -81,12 +82,16 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
 
   const handleImportUrl = () => {
     if (!manifestUrl.trim()) return
-    importUrlMutation.mutate(manifestUrl.trim(), {
-      onSuccess: () => {
-        setManifestUrl('')
-        onOpenChange(false)
-      },
-    })
+    importUrlMutation.mutate(
+      { url: manifestUrl.trim(), projectPath: projectPath.trim() || undefined },
+      {
+        onSuccess: () => {
+          setManifestUrl('')
+          setProjectPath('')
+          onOpenChange(false)
+        },
+      }
+    )
   }
 
   return (
@@ -104,16 +109,29 @@ export function InstallDialog({ open, onOpenChange }: InstallDialogProps) {
 
           <TabsContent value="url" className="space-y-4 mt-4">
             <div>
-              <Label htmlFor="plugin-url">URL do manifesto</Label>
+              <Label htmlFor="plugin-url">URL do Repositorio ou Manifesto</Label>
               <Input
                 id="plugin-url"
                 value={manifestUrl}
                 onChange={(e) => setManifestUrl(e.target.value)}
-                placeholder="https://raw.githubusercontent.com/user/plugin/main/manifest.json"
+                placeholder="https://github.com/user/plugin-repo"
                 className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                URL publica para um arquivo JSON de manifesto do plugin
+                Cole a URL do repositorio GitHub ou de um arquivo JSON de manifesto.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="plugin-project-path">Caminho do Projeto (para instalar arquivos)</Label>
+              <Input
+                id="plugin-project-path"
+                value={projectPath}
+                onChange={(e) => setProjectPath(e.target.value)}
+                placeholder="/workspace/meu-projeto"
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Skills e agents serao copiados pra <code className="text-[10px]">.claude/</code> deste projeto.
               </p>
             </div>
             <div className="flex justify-end gap-2 pt-4 border-t">

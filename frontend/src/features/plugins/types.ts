@@ -5,10 +5,17 @@ export interface Plugin {
   version: string | null
   author: string | null
   enabled: boolean
+  source?: 'manual' | 'imported'
+  repoUrl?: string | null
+  projectPath?: string | null
   mcpServersCount: number
   skillsCount: number
   agentsCount: number
+  mcpServers?: Array<{ id: string; name: string; type: string; enabled: boolean }>
+  skills?: Array<{ id: string; name: string; description: string | null; enabled: boolean }>
+  agents?: Array<{ id: string; name: string; description: string | null; enabled: boolean }>
   createdAt: string
+  updatedAt?: string
 }
 
 export interface PluginManifest {

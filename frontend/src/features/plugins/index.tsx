@@ -6,14 +6,18 @@ import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import { ImportRepoDialog } from '@/shared/components/common/import-repo-dialog'
 import { PluginCard } from './components/plugin-card'
+import { PluginModal } from './components/plugin-modal'
 import { InstallDialog } from './components/install-dialog'
-import { usePlugins, useDeletePlugin, useTogglePlugin } from './hooks/use-plugins'
+import { usePlugins, useDeletePlugin, useTogglePlugin, useResyncPlugin } from './hooks/use-plugins'
+import { usePluginsStore } from './store'
 import type { Plugin } from './types'
 
 export default function PluginsPage() {
   const { data: plugins, isLoading } = usePlugins()
   const deleteMutation = useDeletePlugin()
   const toggleMutation = useTogglePlugin()
+  const resyncMutation = useResyncPlugin()
+  const { openEditModal } = usePluginsStore()
 
   const [installOpen, setInstallOpen] = useState(false)
   const [repoOpen, setRepoOpen] = useState(false)
@@ -58,8 +62,10 @@ export default function PluginsPage() {
             <div key={plugin.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
               <PluginCard
                 plugin={plugin}
+                onEdit={() => openEditModal(plugin)}
                 onDelete={() => setDeleteDialog({ open: true, plugin })}
                 onToggle={() => toggleMutation.mutate(plugin.id)}
+                onResync={() => resyncMutation.mutate({ id: plugin.id })}
               />
             </div>
           ))}
@@ -70,14 +76,21 @@ export default function PluginsPage() {
           title="Nenhum Plugin"
           description="Instale plugins para adicionar MCP servers, skills e agentes de uma vez."
           action={
-            <Button onClick={() => setInstallOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Instalar Plugin
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setRepoOpen(true)}>
+                <GitBranch className="h-4 w-4 mr-2" />
+                Importar Repo
+              </Button>
+              <Button variant="outline" onClick={() => setInstallOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Instalar Manual
+              </Button>
+            </div>
           }
         />
       )}
 
+      <PluginModal />
       <InstallDialog open={installOpen} onOpenChange={setInstallOpen} />
       <ImportRepoDialog open={repoOpen} onOpenChange={setRepoOpen} />
 

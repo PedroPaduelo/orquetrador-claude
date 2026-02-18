@@ -1,5 +1,8 @@
 export { listPlugins } from './list-plugins.js'
+export { getPlugin } from './get-plugin.js'
 export { installPlugin } from './install-plugin.js'
+export { updatePlugin } from './update-plugin.js'
 export { deletePlugin } from './delete-plugin.js'
 export { togglePlugin } from './toggle-plugin.js'
 export { importPluginUrl } from './import-plugin-url.js'
+export { resyncPlugin } from './resync-plugin.js'
