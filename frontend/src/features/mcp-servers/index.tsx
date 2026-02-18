@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Plus, Server } from 'lucide-react'
+import { Plus, Server, Download } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import { ServerCard } from './components/server-card'
 import { ServerModal } from './components/server-modal'
+import { QuickInstallDialog } from './components/quick-install-dialog'
 import { useMcpServers, useDeleteMcpServer, useToggleMcpServer, useTestMcpServer } from './hooks/use-mcp-servers'
 import { useMcpServersStore } from './store'
 import type { McpServer } from './types'
@@ -17,6 +18,7 @@ export default function McpServersPage() {
   const testMutation = useTestMcpServer()
   const { openCreateModal, openEditModal } = useMcpServersStore()
 
+  const [installOpen, setInstallOpen] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; server: McpServer | null }>({
     open: false,
     server: null,
@@ -38,10 +40,16 @@ export default function McpServersPage() {
             Gerencie servidores MCP para expandir as ferramentas do Claude
           </p>
         </div>
-        <Button onClick={openCreateModal}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Server
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setInstallOpen(true)}>
+            <Download className="h-4 w-4 mr-2" />
+            Instalar
+          </Button>
+          <Button onClick={openCreateModal}>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Manual
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -64,17 +72,24 @@ export default function McpServersPage() {
         <EmptyState
           icon={Server}
           title="Nenhum MCP Server"
-          description="Adicione servidores MCP para dar ao Claude acesso a ferramentas externas."
+          description="Instale servidores MCP da comunidade ou crie manualmente."
           action={
-            <Button onClick={openCreateModal}>
-              <Plus className="h-4 w-4 mr-2" />
-              Criar MCP Server
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setInstallOpen(true)}>
+                <Download className="h-4 w-4 mr-2" />
+                Instalar
+              </Button>
+              <Button variant="outline" onClick={openCreateModal}>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Manual
+              </Button>
+            </div>
           }
         />
       )}
 
       <ServerModal />
+      <QuickInstallDialog open={installOpen} onOpenChange={setInstallOpen} />
 
       <ConfirmDialog
         open={deleteDialog.open}

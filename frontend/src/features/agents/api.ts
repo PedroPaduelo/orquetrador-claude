@@ -30,4 +30,9 @@ export const agentsApi = {
     const { data } = await apiClient.patch(`/agents/${id}/toggle`)
     return data
   },
+
+  import: async (input: { url?: string; content?: string; isGlobal?: boolean }): Promise<Agent> => {
+    const { data } = await apiClient.post('/agents/import', input)
+    return data
+  },
 }

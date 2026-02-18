@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Plus, Sparkles } from 'lucide-react'
+import { Plus, Sparkles, Download } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import { SkillCard } from './components/skill-card'
 import { SkillModal } from './components/skill-modal'
+import { ImportSkillDialog } from './components/import-skill-dialog'
 import { useSkills, useDeleteSkill, useToggleSkill } from './hooks/use-skills'
 import { useSkillsStore } from './store'
 import type { Skill } from './types'
@@ -16,6 +17,7 @@ export default function SkillsPage() {
   const toggleMutation = useToggleSkill()
   const { openCreateModal, openEditModal } = useSkillsStore()
 
+  const [importOpen, setImportOpen] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; skill: Skill | null }>({
     open: false,
     skill: null,
@@ -37,10 +39,16 @@ export default function SkillsPage() {
             Gerencie skills para definir comportamentos reutilizaveis do Claude
           </p>
         </div>
-        <Button onClick={openCreateModal}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Skill
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Download className="h-4 w-4 mr-2" />
+            Importar
+          </Button>
+          <Button onClick={openCreateModal}>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Manual
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -62,17 +70,24 @@ export default function SkillsPage() {
         <EmptyState
           icon={Sparkles}
           title="Nenhuma Skill"
-          description="Crie skills para definir comportamentos reutilizaveis para o Claude."
+          description="Importe skills da comunidade ou crie manualmente."
           action={
-            <Button onClick={openCreateModal}>
-              <Plus className="h-4 w-4 mr-2" />
-              Criar Skill
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setImportOpen(true)}>
+                <Download className="h-4 w-4 mr-2" />
+                Importar
+              </Button>
+              <Button variant="outline" onClick={openCreateModal}>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Manual
+              </Button>
+            </div>
           }
         />
       )}
 
       <SkillModal />
+      <ImportSkillDialog open={importOpen} onOpenChange={setImportOpen} />
 
       <ConfirmDialog
         open={deleteDialog.open}

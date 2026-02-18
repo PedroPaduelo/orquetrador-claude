@@ -20,4 +20,9 @@ export const pluginsApi = {
     const { data } = await apiClient.patch(`/plugins/${id}/toggle`)
     return data
   },
+
+  importUrl: async (url: string): Promise<Plugin> => {
+    const { data } = await apiClient.post('/plugins/import-url', { url })
+    return data
+  },
 }

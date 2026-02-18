@@ -62,6 +62,7 @@ import {
   deleteMcpServer,
   testMcpServer,
   toggleMcpServer,
+  quickInstallMcpServer,
 } from './http/routes/mcp-servers/index.js'
 
 // Skills routes
@@ -72,6 +73,7 @@ import {
   updateSkill,
   deleteSkill,
   toggleSkill,
+  importSkill,
 } from './http/routes/skills/index.js'
 
 // Agents routes
@@ -82,6 +84,7 @@ import {
   updateAgent,
   deleteAgent,
   toggleAgent,
+  importAgent,
 } from './http/routes/agents/index.js'
 
 // Plugins routes
@@ -90,6 +93,7 @@ import {
   installPlugin,
   deletePlugin,
   togglePlugin,
+  importPluginUrl,
 } from './http/routes/plugins/index.js'
 
 // Settings routes
@@ -214,6 +218,7 @@ async function registerRoutes() {
   await app.register(deleteMcpServer)
   await app.register(testMcpServer)
   await app.register(toggleMcpServer)
+  await app.register(quickInstallMcpServer)
 
   // Skills
   await app.register(listSkills)
@@ -222,6 +227,7 @@ async function registerRoutes() {
   await app.register(updateSkill)
   await app.register(deleteSkill)
   await app.register(toggleSkill)
+  await app.register(importSkill)
 
   // Agents
   await app.register(listAgents)
@@ -230,12 +236,14 @@ async function registerRoutes() {
   await app.register(updateAgent)
   await app.register(deleteAgent)
   await app.register(toggleAgent)
+  await app.register(importAgent)
 
   // Plugins
   await app.register(listPlugins)
   await app.register(installPlugin)
   await app.register(deletePlugin)
   await app.register(togglePlugin)
+  await app.register(importPluginUrl)
 
   // Settings
   await app.register(getSettings)

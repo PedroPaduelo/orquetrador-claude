@@ -57,3 +57,21 @@ export function useTogglePlugin() {
     },
   })
 }
+
+export function useImportPluginUrl() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: pluginsApi.importUrl,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plugins'] })
+      queryClient.invalidateQueries({ queryKey: ['mcp-servers'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+      toast.success('Plugin importado via URL!')
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Erro ao importar plugin')
+    },
+  })
+}

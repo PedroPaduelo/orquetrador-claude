@@ -96,3 +96,18 @@ export function useTestMcpServer() {
     },
   })
 }
+
+export function useQuickInstallMcpServer() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: mcpServersApi.quickInstall,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['mcp-servers'] })
+      toast.success(`MCP Server "${data.name}" instalado!`)
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Erro ao instalar MCP Server')
+    },
+  })
+}

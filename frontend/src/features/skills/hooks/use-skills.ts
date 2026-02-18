@@ -80,3 +80,18 @@ export function useToggleSkill() {
     },
   })
 }
+
+export function useImportSkill() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: skillsApi.import,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+      toast.success(`Skill "${data.name}" importada!`)
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Erro ao importar skill')
+    },
+  })
+}

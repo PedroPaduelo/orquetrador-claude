@@ -80,3 +80,18 @@ export function useToggleAgent() {
     },
   })
 }
+
+export function useImportAgent() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: agentsApi.import,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+      toast.success(`Agent "${data.name}" importado!`)
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Erro ao importar agent')
+    },
+  })
+}

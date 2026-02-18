@@ -35,4 +35,9 @@ export const mcpServersApi = {
     const { data } = await apiClient.patch(`/mcp-servers/${id}/toggle`)
     return data
   },
+
+  quickInstall: async (input: { command: string; name?: string; description?: string; envVars?: Record<string, string>; isGlobal?: boolean }): Promise<McpServer> => {
+    const { data } = await apiClient.post('/mcp-servers/quick-install', input)
+    return data
+  },
 }

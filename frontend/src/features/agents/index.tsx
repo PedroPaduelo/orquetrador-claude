@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Plus, Bot } from 'lucide-react'
+import { Plus, Bot, Download } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import { AgentCard } from './components/agent-card'
 import { AgentModal } from './components/agent-modal'
+import { ImportAgentDialog } from './components/import-agent-dialog'
 import { useAgents, useDeleteAgent, useToggleAgent } from './hooks/use-agents'
 import { useAgentsStore } from './store'
 import type { Agent } from './types'
@@ -16,6 +17,7 @@ export default function AgentsPage() {
   const toggleMutation = useToggleAgent()
   const { openCreateModal, openEditModal } = useAgentsStore()
 
+  const [importOpen, setImportOpen] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; agent: Agent | null }>({
     open: false,
     agent: null,
@@ -37,10 +39,16 @@ export default function AgentsPage() {
             Gerencie agentes com configuracoes personalizadas do Claude
           </p>
         </div>
-        <Button onClick={openCreateModal}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Agente
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Download className="h-4 w-4 mr-2" />
+            Importar
+          </Button>
+          <Button onClick={openCreateModal}>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Manual
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -62,17 +70,24 @@ export default function AgentsPage() {
         <EmptyState
           icon={Bot}
           title="Nenhum Agente"
-          description="Crie agentes com configuracoes personalizadas para o Claude."
+          description="Importe agentes da comunidade ou crie manualmente."
           action={
-            <Button onClick={openCreateModal}>
-              <Plus className="h-4 w-4 mr-2" />
-              Criar Agente
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setImportOpen(true)}>
+                <Download className="h-4 w-4 mr-2" />
+                Importar
+              </Button>
+              <Button variant="outline" onClick={openCreateModal}>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Manual
+              </Button>
+            </div>
           }
         />
       )}
 
       <AgentModal />
+      <ImportAgentDialog open={importOpen} onOpenChange={setImportOpen} />
 
       <ConfirmDialog
         open={deleteDialog.open}

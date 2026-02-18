@@ -30,4 +30,9 @@ export const skillsApi = {
     const { data } = await apiClient.patch(`/skills/${id}/toggle`)
     return data
   },
+
+  import: async (input: { url?: string; content?: string; isGlobal?: boolean }): Promise<Skill> => {
+    const { data } = await apiClient.post('/skills/import', input)
+    return data
+  },
 }
