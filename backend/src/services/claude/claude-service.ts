@@ -301,12 +301,34 @@ export class ClaudeService {
           finalError = error || `Processo saiu com codigo ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
         } else if (content.length === 0 && rawStdout.length === 0) {
           finalError = `Processo completou mas nao produziu output. Exit code: ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
-        } else if (content.length === 0 && rawStdout.length > 0) {
+        } else if (content.length === 0 && actions.length === 0 && rawStdout.length > 0) {
           finalError = `Processo produziu output (${rawStdout.length} chars) mas parser nao extraiu conteudo. Raw: ${rawStdout.substring(0, 500)}`
         }
 
-        // If we have raw stdout but no parsed content, use raw as fallback
-        const finalContent = content || (rawStdout.length > 0 ? `[output nao parseado]\n${rawStdout}` : '')
+        // Build content from actions if no direct text content was parsed
+        let finalContent = content
+        if (!finalContent && actions.length > 0) {
+          // Extract useful content from actions (thinking, tool results, etc.)
+          const parts: string[] = []
+          for (const action of actions) {
+            if (action.type === 'thinking' && action.content) {
+              parts.push(action.content)
+            } else if (action.type === 'tool_result' && action.output) {
+              const output = typeof action.output === 'string' ? action.output : JSON.stringify(action.output)
+              parts.push(output)
+            } else if (action.type === 'tool_use' && action.name) {
+              // Don't add tool_use to content, it's tracked as an action
+            }
+          }
+          if (parts.length > 0) {
+            finalContent = parts.join('\n\n')
+          }
+        }
+        // Last resort fallback
+        if (!finalContent && rawStdout.length > 0) {
+          finalContent = `[output nao parseado]\n${rawStdout}`
+        }
+        finalContent = finalContent || ''
 
         resolve({
           content: finalContent,

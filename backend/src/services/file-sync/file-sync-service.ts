@@ -103,29 +103,38 @@ export class FileSyncService {
 
   /**
    * Write .mcp.json with all MCP server types.
-   * - stdio: command + args
-   * - http/sse: type + url
+   * Claude Code schema:
+   * - stdio: { command, args, env }
+   * - http:  { type: "http", url, headers }
+   * - sse:   { type: "sse", url, headers }
    */
   writeMcpConfig(projectPath: string, servers: McpServerData[]): void {
     const mcpServers: Record<string, unknown> = {}
 
     for (const server of servers) {
-      const env = safeJsonParse<Record<string, string>>(server.envVars, {})
-      const envObj = Object.keys(env).length > 0 ? env : undefined
+      const envVars = safeJsonParse<Record<string, string>>(server.envVars, {})
 
       if (server.type === 'stdio' && server.command) {
         const args = safeJsonParse<string[]>(server.args, [])
-        mcpServers[server.name] = {
+        const entry: Record<string, unknown> = {
           command: server.command,
           args,
-          env: envObj,
         }
+        // env is only valid for stdio servers
+        if (Object.keys(envVars).length > 0) {
+          entry.env = envVars
+        }
+        mcpServers[server.name] = entry
       } else if ((server.type === 'http' || server.type === 'sse') && server.uri) {
-        mcpServers[server.name] = {
-          type: server.type === 'http' ? 'url' : 'sse',
+        const entry: Record<string, unknown> = {
+          type: server.type, // "http" or "sse"
           url: server.uri,
-          env: envObj,
         }
+        // For remote servers, env vars go as headers (e.g. Authorization)
+        if (Object.keys(envVars).length > 0) {
+          entry.headers = envVars
+        }
+        mcpServers[server.name] = entry
       }
     }
 
