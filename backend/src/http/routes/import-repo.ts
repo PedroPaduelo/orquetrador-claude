@@ -252,17 +252,25 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
 
   try {
     if (item.type === 'skill') {
-      const existing = await prisma.skill.findUnique({ where: { name: item.name } })
-      if (existing) return
-
       const skillMdPath = item.files.find((f) => f.toLowerCase().endsWith('skill.md'))
       if (!skillMdPath) return
 
       const content = await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${skillMdPath}`)
       const { frontmatter, body } = parseFrontmatter(content)
 
-      await prisma.skill.create({
-        data: {
+      await prisma.skill.upsert({
+        where: { name: item.name },
+        update: {
+          description: (frontmatter.description as string) || `${item.files.length} arquivos de ${owner}/${repo}`,
+          body,
+          allowedTools: toJsonArray(frontmatter['allowed-tools'] || frontmatter.allowedTools),
+          model: (frontmatter.model as string) || null,
+          frontmatter: JSON.stringify(frontmatter),
+          source: 'imported',
+          repoUrl,
+          projectPath: projPath,
+        },
+        create: {
           name: item.name,
           description: (frontmatter.description as string) || `${item.files.length} arquivos de ${owner}/${repo}`,
           body,
@@ -277,14 +285,25 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
         },
       })
     } else if (item.type === 'agent') {
-      const existing = await prisma.agent.findUnique({ where: { name: item.name } })
-      if (existing) return
-
       const content = await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${item.files[0]}`)
       const { frontmatter, body } = parseFrontmatter(content)
 
-      await prisma.agent.create({
-        data: {
+      await prisma.agent.upsert({
+        where: { name: item.name },
+        update: {
+          description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
+          systemPrompt: body,
+          tools: toJsonArray(frontmatter.tools),
+          disallowedTools: toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']),
+          model: (frontmatter.model as string) || null,
+          permissionMode: (frontmatter.permissionMode as string) || (frontmatter['permission-mode'] as string) || 'default',
+          maxTurns: frontmatter.maxTurns ? parseInt(String(frontmatter.maxTurns), 10) || null : null,
+          skills: toJsonArray(frontmatter.skills),
+          source: 'imported',
+          repoUrl,
+          projectPath: projPath,
+        },
+        create: {
           name: item.name,
           description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
           systemPrompt: body,
@@ -387,24 +406,12 @@ async function importSingleFile(
 
     if (saveToDb) {
       try {
-        const existing = await prisma.skill.findUnique({ where: { name: skillName } })
-        if (!existing) {
-          await prisma.skill.create({
-            data: {
-              name: skillName,
-              description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
-              body,
-              allowedTools: toJsonArray(frontmatter['allowed-tools'] || frontmatter.allowedTools),
-              model: (frontmatter.model as string) || null,
-              frontmatter: JSON.stringify(frontmatter),
-              enabled: true,
-              isGlobal: false,
-              source: 'imported',
-              repoUrl: `https://github.com/${owner}/${repo}/tree/${branch}/${dir}`,
-              projectPath,
-            },
-          })
-        }
+        const skillRepoUrl = `https://github.com/${owner}/${repo}/tree/${branch}/${dir}`
+        await prisma.skill.upsert({
+          where: { name: skillName },
+          update: { description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, body, source: 'imported', repoUrl: skillRepoUrl, projectPath },
+          create: { name: skillName, description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, body, allowedTools: toJsonArray(frontmatter['allowed-tools'] || frontmatter.allowedTools), model: (frontmatter.model as string) || null, frontmatter: JSON.stringify(frontmatter), enabled: true, isGlobal: false, source: 'imported', repoUrl: skillRepoUrl, projectPath },
+        })
       } catch { /* non-fatal */ }
     }
   } else if (filename.endsWith('.md')) {
@@ -420,27 +427,12 @@ async function importSingleFile(
 
     if (saveToDb) {
       try {
-        const existing = await prisma.agent.findUnique({ where: { name: agentName } })
-        if (!existing) {
-          await prisma.agent.create({
-            data: {
-              name: agentName,
-              description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
-              systemPrompt: body,
-              tools: toJsonArray(frontmatter.tools),
-              disallowedTools: toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']),
-              model: (frontmatter.model as string) || null,
-              permissionMode: (frontmatter.permissionMode as string) || (frontmatter['permission-mode'] as string) || 'default',
-              maxTurns: frontmatter.maxTurns ? parseInt(String(frontmatter.maxTurns), 10) || null : null,
-              skills: toJsonArray(frontmatter.skills),
-              enabled: true,
-              isGlobal: false,
-              source: 'imported',
-              repoUrl: `https://github.com/${owner}/${repo}/blob/${branch}/${filePath}`,
-              projectPath,
-            },
-          })
-        }
+        const agentRepoUrl = `https://github.com/${owner}/${repo}/blob/${branch}/${filePath}`
+        await prisma.agent.upsert({
+          where: { name: agentName },
+          update: { description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, systemPrompt: body, tools: toJsonArray(frontmatter.tools), disallowedTools: toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']), model: (frontmatter.model as string) || null, source: 'imported', repoUrl: agentRepoUrl, projectPath },
+          create: { name: agentName, description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, systemPrompt: body, tools: toJsonArray(frontmatter.tools), disallowedTools: toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']), model: (frontmatter.model as string) || null, permissionMode: (frontmatter.permissionMode as string) || (frontmatter['permission-mode'] as string) || 'default', maxTurns: frontmatter.maxTurns ? parseInt(String(frontmatter.maxTurns), 10) || null : null, skills: toJsonArray(frontmatter.skills), enabled: true, isGlobal: false, source: 'imported', repoUrl: agentRepoUrl, projectPath },
+        })
       } catch { /* non-fatal */ }
     }
   } else {

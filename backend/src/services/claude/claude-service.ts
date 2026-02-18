@@ -69,13 +69,13 @@ export class ClaudeService {
       initialContext = await sessionManager.getInitialContext(conversationId)
     }
 
-    // Build the full message with context
+    // Build the full message with compact context summary
     let fullMessage = message
     if (initialContext.length > 0 && !existingSessionId) {
       const contextStr = initialContext
-        .map((m) => `${m.role === 'user' ? 'Usuario' : 'Assistente'}: ${m.content}`)
-        .join('\n\n')
-      fullMessage = `Contexto anterior:\n${contextStr}\n\n---\n\nMensagem atual: ${message}`
+        .map((m) => `[${m.role === 'user' ? 'User' : 'Assistant'}]: ${m.content}`)
+        .join('\n')
+      fullMessage = `<context-summary>\n${contextStr}\n</context-summary>\n\n${message}`
     }
 
     // Build command arguments - DO NOT use shell:true, pass args as array
