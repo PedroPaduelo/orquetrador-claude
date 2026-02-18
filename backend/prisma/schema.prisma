@@ -214,6 +214,9 @@ model Skill {
   model        String?
   enabled      Boolean  @default(true)
   isGlobal     Boolean  @default(true) @map("is_global")
+  source       String   @default("manual") // manual | imported
+  repoUrl      String?  @map("repo_url")
+  projectPath  String?  @map("project_path")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -240,6 +243,9 @@ model Agent {
   skills          String   @default("[]")
   enabled         Boolean  @default(true)
   isGlobal        Boolean  @default(true) @map("is_global")
+  source          String   @default("manual") // manual | imported
+  repoUrl         String?  @map("repo_url")
+  projectPath     String?  @map("project_path")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -261,6 +267,9 @@ model Plugin {
   author      String?
   manifest    String   @default("{}")
   enabled     Boolean  @default(true)
+  source      String   @default("manual") // manual | imported
+  repoUrl     String?  @map("repo_url")
+  projectPath String?  @map("project_path")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 

@@ -54,6 +54,7 @@ export function SkillCard({ skill, onEdit, onDelete, onToggle }: SkillCardProps)
       </CardHeader>
       <CardContent className="py-3 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
+          {skill.source === 'imported' && <Badge variant="default" className="text-[10px]">Importado</Badge>}
           {skill.isGlobal && <Badge variant="outline">Global</Badge>}
           {skill.model && <Badge variant="secondary">{skill.model}</Badge>}
         </div>

@@ -8,6 +8,8 @@ export interface Skill {
   enabled: boolean
   isGlobal: boolean
   pluginId: string | null
+  source: 'manual' | 'imported'
+  repoUrl: string | null
   createdAt: string
   updatedAt?: string
 }

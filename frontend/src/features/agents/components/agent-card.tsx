@@ -54,6 +54,7 @@ export function AgentCard({ agent, onEdit, onDelete, onToggle }: AgentCardProps)
       </CardHeader>
       <CardContent className="py-3 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
+          {agent.source === 'imported' && <Badge variant="default" className="text-[10px]">Importado</Badge>}
           {agent.model && <Badge variant="secondary">{agent.model}</Badge>}
           {agent.isGlobal && <Badge variant="outline">Global</Badge>}
           {agent.tools.length > 0 && (

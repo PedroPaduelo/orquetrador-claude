@@ -90,13 +90,15 @@ export class FileSyncService {
       this.writeMcpConfig(projectPath, allServers)
     }
 
-    // Write skill files
+    // Write ONLY manual skills (imported ones are already on the filesystem)
     for (const skill of allSkills) {
+      if (skill.source === 'imported') continue
       this.writeSkillFile(projectPath, skill)
     }
 
-    // Write agent files
+    // Write ONLY manual agents (imported ones are already on the filesystem)
     for (const agent of allAgents) {
+      if (agent.source === 'imported') continue
       this.writeAgentFile(projectPath, agent)
     }
   }

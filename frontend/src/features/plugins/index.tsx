@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Plus, Package } from 'lucide-react'
+import { Plus, Package, GitBranch } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
+import { ImportRepoDialog } from '@/shared/components/common/import-repo-dialog'
 import { PluginCard } from './components/plugin-card'
 import { InstallDialog } from './components/install-dialog'
 import { usePlugins, useDeletePlugin, useTogglePlugin } from './hooks/use-plugins'
@@ -15,6 +16,7 @@ export default function PluginsPage() {
   const toggleMutation = useTogglePlugin()
 
   const [installOpen, setInstallOpen] = useState(false)
+  const [repoOpen, setRepoOpen] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; plugin: Plugin | null }>({
     open: false,
     plugin: null,
@@ -36,10 +38,16 @@ export default function PluginsPage() {
             Instale e gerencie plugins para expandir as capacidades do sistema
           </p>
         </div>
-        <Button onClick={() => setInstallOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Instalar Plugin
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setRepoOpen(true)}>
+            <GitBranch className="h-4 w-4 mr-2" />
+            Importar Repo
+          </Button>
+          <Button onClick={() => setInstallOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Instalar Manual
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -71,6 +79,7 @@ export default function PluginsPage() {
       )}
 
       <InstallDialog open={installOpen} onOpenChange={setInstallOpen} />
+      <ImportRepoDialog open={repoOpen} onOpenChange={setRepoOpen} />
 
       <ConfirmDialog
         open={deleteDialog.open}

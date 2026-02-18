@@ -12,6 +12,8 @@ export interface Agent {
   enabled: boolean
   isGlobal: boolean
   pluginId: string | null
+  source: 'manual' | 'imported'
+  repoUrl: string | null
   createdAt: string
   updatedAt?: string
 }

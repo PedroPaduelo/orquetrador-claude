@@ -20,6 +20,8 @@ export async function listSkills(app: FastifyInstance) {
             enabled: z.boolean(),
             isGlobal: z.boolean(),
             pluginId: z.string().nullable(),
+            source: z.string(),
+            repoUrl: z.string().nullable(),
             createdAt: z.string(),
           })),
         },
@@ -36,6 +38,8 @@ export async function listSkills(app: FastifyInstance) {
         enabled: s.enabled,
         isGlobal: s.isGlobal,
         pluginId: s.pluginId,
+        source: s.source,
+        repoUrl: s.repoUrl,
         createdAt: s.createdAt.toISOString(),
       }))
     }

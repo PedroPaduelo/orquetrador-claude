@@ -22,6 +22,8 @@ export async function listAgents(app: FastifyInstance) {
             enabled: z.boolean(),
             isGlobal: z.boolean(),
             pluginId: z.string().nullable(),
+            source: z.string(),
+            repoUrl: z.string().nullable(),
             createdAt: z.string(),
           })),
         },
@@ -40,6 +42,8 @@ export async function listAgents(app: FastifyInstance) {
         enabled: a.enabled,
         isGlobal: a.isGlobal,
         pluginId: a.pluginId,
+        source: a.source,
+        repoUrl: a.repoUrl,
         createdAt: a.createdAt.toISOString(),
       }))
     }

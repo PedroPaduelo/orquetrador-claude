@@ -138,7 +138,7 @@ export async function importRepo(app: FastifyInstance) {
 
             // Also save to DB for UI management if requested
             if (saveToDb) {
-              await saveItemToDb(item, owner, repo, branch)
+              await saveItemToDb(item, owner, repo, branch, projectPath)
             }
           }
         } catch (err) {
@@ -241,13 +241,14 @@ function isRuleInsideSkill(rulePath: string, allFiles: GitHubTreeItem[]): boolea
 /**
  * Save discovered item to database for UI management.
  */
-async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, branch: string): Promise<void> {
+async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, branch: string, projPath: string): Promise<void> {
+  const repoUrl = `https://github.com/${owner}/${repo}/tree/${branch}/${item.dir}`
+
   try {
     if (item.type === 'skill') {
       const existing = await prisma.skill.findUnique({ where: { name: item.name } })
       if (existing) return
 
-      // Fetch SKILL.md to extract frontmatter
       const skillMdPath = item.files.find((f) => f.toLowerCase().endsWith('skill.md'))
       if (!skillMdPath) return
 
@@ -257,13 +258,16 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
       await prisma.skill.create({
         data: {
           name: item.name,
-          description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
+          description: (frontmatter.description as string) || `${item.files.length} arquivos de ${owner}/${repo}`,
           body,
           allowedTools: JSON.stringify(frontmatter['allowed-tools'] || frontmatter.allowedTools || []),
           model: (frontmatter.model as string) || null,
           frontmatter: JSON.stringify(frontmatter),
           enabled: true,
-          isGlobal: false, // Project-scoped since we write to projectPath
+          isGlobal: false,
+          source: 'imported',
+          repoUrl,
+          projectPath: projPath,
         },
       })
     } else if (item.type === 'agent') {
@@ -286,10 +290,13 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
           skills: JSON.stringify(frontmatter.skills || []),
           enabled: true,
           isGlobal: false,
+          source: 'imported',
+          repoUrl,
+          projectPath: projPath,
         },
       })
     }
-    // Rules are file-only, no DB entry needed — Claude reads them from .claude/rules/
+    // Rules are file-only, no DB entry needed
   } catch {
     // Non-fatal: DB save is optional
   }
