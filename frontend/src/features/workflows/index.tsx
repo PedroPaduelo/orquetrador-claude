@@ -28,12 +28,14 @@ export default function WorkflowsPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="container py-8 space-y-6 page-enter">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Workflows</h1>
-          <p className="text-muted-foreground">Gerencie seus workflows de automacao</p>
+          <h1 className="text-2xl font-bold tracking-tight">Workflows</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Defina os passos que o Claude vai seguir nos seus projetos
+          </p>
         </div>
         <Button onClick={openCreateModal}>
           <Plus className="h-4 w-4 mr-2" />
@@ -46,20 +48,25 @@ export default function WorkflowsPage() {
         <ListSkeleton count={4} />
       ) : workflows && workflows.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {workflows.map((workflow) => (
-            <WorkflowCard
+          {workflows.map((workflow, index) => (
+            <div
               key={workflow.id}
-              workflow={workflow}
-              onEdit={() => openEditModal(workflow)}
-              onDelete={() => setDeleteDialog({ open: true, workflow })}
-            />
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <WorkflowCard
+                workflow={workflow}
+                onEdit={() => openEditModal(workflow)}
+                onDelete={() => setDeleteDialog({ open: true, workflow })}
+              />
+            </div>
           ))}
         </div>
       ) : (
         <EmptyState
           icon={Workflow}
           title="Nenhum workflow encontrado"
-          description="Crie seu primeiro workflow para comecar a automatizar tarefas com Claude."
+          description="Crie seu primeiro workflow para começar a automatizar tarefas com Claude."
           action={
             <Button onClick={openCreateModal}>
               <Plus className="h-4 w-4 mr-2" />
@@ -77,7 +84,7 @@ export default function WorkflowsPage() {
         open={deleteDialog.open}
         onOpenChange={(open) => setDeleteDialog({ open, workflow: null })}
         title="Excluir Workflow"
-        description={`Tem certeza que deseja excluir "${deleteDialog.workflow?.name}"? Esta acao nao pode ser desfeita.`}
+        description={`Tem certeza que deseja excluir "${deleteDialog.workflow?.name}"? Esta ação não pode ser desfeita.`}
         confirmLabel="Excluir"
         onConfirm={handleDelete}
         variant="destructive"

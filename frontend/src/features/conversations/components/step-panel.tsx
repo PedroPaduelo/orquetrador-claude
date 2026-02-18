@@ -1,11 +1,11 @@
 import { cn } from '@/shared/lib/utils'
-import { Check, Loader2, AlertCircle, RotateCcw, ChevronRight, SkipForward, MessageCircle } from 'lucide-react'
+import { Check, Loader2, AlertCircle, RotateCcw, SkipForward, SkipBack, MessageCircle, Zap } from 'lucide-react'
 import { ScrollArea } from '@/shared/components/ui/scroll-area'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import type { WorkflowStepSummary } from '../types'
 import { useConversationsStore } from '../store'
-import { useAdvanceStep } from '../hooks/use-conversations'
+import { useAdvanceStep, useGoBackStep } from '../hooks/use-conversations'
 
 interface StepPanelProps {
   steps: WorkflowStepSummary[]
@@ -18,65 +18,110 @@ interface StepPanelProps {
 export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, conversationId }: StepPanelProps) {
   const { stepStatuses } = useConversationsStore()
   const advanceStepMutation = useAdvanceStep(conversationId)
+  const goBackStepMutation = useGoBackStep(conversationId)
 
   const canAdvance = workflowType === 'step_by_step' &&
     !isExecuting &&
     currentStepIndex < steps.length - 1
 
+  const canGoBack = workflowType === 'step_by_step' &&
+    !isExecuting &&
+    currentStepIndex > 0
+
   const isFinished = currentStepIndex >= steps.length
+  const progressPercent = steps.length > 0 ? Math.round((currentStepIndex / steps.length) * 100) : 0
 
   if (steps.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-        Nenhum step configurado
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm p-6 text-center">
+        <Zap className="h-8 w-8 mb-3 opacity-30" />
+        <p className="font-medium">Nenhum step configurado</p>
+        <p className="text-xs mt-1">Adicione steps ao workflow para ver o progresso aqui</p>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header */}
       <div className="p-4 border-b">
-        <h3 className="font-semibold text-sm">Steps do Workflow</h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          {workflowType === 'step_by_step' ? 'Execucao passo a passo' : 'Execucao sequencial'}
-        </p>
-        <div className="flex items-center gap-2 mt-2">
-          <Badge variant="outline" className="text-xs">
-            {Math.min(currentStepIndex + 1, steps.length)} / {steps.length}
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm">Steps</h3>
+          <Badge variant="outline" className="text-[10px] px-2 h-5">
+            {Math.min(currentStepIndex + 1, steps.length)}/{steps.length}
           </Badge>
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-1">
+          {workflowType === 'step_by_step' ? 'Passo a passo' : 'Sequencial'}
+        </p>
+
+        {/* Progress bar */}
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1.5">
+            <span>Progresso</span>
+            <span className="font-medium">{progressPercent}%</span>
+          </div>
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500 rounded-full"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Status badges */}
+        <div className="flex items-center gap-2 mt-2">
           {isExecuting && (
-            <Badge variant="default" className="text-xs">
+            <Badge className="text-[10px] bg-primary/15 text-primary border-0 px-2 h-5">
               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
               Executando
             </Badge>
           )}
           {isFinished && (
-            <Badge variant="secondary" className="text-xs">
-              Concluido
+            <Badge className="text-[10px] bg-success/15 text-success border-0 px-2 h-5">
+              <Check className="h-3 w-3 mr-1" />
+              Concluído
             </Badge>
           )}
         </div>
 
-        {/* Botao de avancar */}
-        {canAdvance && (
-          <Button
-            className="w-full mt-3"
-            size="sm"
-            onClick={() => advanceStepMutation.mutate()}
-            disabled={advanceStepMutation.isPending}
-          >
-            {advanceStepMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <SkipForward className="h-4 w-4 mr-2" />
-            )}
-            Avancar para proximo step
-          </Button>
+        {/* Navigation buttons */}
+        {workflowType === 'step_by_step' && (canGoBack || canAdvance) && (
+          <div className="flex gap-2 mt-3">
+            <Button
+              className="flex-1"
+              size="sm"
+              variant="outline"
+              onClick={() => goBackStepMutation.mutate()}
+              disabled={!canGoBack || goBackStepMutation.isPending}
+            >
+              {goBackStepMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <SkipBack className="h-4 w-4 mr-1.5" />
+              )}
+              Voltar
+            </Button>
+            <Button
+              className="flex-1"
+              size="sm"
+              onClick={() => advanceStepMutation.mutate()}
+              disabled={!canAdvance || advanceStepMutation.isPending}
+            >
+              {advanceStepMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <SkipForward className="h-4 w-4 mr-1.5" />
+              )}
+              Avançar
+            </Button>
+          </div>
         )}
       </div>
 
+      {/* Steps list */}
       <ScrollArea className="flex-1">
-        <div className="p-2 space-y-1">
+        <div className="p-3 space-y-1">
           {steps.map((step, index) => {
             const status = stepStatuses.get(step.id) || 'pending'
             const isExecutingStep = index === currentStepIndex && isExecuting
@@ -88,49 +133,33 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
               <div
                 key={step.id}
                 className={cn(
-                  'flex items-center gap-3 p-3 rounded-lg transition-all',
-                  isCurrent && 'bg-primary/10 border border-primary/20',
-                  isCompleted && !isCurrent && 'bg-muted/50',
+                  'flex items-center gap-3 p-3 rounded-lg transition-all duration-200',
+                  isCurrent && 'bg-primary/8 border border-primary/15',
+                  isCompleted && !isCurrent && 'opacity-60',
                   !isCurrent && !isCompleted && 'hover:bg-muted/30'
                 )}
               >
                 {/* Status indicator */}
-                <div
-                  className={cn(
-                    'flex items-center justify-center w-8 h-8 rounded-full border-2 flex-shrink-0 transition-all',
-                    isCompleted && 'bg-primary border-primary text-primary-foreground',
-                    isExecutingStep && 'border-primary animate-pulse',
-                    isActiveChat && !isExecutingStep && 'bg-blue-500/20 border-blue-500',
-                    status === 'error' && 'border-destructive bg-destructive/10',
-                    status === 'retry' && 'border-yellow-500 bg-yellow-500/10',
-                    !isCompleted && !isExecutingStep && !isActiveChat && status !== 'error' && status !== 'retry' && 'border-muted-foreground/30'
-                  )}
-                >
-                  {isCompleted ? (
-                    <Check className="h-4 w-4" />
-                  ) : isExecutingStep ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : isActiveChat ? (
-                    <MessageCircle className="h-4 w-4 text-blue-500" />
-                  ) : status === 'error' ? (
-                    <AlertCircle className="h-4 w-4 text-destructive" />
-                  ) : status === 'retry' ? (
-                    <RotateCcw className="h-4 w-4 text-yellow-500" />
-                  ) : (
-                    <span className="text-xs font-medium">{index + 1}</span>
-                  )}
-                </div>
+                <StepIndicator
+                  index={index}
+                  isCompleted={isCompleted}
+                  isExecuting={isExecutingStep}
+                  isActiveChat={isActiveChat}
+                  status={status}
+                />
 
                 {/* Step info */}
                 <div className="flex-1 min-w-0">
                   <p className={cn(
                     'text-sm font-medium truncate',
-                    isCompleted && 'text-muted-foreground'
+                    isCurrent && 'text-foreground',
+                    isCompleted && 'text-muted-foreground',
+                    !isCurrent && !isCompleted && 'text-muted-foreground'
                   )}>
                     {step.name}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {isCompleted ? 'Concluido' :
+                  <p className="text-[11px] text-muted-foreground">
+                    {isCompleted ? 'Concluído' :
                      isExecutingStep ? 'Executando...' :
                      isActiveChat ? 'Em conversa' :
                      status === 'error' ? 'Erro' :
@@ -138,30 +167,73 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
                      'Pendente'}
                   </p>
                 </div>
-
-                {/* Arrow indicator for current */}
-                {isCurrent && (
-                  <ChevronRight className="h-4 w-4 text-primary flex-shrink-0" />
-                )}
               </div>
             )
           })}
         </div>
       </ScrollArea>
+    </div>
+  )
+}
 
-      {/* Progress summary */}
-      <div className="p-4 border-t bg-muted/20">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Progresso</span>
-          <span>{Math.round((currentStepIndex / steps.length) * 100)}%</span>
-        </div>
-        <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
-          <div
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${(currentStepIndex / steps.length) * 100}%` }}
-          />
-        </div>
+function StepIndicator({
+  index,
+  isCompleted,
+  isExecuting,
+  isActiveChat,
+  status,
+}: {
+  index: number
+  isCompleted: boolean
+  isExecuting: boolean
+  isActiveChat: boolean
+  status: string
+}) {
+  const baseClasses = 'flex items-center justify-center w-7 h-7 rounded-full border-2 shrink-0 transition-all duration-200 text-xs'
+
+  if (isCompleted) {
+    return (
+      <div className={cn(baseClasses, 'bg-success/15 border-success text-success')}>
+        <Check className="h-3.5 w-3.5" />
       </div>
+    )
+  }
+
+  if (isExecuting) {
+    return (
+      <div className={cn(baseClasses, 'border-primary bg-primary/10')}>
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (isActiveChat) {
+    return (
+      <div className={cn(baseClasses, 'bg-info/10 border-info text-info')}>
+        <MessageCircle className="h-3.5 w-3.5" />
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <div className={cn(baseClasses, 'border-destructive bg-destructive/10 text-destructive')}>
+        <AlertCircle className="h-3.5 w-3.5" />
+      </div>
+    )
+  }
+
+  if (status === 'retry') {
+    return (
+      <div className={cn(baseClasses, 'border-warning bg-warning/10 text-warning')}>
+        <RotateCcw className="h-3.5 w-3.5" />
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn(baseClasses, 'border-muted-foreground/20 text-muted-foreground')}>
+      <span className="font-medium">{index + 1}</span>
     </div>
   )
 }

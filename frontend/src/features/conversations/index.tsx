@@ -20,6 +20,7 @@ import {
 } from '@/shared/components/ui/dialog'
 import { Label } from '@/shared/components/ui/label'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { EmptyState } from '@/shared/components/common/empty-state'
 import { ConversationCard } from './components/conversation-card'
 import { useConversations, useCreateConversation, useDeleteConversation } from './hooks/use-conversations'
 import { useWorkflows } from '../workflows/hooks/use-workflows'
@@ -64,13 +65,13 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className="container py-6 space-y-6">
+    <div className="container py-8 space-y-6 page-enter">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Conversas</h1>
-          <p className="text-muted-foreground">
-            Gerencie suas conversas e execucoes de workflow
+          <h1 className="text-2xl font-bold tracking-tight">Conversas</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Suas sessões de trabalho com o Claude
           </p>
         </div>
 
@@ -110,11 +111,11 @@ export default function ConversationsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Titulo (opcional)</Label>
+                <Label>Título (opcional)</Label>
                 <Input
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Ex: Analise do projeto X"
+                  placeholder="Ex: Análise do projeto X"
                 />
               </div>
             </div>
@@ -135,7 +136,7 @@ export default function ConversationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
+      <div className="flex gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -166,33 +167,40 @@ export default function ConversationsPage() {
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-40" />
+            <Skeleton key={i} className="h-40 rounded-xl" />
           ))}
         </div>
       ) : filteredConversations?.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold">Nenhuma conversa encontrada</h3>
-          <p className="text-muted-foreground mb-4">
-            {search || workflowFilter !== 'all'
-              ? 'Tente ajustar os filtros'
-              : 'Crie uma nova conversa para comecar'}
-          </p>
-          {!search && workflowFilter === 'all' && (
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Conversa
-            </Button>
-          )}
-        </div>
+        <EmptyState
+          icon={MessageSquare}
+          title="Nenhuma conversa ainda"
+          description={
+            search || workflowFilter !== 'all'
+              ? 'Nenhum resultado para esses filtros. Tente outra busca.'
+              : 'Selecione um workflow e inicie sua primeira conversa com o Claude.'
+          }
+          action={
+            !search && workflowFilter === 'all' ? (
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Conversa
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredConversations?.map((conversation) => (
-            <ConversationCard
+          {filteredConversations?.map((conversation, index) => (
+            <div
               key={conversation.id}
-              conversation={conversation}
-              onDelete={() => deleteMutation.mutate(conversation.id)}
-            />
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <ConversationCard
+                conversation={conversation}
+                onDelete={() => deleteMutation.mutate(conversation.id)}
+              />
+            </div>
           ))}
         </div>
       )}

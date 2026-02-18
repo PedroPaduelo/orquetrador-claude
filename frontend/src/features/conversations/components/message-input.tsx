@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Square, Mic, MicOff } from 'lucide-react'
+import { Send, Square, Mic, MicOff, Loader2 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Textarea } from '@/shared/components/ui/textarea'
 
@@ -92,14 +92,11 @@ export function MessageInput({ onSend, onCancel, isStreaming, disabled }: Messag
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = ''
-      let interimTranscript = ''
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript
         if (event.results[i].isFinal) {
           finalTranscript += transcript
-        } else {
-          interimTranscript += transcript
         }
       }
 
@@ -145,8 +142,8 @@ export function MessageInput({ onSend, onCancel, isStreaming, disabled }: Messag
     (window.SpeechRecognition || window.webkitSpeechRecognition)
 
   return (
-    <div className="border-t bg-background p-4">
-      <div className="flex items-end gap-2">
+    <div className="border-t bg-background/95 backdrop-blur-sm p-4">
+      <div className="flex items-end gap-2 max-w-4xl mx-auto">
         <div className="flex-1 relative">
           <Textarea
             ref={textareaRef}
@@ -155,13 +152,13 @@ export function MessageInput({ onSend, onCancel, isStreaming, disabled }: Messag
             onKeyDown={handleKeyDown}
             placeholder={
               disabled
-                ? 'Workflow finalizado'
+                ? 'Workflow concluído. Inicie uma nova conversa.'
                 : isStreaming
-                ? 'Aguardando resposta...'
-                : 'Digite sua mensagem...'
+                ? 'Claude está processando...'
+                : 'Escreva sua mensagem...'
             }
             disabled={isStreaming || disabled}
-            className="min-h-[44px] max-h-[200px] resize-none pr-24"
+            className="min-h-[44px] max-h-[200px] resize-none pr-24 rounded-xl bg-muted/50 border-border/50 focus:border-primary/50"
             rows={1}
           />
 
@@ -169,25 +166,27 @@ export function MessageInput({ onSend, onCancel, isStreaming, disabled }: Messag
             {hasSpeechRecognition && !isStreaming && (
               <Button
                 size="icon"
-                variant={isListening ? 'destructive' : 'outline'}
+                variant={isListening ? 'destructive' : 'ghost'}
                 onClick={toggleListening}
                 disabled={disabled}
                 title={isListening ? 'Parar gravação' : 'Gravar voz'}
+                className="h-8 w-8"
               >
                 {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
             )}
             {isStreaming ? (
-              <Button size="icon" variant="destructive" onClick={onCancel}>
-                <Square className="h-4 w-4" />
+              <Button size="icon" variant="destructive" onClick={onCancel} className="h-8 w-8">
+                <Square className="h-3.5 w-3.5" />
               </Button>
             ) : (
               <Button
                 size="icon"
                 onClick={handleSubmit}
                 disabled={!content.trim() || disabled}
+                className="h-8 w-8"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
@@ -195,14 +194,15 @@ export function MessageInput({ onSend, onCancel, isStreaming, disabled }: Messag
       </div>
 
       {isStreaming && (
-        <p className="text-xs text-muted-foreground mt-2">
-          Processando... Clique no botão para cancelar.
+        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-2 max-w-4xl mx-auto">
+          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+          Claude está trabalhando...
         </p>
       )}
       {isListening && (
-        <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
-          <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-          Gravando... Fale agora
+        <p className="text-xs text-red-400 mt-2 flex items-center gap-2 max-w-4xl mx-auto">
+          <span className="inline-block w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+          Gravando - fale agora
         </p>
       )}
     </div>

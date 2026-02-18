@@ -174,7 +174,7 @@ export function NoteViewer() {
         ) : note.contentType === 'html' ? (
           <div
             className="prose prose-sm max-w-none dark:prose-invert"
-            dangerouslySetInnerHTML={{ __html: note.content }}
+            dangerouslySetInnerHTML={{ __html: note.content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').replace(/on\w+="[^"]*"/gi, '') }}
           />
         ) : (
           <div className="whitespace-pre-wrap">{note.content}</div>

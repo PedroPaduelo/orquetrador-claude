@@ -8,6 +8,7 @@ export function useWorkflows() {
   return useQuery({
     queryKey: ['workflows'],
     queryFn: workflowsApi.list,
+    staleTime: 30000,
   })
 }
 

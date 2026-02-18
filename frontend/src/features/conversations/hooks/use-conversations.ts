@@ -71,10 +71,25 @@ export function useAdvanceStep(conversationId: string) {
     mutationFn: () => conversationsApi.advanceStep(conversationId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
-      toast.success('Avancou para o proximo step!')
+      toast.success('Avançou para o próximo step!')
     },
     onError: () => {
-      toast.error('Erro ao avancar step')
+      toast.error('Erro ao avançar step')
+    },
+  })
+}
+
+export function useGoBackStep(conversationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => conversationsApi.goBackStep(conversationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
+      toast.success('Voltou para o step anterior!')
+    },
+    onError: () => {
+      toast.error('Erro ao voltar step')
     },
   })
 }

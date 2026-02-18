@@ -101,7 +101,7 @@ export async function getConversation(app: FastifyInstance) {
           stepId: m.stepId,
           stepName: m.step?.name || null,
           selectedForContext: m.selectedForContext,
-          metadata: m.metadata ? (typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata) : null,
+          metadata: m.metadata ? (typeof m.metadata === 'string' ? (() => { try { return JSON.parse(m.metadata as string) } catch { return null } })() : m.metadata) : null,
           createdAt: m.createdAt.toISOString(),
         })),
         createdAt: conversation.createdAt.toISOString(),

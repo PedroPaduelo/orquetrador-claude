@@ -96,18 +96,10 @@ export class SmartNotesMCPClient {
   }
 
   async getNotesBatch(ids: string[]): Promise<Note[]> {
-    const notes: Note[] = []
-
-    for (const id of ids) {
-      try {
-        const note = await this.getNote(id)
-        notes.push(note)
-      } catch (error) {
-        console.error(`Failed to fetch note ${id}:`, error)
-      }
-    }
-
-    return notes
+    const results = await Promise.allSettled(ids.map((id) => this.getNote(id)))
+    return results
+      .filter((r): r is PromiseFulfilledResult<Note> => r.status === 'fulfilled')
+      .map((r) => r.value)
   }
 }
 

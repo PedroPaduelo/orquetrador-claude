@@ -7,7 +7,6 @@ const envSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
   JWT_SECRET: z.string().default('development-secret-change-in-production'),
   DATABASE_URL: z.string(),
-  GROQ_API_KEY: z.string().optional(),
   SMART_NOTES_API_URL: z.string().optional(),
   SMART_NOTES_API_KEY: z.string().optional(),
   MAX_FILE_SIZE: z.coerce.number().default(26214400), // 25MB

@@ -164,7 +164,10 @@ export class TaskOrchestrator {
         })
 
         // Evaluate conditions
-        const conditionsData = typeof step.conditions === 'string' ? JSON.parse(step.conditions) : step.conditions
+        let conditionsData: unknown = step.conditions
+        if (typeof step.conditions === 'string') {
+          try { conditionsData = JSON.parse(step.conditions) } catch { conditionsData = null }
+        }
         const conditions = (conditionsData || { rules: [], default: 'continue' }) as unknown as StepConditions
         const conditionResult = conditionsEvaluator.evaluate(result.content, conditions)
 

@@ -1,4 +1,5 @@
 import Fastify from 'fastify'
+import fastifyCompress from '@fastify/compress'
 import fastifyCors from '@fastify/cors'
 import fastifyMultipart from '@fastify/multipart'
 import fastifySwagger from '@fastify/swagger'
@@ -30,6 +31,7 @@ import {
   cancelExecution,
   getConversationStatus,
   advanceStep,
+  goBackStep,
 } from './http/routes/conversations/index.js'
 
 // Message routes
@@ -51,9 +53,6 @@ import {
   previewSmartNotesContext,
 } from './http/routes/smart-notes/index.js'
 
-// Transcribe routes
-import { transcribeAudio } from './http/routes/transcribe/index.js'
-
 // Health routes
 import { healthCheck } from './http/routes/health/index.js'
 
@@ -72,6 +71,9 @@ app.setErrorHandler(errorHandler)
 
 // Register plugins
 async function registerPlugins() {
+  // Compression (gzip/deflate)
+  await app.register(fastifyCompress, { threshold: 1024 })
+
   // CORS
   await app.register(fastifyCors, {
     origin: true,
@@ -107,7 +109,6 @@ async function registerPlugins() {
         { name: 'Conversations', description: 'Conversation management' },
         { name: 'Messages', description: 'Message handling and streaming' },
         { name: 'Smart Notes', description: 'Smart Notes integration' },
-        { name: 'Transcription', description: 'Audio transcription' },
       ],
     },
     transform: jsonSchemaTransform,
@@ -138,6 +139,7 @@ async function registerRoutes() {
   await app.register(cancelExecution)
   await app.register(getConversationStatus)
   await app.register(advanceStep)
+  await app.register(goBackStep)
 
   // Messages
   await app.register(sendMessageStream)
@@ -153,9 +155,6 @@ async function registerRoutes() {
   await app.register(searchSmartNotes)
   await app.register(getSmartNote)
   await app.register(previewSmartNotesContext)
-
-  // Transcription
-  await app.register(transcribeAudio)
 }
 
 // Start server

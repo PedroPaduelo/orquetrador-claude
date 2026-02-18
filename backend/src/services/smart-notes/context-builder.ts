@@ -6,7 +6,8 @@ export class SmartNotesContextBuilder {
     const parts: string[] = []
 
     // 1. Memory notes (base knowledge)
-    const memoryNoteIds = typeof step.memoryNoteIds === 'string' ? JSON.parse(step.memoryNoteIds) as string[] : step.memoryNoteIds as string[]
+    let memoryNoteIds: string[] = []
+    try { memoryNoteIds = typeof step.memoryNoteIds === 'string' ? JSON.parse(step.memoryNoteIds) : (step.memoryNoteIds as string[]) || [] } catch { /* ignore */ }
     if (memoryNoteIds && memoryNoteIds.length > 0 && smartNotesMCPClient.isConfigured()) {
       try {
         const memoryContent = await this.getMemoryContent(memoryNoteIds)
@@ -19,7 +20,8 @@ export class SmartNotesContextBuilder {
     }
 
     // 2. Context notes (specific context)
-    const contextNoteIds = typeof step.contextNoteIds === 'string' ? JSON.parse(step.contextNoteIds) as string[] : step.contextNoteIds as string[]
+    let contextNoteIds: string[] = []
+    try { contextNoteIds = typeof step.contextNoteIds === 'string' ? JSON.parse(step.contextNoteIds) : (step.contextNoteIds as string[]) || [] } catch { /* ignore */ }
     if (contextNoteIds && contextNoteIds.length > 0 && smartNotesMCPClient.isConfigured()) {
       try {
         const contextContent = await this.getContextContent(contextNoteIds)

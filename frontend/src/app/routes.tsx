@@ -1,14 +1,14 @@
 import { Suspense, lazy } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { AppLayout } from './app-layout'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 
 // Lazy load pages
+const DashboardPage = lazy(() => import('@/features/dashboard'))
 const WorkflowsPage = lazy(() => import('@/features/workflows'))
 const ConversationsPage = lazy(() => import('@/features/conversations'))
 const ConversationDetailPage = lazy(() => import('@/features/conversations/[id]'))
 const SmartNotesPage = lazy(() => import('@/features/smart-notes'))
-const TranscriptionPage = lazy(() => import('@/features/transcription'))
 
 // Page loader
 function PageLoader() {
@@ -30,7 +30,14 @@ export function AppRoutes() {
     <Routes>
       {/* Main layout */}
       <Route path="/" element={<AppLayout />}>
-        <Route index element={<Navigate to="/conversations" replace />} />
+        <Route
+          index
+          element={
+            <Lazy>
+              <DashboardPage />
+            </Lazy>
+          }
+        />
 
         <Route
           path="workflows"
@@ -67,19 +74,14 @@ export function AppRoutes() {
             </Lazy>
           }
         />
-
-        <Route
-          path="transcription"
-          element={
-            <Lazy>
-              <TranscriptionPage />
-            </Lazy>
-          }
-        />
       </Route>
 
-      {/* Catch all */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Catch all - go to dashboard */}
+      <Route path="*" element={
+        <Lazy>
+          <DashboardPage />
+        </Lazy>
+      } />
     </Routes>
   )
 }

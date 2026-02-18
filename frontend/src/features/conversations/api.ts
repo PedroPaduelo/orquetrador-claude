@@ -1,5 +1,5 @@
 import { apiClient } from '@/shared/lib/api-client'
-import type { Conversation, CreateConversationInput, Message } from './types'
+import type { Conversation, CreateConversationInput } from './types'
 
 export const conversationsApi = {
   list: async (workflowId?: string): Promise<Conversation[]> => {
@@ -27,27 +27,13 @@ export const conversationsApi = {
     return data
   },
 
-  getStatus: async (id: string): Promise<{ isExecuting: boolean }> => {
-    const { data } = await apiClient.get(`/conversations/${id}/status`)
-    return data
-  },
-
-  getMessages: async (id: string, stepId?: string): Promise<Message[]> => {
-    const params = stepId ? { stepId } : {}
-    const { data } = await apiClient.get(`/conversations/${id}/messages`, { params })
-    return data
-  },
-
-  toggleMessageContext: async (messageId: string, selected: boolean): Promise<void> => {
-    await apiClient.put(`/messages/${messageId}/select`, { selected })
-  },
-
-  updateMessageActions: async (messageId: string, actions: unknown[]): Promise<void> => {
-    await apiClient.put(`/messages/${messageId}/actions`, { actions })
-  },
-
   advanceStep: async (id: string): Promise<Conversation> => {
     const { data } = await apiClient.post(`/conversations/${id}/advance-step`)
+    return data
+  },
+
+  goBackStep: async (id: string): Promise<Conversation> => {
+    const { data } = await apiClient.post(`/conversations/${id}/go-back-step`)
     return data
   },
 }

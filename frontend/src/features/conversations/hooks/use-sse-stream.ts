@@ -30,9 +30,8 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     async (content: string, stepIndex?: number) => {
       if (isStreaming) return
 
-      setStreaming(true)
       clearStreaming()
-      setStreaming(true) // Set again after clear
+      setStreaming(true)
 
       abortControllerRef.current = new AbortController()
 

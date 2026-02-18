@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import { prisma } from '../../../lib/prisma.js'
+import { safeJsonParse } from '../../../lib/safe-json.js'
 import { NotFoundError } from '../_errors/index.js'
 
 export async function getWorkflow(app: FastifyInstance) {
@@ -70,9 +71,9 @@ export async function getWorkflow(app: FastifyInstance) {
           stepOrder: s.stepOrder,
           systemPrompt: s.systemPrompt,
           systemPromptNoteId: s.systemPromptNoteId,
-          contextNoteIds: typeof s.contextNoteIds === 'string' ? JSON.parse(s.contextNoteIds) : s.contextNoteIds,
-          memoryNoteIds: typeof s.memoryNoteIds === 'string' ? JSON.parse(s.memoryNoteIds) : s.memoryNoteIds,
-          conditions: typeof s.conditions === 'string' ? JSON.parse(s.conditions) : s.conditions,
+          contextNoteIds: safeJsonParse<string[]>(s.contextNoteIds, []),
+          memoryNoteIds: safeJsonParse<string[]>(s.memoryNoteIds, []),
+          conditions: safeJsonParse(s.conditions, null),
           maxRetries: s.maxRetries,
           backend: s.backend,
           model: s.model,
