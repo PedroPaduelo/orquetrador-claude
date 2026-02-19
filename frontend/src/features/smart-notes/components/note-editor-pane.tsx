@@ -37,16 +37,29 @@ export function NoteEditorPane() {
 
   const loadedNoteIdRef = useRef<string | null>(null)
   const lastSavedRef = useRef({ title: '', content: '' })
+  const userEditedRef = useRef(false)
 
   const isHtml = note?.contentType === 'html'
 
-  // Load note data when a different note is selected
+  // Load note data when a different note is selected or content arrives
   useEffect(() => {
-    if (note && note.id !== loadedNoteIdRef.current) {
+    if (!note) return
+
+    const noteContent = note.content || ''
+    const isNewNote = note.id !== loadedNoteIdRef.current
+    // Also reload if we got empty content initially but real content arrived later
+    const wasEmptyNowHasContent =
+      loadedNoteIdRef.current === note.id &&
+      noteContent !== '' &&
+      lastSavedRef.current.content === '' &&
+      !userEditedRef.current
+
+    if (isNewNote || wasEmptyNowHasContent) {
       setTitle(note.title)
-      setContent(note.content || '')
+      setContent(noteContent)
       loadedNoteIdRef.current = note.id
-      lastSavedRef.current = { title: note.title, content: note.content || '' }
+      lastSavedRef.current = { title: note.title, content: noteContent }
+      userEditedRef.current = false
       setSaveStatus(null)
     }
   }, [note])
@@ -55,6 +68,7 @@ export function NoteEditorPane() {
   useEffect(() => {
     if (!selectedNoteId) {
       loadedNoteIdRef.current = null
+      userEditedRef.current = false
       setTitle('')
       setContent('')
       setSaveStatus(null)
@@ -68,6 +82,8 @@ export function NoteEditorPane() {
   useEffect(() => {
     const noteId = loadedNoteIdRef.current
     if (!noteId) return
+    // Don't auto-save until user has actually edited something
+    if (!userEditedRef.current) return
 
     const titleChanged = debouncedTitle !== lastSavedRef.current.title
     const contentChanged = debouncedContent !== lastSavedRef.current.content
@@ -94,6 +110,7 @@ export function NoteEditorPane() {
     const titleChanged = title !== lastSavedRef.current.title
     const contentChanged = content !== lastSavedRef.current.content
     if (titleChanged || contentChanged) {
+      userEditedRef.current = true
       setSaveStatus('unsaved')
     }
   }, [title, content])

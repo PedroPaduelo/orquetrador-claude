@@ -6,7 +6,7 @@ import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
   Bold, Italic, Strikethrough, Code, Heading1, Heading2, Heading3,
@@ -25,6 +25,8 @@ interface BlockEditorProps {
 }
 
 export function BlockEditor({ content, onChange, readOnly = false, placeholder = 'Comece a escrever...' }: BlockEditorProps) {
+  const isSyncingRef = useRef(false)
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -56,13 +58,22 @@ export function BlockEditor({ content, onChange, readOnly = false, placeholder =
       },
     },
     onUpdate: ({ editor: e }) => {
+      // Skip onChange during programmatic content sync to prevent auto-save loops
+      if (isSyncingRef.current) return
       onChange?.(e.getHTML())
     },
   })
 
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
+    if (!editor) return
+    // Normalize: Tiptap represents empty content as <p></p>
+    const editorHtml = editor.getHTML()
+    const isEmpty = (s: string) => !s || s === '<p></p>'
+    if (isEmpty(content) && isEmpty(editorHtml)) return
+    if (content !== editorHtml) {
+      isSyncingRef.current = true
       editor.commands.setContent(content)
+      isSyncingRef.current = false
     }
   }, [content, editor])
 
