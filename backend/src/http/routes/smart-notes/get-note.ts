@@ -14,15 +14,6 @@ export async function getSmartNote(app: FastifyInstance) {
         params: z.object({
           id: z.string(),
         }),
-        response: {
-          200: z.object({
-            id: z.string(),
-            title: z.string(),
-            content: z.string(),
-            folderId: z.string().optional(),
-            tags: z.array(z.string()).optional(),
-          }),
-        },
       },
     },
     async (request) => {

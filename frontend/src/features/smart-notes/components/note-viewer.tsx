@@ -59,7 +59,7 @@ export function NoteViewer() {
 
   const startEditing = () => {
     setEditTitle(note.title)
-    setEditContent(note.content)
+    setEditContent(note.content || '')
     setIsEditing(true)
   }
 
@@ -144,22 +144,28 @@ export function NoteViewer() {
       </div>
 
       {/* Meta */}
-      <div className="px-4 py-2 border-b text-sm text-muted-foreground">
-        <p>Atualizado em {formatDate(note.updatedAt)}</p>
-      </div>
+      {note.updatedAt && (
+        <div className="px-4 py-2 border-b text-sm text-muted-foreground">
+          <p>Atualizado em {formatDate(note.updatedAt)}</p>
+        </div>
+      )}
 
       {/* Tags */}
-      {note.tags.length > 0 && (
+      {note.tags && note.tags.length > 0 && (
         <div className="px-4 py-2 border-b flex flex-wrap gap-1">
-          {note.tags.map((tag) => (
-            <Badge
-              key={tag.id}
-              variant="outline"
-              style={{ borderColor: tag.color || undefined }}
-            >
-              {tag.name}
-            </Badge>
-          ))}
+          {note.tags.map((tag, index) => {
+            const tagName = typeof tag === 'string' ? tag : tag.name
+            const tagColor = typeof tag === 'string' ? undefined : tag.color || undefined
+            return (
+              <Badge
+                key={tagName || index}
+                variant="outline"
+                style={{ borderColor: tagColor }}
+              >
+                {tagName}
+              </Badge>
+            )
+          })}
         </div>
       )}
 
@@ -174,7 +180,7 @@ export function NoteViewer() {
         ) : note.contentType === 'html' ? (
           <div
             className="prose prose-sm max-w-none dark:prose-invert"
-            dangerouslySetInnerHTML={{ __html: note.content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').replace(/on\w+="[^"]*"/gi, '') }}
+            dangerouslySetInnerHTML={{ __html: (note.content || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').replace(/on\w+="[^"]*"/gi, '') }}
           />
         ) : (
           <div className="whitespace-pre-wrap">{note.content}</div>

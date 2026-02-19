@@ -48,9 +48,16 @@ import {
 import {
   getSmartNotesStatus,
   listSmartNotesFolders,
+  createSmartNotesFolder,
+  updateSmartNotesFolder,
+  deleteSmartNotesFolder,
   listSmartNotes,
   searchSmartNotes,
   getSmartNote,
+  createSmartNote,
+  updateSmartNote,
+  deleteSmartNote,
+  smartNoteActions,
   previewSmartNotesContext,
 } from './http/routes/smart-notes/index.js'
 
@@ -213,9 +220,16 @@ async function registerRoutes() {
   // Smart Notes
   await app.register(getSmartNotesStatus)
   await app.register(listSmartNotesFolders)
+  await app.register(createSmartNotesFolder)
+  await app.register(updateSmartNotesFolder)
+  await app.register(deleteSmartNotesFolder)
   await app.register(listSmartNotes)
   await app.register(searchSmartNotes)
   await app.register(getSmartNote)
+  await app.register(createSmartNote)
+  await app.register(updateSmartNote)
+  await app.register(deleteSmartNote)
+  await app.register(smartNoteActions)
   await app.register(previewSmartNotesContext)
 
   // MCP Servers

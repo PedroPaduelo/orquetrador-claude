@@ -47,7 +47,9 @@ export default function SmartNotesPage() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Conexão não estabelecida</AlertTitle>
           <AlertDescription className="mt-2">
-            {status?.error || 'Não foi possível conectar ao servidor Smart Notes MCP.'}
+            {!status?.configured
+              ? 'Smart Notes MCP não está configurado. Verifique as variáveis de ambiente.'
+              : 'Não foi possível conectar ao servidor Smart Notes MCP.'}
             <div className="mt-4">
               <Button variant="outline" onClick={() => refetch()}>
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -72,7 +74,7 @@ export default function SmartNotesPage() {
             <div>
               <h1 className="text-lg font-bold tracking-tight">Smart Notes</h1>
               <p className="text-[11px] text-muted-foreground">
-                Conectado a {status.serverUrl}
+                Conectado ao Smart Notes MCP
               </p>
             </div>
           </div>

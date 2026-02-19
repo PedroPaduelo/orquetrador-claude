@@ -211,8 +211,8 @@ export function NotesList() {
                 isSelected={selectedNoteId === note.id}
                 onSelect={() => setSelectedNoteId(note.id)}
                 onDelete={() => deleteMutation.mutate(note.id)}
-                onArchive={() => handleArchive(note.id, note.isArchived)}
-                onPin={() => handlePin(note.id, note.isPinned)}
+                onArchive={() => handleArchive(note.id, !!note.isArchived)}
+                onPin={() => handlePin(note.id, !!note.isPinned)}
               />
             ))}
           </div>

@@ -13,15 +13,22 @@ interface MCPResponse {
 }
 
 export interface Note {
+  [k: string]: unknown
   id: string
   title: string
-  content: string
-  folderId?: string
-  tags?: string[]
+  content?: string
   contentPreview?: string
+  contentType?: string
+  folderId?: string
+  isPinned?: boolean
+  isArchived?: boolean
+  tags?: string[]
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface Folder {
+  [k: string]: unknown
   id: string
   name: string
   icon?: string
@@ -35,7 +42,12 @@ export class SmartNotesMCPClient {
   private apiKey: string | undefined
 
   constructor() {
-    this.baseUrl = env.SMART_NOTES_API_URL
+    // Strip /api/mcp/execute suffix if present, since execute() appends it
+    let url = env.SMART_NOTES_API_URL
+    if (url) {
+      url = url.replace(/\/api\/mcp\/execute\/?$/, '').replace(/\/+$/, '')
+    }
+    this.baseUrl = url
     this.apiKey = env.SMART_NOTES_API_KEY
   }
 
@@ -84,15 +96,79 @@ export class SmartNotesMCPClient {
   }
 
   async listNotes(folderId?: string): Promise<{ notes: Note[] }> {
-    return this.execute('list_notes', folderId ? { folderId } : {})
+    const result = await this.execute<{ notes: Note[] } | Note[]>('list_notes', folderId ? { folderId } : {})
+    if (Array.isArray(result)) {
+      return { notes: result }
+    }
+    return result
   }
 
-  async listFolders(): Promise<{ folders: Folder[] }> {
-    return this.execute('list_folders', { asTree: 'true' })
+  async listFolders(): Promise<Folder[]> {
+    const result = await this.execute<Folder[] | { folders: Folder[] }>('list_folders', { asTree: 'true' })
+    if (Array.isArray(result)) {
+      return result
+    }
+    return result.folders || []
   }
 
   async searchNotes(query: string): Promise<{ notes: Note[] }> {
-    return this.execute('search_notes', { query })
+    const result = await this.execute<{ notes: Note[] } | Note[]>('search_notes', { query })
+    if (Array.isArray(result)) {
+      return { notes: result }
+    }
+    return result
+  }
+
+  async createNote(params: { title: string; content: string; contentType?: string; folderId?: string; tags?: string[]; isPinned?: boolean }): Promise<Note> {
+    return this.execute('create_note', params as Record<string, unknown>)
+  }
+
+  async updateNote(id: string, params: { title?: string; content?: string; tags?: string[] }): Promise<Note> {
+    return this.execute('update_note', { id, ...params } as Record<string, unknown>)
+  }
+
+  async deleteNote(id: string): Promise<void> {
+    await this.execute('delete_note', { id })
+  }
+
+  async moveNote(id: string, folderId: string | null): Promise<Note> {
+    return this.execute('move_note', { id, folderId: folderId || '' })
+  }
+
+  async archiveNote(id: string): Promise<Note> {
+    return this.execute('archive_note', { id })
+  }
+
+  async unarchiveNote(id: string): Promise<Note> {
+    return this.execute('unarchive_note', { id })
+  }
+
+  async pinNote(id: string): Promise<Note> {
+    return this.execute('pin_note', { id })
+  }
+
+  async unpinNote(id: string): Promise<Note> {
+    return this.execute('unpin_note', { id })
+  }
+
+  async createFolder(params: { name: string; icon?: string; color?: string; parentId?: string }): Promise<Folder> {
+    return this.execute('create_folder', params as Record<string, unknown>)
+  }
+
+  async updateFolder(id: string, params: { name?: string; icon?: string; color?: string; parentId?: string }): Promise<Folder> {
+    return this.execute('update_folder', { id, ...params } as Record<string, unknown>)
+  }
+
+  async deleteFolder(id: string): Promise<void> {
+    await this.execute('delete_folder', { id })
+  }
+
+  async addTagToNote(noteId: string, tagName: string): Promise<Note> {
+    return this.execute('add_tag_to_note', { noteId, tagName })
+  }
+
+  async removeTagFromNote(noteId: string, tagName: string): Promise<Note> {
+    return this.execute('remove_tag_from_note', { noteId, tagName })
   }
 
   async getNotesBatch(ids: string[]): Promise<Note[]> {

@@ -132,7 +132,7 @@ function FolderItem({ folder, isSelected, onSelect, onDelete }: FolderItemProps)
       <button onClick={onSelect} className="flex items-center gap-2 flex-1 text-left">
         <span>{folder.icon || '📁'}</span>
         <span className="truncate flex-1">{folder.name}</span>
-        <span className="text-xs text-muted-foreground">{folder.noteCount}</span>
+        <span className="text-xs text-muted-foreground">{folder.noteCount ?? 0}</span>
       </button>
 
       <DropdownMenu>

@@ -4,25 +4,23 @@ import { z } from 'zod'
 import { smartNotesMCPClient } from '../../../services/smart-notes/mcp-client.js'
 import { BadRequestError } from '../_errors/index.js'
 
-export async function listSmartNotes(app: FastifyInstance) {
-  app.withTypeProvider<ZodTypeProvider>().get(
-    '/smart-notes/notes',
+export async function deleteSmartNotesFolder(app: FastifyInstance) {
+  app.withTypeProvider<ZodTypeProvider>().delete(
+    '/smart-notes/folders/:id',
     {
       schema: {
         tags: ['Smart Notes'],
-        summary: 'List Smart Notes',
-        querystring: z.object({
-          folderId: z.string().optional(),
-        }),
+        summary: 'Delete a Smart Notes folder',
+        params: z.object({ id: z.string() }),
       },
     },
-    async (request) => {
+    async (request, reply) => {
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes is not configured')
       }
 
-      const { folderId } = request.query
-      return smartNotesMCPClient.listNotes(folderId)
+      await smartNotesMCPClient.deleteFolder(request.params.id)
+      return reply.status(204).send()
     }
   )
 }

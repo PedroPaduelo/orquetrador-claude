@@ -1,51 +1,55 @@
 export interface SmartNotesStatus {
+  configured: boolean
   connected: boolean
-  serverUrl: string | null
-  error: string | null
+  serverUrl?: string | null
+  error?: string | null
 }
 
 export interface Folder {
   id: string
   name: string
-  icon: string | null
-  color: string | null
-  parentId: string | null
-  noteCount: number
-  createdAt: string
-  updatedAt: string
+  icon?: string | null
+  color?: string | null
+  parentId?: string | null
+  noteCount?: number
+  children?: Folder[]
+  sortOrder?: number
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface Tag {
   id: string
   name: string
-  color: string | null
-  noteCount: number
+  color?: string | null
+  noteCount?: number
 }
 
 export interface Note {
   id: string
   title: string
-  content: string
-  contentType: 'richtext' | 'html'
-  folderId: string | null
-  isPinned: boolean
-  isArchived: boolean
-  tags: Tag[]
-  createdAt: string
-  updatedAt: string
+  content?: string
+  contentType?: string
+  folderId?: string | null
+  isPinned?: boolean
+  isArchived?: boolean
+  tags?: (Tag | string)[]
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface NotePreview {
   id: string
   title: string
-  contentPreview: string
-  contentType: 'richtext' | 'html'
-  folderId: string | null
-  isPinned: boolean
-  isArchived: boolean
-  tags: Tag[]
-  createdAt: string
-  updatedAt: string
+  contentPreview?: string
+  content?: string
+  contentType?: string
+  folderId?: string | null
+  isPinned?: boolean
+  isArchived?: boolean
+  tags?: (Tag | string)[]
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface ContextPreview {

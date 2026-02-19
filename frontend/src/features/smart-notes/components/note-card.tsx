@@ -86,18 +86,22 @@ export function NoteCard({
       </div>
 
       {/* Tags */}
-      {note.tags.length > 0 && (
+      {note.tags && note.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
-          {note.tags.slice(0, 3).map((tag) => (
-            <Badge
-              key={tag.id}
-              variant="outline"
-              className="text-xs"
-              style={{ borderColor: tag.color || undefined }}
-            >
-              {tag.name}
-            </Badge>
-          ))}
+          {note.tags.slice(0, 3).map((tag, index) => {
+            const tagName = typeof tag === 'string' ? tag : tag.name
+            const tagColor = typeof tag === 'string' ? undefined : tag.color || undefined
+            return (
+              <Badge
+                key={tagName || index}
+                variant="outline"
+                className="text-xs"
+                style={{ borderColor: tagColor }}
+              >
+                {tagName}
+              </Badge>
+            )
+          })}
           {note.tags.length > 3 && (
             <Badge variant="outline" className="text-xs">
               +{note.tags.length - 3}
@@ -107,9 +111,11 @@ export function NoteCard({
       )}
 
       {/* Date */}
-      <p className="text-xs text-muted-foreground mt-2">
-        {formatDate(note.updatedAt)}
-      </p>
+      {note.updatedAt && (
+        <p className="text-xs text-muted-foreground mt-2">
+          {formatDate(note.updatedAt)}
+        </p>
+      )}
     </div>
   )
 }

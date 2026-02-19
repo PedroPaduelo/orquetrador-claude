@@ -14,15 +14,6 @@ export async function searchSmartNotes(app: FastifyInstance) {
         querystring: z.object({
           q: z.string().min(1),
         }),
-        response: {
-          200: z.object({
-            notes: z.array(z.object({
-              id: z.string(),
-              title: z.string(),
-              contentPreview: z.string().optional(),
-            })),
-          }),
-        },
       },
     },
     async (request) => {
