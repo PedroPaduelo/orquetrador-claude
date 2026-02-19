@@ -1,37 +1,52 @@
 import { create } from 'zustand'
 
 interface SmartNotesState {
-  // UI State
-  selectedFolderId: string | null
   selectedNoteId: string | null
   searchQuery: string
-  isSearching: boolean
-  viewMode: 'list' | 'grid'
+  expandedFolderIds: Set<string>
 
-  // Actions
-  setSelectedFolderId: (id: string | null) => void
   setSelectedNoteId: (id: string | null) => void
   setSearchQuery: (query: string) => void
-  setIsSearching: (searching: boolean) => void
-  setViewMode: (mode: 'list' | 'grid') => void
+  toggleFolder: (id: string) => void
+  expandFolder: (id: string) => void
+  collapseFolder: (id: string) => void
   reset: () => void
 }
 
-const initialState = {
-  selectedFolderId: null,
+export const useSmartNotesStore = create<SmartNotesState>((set) => ({
   selectedNoteId: null,
   searchQuery: '',
-  isSearching: false,
-  viewMode: 'list' as const,
-}
+  expandedFolderIds: new Set<string>(),
 
-export const useSmartNotesStore = create<SmartNotesState>((set) => ({
-  ...initialState,
-
-  setSelectedFolderId: (id) => set({ selectedFolderId: id, selectedNoteId: null }),
   setSelectedNoteId: (id) => set({ selectedNoteId: id }),
   setSearchQuery: (query) => set({ searchQuery: query }),
-  setIsSearching: (searching) => set({ isSearching: searching }),
-  setViewMode: (mode) => set({ viewMode: mode }),
-  reset: () => set(initialState),
+
+  toggleFolder: (id) =>
+    set((state) => {
+      const next = new Set(state.expandedFolderIds)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return { expandedFolderIds: next }
+    }),
+
+  expandFolder: (id) =>
+    set((state) => {
+      const next = new Set(state.expandedFolderIds)
+      next.add(id)
+      return { expandedFolderIds: next }
+    }),
+
+  collapseFolder: (id) =>
+    set((state) => {
+      const next = new Set(state.expandedFolderIds)
+      next.delete(id)
+      return { expandedFolderIds: next }
+    }),
+
+  reset: () =>
+    set({
+      selectedNoteId: null,
+      searchQuery: '',
+      expandedFolderIds: new Set<string>(),
+    }),
 }))

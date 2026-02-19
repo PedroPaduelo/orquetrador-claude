@@ -37,6 +37,7 @@ export const smartNotesKeys = {
   status: () => [...smartNotesKeys.all, 'status'] as const,
   folders: () => [...smartNotesKeys.all, 'folders'] as const,
   folder: (id: string) => [...smartNotesKeys.folders(), id] as const,
+  notesAll: () => [...smartNotesKeys.all, 'notes'] as const,
   notes: (params?: ListNotesParams) => [...smartNotesKeys.all, 'notes', params] as const,
   note: (id: string) => [...smartNotesKeys.all, 'note', id] as const,
   search: (params: SearchNotesParams) => [...smartNotesKeys.all, 'search', params] as const,
@@ -99,7 +100,7 @@ export function useDeleteFolder() {
     mutationFn: (id: string) => deleteFolder(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.folders() })
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
     },
   })
 }
@@ -126,7 +127,7 @@ export function useCreateNote() {
   return useMutation({
     mutationFn: (params: CreateNoteParams) => createNote(params),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.folders() })
     },
   })
@@ -140,7 +141,7 @@ export function useUpdateNote() {
       updateNote(id, params),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.note(variables.id) })
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
     },
   })
 }
@@ -151,7 +152,7 @@ export function useDeleteNote() {
   return useMutation({
     mutationFn: (id: string) => deleteNote(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.folders() })
     },
   })
@@ -165,7 +166,7 @@ export function useMoveNote() {
       moveNote(id, folderId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.note(variables.id) })
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.folders() })
     },
   })
@@ -178,7 +179,7 @@ export function useArchiveNote() {
     mutationFn: (id: string) => archiveNote(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.note(id) })
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
     },
   })
 }
@@ -190,7 +191,7 @@ export function useUnarchiveNote() {
     mutationFn: (id: string) => unarchiveNote(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.note(id) })
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
     },
   })
 }
@@ -202,7 +203,7 @@ export function usePinNote() {
     mutationFn: (id: string) => pinNote(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.note(id) })
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
     },
   })
 }
@@ -214,7 +215,7 @@ export function useUnpinNote() {
     mutationFn: (id: string) => unpinNote(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.note(id) })
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
     },
   })
 }
@@ -244,7 +245,7 @@ export function useAddTagToNote() {
       addTagToNote(noteId, tagName),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.note(variables.noteId) })
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.tags() })
     },
   })
@@ -258,7 +259,7 @@ export function useRemoveTagFromNote() {
       removeTagFromNote(noteId, tagName),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.note(variables.noteId) })
-      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notes() })
+      queryClient.invalidateQueries({ queryKey: smartNotesKeys.notesAll() })
       queryClient.invalidateQueries({ queryKey: smartNotesKeys.tags() })
     },
   })

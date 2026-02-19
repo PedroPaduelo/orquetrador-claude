@@ -3,9 +3,8 @@ import { StickyNote, AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/components/ui/alert'
-import { FolderList } from './components/folder-list'
-import { NotesList } from './components/notes-list'
-import { NoteViewer } from './components/note-viewer'
+import { FolderTree } from './components/folder-tree'
+import { NoteEditorPane } from './components/note-editor-pane'
 import { useSmartNotesStatus } from './hooks/use-smart-notes'
 import { useSmartNotesStore } from './store'
 
@@ -13,7 +12,6 @@ export default function SmartNotesPage() {
   const { data: status, isLoading, error, refetch } = useSmartNotesStatus()
   const { reset } = useSmartNotesStore()
 
-  // Reset store on unmount
   useEffect(() => {
     return () => reset()
   }, [reset])
@@ -22,10 +20,9 @@ export default function SmartNotesPage() {
     return (
       <div className="container py-8">
         <Skeleton className="h-8 w-64 mb-4" />
-        <div className="grid grid-cols-12 gap-4 h-[calc(100vh-200px)]">
-          <Skeleton className="col-span-2 h-full rounded-xl" />
-          <Skeleton className="col-span-4 h-full rounded-xl" />
-          <Skeleton className="col-span-6 h-full rounded-xl" />
+        <div className="flex gap-4 h-[calc(100vh-200px)]">
+          <Skeleton className="w-72 h-full rounded-xl" />
+          <Skeleton className="flex-1 h-full rounded-xl" />
         </div>
       </div>
     )
@@ -65,37 +62,27 @@ export default function SmartNotesPage() {
   return (
     <div className="flex flex-col h-full page-enter">
       {/* Header */}
-      <header className="border-b border-border/50 bg-background/95 backdrop-blur-sm px-6 py-4 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              <StickyNote className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">Smart Notes</h1>
-              <p className="text-[11px] text-muted-foreground">
-                Conectado ao Smart Notes MCP
-              </p>
-            </div>
+      <header className="border-b border-border/50 bg-background/95 backdrop-blur-sm px-6 py-3 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+            <StickyNote className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight">Smart Notes</h1>
+            <p className="text-[11px] text-muted-foreground">
+              Conectado ao Smart Notes MCP
+            </p>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Two-panel layout: sidebar + editor */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Folders Sidebar */}
-        <aside className="w-56 border-r border-border/50 bg-card/30">
-          <FolderList />
+        <aside className="w-72 border-r border-border/50 bg-card/30 flex flex-col shrink-0">
+          <FolderTree />
         </aside>
-
-        {/* Notes List */}
-        <div className="w-80 border-r border-border/50">
-          <NotesList />
-        </div>
-
-        {/* Note Viewer */}
-        <main className="flex-1">
-          <NoteViewer />
+        <main className="flex-1 min-w-0">
+          <NoteEditorPane />
         </main>
       </div>
     </div>
