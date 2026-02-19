@@ -23,7 +23,7 @@ export async function getSmartNotesStatus(): Promise<SmartNotesStatus> {
 // Folders
 export async function listFolders(): Promise<Folder[]> {
   const { data } = await apiClient.get('/smart-notes/folders')
-  return data
+  return data.folders ?? data
 }
 
 export async function getFolder(id: string): Promise<Folder> {
@@ -48,7 +48,7 @@ export async function deleteFolder(id: string): Promise<void> {
 // Notes
 export async function listNotes(params?: ListNotesParams): Promise<NotePreview[]> {
   const { data } = await apiClient.get('/smart-notes/notes', { params })
-  return data
+  return data.notes ?? data
 }
 
 export async function getNote(id: string): Promise<Note> {
@@ -97,8 +97,8 @@ export async function unpinNote(id: string): Promise<Note> {
 
 // Search
 export async function searchNotes(params: SearchNotesParams): Promise<NotePreview[]> {
-  const { data } = await apiClient.get('/smart-notes/search', { params })
-  return data
+  const { data } = await apiClient.get('/smart-notes/notes/search', { params: { q: params.query } })
+  return data.notes ?? data
 }
 
 // Tags

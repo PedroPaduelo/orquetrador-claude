@@ -57,7 +57,8 @@ export function NotesList() {
   const archiveMutation = useArchiveNote()
   const unarchiveMutation = useUnarchiveNote()
 
-  const displayedNotes = searchQuery ? searchResults : notes
+  const rawNotes = searchQuery ? searchResults : notes
+  const displayedNotes = Array.isArray(rawNotes) ? rawNotes : []
 
   const handleCreateNote = async () => {
     if (!newTitle.trim()) return
