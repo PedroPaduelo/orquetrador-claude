@@ -9,7 +9,7 @@ import { useSearchPagination, SearchBar, Pagination } from '@/shared/components/
 import { AgentCard } from './components/agent-card'
 import { AgentModal } from './components/agent-modal'
 import { ImportAgentDialog } from './components/import-agent-dialog'
-import { useAgents, useDeleteAgent, useToggleAgent } from './hooks/use-agents'
+import { useAgents, useDeleteAgent, useToggleAgent, useResyncAgent } from './hooks/use-agents'
 import { useAgentsStore } from './store'
 import type { Agent } from './types'
 
@@ -19,6 +19,7 @@ export default function AgentsPage() {
   const { data: agents, isLoading } = useAgents()
   const deleteMutation = useDeleteAgent()
   const toggleMutation = useToggleAgent()
+  const resyncMutation = useResyncAgent()
   const { openCreateModal, openEditModal } = useAgentsStore()
 
   const { paged, search, setSearch, page, setPage, totalPages, total } = useSearchPagination({
@@ -78,6 +79,8 @@ export default function AgentsPage() {
                   onEdit={() => openEditModal(agent)}
                   onDelete={() => setDeleteDialog({ open: true, agent })}
                   onToggle={() => toggleMutation.mutate(agent.id)}
+                  onResync={() => resyncMutation.mutate(agent.id)}
+                  isResyncing={resyncMutation.isPending}
                 />
               </div>
             ))}

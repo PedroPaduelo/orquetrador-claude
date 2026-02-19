@@ -6,6 +6,30 @@ import { join, dirname } from 'path'
 import { prisma } from '../../../lib/prisma.js'
 import { NotFoundError } from '../_errors/index.js'
 
+interface Frontmatter { [key: string]: unknown }
+
+function parseFrontmatter(md: string): { frontmatter: Frontmatter; body: string } {
+  const t = md.trim()
+  if (!t.startsWith('---')) return { frontmatter: {}, body: t }
+  const end = t.indexOf('---', 3)
+  if (end === -1) return { frontmatter: {}, body: t }
+  const yaml = t.substring(3, end).trim()
+  const body = t.substring(end + 3).trim()
+  const fm: Frontmatter = {}
+  let key = ''
+  let arr: string[] | null = null
+  for (const line of yaml.split('\n')) {
+    const tl = line.trim()
+    if (!tl) continue
+    if (tl.startsWith('- ') && key) { if (!arr) arr = []; arr.push(tl.substring(2).trim()); continue }
+    if (arr && key) { fm[key] = arr; arr = null }
+    const ci = tl.indexOf(':')
+    if (ci > 0) { key = tl.substring(0, ci).trim(); const v = tl.substring(ci + 1).trim(); if (v) fm[key] = v.replace(/^["']|["']$/g, '') }
+  }
+  if (arr && key) fm[key] = arr
+  return { frontmatter: fm, body }
+}
+
 interface GitHubTreeItem {
   path: string
   type: string
@@ -78,6 +102,9 @@ export async function resyncPlugin(app: FastifyInstance) {
           const skillName = dir.split('/').pop() || 'unnamed'
           const skillFiles = tree.filter((f) => f.path.startsWith(dir + '/'))
 
+          const manifest: Array<{ path: string; content: string }> = []
+          let skillMdContent = ''
+
           for (const sf of skillFiles) {
             try {
               const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${sf.path}`
@@ -89,12 +116,40 @@ export async function resyncPlugin(app: FastifyInstance) {
               const content = await resp.text()
 
               const relativePath = sf.path.substring(dir.length + 1)
+              manifest.push({ path: relativePath, content })
+
+              if (relativePath.toLowerCase() === 'skill.md') {
+                skillMdContent = content
+              }
+
               const targetPath = join(projPath, '.claude', 'skills', skillName, relativePath)
               mkdirSync(dirname(targetPath), { recursive: true })
               writeFileSync(targetPath, content, 'utf-8')
               filesUpdated++
             } catch { /* skip */ }
           }
+
+          // Update DB record with fresh content and manifest
+          try {
+            const existing = await prisma.skill.findUnique({ where: { name: skillName } })
+            if (existing) {
+              const updateData: Record<string, unknown> = {
+                fileManifest: JSON.stringify(manifest),
+                lastSyncedAt: new Date(),
+                repoOwner: owner,
+                repoName: repo,
+                repoBranch: branch,
+                repoPath: dir,
+              }
+              if (skillMdContent) {
+                const { frontmatter, body } = parseFrontmatter(skillMdContent)
+                updateData.body = body
+                updateData.frontmatter = JSON.stringify(frontmatter)
+                if (frontmatter.description) updateData.description = frontmatter.description
+              }
+              await prisma.skill.update({ where: { name: skillName }, data: updateData as Parameters<typeof prisma.skill.update>[0]['data'] })
+            }
+          } catch { /* non-fatal */ }
         }
       }
 

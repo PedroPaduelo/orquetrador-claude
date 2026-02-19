@@ -82,6 +82,7 @@ import {
   deleteSkill,
   toggleSkill,
   importSkill,
+  resyncSkill,
 } from './http/routes/skills/index.js'
 
 // Agents routes
@@ -93,6 +94,7 @@ import {
   deleteAgent,
   toggleAgent,
   importAgent,
+  resyncAgent,
 } from './http/routes/agents/index.js'
 
 // Rules routes
@@ -104,6 +106,7 @@ import {
   deleteRule,
   toggleRule,
   importRule,
+  resyncRule,
 } from './http/routes/rules/index.js'
 
 // Plugins routes
@@ -262,6 +265,7 @@ async function registerRoutes() {
   await app.register(deleteSkill)
   await app.register(toggleSkill)
   await app.register(importSkill)
+  await app.register(resyncSkill)
 
   // Agents
   await app.register(listAgents)
@@ -271,6 +275,7 @@ async function registerRoutes() {
   await app.register(deleteAgent)
   await app.register(toggleAgent)
   await app.register(importAgent)
+  await app.register(resyncAgent)
 
   // Rules
   await app.register(listRules)
@@ -280,6 +285,7 @@ async function registerRoutes() {
   await app.register(deleteRule)
   await app.register(toggleRule)
   await app.register(importRule)
+  await app.register(resyncRule)
 
   // Plugins
   await app.register(listPlugins)

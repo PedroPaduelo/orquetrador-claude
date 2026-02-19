@@ -9,7 +9,7 @@ import { useSearchPagination, SearchBar, Pagination } from '@/shared/components/
 import { SkillCard } from './components/skill-card'
 import { SkillModal } from './components/skill-modal'
 import { ImportSkillDialog } from './components/import-skill-dialog'
-import { useSkills, useDeleteSkill, useToggleSkill } from './hooks/use-skills'
+import { useSkills, useDeleteSkill, useToggleSkill, useResyncSkill } from './hooks/use-skills'
 import { useSkillsStore } from './store'
 import type { Skill } from './types'
 
@@ -19,6 +19,7 @@ export default function SkillsPage() {
   const { data: skills, isLoading } = useSkills()
   const deleteMutation = useDeleteSkill()
   const toggleMutation = useToggleSkill()
+  const resyncMutation = useResyncSkill()
   const { openCreateModal, openEditModal } = useSkillsStore()
 
   const { paged, search, setSearch, page, setPage, totalPages, total } = useSearchPagination({
@@ -78,6 +79,8 @@ export default function SkillsPage() {
                   onEdit={() => openEditModal(skill)}
                   onDelete={() => setDeleteDialog({ open: true, skill })}
                   onToggle={() => toggleMutation.mutate(skill.id)}
+                  onResync={() => resyncMutation.mutate(skill.id)}
+                  isResyncing={resyncMutation.isPending}
                 />
               </div>
             ))}

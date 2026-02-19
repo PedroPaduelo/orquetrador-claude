@@ -14,6 +14,9 @@ export interface Agent {
   pluginId: string | null
   source: 'manual' | 'imported'
   repoUrl: string | null
+  repoOwner: string | null
+  repoName: string | null
+  lastSyncedAt: string | null
   createdAt: string
   updatedAt?: string
 }

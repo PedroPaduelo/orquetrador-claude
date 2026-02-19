@@ -7,6 +7,9 @@ export interface Rule {
   isGlobal: boolean
   source: 'manual' | 'imported'
   repoUrl: string | null
+  repoOwner: string | null
+  repoName: string | null
+  lastSyncedAt: string | null
   skillId: string | null
   skillName: string | null
   pluginId: string | null

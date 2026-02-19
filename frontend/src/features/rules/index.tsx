@@ -9,7 +9,7 @@ import { useSearchPagination, SearchBar, Pagination } from '@/shared/components/
 import { RuleCard } from './components/rule-card'
 import { RuleModal } from './components/rule-modal'
 import { ImportRuleDialog } from './components/import-rule-dialog'
-import { useRules, useDeleteRule, useToggleRule } from './hooks/use-rules'
+import { useRules, useDeleteRule, useToggleRule, useResyncRule } from './hooks/use-rules'
 import { useRulesStore } from './store'
 import type { Rule } from './types'
 
@@ -19,6 +19,7 @@ export default function RulesPage() {
   const { data: rules, isLoading } = useRules()
   const deleteMutation = useDeleteRule()
   const toggleMutation = useToggleRule()
+  const resyncMutation = useResyncRule()
   const { openCreateModal, openEditModal } = useRulesStore()
 
   const { paged, search, setSearch, page, setPage, totalPages, total } = useSearchPagination({
@@ -78,6 +79,8 @@ export default function RulesPage() {
                   onEdit={() => openEditModal(rule)}
                   onDelete={() => setDeleteDialog({ open: true, rule })}
                   onToggle={() => toggleMutation.mutate(rule.id)}
+                  onResync={() => resyncMutation.mutate(rule.id)}
+                  isResyncing={resyncMutation.isPending}
                 />
               </div>
             ))}

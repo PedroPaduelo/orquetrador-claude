@@ -37,6 +37,9 @@ export async function listAgents(app: FastifyInstance) {
             pluginId: z.string().nullable(),
             source: z.string(),
             repoUrl: z.string().nullable(),
+            repoOwner: z.string().nullable(),
+            repoName: z.string().nullable(),
+            lastSyncedAt: z.string().nullable(),
             createdAt: z.string(),
           })),
         },
@@ -57,6 +60,9 @@ export async function listAgents(app: FastifyInstance) {
         pluginId: a.pluginId,
         source: a.source,
         repoUrl: a.repoUrl,
+        repoOwner: a.repoOwner,
+        repoName: a.repoName,
+        lastSyncedAt: a.lastSyncedAt?.toISOString() ?? null,
         createdAt: a.createdAt.toISOString(),
       }))
     }

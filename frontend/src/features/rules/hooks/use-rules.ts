@@ -80,3 +80,15 @@ export function useImportRule() {
     onError: (err: Error) => { toast.error(err.message || 'Erro ao importar rule') },
   })
 }
+
+export function useResyncRule() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: rulesApi.resync,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['rules'] })
+      toast.success(`Rule "${data.name}" resincronizada!`)
+    },
+    onError: (err: Error) => { toast.error(err.message || 'Erro ao resincronizar rule') },
+  })
+}

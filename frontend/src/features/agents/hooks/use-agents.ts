@@ -95,3 +95,18 @@ export function useImportAgent() {
     },
   })
 }
+
+export function useResyncAgent() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: agentsApi.resync,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+      toast.success(`Agent "${data.name}" resincronizado!`)
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Erro ao resincronizar agent')
+    },
+  })
+}

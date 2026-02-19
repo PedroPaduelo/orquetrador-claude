@@ -1,4 +1,4 @@
-import { Sparkles, MoreVertical, Trash2, Pencil, Power, PowerOff } from 'lucide-react'
+import { Sparkles, MoreVertical, Trash2, Pencil, Power, PowerOff, RefreshCw, Github, ExternalLink } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
 import type { Skill } from '../types'
@@ -15,9 +16,13 @@ interface SkillCardProps {
   onEdit: () => void
   onDelete: () => void
   onToggle: () => void
+  onResync?: () => void
+  isResyncing?: boolean
 }
 
-export function SkillCard({ skill, onEdit, onDelete, onToggle }: SkillCardProps) {
+export function SkillCard({ skill, onEdit, onDelete, onToggle, onResync, isResyncing }: SkillCardProps) {
+  const hasGitHub = skill.source === 'imported' && skill.repoOwner && skill.repoName
+
   return (
     <Card className={!skill.enabled ? 'opacity-60' : ''}>
       <CardHeader className="py-3">
@@ -44,6 +49,20 @@ export function SkillCard({ skill, onEdit, onDelete, onToggle }: SkillCardProps)
                   <><Power className="h-4 w-4 mr-2" />Ativar</>
                 )}
               </DropdownMenuItem>
+              {hasGitHub && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onResync} disabled={isResyncing}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isResyncing ? 'animate-spin' : ''}`} />
+                    {isResyncing ? 'Sincronizando...' : 'Resincronizar'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.open(skill.repoUrl || `https://github.com/${skill.repoOwner}/${skill.repoName}`, '_blank')}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Ver no GitHub
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onDelete} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Excluir
@@ -54,7 +73,13 @@ export function SkillCard({ skill, onEdit, onDelete, onToggle }: SkillCardProps)
       </CardHeader>
       <CardContent className="py-3 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
-          {skill.source === 'imported' && <Badge variant="default" className="text-[10px]">Importado</Badge>}
+          {hasGitHub && (
+            <Badge variant="default" className="text-[10px] gap-1">
+              <Github className="h-3 w-3" />
+              {skill.repoOwner}/{skill.repoName}
+            </Badge>
+          )}
+          {skill.source === 'imported' && !hasGitHub && <Badge variant="default" className="text-[10px]">Importado</Badge>}
           {skill.isGlobal && <Badge variant="outline">Global</Badge>}
           {skill.model && <Badge variant="secondary">{skill.model}</Badge>}
         </div>
@@ -69,6 +94,11 @@ export function SkillCard({ skill, onEdit, onDelete, onToggle }: SkillCardProps)
               </Badge>
             ))}
           </div>
+        )}
+        {skill.lastSyncedAt && (
+          <p className="text-[10px] text-muted-foreground">
+            Sync: {new Date(skill.lastSyncedAt).toLocaleDateString('pt-BR')}
+          </p>
         )}
       </CardContent>
     </Card>

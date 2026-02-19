@@ -1,4 +1,4 @@
-import { Bot, MoreVertical, Trash2, Pencil, Power, PowerOff } from 'lucide-react'
+import { Bot, MoreVertical, Trash2, Pencil, Power, PowerOff, RefreshCw, Github, ExternalLink } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
 import type { Agent } from '../types'
@@ -15,9 +16,13 @@ interface AgentCardProps {
   onEdit: () => void
   onDelete: () => void
   onToggle: () => void
+  onResync?: () => void
+  isResyncing?: boolean
 }
 
-export function AgentCard({ agent, onEdit, onDelete, onToggle }: AgentCardProps) {
+export function AgentCard({ agent, onEdit, onDelete, onToggle, onResync, isResyncing }: AgentCardProps) {
+  const hasGitHub = agent.source === 'imported' && agent.repoOwner && agent.repoName
+
   return (
     <Card className={!agent.enabled ? 'opacity-60' : ''}>
       <CardHeader className="py-3">
@@ -44,6 +49,20 @@ export function AgentCard({ agent, onEdit, onDelete, onToggle }: AgentCardProps)
                   <><Power className="h-4 w-4 mr-2" />Ativar</>
                 )}
               </DropdownMenuItem>
+              {hasGitHub && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onResync} disabled={isResyncing}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isResyncing ? 'animate-spin' : ''}`} />
+                    {isResyncing ? 'Sincronizando...' : 'Resincronizar'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.open(agent.repoUrl || `https://github.com/${agent.repoOwner}/${agent.repoName}`, '_blank')}>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Ver no GitHub
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onDelete} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Excluir
@@ -54,7 +73,13 @@ export function AgentCard({ agent, onEdit, onDelete, onToggle }: AgentCardProps)
       </CardHeader>
       <CardContent className="py-3 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
-          {agent.source === 'imported' && <Badge variant="default" className="text-[10px]">Importado</Badge>}
+          {hasGitHub && (
+            <Badge variant="default" className="text-[10px] gap-1">
+              <Github className="h-3 w-3" />
+              {agent.repoOwner}/{agent.repoName}
+            </Badge>
+          )}
+          {agent.source === 'imported' && !hasGitHub && <Badge variant="default" className="text-[10px]">Importado</Badge>}
           {agent.model && <Badge variant="secondary">{agent.model}</Badge>}
           {agent.isGlobal && <Badge variant="outline">Global</Badge>}
           {agent.tools.length > 0 && (
@@ -68,6 +93,11 @@ export function AgentCard({ agent, onEdit, onDelete, onToggle }: AgentCardProps)
           Modo: {agent.permissionMode}
           {agent.maxTurns && ` | Max turnos: ${agent.maxTurns}`}
         </p>
+        {agent.lastSyncedAt && (
+          <p className="text-[10px] text-muted-foreground">
+            Sync: {new Date(agent.lastSyncedAt).toLocaleDateString('pt-BR')}
+          </p>
+        )}
       </CardContent>
     </Card>
   )

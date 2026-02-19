@@ -103,12 +103,15 @@ export async function importRepo(app: FastifyInstance) {
             targetDir = join(projectPath, '.claude', 'rules')
           }
 
-          // Fetch and write all files for this item
+          // Fetch and write all files for this item, collecting contents for DB
           let filesWritten = 0
+          const fileContents = new Map<string, string>()
+
           for (const filePath of item.files) {
             try {
               const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`
               const content = await fetchText(rawUrl)
+              fileContents.set(filePath, content)
 
               // Calculate relative path within the item's directory
               let relativePath: string
@@ -144,7 +147,7 @@ export async function importRepo(app: FastifyInstance) {
 
             // Also save to DB for UI management if requested
             if (saveToDb) {
-              await saveItemToDb(item, owner, repo, branch, projectPath)
+              await saveItemToDb(item, owner, repo, branch, projectPath, fileContents)
             }
           }
         } catch (err) {
@@ -246,17 +249,41 @@ function isRuleInsideSkill(rulePath: string, allFiles: GitHubTreeItem[]): boolea
 
 /**
  * Save discovered item to database for UI management.
+ * Stores structured GitHub info + full file manifest for skills.
  */
-async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, branch: string, projPath: string): Promise<void> {
+async function saveItemToDb(
+  item: DiscoveredItem, owner: string, repo: string, branch: string, projPath: string,
+  fileContents: Map<string, string>
+): Promise<void> {
   const repoUrl = `https://github.com/${owner}/${repo}/tree/${branch}/${item.dir}`
+  const now = new Date()
 
   try {
     if (item.type === 'skill') {
       const skillMdPath = item.files.find((f) => f.toLowerCase().endsWith('skill.md'))
       if (!skillMdPath) return
 
-      const content = await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${skillMdPath}`)
-      const { frontmatter, body } = parseFrontmatter(content)
+      const skillMdContent = fileContents.get(skillMdPath) || await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${skillMdPath}`)
+      const { frontmatter, body } = parseFrontmatter(skillMdContent)
+
+      // Build file manifest with ALL skill files and their contents
+      const manifest: Array<{ path: string; content: string }> = []
+      for (const filePath of item.files) {
+        const relativePath = filePath.substring(item.dir.length + 1)
+        const content = fileContents.get(filePath)
+        if (content !== undefined) {
+          manifest.push({ path: relativePath, content })
+        }
+      }
+
+      const githubFields = {
+        repoOwner: owner,
+        repoName: repo,
+        repoBranch: branch,
+        repoPath: item.dir,
+        fileManifest: JSON.stringify(manifest),
+        lastSyncedAt: now,
+      }
 
       await prisma.skill.upsert({
         where: { name: item.name },
@@ -269,6 +296,7 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
           source: 'imported',
           repoUrl,
           projectPath: projPath,
+          ...githubFields,
         },
         create: {
           name: item.name,
@@ -282,11 +310,20 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
           source: 'imported',
           repoUrl,
           projectPath: projPath,
+          ...githubFields,
         },
       })
     } else if (item.type === 'agent') {
-      const content = await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${item.files[0]}`)
-      const { frontmatter, body } = parseFrontmatter(content)
+      const agentContent = fileContents.get(item.files[0]) || await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${item.files[0]}`)
+      const { frontmatter, body } = parseFrontmatter(agentContent)
+
+      const githubFields = {
+        repoOwner: owner,
+        repoName: repo,
+        repoBranch: branch,
+        repoPath: item.files[0],
+        lastSyncedAt: now,
+      }
 
       await prisma.agent.upsert({
         where: { name: item.name },
@@ -302,6 +339,7 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
           source: 'imported',
           repoUrl,
           projectPath: projPath,
+          ...githubFields,
         },
         create: {
           name: item.name,
@@ -318,14 +356,24 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
           source: 'imported',
           repoUrl,
           projectPath: projPath,
+          ...githubFields,
         },
       })
     } else if (item.type === 'rule') {
-      const content = await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${item.files[0]}`)
+      const content = fileContents.get(item.files[0]) || await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${item.files[0]}`)
+
+      const githubFields = {
+        repoOwner: owner,
+        repoName: repo,
+        repoBranch: branch,
+        repoPath: item.files[0],
+        lastSyncedAt: now,
+      }
+
       await prisma.rule.upsert({
         where: { name: item.name },
-        update: { body: content, source: 'imported', repoUrl, projectPath: projPath },
-        create: { name: item.name, body: content, enabled: true, isGlobal: false, source: 'imported', repoUrl, projectPath: projPath },
+        update: { body: content, source: 'imported', repoUrl, projectPath: projPath, ...githubFields },
+        create: { name: item.name, body: content, enabled: true, isGlobal: false, source: 'imported', repoUrl, projectPath: projPath, ...githubFields },
       })
     }
   } catch {
@@ -413,10 +461,37 @@ async function importSingleFile(
     if (saveToDb) {
       try {
         const skillRepoUrl = `https://github.com/${owner}/${repo}/tree/${branch}/${dir}`
+        const now = new Date()
+
+        // Build file manifest from all sibling files
+        const manifest: Array<{ path: string; content: string }> = []
+        try {
+          const treeUrl2 = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`
+          const treeResp = await fetchJson<{ tree: GitHubTreeItem[] }>(treeUrl2)
+          const sibFiles = (treeResp?.tree || []).filter((f) => f.type === 'blob' && f.path.startsWith(dir + '/'))
+          for (const sf of sibFiles) {
+            try {
+              const sfContent = await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${sf.path}`)
+              manifest.push({ path: sf.path.substring(dir.length + 1), content: sfContent })
+            } catch { /* skip */ }
+          }
+        } catch {
+          manifest.push({ path: 'SKILL.md', content })
+        }
+
+        const githubFields = {
+          repoOwner: owner,
+          repoName: repo,
+          repoBranch: branch,
+          repoPath: dir,
+          fileManifest: JSON.stringify(manifest),
+          lastSyncedAt: now,
+        }
+
         await prisma.skill.upsert({
           where: { name: skillName },
-          update: { description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, body, source: 'imported', repoUrl: skillRepoUrl, projectPath },
-          create: { name: skillName, description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, body, allowedTools: toJsonArray(frontmatter['allowed-tools'] || frontmatter.allowedTools), model: (frontmatter.model as string) || null, frontmatter: JSON.stringify(frontmatter), enabled: true, isGlobal: false, source: 'imported', repoUrl: skillRepoUrl, projectPath },
+          update: { description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, body, allowedTools: toJsonArray(frontmatter['allowed-tools'] || frontmatter.allowedTools), model: (frontmatter.model as string) || null, frontmatter: JSON.stringify(frontmatter), source: 'imported', repoUrl: skillRepoUrl, projectPath, ...githubFields },
+          create: { name: skillName, description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, body, allowedTools: toJsonArray(frontmatter['allowed-tools'] || frontmatter.allowedTools), model: (frontmatter.model as string) || null, frontmatter: JSON.stringify(frontmatter), enabled: true, isGlobal: false, source: 'imported', repoUrl: skillRepoUrl, projectPath, ...githubFields },
         })
       } catch { /* non-fatal */ }
     }
@@ -434,10 +509,19 @@ async function importSingleFile(
     if (saveToDb) {
       try {
         const agentRepoUrl = `https://github.com/${owner}/${repo}/blob/${branch}/${filePath}`
+        const now = new Date()
+        const githubFields = {
+          repoOwner: owner,
+          repoName: repo,
+          repoBranch: branch,
+          repoPath: filePath,
+          lastSyncedAt: now,
+        }
+
         await prisma.agent.upsert({
           where: { name: agentName },
-          update: { description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, systemPrompt: body, tools: toJsonArray(frontmatter.tools), disallowedTools: toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']), model: (frontmatter.model as string) || null, source: 'imported', repoUrl: agentRepoUrl, projectPath },
-          create: { name: agentName, description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, systemPrompt: body, tools: toJsonArray(frontmatter.tools), disallowedTools: toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']), model: (frontmatter.model as string) || null, permissionMode: (frontmatter.permissionMode as string) || (frontmatter['permission-mode'] as string) || 'default', maxTurns: frontmatter.maxTurns ? parseInt(String(frontmatter.maxTurns), 10) || null : null, skills: toJsonArray(frontmatter.skills), enabled: true, isGlobal: false, source: 'imported', repoUrl: agentRepoUrl, projectPath },
+          update: { description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, systemPrompt: body, tools: toJsonArray(frontmatter.tools), disallowedTools: toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']), model: (frontmatter.model as string) || null, source: 'imported', repoUrl: agentRepoUrl, projectPath, ...githubFields },
+          create: { name: agentName, description: (frontmatter.description as string) || `Importado de ${owner}/${repo}`, systemPrompt: body, tools: toJsonArray(frontmatter.tools), disallowedTools: toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']), model: (frontmatter.model as string) || null, permissionMode: (frontmatter.permissionMode as string) || (frontmatter['permission-mode'] as string) || 'default', maxTurns: frontmatter.maxTurns ? parseInt(String(frontmatter.maxTurns), 10) || null : null, skills: toJsonArray(frontmatter.skills), enabled: true, isGlobal: false, source: 'imported', repoUrl: agentRepoUrl, projectPath, ...githubFields },
         })
       } catch { /* non-fatal */ }
     }

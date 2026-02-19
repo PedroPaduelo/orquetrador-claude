@@ -10,6 +10,11 @@ export interface Skill {
   pluginId: string | null
   source: 'manual' | 'imported'
   repoUrl: string | null
+  repoOwner: string | null
+  repoName: string | null
+  repoBranch: string | null
+  repoPath: string | null
+  lastSyncedAt: string | null
   createdAt: string
   updatedAt?: string
 }

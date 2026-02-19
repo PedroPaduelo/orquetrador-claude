@@ -218,6 +218,15 @@ model Skill {
   source       String   @default("manual") // manual | imported
   repoUrl      String?  @map("repo_url")
   projectPath  String?  @map("project_path")
+
+  // Structured GitHub tracking
+  repoOwner    String?  @map("repo_owner")
+  repoName     String?  @map("repo_name")
+  repoBranch   String?  @default("main") @map("repo_branch")
+  repoPath     String?  @map("repo_path")     // path within repo to skill dir
+  fileManifest String   @default("[]") @map("file_manifest") // JSON [{path,content}] all skill files
+  lastSyncedAt DateTime? @map("last_synced_at")
+
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -248,6 +257,14 @@ model Agent {
   source          String   @default("manual") // manual | imported
   repoUrl         String?  @map("repo_url")
   projectPath     String?  @map("project_path")
+
+  // Structured GitHub tracking
+  repoOwner    String?  @map("repo_owner")
+  repoName     String?  @map("repo_name")
+  repoBranch   String?  @default("main") @map("repo_branch")
+  repoPath     String?  @map("repo_path")
+  lastSyncedAt DateTime? @map("last_synced_at")
+
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -271,6 +288,14 @@ model Rule {
   source      String   @default("manual")
   repoUrl     String?  @map("repo_url")
   projectPath String?  @map("project_path")
+
+  // Structured GitHub tracking
+  repoOwner    String?  @map("repo_owner")
+  repoName     String?  @map("repo_name")
+  repoBranch   String?  @default("main") @map("repo_branch")
+  repoPath     String?  @map("repo_path")
+  lastSyncedAt DateTime? @map("last_synced_at")
+
   skillId     String?  @map("skill_id")
   skill       Skill?   @relation(fields: [skillId], references: [id], onDelete: SetNull)
   pluginId    String?  @map("plugin_id")

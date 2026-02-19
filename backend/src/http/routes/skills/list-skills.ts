@@ -22,6 +22,11 @@ export async function listSkills(app: FastifyInstance) {
             pluginId: z.string().nullable(),
             source: z.string(),
             repoUrl: z.string().nullable(),
+            repoOwner: z.string().nullable(),
+            repoName: z.string().nullable(),
+            repoBranch: z.string().nullable(),
+            repoPath: z.string().nullable(),
+            lastSyncedAt: z.string().nullable(),
             createdAt: z.string(),
           })),
         },
@@ -40,6 +45,11 @@ export async function listSkills(app: FastifyInstance) {
         pluginId: s.pluginId,
         source: s.source,
         repoUrl: s.repoUrl,
+        repoOwner: s.repoOwner,
+        repoName: s.repoName,
+        repoBranch: s.repoBranch,
+        repoPath: s.repoPath,
+        lastSyncedAt: s.lastSyncedAt?.toISOString() ?? null,
         createdAt: s.createdAt.toISOString(),
       }))
     }

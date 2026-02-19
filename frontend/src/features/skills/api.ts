@@ -35,4 +35,9 @@ export const skillsApi = {
     const { data } = await apiClient.post('/skills/import', input)
     return data
   },
+
+  resync: async (id: string): Promise<{ id: string; name: string; filesUpdated: number; lastSyncedAt: string }> => {
+    const { data } = await apiClient.post(`/skills/${id}/resync`)
+    return data
+  },
 }

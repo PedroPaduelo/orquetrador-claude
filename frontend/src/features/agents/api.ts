@@ -35,4 +35,9 @@ export const agentsApi = {
     const { data } = await apiClient.post('/agents/import', input)
     return data
   },
+
+  resync: async (id: string): Promise<{ id: string; name: string; lastSyncedAt: string }> => {
+    const { data } = await apiClient.post(`/agents/${id}/resync`)
+    return data
+  },
 }

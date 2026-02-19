@@ -19,6 +19,8 @@ interface SkillData {
   body: string
   allowedTools: string
   model?: string | null
+  source: string
+  fileManifest: string
 }
 
 interface AgentData {
@@ -175,30 +177,43 @@ export class FileSyncService {
   }
 
   /**
-   * Sync a skill file to .claude/skills/{name}/SKILL.md
+   * Sync a skill to .claude/skills/{name}/
+   * For imported skills with fileManifest: writes ALL files from the manifest.
+   * For manual skills: reconstructs SKILL.md from DB fields.
    */
   syncSkillFile(projectPath: string, skill: SkillData): void {
-    const allowedTools = safeJsonParse<string[]>(skill.allowedTools, [])
+    const manifest = safeJsonParse<Array<{ path: string; content: string }>>(skill.fileManifest, [])
 
-    const frontmatterLines: string[] = ['---']
-    frontmatterLines.push(`name: ${skill.name}`)
-    if (skill.description) {
-      frontmatterLines.push(`description: ${skill.description}`)
-    }
-    if (allowedTools.length > 0) {
-      frontmatterLines.push('allowed-tools:')
-      for (const tool of allowedTools) {
-        frontmatterLines.push(`  - ${tool}`)
+    if (skill.source === 'imported' && manifest.length > 0) {
+      // Imported skill: write ALL files from manifest
+      for (const file of manifest) {
+        const filePath = join(projectPath, '.claude', 'skills', skill.name, file.path)
+        this.syncFile(filePath, file.content)
       }
-    }
-    if (skill.model) {
-      frontmatterLines.push(`model: ${skill.model}`)
-    }
-    frontmatterLines.push('---')
+    } else {
+      // Manual skill: reconstruct SKILL.md from DB fields
+      const allowedTools = safeJsonParse<string[]>(skill.allowedTools, [])
 
-    const content = frontmatterLines.join('\n') + '\n\n' + skill.body
-    const filePath = join(projectPath, '.claude', 'skills', skill.name, 'SKILL.md')
-    this.syncFile(filePath, content)
+      const frontmatterLines: string[] = ['---']
+      frontmatterLines.push(`name: ${skill.name}`)
+      if (skill.description) {
+        frontmatterLines.push(`description: ${skill.description}`)
+      }
+      if (allowedTools.length > 0) {
+        frontmatterLines.push('allowed-tools:')
+        for (const tool of allowedTools) {
+          frontmatterLines.push(`  - ${tool}`)
+        }
+      }
+      if (skill.model) {
+        frontmatterLines.push(`model: ${skill.model}`)
+      }
+      frontmatterLines.push('---')
+
+      const content = frontmatterLines.join('\n') + '\n\n' + skill.body
+      const filePath = join(projectPath, '.claude', 'skills', skill.name, 'SKILL.md')
+      this.syncFile(filePath, content)
+    }
   }
 
   /**

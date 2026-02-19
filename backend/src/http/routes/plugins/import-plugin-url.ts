@@ -244,21 +244,35 @@ async function importFromGitHubRepo(info: RepoInfo, projectPath?: string) {
     }
   }
 
-  // Save to DB
-  const skillRecords: Array<{ name: string; description: string }> = []
-  for (const [dir] of skillDirs) {
+  // Save to DB - fetch SKILL.md content and build file manifests
+  const skillRecords: Array<{ name: string; description: string; body: string; repoPath: string; manifest: Array<{ path: string; content: string }> }> = []
+  for (const [dir, files] of skillDirs) {
     const skillName = dir.split('/').pop() || 'unnamed'
     try {
       const skillMdPath = allFiles.find((f) => f.path === `${dir}/SKILL.md`)
       let description = `Skill de ${owner}/${repo}`
+      let body = ''
+
       if (skillMdPath) {
         const content = await fetchText(rawUrl(owner, repo, branch, skillMdPath.path))
-        const { frontmatter } = parseFrontmatter(content)
+        const { frontmatter, body: parsedBody } = parseFrontmatter(content)
         description = (frontmatter.description as string) || description
+        body = parsedBody
       }
-      skillRecords.push({ name: skillName, description })
+
+      // Build file manifest from already-downloaded files
+      const manifest: Array<{ path: string; content: string }> = []
+      for (const filePath of files) {
+        try {
+          const content = await fetchText(rawUrl(owner, repo, branch, filePath))
+          const relativePath = filePath.substring(dir.length + 1)
+          manifest.push({ path: relativePath, content })
+        } catch { /* skip */ }
+      }
+
+      skillRecords.push({ name: skillName, description, body, repoPath: dir, manifest })
     } catch {
-      skillRecords.push({ name: skillName, description: `Skill de ${owner}/${repo}` })
+      skillRecords.push({ name: skillName, description: `Skill de ${owner}/${repo}`, body: '', repoPath: dir, manifest: [] })
     }
   }
 
@@ -276,8 +290,15 @@ async function importFromGitHubRepo(info: RepoInfo, projectPath?: string) {
         create: skillRecords.map((s) => ({
           name: s.name,
           description: s.description,
+          body: s.body || '',
+          fileManifest: JSON.stringify(s.manifest || []),
           source: 'imported',
           repoUrl: `https://github.com/${owner}/${repo}`,
+          repoOwner: owner,
+          repoName: repo,
+          repoBranch: branch,
+          repoPath: s.repoPath,
+          lastSyncedAt: new Date(),
           projectPath,
           isGlobal: false,
           enabled: true,

@@ -95,3 +95,18 @@ export function useImportSkill() {
     },
   })
 }
+
+export function useResyncSkill() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: skillsApi.resync,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+      toast.success(`Skill "${data.name}" resincronizada! ${data.filesUpdated} arquivos atualizados.`)
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Erro ao resincronizar skill')
+    },
+  })
+}

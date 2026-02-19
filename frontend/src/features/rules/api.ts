@@ -29,4 +29,8 @@ export const rulesApi = {
     const { data } = await apiClient.post('/rules/import', input)
     return data
   },
+  resync: async (id: string): Promise<{ id: string; name: string; lastSyncedAt: string }> => {
+    const { data } = await apiClient.post(`/rules/${id}/resync`)
+    return data
+  },
 }
