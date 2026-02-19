@@ -43,6 +43,7 @@ export class TaskOrchestrator {
 
     orchestratorEvents.emitMessageSaved({
       executionId,
+      conversationId,
       messageId: userMessage.id,
       role: 'user',
       content: userInput,
@@ -108,6 +109,7 @@ export class TaskOrchestrator {
             if (event.type === 'content' && event.content) {
               orchestratorEvents.emitStepStream({
                 executionId,
+                conversationId,
                 stepId: step.id,
                 type: 'content',
                 content: event.content,
@@ -115,6 +117,7 @@ export class TaskOrchestrator {
             } else if (event.type === 'action' && event.action) {
               orchestratorEvents.emitStepStream({
                 executionId,
+                conversationId,
                 stepId: step.id,
                 type: 'action',
                 action: event.action,
@@ -134,6 +137,7 @@ export class TaskOrchestrator {
         if (result.error) {
           orchestratorEvents.emitStepError({
             executionId,
+            conversationId,
             stepId: step.id,
             stepName: step.name,
             error: result.error,
@@ -162,6 +166,7 @@ export class TaskOrchestrator {
 
         orchestratorEvents.emitMessageSaved({
           executionId,
+          conversationId,
           messageId: assistantMessage.id,
           role: 'assistant',
           content: result.content,
@@ -193,6 +198,7 @@ export class TaskOrchestrator {
             // Max retries reached, move to next
             orchestratorEvents.emitStepComplete({
               executionId,
+              conversationId,
               stepId: step.id,
               stepName: step.name,
               stepOrder: i + 1,
@@ -217,6 +223,7 @@ export class TaskOrchestrator {
 
             orchestratorEvents.emitConditionRetry({
               executionId,
+              conversationId,
               stepId: step.id,
               retryCount: currentRetry,
               maxRetries,
@@ -230,6 +237,7 @@ export class TaskOrchestrator {
           // Workflow finished
           orchestratorEvents.emitStepComplete({
             executionId,
+            conversationId,
             stepId: step.id,
             stepName: step.name,
             stepOrder: i + 1,
@@ -242,6 +250,7 @@ export class TaskOrchestrator {
           // Move to next/jump step
           orchestratorEvents.emitStepComplete({
             executionId,
+            conversationId,
             stepId: step.id,
             stepName: step.name,
             stepOrder: i + 1,
@@ -253,6 +262,7 @@ export class TaskOrchestrator {
           if (nextStep.nextIndex !== i + 1) {
             orchestratorEvents.emitConditionJump({
               executionId,
+              conversationId,
               fromStepId: step.id,
               toStepId: steps[nextStep.nextIndex]?.id || 'end',
               toStepIndex: nextStep.nextIndex,
@@ -309,6 +319,7 @@ export class TaskOrchestrator {
 
     orchestratorEvents.emitMessageSaved({
       executionId,
+      conversationId,
       messageId: userMessage.id,
       role: 'user',
       content: userInput,
@@ -347,6 +358,7 @@ export class TaskOrchestrator {
           if (event.type === 'content' && event.content) {
             orchestratorEvents.emitStepStream({
               executionId,
+              conversationId,
               stepId: step.id,
               type: 'content',
               content: event.content,
@@ -354,6 +366,7 @@ export class TaskOrchestrator {
           } else if (event.type === 'action' && event.action) {
             orchestratorEvents.emitStepStream({
               executionId,
+              conversationId,
               stepId: step.id,
               type: 'action',
               action: event.action,
@@ -366,6 +379,7 @@ export class TaskOrchestrator {
       if (result.error) {
         orchestratorEvents.emitStepError({
           executionId,
+          conversationId,
           stepId: step.id,
           stepName: step.name,
           error: result.error,
@@ -394,6 +408,7 @@ export class TaskOrchestrator {
 
         orchestratorEvents.emitMessageSaved({
           executionId,
+          conversationId,
           messageId: assistantMessage.id,
           role: 'assistant',
           content: result.content,
@@ -408,6 +423,7 @@ export class TaskOrchestrator {
       // Emit step complete (this message round-trip is done, but the step stays active)
       orchestratorEvents.emitStepComplete({
         executionId,
+        conversationId,
         stepId: step.id,
         stepName: step.name,
         stepOrder: stepIndex + 1,

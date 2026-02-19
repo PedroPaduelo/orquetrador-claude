@@ -66,39 +66,39 @@ export async function sendMessageStream(app: FastifyInstance) {
         }
       }
 
-      // Event handlers - FILTER by conversationId to prevent cross-talk
+      // Event handlers - FILTER ALL by conversationId to prevent cross-talk between sessions
+      const filterByConversation = (data: unknown): boolean => {
+        const d = data as { conversationId?: string }
+        return d.conversationId === id
+      }
+
       const handlers: Record<string, (...args: unknown[]) => void> = {
         'step:start': (data: unknown) => {
-          const d = data as { conversationId?: string }
-          if (d.conversationId === id) sendEvent('step_start', data)
+          if (filterByConversation(data)) sendEvent('step_start', data)
         },
         'step:stream': (data: unknown) => {
-          // step:stream events don't have conversationId directly,
-          // but are tied to an execution which is per-conversation
-          sendEvent('stream', data)
+          if (filterByConversation(data)) sendEvent('stream', data)
         },
         'step:complete': (data: unknown) => {
-          sendEvent('step_complete', data)
+          if (filterByConversation(data)) sendEvent('step_complete', data)
         },
         'step:error': (data: unknown) => {
-          sendEvent('step_error', data)
+          if (filterByConversation(data)) sendEvent('step_error', data)
         },
         'message:saved': (data: unknown) => {
-          sendEvent('message_saved', data)
+          if (filterByConversation(data)) sendEvent('message_saved', data)
         },
         'condition:retry': (data: unknown) => {
-          sendEvent('condition_retry', data)
+          if (filterByConversation(data)) sendEvent('condition_retry', data)
         },
         'condition:jump': (data: unknown) => {
-          sendEvent('condition_jump', data)
+          if (filterByConversation(data)) sendEvent('condition_jump', data)
         },
         'execution:cancelled': (data: unknown) => {
-          const d = data as { conversationId?: string }
-          if (d.conversationId === id) sendEvent('cancelled', data)
+          if (filterByConversation(data)) sendEvent('cancelled', data)
         },
         'execution:complete': (data: unknown) => {
-          const d = data as { conversationId?: string }
-          if (d.conversationId === id) sendEvent('complete', data)
+          if (filterByConversation(data)) sendEvent('complete', data)
         },
       }
 

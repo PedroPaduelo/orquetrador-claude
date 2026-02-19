@@ -25,4 +25,9 @@ export const workflowsApi = {
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/workflows/${id}`)
   },
+
+  duplicate: async (id: string): Promise<Workflow> => {
+    const { data } = await apiClient.post(`/workflows/${id}/duplicate`)
+    return data
+  },
 }

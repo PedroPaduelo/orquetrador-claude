@@ -11,6 +11,7 @@ export interface StepStartEvent {
 
 export interface StepStreamEvent {
   executionId: string
+  conversationId: string
   stepId: string
   type: 'content' | 'action'
   content?: string
@@ -25,6 +26,7 @@ export interface StepStreamEvent {
 
 export interface StepCompleteEvent {
   executionId: string
+  conversationId: string
   stepId: string
   stepName: string
   stepOrder: number
@@ -36,6 +38,7 @@ export interface StepCompleteEvent {
 
 export interface StepErrorEvent {
   executionId: string
+  conversationId: string
   stepId: string
   stepName: string
   error: string
@@ -43,6 +46,7 @@ export interface StepErrorEvent {
 
 export interface MessageSavedEvent {
   executionId: string
+  conversationId: string
   messageId: string
   role: 'user' | 'assistant'
   content: string
@@ -52,6 +56,7 @@ export interface MessageSavedEvent {
 
 export interface ConditionRetryEvent {
   executionId: string
+  conversationId: string
   stepId: string
   retryCount: number
   maxRetries: number
@@ -60,6 +65,7 @@ export interface ConditionRetryEvent {
 
 export interface ConditionJumpEvent {
   executionId: string
+  conversationId: string
   fromStepId: string
   toStepId: string
   toStepIndex: number

@@ -20,6 +20,7 @@ import {
   getWorkflow,
   updateWorkflow,
   deleteWorkflow,
+  duplicateWorkflow,
 } from './http/routes/workflows/index.js'
 
 // Conversation routes
@@ -190,6 +191,7 @@ async function registerRoutes() {
   await app.register(getWorkflow)
   await app.register(updateWorkflow)
   await app.register(deleteWorkflow)
+  await app.register(duplicateWorkflow)
 
   // Conversations
   await app.register(createConversation)

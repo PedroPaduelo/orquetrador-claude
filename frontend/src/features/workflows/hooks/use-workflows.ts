@@ -70,3 +70,18 @@ export function useDeleteWorkflow() {
     },
   })
 }
+
+export function useDuplicateWorkflow() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: workflowsApi.duplicate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workflows'] })
+      toast.success('Workflow duplicado com sucesso!')
+    },
+    onError: () => {
+      toast.error('Erro ao duplicar workflow')
+    },
+  })
+}

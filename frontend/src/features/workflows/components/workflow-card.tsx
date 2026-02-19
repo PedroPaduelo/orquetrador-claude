@@ -1,4 +1,4 @@
-import { MoreHorizontal, Pencil, Trash2, MessageSquare, GitBranch, FolderOpen, Play } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, MessageSquare, GitBranch, FolderOpen, Play, Copy } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -17,9 +17,10 @@ interface WorkflowCardProps {
   workflow: Workflow
   onEdit: () => void
   onDelete: () => void
+  onDuplicate: () => void
 }
 
-export function WorkflowCard({ workflow, onEdit, onDelete }: WorkflowCardProps) {
+export function WorkflowCard({ workflow, onEdit, onDelete, onDuplicate }: WorkflowCardProps) {
   const navigate = useNavigate()
 
   return (
@@ -54,6 +55,10 @@ export function WorkflowCard({ workflow, onEdit, onDelete }: WorkflowCardProps) 
               <DropdownMenuItem onClick={() => navigate('/conversations')}>
                 <Play className="mr-2 h-4 w-4" />
                 Nova Conversa
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onDuplicate}>
+                <Copy className="mr-2 h-4 w-4" />
+                Duplicar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onDelete} className="text-destructive">

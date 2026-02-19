@@ -6,13 +6,14 @@ import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import { WorkflowCard } from './components/workflow-card'
 import { WorkflowModal } from './components/workflow-modal'
-import { useWorkflows, useDeleteWorkflow } from './hooks/use-workflows'
+import { useWorkflows, useDeleteWorkflow, useDuplicateWorkflow } from './hooks/use-workflows'
 import { useWorkflowsStore } from './store'
 import type { Workflow as WorkflowType } from './types'
 
 export default function WorkflowsPage() {
   const { data: workflows, isLoading } = useWorkflows()
   const deleteMutation = useDeleteWorkflow()
+  const duplicateMutation = useDuplicateWorkflow()
   const { openCreateModal, openEditModal } = useWorkflowsStore()
 
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; workflow: WorkflowType | null }>({
@@ -58,6 +59,7 @@ export default function WorkflowsPage() {
                 workflow={workflow}
                 onEdit={() => openEditModal(workflow)}
                 onDelete={() => setDeleteDialog({ open: true, workflow })}
+                onDuplicate={() => duplicateMutation.mutate(workflow.id)}
               />
             </div>
           ))}
