@@ -57,10 +57,11 @@ model WorkflowStep {
   currentConversations Conversation[]        @relation("CurrentStep")
   executionLogs        ExecutionLog[]
 
-  // Join tables for MCP/Skills/Agents
+  // Join tables for MCP/Skills/Agents/Rules
   mcpServers WorkflowStepMcpServer[]
   skills     WorkflowStepSkill[]
   agents     WorkflowStepAgent[]
+  rules      WorkflowStepRule[]
 
   @@index([workflowId])
   @@map("workflow_steps")
@@ -221,6 +222,7 @@ model Skill {
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   stepSkills WorkflowStepSkill[]
+  rules      Rule[]
   pluginId   String?  @map("plugin_id")
   plugin     Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
 
@@ -257,6 +259,30 @@ model Agent {
 }
 
 // ============================================
+// RULES
+// ============================================
+model Rule {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  body        String   @default("")
+  enabled     Boolean  @default(true)
+  isGlobal    Boolean  @default(true) @map("is_global")
+  source      String   @default("manual")
+  repoUrl     String?  @map("repo_url")
+  projectPath String?  @map("project_path")
+  skillId     String?  @map("skill_id")
+  skill       Skill?   @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  pluginId    String?  @map("plugin_id")
+  plugin      Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
+  stepRules   WorkflowStepRule[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("rules")
+}
+
+// ============================================
 // PLUGINS
 // ============================================
 model Plugin {
@@ -276,6 +302,7 @@ model Plugin {
   mcpServers McpServer[]
   skills     Skill[]
   agents     Agent[]
+  rules      Rule[]
 
   @@map("plugins")
 }
@@ -327,4 +354,15 @@ model WorkflowStepAgent {
 
   @@unique([stepId, agentId])
   @@map("workflow_step_agents")
+}
+
+model WorkflowStepRule {
+  id     String       @id @default(uuid())
+  stepId String       @map("step_id")
+  ruleId String       @map("rule_id")
+  step   WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  rule   Rule         @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([stepId, ruleId])
+  @@map("workflow_step_rules")
 }

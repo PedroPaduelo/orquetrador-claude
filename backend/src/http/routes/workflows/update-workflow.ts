@@ -30,6 +30,7 @@ const stepSchema = z.object({
   mcpServerIds: z.array(z.string()).default([]),
   skillIds: z.array(z.string()).default([]),
   agentIds: z.array(z.string()).default([]),
+  ruleIds: z.array(z.string()).default([]),
 })
 
 export async function updateWorkflow(app: FastifyInstance) {
@@ -78,6 +79,7 @@ export async function updateWorkflow(app: FastifyInstance) {
         await prisma.workflowStepMcpServer.deleteMany({ where: { stepId: { in: stepIds } } })
         await prisma.workflowStepSkill.deleteMany({ where: { stepId: { in: stepIds } } })
         await prisma.workflowStepAgent.deleteMany({ where: { stepId: { in: stepIds } } })
+        await prisma.workflowStepRule.deleteMany({ where: { stepId: { in: stepIds } } })
         await prisma.workflowStep.deleteMany({ where: { workflowId: id } })
       }
 
@@ -110,6 +112,9 @@ export async function updateWorkflow(app: FastifyInstance) {
                 },
                 agents: {
                   create: step.agentIds.map((agentId) => ({ agentId })),
+                },
+                rules: {
+                  create: step.ruleIds.map((ruleId) => ({ ruleId })),
                 },
               })),
             },

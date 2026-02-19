@@ -39,6 +39,7 @@ export async function duplicateWorkflow(app: FastifyInstance) {
               mcpServers: { select: { serverId: true } },
               skills: { select: { skillId: true } },
               agents: { select: { agentId: true } },
+              rules: { select: { ruleId: true } },
             },
           },
         },
@@ -76,6 +77,9 @@ export async function duplicateWorkflow(app: FastifyInstance) {
               },
               agents: {
                 create: step.agents.map((a) => ({ agentId: a.agentId })),
+              },
+              rules: {
+                create: step.rules.map((r) => ({ ruleId: r.ruleId })),
               },
             })),
           },

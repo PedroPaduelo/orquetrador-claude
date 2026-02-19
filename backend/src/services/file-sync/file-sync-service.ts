@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs'
-import { join } from 'path'
+import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'fs'
+import { join, dirname } from 'path'
 import { prisma } from '../../lib/prisma.js'
 
 interface McpServerData {
@@ -33,6 +33,12 @@ interface AgentData {
   skills: string
 }
 
+interface RuleData {
+  name: string
+  body: string
+  skillName?: string | null
+}
+
 function safeJsonParse<T>(value: string, fallback: T): T {
   try {
     return JSON.parse(value) as T
@@ -43,27 +49,43 @@ function safeJsonParse<T>(value: string, fallback: T): T {
 
 export class FileSyncService {
   /**
+   * Write a file only if it doesn't exist or its content differs.
+   * Returns true if the file was written, false if already up-to-date.
+   */
+  private syncFile(filePath: string, expectedContent: string): boolean {
+    if (existsSync(filePath)) {
+      const currentContent = readFileSync(filePath, 'utf-8')
+      if (currentContent === expectedContent) return false
+    }
+    mkdirSync(dirname(filePath), { recursive: true })
+    writeFileSync(filePath, expectedContent, 'utf-8')
+    return true
+  }
+
+  /**
    * Sync all resources for a workflow step before execution.
-   * Writes .mcp.json, skill files, and agent files to the project directory.
+   * DB is the source of truth - all resources are synced to filesystem.
    */
   async syncForStep(projectPath: string, stepId: string): Promise<void> {
-    // Get step with its assigned resources
+    // Get step with its assigned resources (including rules)
     const step = await prisma.workflowStep.findUnique({
       where: { id: stepId },
       include: {
         mcpServers: { include: { server: true } },
         skills: { include: { skill: true } },
         agents: { include: { agent: true } },
+        rules: { include: { rule: { include: { skill: { select: { name: true } } } } } },
       },
     })
 
     if (!step) return
 
     // Get global resources (enabled + isGlobal)
-    const [globalServers, globalSkills, globalAgents] = await Promise.all([
+    const [globalServers, globalSkills, globalAgents, globalRules] = await Promise.all([
       prisma.mcpServer.findMany({ where: { enabled: true, isGlobal: true } }),
       prisma.skill.findMany({ where: { enabled: true, isGlobal: true } }),
       prisma.agent.findMany({ where: { enabled: true, isGlobal: true } }),
+      prisma.rule.findMany({ where: { enabled: true, isGlobal: true }, include: { skill: { select: { name: true } } } }),
     ])
 
     // Merge step-specific + global (dedupe by id)
@@ -85,32 +107,41 @@ export class FileSyncService {
       ...globalAgents.filter((s) => !stepAgentIds.has(s.id)),
     ]
 
-    // Write ALL MCP servers to .mcp.json (stdio, http, sse)
+    const stepRuleIds = new Set(step.rules.map((r) => r.ruleId))
+    const allRules = [
+      ...step.rules.map((r) => r.rule).filter((r) => r.enabled),
+      ...globalRules.filter((r) => !stepRuleIds.has(r.id)),
+    ]
+
+    // Sync ALL MCP servers to .mcp.json
     if (allServers.length > 0) {
-      this.writeMcpConfig(projectPath, allServers)
+      this.syncMcpConfig(projectPath, allServers)
     }
 
-    // Write ONLY manual skills (imported ones are already on the filesystem)
+    // Sync ALL skills (DB is truth, no source check)
     for (const skill of allSkills) {
-      if (skill.source === 'imported') continue
-      this.writeSkillFile(projectPath, skill)
+      this.syncSkillFile(projectPath, skill)
     }
 
-    // Write ONLY manual agents (imported ones are already on the filesystem)
+    // Sync ALL agents (DB is truth, no source check)
     for (const agent of allAgents) {
-      if (agent.source === 'imported') continue
-      this.writeAgentFile(projectPath, agent)
+      this.syncAgentFile(projectPath, agent)
+    }
+
+    // Sync ALL rules
+    for (const rule of allRules) {
+      this.syncRuleFile(projectPath, {
+        name: rule.name,
+        body: rule.body,
+        skillName: rule.skill?.name ?? null,
+      })
     }
   }
 
   /**
-   * Write .mcp.json with all MCP server types.
-   * Claude Code schema:
-   * - stdio: { command, args, env }
-   * - http:  { type: "http", url, headers }
-   * - sse:   { type: "sse", url, headers }
+   * Sync .mcp.json with all MCP server types.
    */
-  writeMcpConfig(projectPath: string, servers: McpServerData[]): void {
+  syncMcpConfig(projectPath: string, servers: McpServerData[]): void {
     const mcpServers: Record<string, unknown> = {}
 
     for (const server of servers) {
@@ -122,17 +153,15 @@ export class FileSyncService {
           command: server.command,
           args,
         }
-        // env is only valid for stdio servers
         if (Object.keys(envVars).length > 0) {
           entry.env = envVars
         }
         mcpServers[server.name] = entry
       } else if ((server.type === 'http' || server.type === 'sse') && server.uri) {
         const entry: Record<string, unknown> = {
-          type: server.type, // "http" or "sse"
+          type: server.type,
           url: server.uri,
         }
-        // For remote servers, env vars go as headers (e.g. Authorization)
         if (Object.keys(envVars).length > 0) {
           entry.headers = envVars
         }
@@ -141,19 +170,16 @@ export class FileSyncService {
     }
 
     const configPath = join(projectPath, '.mcp.json')
-    writeFileSync(configPath, JSON.stringify({ mcpServers }, null, 2), 'utf-8')
+    const content = JSON.stringify({ mcpServers }, null, 2)
+    this.syncFile(configPath, content)
   }
 
   /**
-   * Write a skill file to .claude/skills/{name}/SKILL.md
+   * Sync a skill file to .claude/skills/{name}/SKILL.md
    */
-  writeSkillFile(projectPath: string, skill: SkillData): void {
-    const skillDir = join(projectPath, '.claude', 'skills', skill.name)
-    mkdirSync(skillDir, { recursive: true })
-
+  syncSkillFile(projectPath: string, skill: SkillData): void {
     const allowedTools = safeJsonParse<string[]>(skill.allowedTools, [])
 
-    // Build frontmatter
     const frontmatterLines: string[] = ['---']
     frontmatterLines.push(`name: ${skill.name}`)
     if (skill.description) {
@@ -171,22 +197,18 @@ export class FileSyncService {
     frontmatterLines.push('---')
 
     const content = frontmatterLines.join('\n') + '\n\n' + skill.body
-
-    writeFileSync(join(skillDir, 'SKILL.md'), content, 'utf-8')
+    const filePath = join(projectPath, '.claude', 'skills', skill.name, 'SKILL.md')
+    this.syncFile(filePath, content)
   }
 
   /**
-   * Write an agent file to .claude/agents/{name}/agent.md
+   * Sync an agent file to .claude/agents/{name}/agent.md
    */
-  writeAgentFile(projectPath: string, agent: AgentData): void {
-    const agentDir = join(projectPath, '.claude', 'agents', agent.name)
-    mkdirSync(agentDir, { recursive: true })
-
+  syncAgentFile(projectPath: string, agent: AgentData): void {
     const tools = safeJsonParse<string[]>(agent.tools, [])
     const disallowedTools = safeJsonParse<string[]>(agent.disallowedTools, [])
     const skills = safeJsonParse<string[]>(agent.skills, [])
 
-    // Build frontmatter
     const frontmatterLines: string[] = ['---']
     frontmatterLines.push(`name: ${agent.name}`)
     if (agent.description) {
@@ -222,8 +244,21 @@ export class FileSyncService {
     frontmatterLines.push('---')
 
     const content = frontmatterLines.join('\n') + '\n\n' + agent.systemPrompt
+    const filePath = join(projectPath, '.claude', 'agents', agent.name, 'agent.md')
+    this.syncFile(filePath, content)
+  }
 
-    writeFileSync(join(agentDir, 'agent.md'), content, 'utf-8')
+  /**
+   * Sync a rule file to .claude/rules/{name}.md or .claude/skills/{skillName}/rules/{name}.md
+   */
+  syncRuleFile(projectPath: string, rule: RuleData): void {
+    let filePath: string
+    if (rule.skillName) {
+      filePath = join(projectPath, '.claude', 'skills', rule.skillName, 'rules', `${rule.name}.md`)
+    } else {
+      filePath = join(projectPath, '.claude', 'rules', `${rule.name}.md`)
+    }
+    this.syncFile(filePath, rule.body)
   }
 
   /**
@@ -243,6 +278,21 @@ export class FileSyncService {
     const agentDir = join(projectPath, '.claude', 'agents', agentName)
     if (existsSync(agentDir)) {
       rmSync(agentDir, { recursive: true, force: true })
+    }
+  }
+
+  /**
+   * Remove an orphan rule file
+   */
+  cleanRuleFile(projectPath: string, ruleName: string, skillName?: string | null): void {
+    let filePath: string
+    if (skillName) {
+      filePath = join(projectPath, '.claude', 'skills', skillName, 'rules', `${ruleName}.md`)
+    } else {
+      filePath = join(projectPath, '.claude', 'rules', `${ruleName}.md`)
+    }
+    if (existsSync(filePath)) {
+      rmSync(filePath, { force: true })
     }
   }
 }

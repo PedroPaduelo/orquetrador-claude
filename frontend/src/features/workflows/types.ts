@@ -25,6 +25,7 @@ export interface WorkflowStep {
   mcpServerIds: string[]
   skillIds: string[]
   agentIds: string[]
+  ruleIds: string[]
 }
 
 export interface StepConditions {

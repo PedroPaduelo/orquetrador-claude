@@ -320,8 +320,14 @@ async function saveItemToDb(item: DiscoveredItem, owner: string, repo: string, b
           projectPath: projPath,
         },
       })
+    } else if (item.type === 'rule') {
+      const content = await fetchText(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${item.files[0]}`)
+      await prisma.rule.upsert({
+        where: { name: item.name },
+        update: { body: content, source: 'imported', repoUrl, projectPath: projPath },
+        create: { name: item.name, body: content, enabled: true, isGlobal: false, source: 'imported', repoUrl, projectPath: projPath },
+      })
     }
-    // Rules are file-only, no DB entry needed
   } catch {
     // Non-fatal: DB save is optional
   }

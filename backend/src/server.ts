@@ -95,6 +95,17 @@ import {
   importAgent,
 } from './http/routes/agents/index.js'
 
+// Rules routes
+import {
+  listRules,
+  createRule,
+  getRule,
+  updateRule,
+  deleteRule,
+  toggleRule,
+  importRule,
+} from './http/routes/rules/index.js'
+
 // Plugins routes
 import {
   listPlugins,
@@ -175,6 +186,7 @@ async function registerPlugins() {
         { name: 'MCP Servers', description: 'MCP Server management' },
         { name: 'Skills', description: 'Skills management' },
         { name: 'Agents', description: 'Agents management' },
+        { name: 'Rules', description: 'Rules management' },
         { name: 'Plugins', description: 'Plugin management' },
         { name: 'Settings', description: 'Application settings' },
       ],
@@ -259,6 +271,15 @@ async function registerRoutes() {
   await app.register(deleteAgent)
   await app.register(toggleAgent)
   await app.register(importAgent)
+
+  // Rules
+  await app.register(listRules)
+  await app.register(createRule)
+  await app.register(getRule)
+  await app.register(updateRule)
+  await app.register(deleteRule)
+  await app.register(toggleRule)
+  await app.register(importRule)
 
   // Plugins
   await app.register(listPlugins)

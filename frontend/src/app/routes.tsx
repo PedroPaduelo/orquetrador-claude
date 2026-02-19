@@ -12,6 +12,7 @@ const SmartNotesPage = lazy(() => import('@/features/smart-notes'))
 const McpServersPage = lazy(() => import('@/features/mcp-servers'))
 const SkillsPage = lazy(() => import('@/features/skills'))
 const AgentsPage = lazy(() => import('@/features/agents'))
+const RulesPage = lazy(() => import('@/features/rules'))
 const PluginsPage = lazy(() => import('@/features/plugins'))
 const SettingsPage = lazy(() => import('@/features/settings'))
 
@@ -103,6 +104,15 @@ export function AppRoutes() {
           element={
             <Lazy>
               <AgentsPage />
+            </Lazy>
+          }
+        />
+
+        <Route
+          path="rules"
+          element={
+            <Lazy>
+              <RulesPage />
             </Lazy>
           }
         />

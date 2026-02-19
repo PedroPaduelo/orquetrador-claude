@@ -31,6 +31,7 @@ const defaultStep: WorkflowStep = {
   mcpServerIds: [],
   skillIds: [],
   agentIds: [],
+  ruleIds: [],
 }
 
 export const useWorkflowsStore = create<WorkflowsState>((set) => ({
@@ -64,6 +65,7 @@ export const useWorkflowsStore = create<WorkflowsState>((set) => ({
         mcpServerIds: s.mcpServerIds || [],
         skillIds: s.skillIds || [],
         agentIds: s.agentIds || [],
+        ruleIds: s.ruleIds || [],
         contextNoteIds: s.contextNoteIds || [],
         memoryNoteIds: s.memoryNoteIds || [],
         conditions: s.conditions || { rules: [], default: 'next' },

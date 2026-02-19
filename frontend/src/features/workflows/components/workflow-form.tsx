@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Trash2, ChevronDown, Server, Sparkles, Bot } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, Server, Sparkles, Bot, ScrollText } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
@@ -22,6 +22,7 @@ import { useCreateWorkflow, useUpdateWorkflow } from '../hooks/use-workflows'
 import { useMcpServers } from '@/features/mcp-servers/hooks/use-mcp-servers'
 import { useSkills } from '@/features/skills/hooks/use-skills'
 import { useAgents } from '@/features/agents/hooks/use-agents'
+import { useRules } from '@/features/rules/hooks/use-rules'
 import type { WorkflowInput } from '../types'
 
 const formSchema = z.object({
@@ -44,6 +45,7 @@ export function WorkflowForm() {
   const { data: mcpServers } = useMcpServers()
   const { data: skills } = useSkills()
   const { data: agents } = useAgents()
+  const { data: rules } = useRules()
 
   const {
     register,
@@ -91,6 +93,7 @@ export function WorkflowForm() {
         mcpServerIds: step.mcpServerIds,
         skillIds: step.skillIds,
         agentIds: step.agentIds,
+        ruleIds: step.ruleIds,
       })),
     }
 
@@ -331,6 +334,40 @@ export function WorkflowForm() {
                       ))}
                       {(!agents || agents.filter((a) => a.enabled).length === 0) && (
                         <p className="text-xs text-muted-foreground">Nenhum agent disponivel</p>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1">
+                    <ChevronDown className="h-3 w-3" />
+                    <ScrollText className="h-3 w-3" />
+                    Rules
+                    {step.ruleIds.length > 0 && (
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0">{step.ruleIds.length}</Badge>
+                    )}
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {rules?.filter((r) => r.enabled).map((rule) => (
+                        <label key={rule.id} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 rounded border hover:bg-muted/50 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={step.ruleIds.includes(rule.id)}
+                            onChange={(e) => {
+                              const ids = e.target.checked
+                                ? [...step.ruleIds, rule.id]
+                                : step.ruleIds.filter((id) => id !== rule.id)
+                              updateStep(index, { ruleIds: ids })
+                            }}
+                            className="rounded"
+                          />
+                          {rule.name}
+                        </label>
+                      ))}
+                      {(!rules || rules.filter((r) => r.enabled).length === 0) && (
+                        <p className="text-xs text-muted-foreground">Nenhuma rule disponivel</p>
                       )}
                     </div>
                   </CollapsibleContent>

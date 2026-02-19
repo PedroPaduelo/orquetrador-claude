@@ -8,6 +8,7 @@ import {
   Server,
   Sparkles,
   Bot,
+  ScrollText,
   Package,
   Settings,
 } from 'lucide-react'
@@ -52,6 +53,11 @@ const configItems = [
     to: '/agents',
     icon: Bot,
     label: 'Agents',
+  },
+  {
+    to: '/rules',
+    icon: ScrollText,
+    label: 'Rules',
   },
   {
     to: '/plugins',
