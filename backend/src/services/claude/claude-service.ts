@@ -152,12 +152,14 @@ export class ClaudeService {
     // Emit debug info through SSE so frontend can see it
     const emitDebug = (msg: string) => {
       console.log(`${logPrefix} ${msg}`)
+      const debugAction: Action = {
+        type: 'stderr',
+        content: `[debug] ${msg}`,
+      }
+      actions.push(debugAction)
       onEvent?.({
         type: 'action',
-        action: {
-          type: 'stderr',
-          content: `[debug] ${msg}`,
-        },
+        action: debugAction,
       })
     }
 
@@ -252,12 +254,14 @@ export class ClaudeService {
           error = stderrContent.trim()
         }
 
+        const stderrAction: Action = {
+          type: 'stderr',
+          content: stderrContent,
+        }
+        actions.push(stderrAction)
         onEvent?.({
           type: 'action',
-          action: {
-            type: 'stderr',
-            content: stderrContent,
-          },
+          action: stderrAction,
         })
       })
 

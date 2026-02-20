@@ -5,7 +5,7 @@ import { Textarea } from '@/shared/components/ui/textarea'
 import { Badge } from '@/shared/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Checkbox } from '@/shared/components/ui/checkbox'
-import { HelpCircle, Send, MessageSquare } from 'lucide-react'
+import { HelpCircle, Send, CheckCircle2 } from 'lucide-react'
 
 interface QuestionOption {
   label: string
@@ -23,14 +23,36 @@ interface UserQuestionCardProps {
   questions: Question[]
   onAnswer: (formattedAnswer: string) => void
   disabled?: boolean
+  answeredText?: string
 }
 
-export function UserQuestionCard({ questions, onAnswer, disabled }: UserQuestionCardProps) {
+/**
+ * Parse the formatted answer text back into per-question answers.
+ * Format: "Question text\n→ Answer\n\nQuestion text 2\n→ Answer 2"
+ */
+function parseAnsweredText(text: string): Map<string, string> {
+  const map = new Map<string, string>()
+  const blocks = text.split('\n\n')
+  for (const block of blocks) {
+    const arrowIdx = block.indexOf('\n→ ')
+    if (arrowIdx !== -1) {
+      const question = block.slice(0, arrowIdx).trim()
+      const answer = block.slice(arrowIdx + 3).trim()
+      map.set(question, answer)
+    }
+  }
+  return map
+}
+
+export function UserQuestionCard({ questions, onAnswer, disabled, answeredText }: UserQuestionCardProps) {
   const [selections, setSelections] = useState<Map<number, Set<number>>>(new Map())
   const [customTexts, setCustomTexts] = useState<Map<number, string>>(new Map())
   const [submitted, setSubmitted] = useState(false)
 
+  const isAnswered = !!answeredText || submitted
+
   const toggleSelection = (questionIdx: number, optionIdx: number, multiSelect?: boolean) => {
+    if (isAnswered) return
     setSelections((prev) => {
       const newMap = new Map(prev)
       const current = newMap.get(questionIdx) || new Set<number>()
@@ -44,7 +66,6 @@ export function UserQuestionCard({ questions, onAnswer, disabled }: UserQuestion
         }
         newMap.set(questionIdx, newSet)
       } else {
-        // Single select - replace
         newMap.set(questionIdx, new Set([optionIdx]))
       }
 
@@ -53,6 +74,7 @@ export function UserQuestionCard({ questions, onAnswer, disabled }: UserQuestion
   }
 
   const setCustomText = (questionIdx: number, text: string) => {
+    if (isAnswered) return
     setCustomTexts((prev) => {
       const newMap = new Map(prev)
       newMap.set(questionIdx, text)
@@ -61,6 +83,7 @@ export function UserQuestionCard({ questions, onAnswer, disabled }: UserQuestion
   }
 
   const handleSubmit = () => {
+    if (isAnswered) return
     const answers: string[] = []
 
     for (let i = 0; i < questions.length; i++) {
@@ -92,14 +115,38 @@ export function UserQuestionCard({ questions, onAnswer, disabled }: UserQuestion
   const hasAnySelection = Array.from(selections.values()).some((s) => s.size > 0) ||
     Array.from(customTexts.values()).some((t) => t.trim().length > 0)
 
-  if (submitted) {
+  // Already answered — show the answered state with recorded responses
+  if (isAnswered) {
+    const parsedAnswers = answeredText ? parseAnsweredText(answeredText) : null
+
     return (
-      <Card className="border-blue-500/30 bg-blue-500/5">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 text-sm text-blue-400">
-            <MessageSquare className="h-4 w-4" />
+      <Card className="border-green-500/30 bg-green-500/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-green-400">
+            <CheckCircle2 className="h-4 w-4" />
             <span>Resposta enviada</span>
-          </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {questions.map((q, qIdx) => {
+            const answer = parsedAnswers?.get(q.question)
+
+            return (
+              <div key={qIdx} className="space-y-1">
+                <div className="flex items-center gap-2">
+                  {q.header && (
+                    <Badge variant="outline" className="text-xs">{q.header}</Badge>
+                  )}
+                  <p className="text-sm font-medium text-muted-foreground">{q.question}</p>
+                </div>
+                {answer && (
+                  <p className="text-sm text-green-300 pl-4 border-l-2 border-green-500/30">
+                    {answer}
+                  </p>
+                )}
+              </div>
+            )
+          })}
         </CardContent>
       </Card>
     )

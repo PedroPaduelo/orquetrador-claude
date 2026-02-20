@@ -87,8 +87,11 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           onError?.((error as Error).message)
         }
       } finally {
+        // Wait for refetch to complete BEFORE hiding the streaming bubble.
+        // This prevents the gap where the streaming message disappears
+        // but the DB message (with actions/logs) hasn't loaded yet.
+        await queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
         setStreaming(false)
-        queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
       }
     },
     [conversationId, isStreaming, queryClient, onComplete, onError]

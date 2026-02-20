@@ -6,7 +6,7 @@ import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
 import { useSSEStream } from '../hooks/use-sse-stream'
 import { useConversationsStore } from '../store'
-import type { Conversation } from '../types'
+import type { Conversation, Action } from '../types'
 
 interface ChatContainerProps {
   conversation: Conversation
@@ -127,26 +127,51 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
           </div>
         )}
 
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            onSendAnswer={!isStreaming ? handleSendAnswer : undefined}
-          />
-        ))}
+        {messages.map((message, index) => {
+          // Check if this assistant message's questions have been answered
+          // by looking for a subsequent user message
+          let answeredText: string | undefined
+          if (message.role === 'assistant') {
+            const actions = (message.metadata?.actions || []) as Action[]
+            const hasQuestions = actions.some(
+              (a) => a.type === 'tool_use' && a.name === 'AskUserQuestion'
+            )
+            if (hasQuestions) {
+              const nextMessage = messages[index + 1]
+              if (nextMessage && nextMessage.role === 'user') {
+                answeredText = nextMessage.content
+              }
+            }
+          }
+
+          return (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              onSendAnswer={!isStreaming && !answeredText ? handleSendAnswer : undefined}
+              answeredText={answeredText}
+            />
+          )
+        })}
 
         {/* Streaming message - show even without content for thinking indicator */}
-        {isStreaming && (
-          <MessageBubble
-            message={{
-              id: 'streaming',
-              role: 'assistant',
-              content: streamingContent,
-              metadata: { actions: streamingActions },
-            }}
-            isStreaming
-          />
-        )}
+        {/* Don't show if the last DB message already has matching content (avoids duplicate during refetch transition) */}
+        {isStreaming && (() => {
+          const lastMsg = messages[messages.length - 1]
+          const isDuplicate = lastMsg?.role === 'assistant' && lastMsg.content === streamingContent && streamingContent.length > 0
+          if (isDuplicate) return null
+          return (
+            <MessageBubble
+              message={{
+                id: 'streaming',
+                role: 'assistant',
+                content: streamingContent,
+                metadata: { actions: streamingActions },
+              }}
+              isStreaming
+            />
+          )
+        })()}
       </div>
 
       {/* Scroll to bottom - absolute, no layout impact */}

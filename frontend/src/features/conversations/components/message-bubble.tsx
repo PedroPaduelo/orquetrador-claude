@@ -13,6 +13,7 @@ interface MessageBubbleProps {
   message: Message | { id: string; role: 'assistant'; content: string; metadata?: { actions?: Action[] } }
   isStreaming?: boolean
   onSendAnswer?: (answer: string) => void
+  answeredText?: string
 }
 
 function extractUserQuestions(actions: Action[]): { questions: Action[]; otherActions: Action[] } {
@@ -54,7 +55,7 @@ function CopyButton({ text }: { text: string }) {
   )
 }
 
-export const MessageBubble = memo(function MessageBubble({ message, isStreaming, onSendAnswer }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, isStreaming, onSendAnswer, answeredText }: MessageBubbleProps) {
   const [actionsOpen, setActionsOpen] = useState(false)
   const isUser = message.role === 'user'
   const actions = (message.metadata?.actions || []) as Action[]
@@ -166,7 +167,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
         </div>
 
         {/* AskUserQuestion - Interactive question cards */}
-        {!isUser && questions.length > 0 && onSendAnswer && (
+        {!isUser && questions.length > 0 && (
           <div className="w-full space-y-2">
             {questions.map((q, i) => {
               const input = q.input as { questions?: Array<{ question: string; header?: string; options: Array<{ label: string; description?: string }>; multiSelect?: boolean }> }
@@ -176,8 +177,9 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
                 <UserQuestionCard
                   key={i}
                   questions={input.questions}
-                  onAnswer={onSendAnswer}
-                  disabled={isStreaming}
+                  onAnswer={onSendAnswer || (() => {})}
+                  disabled={isStreaming || !!answeredText}
+                  answeredText={answeredText}
                 />
               )
             })}
