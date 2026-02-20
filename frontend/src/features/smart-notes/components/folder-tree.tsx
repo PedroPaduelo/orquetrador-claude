@@ -417,9 +417,13 @@ function NoteTreeItem({ note, level, isSelected, onSelect }: NoteTreeItemProps) 
       onClick={onSelect}
     >
       {isHtml ? (
-        <Code className="h-3.5 w-3.5 shrink-0 text-orange-500" />
+        <div className="flex items-center justify-center h-5 w-5 shrink-0 rounded bg-orange-500/15">
+          <Code className="h-3 w-3 text-orange-500" />
+        </div>
       ) : (
-        <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <div className="flex items-center justify-center h-5 w-5 shrink-0 rounded bg-blue-500/15">
+          <FileText className="h-3 w-3 text-blue-500" />
+        </div>
       )}
       <span className="flex-1 truncate">{note.title || 'Sem título'}</span>
       {note.isPinned && <Pin className="h-3 w-3 shrink-0 fill-yellow-500 text-yellow-500" />}

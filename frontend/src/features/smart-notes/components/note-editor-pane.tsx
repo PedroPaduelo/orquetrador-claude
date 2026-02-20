@@ -173,7 +173,7 @@ export function NoteEditorPane() {
         {isHtml ? (
           <Code className="h-4 w-4 text-orange-500 shrink-0" />
         ) : (
-          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+          <FileText className="h-4 w-4 text-blue-500 shrink-0" />
         )}
 
         {note.isPinned && (
