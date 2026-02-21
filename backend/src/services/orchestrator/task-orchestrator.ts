@@ -259,18 +259,56 @@ export class TaskOrchestrator {
             finished: nextStep.nextIndex >= steps.length,
           })
 
-          if (nextStep.nextIndex !== i + 1) {
-            orchestratorEvents.emitConditionJump({
-              executionId,
-              conversationId,
-              fromStepId: step.id,
-              toStepId: steps[nextStep.nextIndex]?.id || 'end',
-              toStepIndex: nextStep.nextIndex,
-            })
-          }
+          if (nextStep.nextIndex < i && conditionResult.matched && conditionResult.rule) {
+            // BACKWARD JUMP — apply retry counting to prevent infinite loops
+            const jumpKey = `jump_${step.id}_to_${nextStep.nextIndex}`
+            const currentRetry = (retryCounts[jumpKey] || 0) + 1
+            const maxRetries = conditionResult.rule.maxRetries || 3
 
-          i = nextStep.nextIndex
-          currentInput = result.content
+            if (currentRetry >= maxRetries) {
+              // Max loop-backs reached, force advance
+              delete retryCounts[jumpKey]
+              i = i + 1
+              currentInput = result.content
+            } else {
+              retryCounts[jumpKey] = currentRetry
+              await executionStateManager.updateRetryCounts(executionId, retryCounts)
+
+              const retryMessage = conditionsEvaluator.formatRetryMessage(
+                conditionResult.rule.retryMessage,
+                result.content,
+                conditionResult.rule
+              )
+
+              orchestratorEvents.emitConditionJump({
+                executionId,
+                conversationId,
+                fromStepId: step.id,
+                toStepId: steps[nextStep.nextIndex]?.id || 'end',
+                toStepIndex: nextStep.nextIndex,
+              })
+
+              i = nextStep.nextIndex
+              currentInput = retryMessage
+            }
+          } else {
+            // Forward jump or simple next — clear retry counts for this step
+            const keysToDelete = Object.keys(retryCounts).filter(k => k.startsWith(`jump_${step.id}`))
+            keysToDelete.forEach(k => delete retryCounts[k])
+
+            if (nextStep.nextIndex !== i + 1) {
+              orchestratorEvents.emitConditionJump({
+                executionId,
+                conversationId,
+                fromStepId: step.id,
+                toStepId: steps[nextStep.nextIndex]?.id || 'end',
+                toStepIndex: nextStep.nextIndex,
+              })
+            }
+
+            i = nextStep.nextIndex
+            currentInput = result.content
+          }
         }
       }
 

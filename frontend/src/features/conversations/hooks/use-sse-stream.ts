@@ -131,6 +131,11 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           setStepStatus(data.stepId as string, 'retry')
           break
 
+        case 'condition_jump':
+          // Clear streaming content — a new step will start via step_start
+          clearStreaming()
+          break
+
         case 'error':
           onError?.(data.message as string)
           break
@@ -140,7 +145,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           break
       }
     },
-    [setProgress, setStepStatus, appendStreamingContent, addStreamingAction, onError, onComplete]
+    [setProgress, setStepStatus, appendStreamingContent, addStreamingAction, clearStreaming, onError, onComplete]
   )
 
   const cancel = useCallback(() => {

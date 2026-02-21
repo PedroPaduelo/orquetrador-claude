@@ -71,6 +71,7 @@ async function main() {
     data: {
       name: 'Software House — Template Genérico',
       description: 'Template genérico de Software House. Copie este workflow, aponte o projectPath para qualquer projeto e use. Os agentes vão ler e entender o projeto automaticamente. Funciona para: criar sistemas, copiar produtos, features, melhorias, bug fixes, refatoração.',
+      type: 'sequential',
       projectPath: null,
     },
   })
@@ -691,7 +692,29 @@ Se ❌:
 ---
 **⚠️ Retorno para Step 5:**
 "Review reprovou. [X] críticos. Leia \`06-code-review.md\` e corrija os achados 🔴."
----`,
+---
+
+## IMPORTANTE: Formato do Veredito
+
+O sistema usa o emoji do veredito para decidir automaticamente o próximo passo.
+
+- \`## Veredito: ✅ Aprovado\` — código aprovado, prossegue para QA
+- \`## Veredito: ⚠️ Aprovado com Ressalvas\` — aprovado com observações, prossegue
+- \`## Veredito: ❌ Mudanças Necessárias\` — reprovado, volta para Implementação
+
+Use ❌ APENAS quando há problemas críticos que impedem o deploy.`,
+      conditions: JSON.stringify({
+        rules: [
+          {
+            type: 'contains',
+            match: '❌',
+            goto: '746a426b-f4a9-4dee-ab30-53afa4e0e898',
+            maxRetries: 3,
+            retryMessage: 'O Code Review REPROVOU a implementação. Leia o relatório abaixo e corrija TODOS os achados críticos (🔴).\n\n--- RELATÓRIO DO CODE REVIEW ---\n{output}\n--- FIM DO RELATÓRIO ---\n\nApós corrigir, gere um novo 05-implementacao.md atualizado.',
+          },
+        ],
+        default: 'next',
+      }),
     },
   })
   console.log('✅ Step 6: Code Review')
@@ -778,7 +801,37 @@ Se ❌:
 ---
 **⚠️ Retorno para Step 5:**
 "QA reprovou. [X] bugs. Corrija e retorne."
----`,
+---
+
+## IMPORTANTE: Formato do Veredito QA
+
+O sistema usa marcadores no veredito para decidir o próximo passo automaticamente.
+
+- \`## Veredito: ✅ Aprovado\` — tudo funciona, prossegue para Deploy
+- \`## Veredito: ⚠️ Ressalvas\` — problemas menores, prossegue
+- \`## Veredito: ❌ Reprovado\` — bugs encontrados, volta para Implementação para correção
+- \`## Veredito: ❌ Reprovado — RETORNO_TRIAGEM\` — problemas graves/arquiteturais que exigem re-análise completa desde a Triagem
+
+Use RETORNO_TRIAGEM apenas quando os problemas são tão graves que a arquitetura ou os requisitos precisam ser revistos (ex: modelo de dados fundamentalmente errado, stack inadequado).`,
+      conditions: JSON.stringify({
+        rules: [
+          {
+            type: 'contains',
+            match: 'RETORNO_TRIAGEM',
+            goto: '74619171-4b09-4ecf-b24f-6b7cbd1fd501',
+            maxRetries: 1,
+            retryMessage: 'O QA encontrou problemas GRAVES que exigem re-análise completa. Leia o relatório abaixo e faça uma nova triagem.\n\n--- RELATÓRIO DE QA ---\n{output}\n--- FIM DO RELATÓRIO ---\n\nFaça nova triagem considerando os problemas encontrados.',
+          },
+          {
+            type: 'contains',
+            match: '❌',
+            goto: '746a426b-f4a9-4dee-ab30-53afa4e0e898',
+            maxRetries: 2,
+            retryMessage: 'O QA encontrou bugs. Leia o relatório abaixo e corrija os bugs reportados.\n\n--- RELATÓRIO DE QA ---\n{output}\n--- FIM DO RELATÓRIO ---\n\nCorrija os bugs e gere um novo 05-implementacao.md atualizado.',
+          },
+        ],
+        default: 'next',
+      }),
     },
   })
   console.log('✅ Step 7: Testes & QA')
@@ -864,6 +917,10 @@ Gere \`08-entrega.md\`:
 **✅ Workflow Completo!**
 "Projeto entregue. Documentação em \`08-entrega.md\`. URLs públicas ativas."
 ---`,
+      conditions: JSON.stringify({
+        rules: [],
+        default: 'finish',
+      }),
     },
   })
   console.log('✅ Step 8: Deploy')
