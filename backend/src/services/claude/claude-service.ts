@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from 'child_process'
+import { spawn, execSync, ChildProcess } from 'child_process'
 import { existsSync } from 'fs'
 import { StreamParser, type StreamEvent, type Action } from './stream-parser.js'
 import { sessionManager } from './session-manager.js'
@@ -31,9 +31,81 @@ export interface ExecuteResult {
   error?: string
 }
 
+// ============================================
+// SANDBOX CONFIGURATION
+// ============================================
+// Runs Claude CLI as a restricted user to prevent child processes from
+// killing the orchestrator or accessing its files.
+//
+// The sandbox user (claude-sandbox) has:
+//   - NO ability to send signals to processes owned by 'dev' (kill blocked)
+//   - NO access to /workspace/orquetrador-claude/ (permission denied)
+//   - READ/WRITE access to project directories (via 'dev' group membership)
+//   - Access to the Claude CLI binary
+//
+// Set SANDBOX_ENABLED=false to disable (e.g., for debugging)
+// ============================================
+const SANDBOX_USER = process.env.SANDBOX_USER || 'claude-sandbox'
+const SANDBOX_GROUP = process.env.SANDBOX_GROUP || 'dev'
+const SANDBOX_ENABLED = process.env.SANDBOX_ENABLED !== 'false'
+
+// Environment variables that MUST NOT leak to child processes
+const ENV_BLOCKLIST = new Set([
+  // Orchestrator internals
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'SMART_NOTES_API_KEY',
+  'SMART_NOTES_API_URL',
+  'GROQ_API_KEY',
+  // Claude Code internal vars
+  'CLAUDECODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+  // Process info that reveals orchestrator
+  'npm_lifecycle_event',
+  'npm_package_name',
+  'npm_package_version',
+])
+
 export class ClaudeService {
   private activeProcesses = new Map<string, ChildProcess>()
   private timeout = 5 * 60 * 1000 // 5 minutes
+  private cachedClaudeBin: string | null = null
+
+  /**
+   * Resolve the absolute path to the Claude CLI binary.
+   * Caches the result since the binary location doesn't change at runtime.
+   * Uses absolute path because sudo resets PATH for security.
+   */
+  private resolveClaudeBin(): string {
+    if (this.cachedClaudeBin) return this.cachedClaudeBin
+
+    try {
+      const resolved = execSync('which claude', { encoding: 'utf-8' }).trim()
+      if (resolved) {
+        this.cachedClaudeBin = resolved
+        console.log(`[ClaudeService] Resolved claude binary: ${resolved}`)
+        return resolved
+      }
+    } catch { /* which failed */ }
+
+    // Fallback: common locations
+    const candidates = [
+      '/home/dev/.npm-global/bin/claude',
+      '/usr/local/bin/claude',
+      '/usr/bin/claude',
+    ]
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) {
+        this.cachedClaudeBin = candidate
+        console.log(`[ClaudeService] Found claude binary at: ${candidate}`)
+        return candidate
+      }
+    }
+
+    // Last resort
+    this.cachedClaudeBin = 'claude'
+    return 'claude'
+  }
 
   async execute(options: ExecuteOptions): Promise<ExecuteResult> {
     const {
@@ -101,18 +173,32 @@ export class ClaudeService {
     // The message is the last positional argument
     args.push(fullMessage)
 
-    // Set environment - remove Claude Code internal env vars to allow nested sessions
+    // Build sanitized environment for the child process
+    // Only pass what Claude CLI needs — block orchestrator secrets
     const env: Record<string, string> = {}
     for (const [key, value] of Object.entries(process.env)) {
-      if (value !== undefined) {
+      if (value !== undefined && !ENV_BLOCKLIST.has(key)) {
         env[key] = value
       }
     }
-    delete env.CLAUDECODE
-    delete env.CLAUDE_CODE_ENTRYPOINT
 
-    if (baseUrl) {
-      env.ANTHROPIC_BASE_URL = baseUrl
+    // Each step MUST have its own baseUrl configured
+    if (!baseUrl) {
+      return {
+        content: '',
+        sessionId: null,
+        actions: [],
+        timedOut: false,
+        cancelled: false,
+        needsUserInput: false,
+        error: 'Este step nao tem uma Base URL configurada. Configure a URL no step do workflow antes de executar.',
+      }
+    }
+    env.ANTHROPIC_BASE_URL = baseUrl
+
+    // Set HOME for sandbox user so Claude CLI stores sessions correctly
+    if (SANDBOX_ENABLED) {
+      env.HOME = `/home/${SANDBOX_USER}`
     }
 
     // Validate and resolve projectPath
@@ -129,8 +215,17 @@ export class ClaudeService {
       }
     }
 
-    // Resolve the claude binary path
-    const claudeBin = process.env.CLAUDE_BIN || 'claude'
+    // Resolve the claude binary path to an absolute path
+    // This is critical for sandbox mode because sudo resets PATH
+    const claudeBin = process.env.CLAUDE_BIN || this.resolveClaudeBin()
+
+    // Ensure Claude binary dir is in PATH for sandbox (sudo resets PATH)
+    if (SANDBOX_ENABLED && claudeBin.includes('/')) {
+      const claudeBinDir = claudeBin.substring(0, claudeBin.lastIndexOf('/'))
+      if (claudeBinDir && env.PATH && !env.PATH.includes(claudeBinDir)) {
+        env.PATH = `${claudeBinDir}:${env.PATH}`
+      }
+    }
 
     // Log full execution details
     const logPrefix = `[Claude][${processId.substring(0, 8)}]`
@@ -144,7 +239,7 @@ export class ClaudeService {
     console.log(`${logPrefix} System prompt: ${systemPrompt ? systemPrompt.substring(0, 100) + '...' : 'none'}`)
     console.log(`${logPrefix} ANTHROPIC_API_KEY set: ${!!env.ANTHROPIC_API_KEY}`)
     console.log(`${logPrefix} ANTHROPIC_AUTH_TOKEN set: ${!!env.ANTHROPIC_AUTH_TOKEN}`)
-    console.log(`${logPrefix} ANTHROPIC_BASE_URL: ${env.ANTHROPIC_BASE_URL || 'not set'}`)
+    console.log(`${logPrefix} ANTHROPIC_BASE_URL: ${env.ANTHROPIC_BASE_URL || 'not set'} (step: ${baseUrl || 'none'}, fallback: ${process.env.DEFAULT_BASE_URL || 'none'})`)
 
     const sanitizedArgs = args.map(a => a.length > 80 ? a.substring(0, 80) + '...' : a)
     console.log(`${logPrefix} Args: ${claudeBin} ${sanitizedArgs.join(' ')}`)
@@ -163,11 +258,34 @@ export class ClaudeService {
       })
     }
 
-    emitDebug(`Starting claude CLI - cwd: ${resolvedCwd}, session: ${existingSessionId || 'new'}, baseUrl: ${baseUrl || env.ANTHROPIC_BASE_URL || 'default'}, model: ${model || 'default'}, apiKey: ${!!env.ANTHROPIC_API_KEY}, authToken: ${!!env.ANTHROPIC_AUTH_TOKEN}`)
+    emitDebug(`Starting claude CLI - cwd: ${resolvedCwd}, session: ${existingSessionId || 'new'}, baseUrl: ${baseUrl || env.ANTHROPIC_BASE_URL || 'default'}, model: ${model || 'default'}, apiKey: ${!!env.ANTHROPIC_API_KEY}, authToken: ${!!env.ANTHROPIC_AUTH_TOKEN}, sandbox: ${SANDBOX_ENABLED ? SANDBOX_USER : 'disabled'}`)
 
     return new Promise((resolve) => {
-      // Spawn WITHOUT shell:true - args are passed as an array which handles escaping
-      const childProcess = spawn(claudeBin, args, {
+      // Spawn the Claude CLI process
+      // When SANDBOX_ENABLED, run as restricted user via sudo to prevent:
+      //   1. Child killing orchestrator processes (different UID = EPERM on kill())
+      //   2. Child reading orchestrator files (filesystem permissions block access)
+      //   3. Child discovering orchestrator internals (env vars sanitized)
+      let spawnCmd: string
+      let spawnArgs: string[]
+
+      if (SANDBOX_ENABLED) {
+        spawnCmd = 'sudo'
+        spawnArgs = [
+          '-n',                             // non-interactive (no password prompt)
+          '-u', SANDBOX_USER,               // run as sandbox user
+          '-g', SANDBOX_GROUP,              // use dev group (for project file access)
+          '--preserve-env',                 // pass our sanitized env
+          '--',
+          claudeBin,
+          ...args,
+        ]
+      } else {
+        spawnCmd = claudeBin
+        spawnArgs = args
+      }
+
+      const childProcess = spawn(spawnCmd, spawnArgs, {
         cwd: resolvedCwd,
         env,
         stdio: ['pipe', 'pipe', 'pipe'],
