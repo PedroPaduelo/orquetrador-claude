@@ -1,5 +1,5 @@
 import { cn } from '@/shared/lib/utils'
-import { Check, Loader2, AlertCircle, RotateCcw, SkipForward, SkipBack, MessageCircle, Zap } from 'lucide-react'
+import { Check, Loader2, AlertCircle, RotateCcw, SkipForward, SkipBack, MessageCircle, Zap, StopCircle } from 'lucide-react'
 import { ScrollArea } from '@/shared/components/ui/scroll-area'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -162,6 +162,7 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
                     {isCompleted ? 'Concluído' :
                      isExecutingStep ? 'Executando...' :
                      isActiveChat ? 'Em conversa' :
+                     status === 'cancelled' ? 'Cancelado' :
                      status === 'error' ? 'Erro' :
                      status === 'retry' ? 'Tentando novamente' :
                      'Pendente'}
@@ -211,6 +212,14 @@ function StepIndicator({
     return (
       <div className={cn(baseClasses, 'bg-info/10 border-info text-info')}>
         <MessageCircle className="h-3.5 w-3.5" />
+      </div>
+    )
+  }
+
+  if (status === 'cancelled') {
+    return (
+      <div className={cn(baseClasses, 'border-muted-foreground bg-muted-foreground/10 text-muted-foreground')}>
+        <StopCircle className="h-3.5 w-3.5" />
       </div>
     )
   }

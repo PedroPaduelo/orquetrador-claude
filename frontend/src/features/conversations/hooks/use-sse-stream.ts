@@ -13,6 +13,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
   const { conversationId, onComplete, onError } = options
   const queryClient = useQueryClient()
   const abortControllerRef = useRef<AbortController | null>(null)
+  const cancelledRef = useRef(false)
 
   const {
     isStreaming,
@@ -22,6 +23,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     appendStreamingContent,
     addStreamingAction,
     clearStreaming,
+    resetStreamingContent,
     setProgress,
     setStepStatus,
   } = useConversationsStore()
@@ -30,6 +32,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     async (content: string, stepIndex?: number) => {
       if (isStreaming) return
 
+      cancelledRef.current = false
       clearStreaming()
       setStreaming(true)
 
@@ -87,11 +90,16 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           onError?.((error as Error).message)
         }
       } finally {
-        // Wait for refetch to complete BEFORE hiding the streaming bubble.
-        // This prevents the gap where the streaming message disappears
-        // but the DB message (with actions/logs) hasn't loaded yet.
-        await queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
-        setStreaming(false)
+        if (!cancelledRef.current) {
+          // Normal completion — refetch then stop streaming
+          try {
+            await queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
+          } catch {
+            // Ignore refetch errors
+          }
+          setStreaming(false)
+        }
+        // If cancelled, cancel() already handled setStreaming(false)
       }
     },
     [conversationId, isStreaming, queryClient, onComplete, onError]
@@ -100,13 +108,23 @@ export function useSSEStream(options: UseSSEStreamOptions) {
   const handleEvent = useCallback(
     (event: string, data: Record<string, unknown>) => {
       switch (event) {
-        case 'step_start':
+        case 'step_start': {
+          // Mark any previously running/active steps as completed
+          const { stepStatuses } = useConversationsStore.getState()
+          stepStatuses.forEach((status, id) => {
+            if (status === 'running' || status === 'active') {
+              setStepStatus(id, 'completed')
+            }
+          })
+
           setProgress(
             (data.stepOrder as number) - 1,
             data.totalSteps as number
           )
           setStepStatus(data.stepId as string, 'running')
+          resetStreamingContent()
           break
+        }
 
         case 'stream':
           if (data.type === 'content' && data.content) {
@@ -117,9 +135,11 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           break
 
         case 'step_complete':
-          // Mark as 'active' (not 'completed') - the step stays open for more messages.
-          // Steps only become 'completed' when the user advances past them.
-          setStepStatus(data.stepId as string, 'active')
+          if (data.finished) {
+            setStepStatus(data.stepId as string, 'completed')
+          } else {
+            setStepStatus(data.stepId as string, 'active')
+          }
           break
 
         case 'step_error':
@@ -132,8 +152,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           break
 
         case 'condition_jump':
-          // Clear streaming content — a new step will start via step_start
-          clearStreaming()
+          resetStreamingContent()
           break
 
         case 'error':
@@ -145,13 +164,40 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           break
       }
     },
-    [setProgress, setStepStatus, appendStreamingContent, addStreamingAction, clearStreaming, onError, onComplete]
+    [setProgress, setStepStatus, appendStreamingContent, addStreamingAction, resetStreamingContent, onError, onComplete]
   )
 
-  const cancel = useCallback(() => {
+  const cancel = useCallback(async () => {
+    // Mark as cancelled so sendMessage's finally doesn't interfere
+    cancelledRef.current = true
+
+    // Abort the HTTP connection immediately
     abortControllerRef.current?.abort()
+
+    // Stop streaming UI immediately
     setStreaming(false)
-  }, [setStreaming])
+
+    // Clear any 'running' step statuses so the spinner stops
+    const { stepStatuses, setStepStatus: updateStepStatus } = useConversationsStore.getState()
+    stepStatuses.forEach((status, id) => {
+      if (status === 'running') {
+        updateStepStatus(id, 'cancelled')
+      }
+    })
+
+    // Cancel backend execution
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
+      await fetch(`${apiUrl}/conversations/${conversationId}/cancel`, {
+        method: 'POST',
+      })
+    } catch {
+      // Ignore cancel API errors
+    }
+
+    // Refetch conversation to get latest state
+    queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
+  }, [conversationId, setStreaming, queryClient])
 
   return {
     sendMessage,

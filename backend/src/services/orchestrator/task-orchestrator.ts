@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma.js'
 import { claudeService } from '../claude/claude-service.js'
+import { sessionManager } from '../claude/session-manager.js'
 import { conditionsEvaluator, type StepConditions } from './conditions-evaluator.js'
 import { executionStateManager } from './execution-state.js'
 import { orchestratorEvents } from './events.js'
@@ -127,9 +128,10 @@ export class TaskOrchestrator {
         })
 
         // Check if cancelled during execution
-        if (!this.activeExecutions.get(conversationId)) {
+        if (result.cancelled || !this.activeExecutions.get(conversationId)) {
           orchestratorEvents.emitExecutionCancelled({ executionId, conversationId })
           await executionStateManager.markCancelled(executionId)
+          this.activeExecutions.delete(conversationId)
           return
         }
 
@@ -486,7 +488,12 @@ export class TaskOrchestrator {
 
   cancel(conversationId: string): boolean {
     this.activeExecutions.delete(conversationId)
-    return claudeService.cancel(conversationId)
+    const killed = claudeService.cancel(conversationId)
+
+    // Clear saved sessions so next execution starts fresh (cancelled sessions are corrupt)
+    sessionManager.deleteAllSessions(conversationId).catch(() => {})
+
+    return killed
   }
 
   isExecuting(conversationId: string): boolean {

@@ -27,7 +27,7 @@ export default function ConversationDetailPage() {
   const [showStepPanel, setShowStepPanel] = useState(true)
   const { data: conversation, isLoading, error } = useConversation(id!)
   const deleteMutation = useDeleteConversation()
-  const { stepStatuses } = useConversationsStore()
+  const { stepStatuses, currentStepIndex: storeStepIndex, isStreaming: storeIsStreaming } = useConversationsStore()
 
   const handleDelete = async () => {
     await deleteMutation.mutateAsync(id!)
@@ -73,8 +73,10 @@ export default function ConversationDetailPage() {
   }
 
   const steps = conversation.workflow?.steps || []
-  const currentStepIndex = conversation.currentStepIndex || 0
-  const isStreaming = stepStatuses.size > 0 && Array.from(stepStatuses.values()).some(s => s === 'running')
+  const apiStepIndex = conversation.currentStepIndex || 0
+  // Use store's step index during streaming (real-time), fall back to API value
+  const currentStepIndex = storeIsStreaming ? storeStepIndex : apiStepIndex
+  const isStreaming = storeIsStreaming || (stepStatuses.size > 0 && Array.from(stepStatuses.values()).some(s => s === 'running'))
 
   return (
     <div className="flex h-full">

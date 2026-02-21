@@ -68,6 +68,7 @@ const ENV_BLOCKLIST = new Set([
 
 export class ClaudeService {
   private activeProcesses = new Map<string, ChildProcess>()
+  private cancelledProcesses = new Set<string>()
   private timeout = 5 * 60 * 1000 // 5 minutes
   private cachedClaudeBin: string | null = null
 
@@ -289,6 +290,7 @@ export class ClaudeService {
         cwd: resolvedCwd,
         env,
         stdio: ['pipe', 'pipe', 'pipe'],
+        detached: true,  // Create new process group so we can kill entire tree
       })
 
       this.activeProcesses.set(processId, childProcess)
@@ -305,9 +307,16 @@ export class ClaudeService {
         if (elapsed > this.timeout) {
           emitDebug(`TIMEOUT after ${Math.round(elapsed / 1000)}s of inactivity. stdout: ${rawStdout.length} chars, stderr: ${rawStderr.length} chars`)
           timedOut = true
-          childProcess.kill('SIGTERM')
+          // Kill entire process group
+          const tPid = childProcess.pid
+          if (tPid) {
+            try { process.kill(-tPid, 'SIGTERM') } catch { childProcess.kill('SIGTERM') }
+          } else {
+            childProcess.kill('SIGTERM')
+          }
           // Force kill after 5 seconds if SIGTERM doesn't work
           setTimeout(() => {
+            if (tPid) { try { process.kill(-tPid, 'SIGKILL') } catch { /* ignore */ } }
             try { childProcess.kill('SIGKILL') } catch { /* ignore */ }
           }, 5000)
           clearInterval(timeoutCheck)
@@ -339,8 +348,14 @@ export class ClaudeService {
             if (event.action.type === 'tool_use' && event.action.name && USER_INPUT_TOOLS.has(event.action.name)) {
               needsUserInput = true
               emitDebug(`${event.action.name} detected - killing process to wait for user input`)
-              childProcess.kill('SIGTERM')
+              const uPid = childProcess.pid
+              if (uPid) {
+                try { process.kill(-uPid, 'SIGTERM') } catch { childProcess.kill('SIGTERM') }
+              } else {
+                childProcess.kill('SIGTERM')
+              }
               setTimeout(() => {
+                if (uPid) { try { process.kill(-uPid, 'SIGKILL') } catch { /* ignore */ } }
                 try { childProcess.kill('SIGKILL') } catch { /* ignore */ }
               }, 2000)
             }
@@ -388,6 +403,12 @@ export class ClaudeService {
         clearInterval(timeoutCheck)
         this.activeProcesses.delete(processId)
         parser.reset()
+
+        // Check if this process was externally cancelled
+        if (this.cancelledProcesses.has(processId)) {
+          this.cancelledProcesses.delete(processId)
+          cancelled = true
+        }
 
         console.log(`${logPrefix} ========== EXECUTION END ==========`)
         console.log(`${logPrefix} Exit code: ${code}, Signal: ${signal}`)
@@ -489,8 +510,37 @@ export class ClaudeService {
 
     for (const [processId, childProcess] of this.activeProcesses) {
       if (processId.startsWith(conversationId)) {
-        childProcess.kill('SIGTERM')
-        this.activeProcesses.delete(processId)
+        console.log(`[ClaudeService] Cancelling process ${processId} (PID: ${childProcess.pid})`)
+
+        // Mark as cancelled so the close handler sets cancelled=true in the result
+        this.cancelledProcesses.add(processId)
+
+        // Kill entire process group to handle sudo → claude subprocess hierarchy
+        // Negative PID sends signal to all processes in the process group
+        const pid = childProcess.pid
+        if (pid) {
+          try {
+            process.kill(-pid, 'SIGTERM')
+          } catch {
+            // Process group kill failed, fall back to direct kill
+            childProcess.kill('SIGTERM')
+          }
+        } else {
+          childProcess.kill('SIGTERM')
+        }
+
+        // Force kill after 3 seconds if SIGTERM doesn't work
+        setTimeout(() => {
+          try {
+            if (pid) {
+              process.kill(-pid, 'SIGKILL')
+            }
+          } catch { /* already dead */ }
+          try {
+            childProcess.kill('SIGKILL')
+          } catch { /* already dead */ }
+        }, 3000)
+
         cancelled = true
       }
     }
