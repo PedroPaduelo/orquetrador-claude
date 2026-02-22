@@ -52,7 +52,7 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
           </Badge>
         </div>
         <p className="text-[11px] text-muted-foreground mt-1">
-          {workflowType === 'step_by_step' ? 'Passo a passo' : 'Sequencial'}
+          {workflowType === 'step_by_step' ? 'Passo a passo — Clique "Avançar" após concluir cada step' : 'Sequencial — Steps executam automaticamente em ordem'}
         </p>
 
         {/* Progress bar */}
@@ -134,7 +134,7 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
                 key={step.id}
                 className={cn(
                   'flex items-center gap-3 p-3 rounded-lg transition-all duration-200',
-                  isCurrent && 'bg-primary/8 border border-primary/15',
+                  isCurrent && 'bg-primary/8 border border-primary/30 shadow-sm shadow-primary/10',
                   isCompleted && !isCurrent && 'opacity-60',
                   !isCurrent && !isCompleted && 'hover:bg-muted/30'
                 )}

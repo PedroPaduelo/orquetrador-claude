@@ -1,12 +1,27 @@
-import { useState, useMemo } from 'react'
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useMemo, useCallback } from 'react'
+import { Search, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select'
+
+export interface FilterDefinition<T> {
+  key: string
+  label: string
+  options: { value: string; label: string }[]
+  match: (item: T, value: string) => boolean
+}
 
 interface UseSearchPaginationOptions<T> {
   data: T[] | undefined
   searchFields: (keyof T)[]
   pageSize?: number
+  filters?: FilterDefinition<T>[]
 }
 
 interface SearchPaginationResult<T> {
@@ -18,27 +33,66 @@ interface SearchPaginationResult<T> {
   setPage: (p: number) => void
   totalPages: number
   total: number
+  activeFilters: Record<string, string>
+  setFilter: (key: string, value: string) => void
+  clearFilters: () => void
+  hasActiveFilters: boolean
 }
 
 export function useSearchPagination<T>({
   data,
   searchFields,
   pageSize = 12,
+  filters: filterDefs = [],
 }: UseSearchPaginationOptions<T>): SearchPaginationResult<T> {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({})
+
+  const setFilter = useCallback((key: string, value: string) => {
+    setActiveFilters((prev) => {
+      if (value === '__all__') {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      }
+      return { ...prev, [key]: value }
+    })
+    setPage(1)
+  }, [])
+
+  const clearFilters = useCallback(() => {
+    setActiveFilters({})
+    setPage(1)
+  }, [])
+
+  const hasActiveFilters = Object.keys(activeFilters).length > 0
 
   const filtered = useMemo(() => {
     if (!data) return []
-    if (!search.trim()) return data
-    const q = search.toLowerCase()
-    return data.filter((item) =>
-      searchFields.some((field) => {
-        const val = item[field]
-        return typeof val === 'string' && val.toLowerCase().includes(q)
-      })
-    )
-  }, [data, search, searchFields])
+    let result = data
+
+    // Apply filters
+    for (const def of filterDefs) {
+      const val = activeFilters[def.key]
+      if (val) {
+        result = result.filter((item) => def.match(item, val))
+      }
+    }
+
+    // Apply search
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter((item) =>
+        searchFields.some((field) => {
+          const v = item[field]
+          return typeof v === 'string' && v.toLowerCase().includes(q)
+        })
+      )
+    }
+
+    return result
+  }, [data, search, searchFields, activeFilters, filterDefs])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const safePage = Math.min(page, totalPages)
@@ -53,6 +107,10 @@ export function useSearchPagination<T>({
     setPage,
     totalPages,
     total: filtered.length,
+    activeFilters,
+    setFilter,
+    clearFilters,
+    hasActiveFilters,
   }
 }
 
@@ -77,6 +135,41 @@ export function SearchBar({ value, onChange, placeholder = 'Buscar...', total }:
       </div>
       {total !== undefined && (
         <span className="text-xs text-muted-foreground whitespace-nowrap">{total} resultado(s)</span>
+      )}
+    </div>
+  )
+}
+
+interface FilterBarProps<T> {
+  filters: FilterDefinition<T>[]
+  activeFilters: Record<string, string>
+  onFilterChange: (key: string, value: string) => void
+  onClear: () => void
+  hasActive: boolean
+}
+
+export function FilterBar<T>({ filters, activeFilters, onFilterChange, onClear, hasActive }: FilterBarProps<T>) {
+  if (filters.length === 0) return null
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {filters.map((f) => (
+        <Select key={f.key} value={activeFilters[f.key] || '__all__'} onValueChange={(v) => onFilterChange(f.key, v)}>
+          <SelectTrigger className="h-8 w-auto min-w-[120px] text-xs gap-1.5">
+            <SelectValue placeholder={f.label} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todos</SelectItem>
+            {f.options.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ))}
+      {hasActive && (
+        <Button variant="ghost" size="sm" className="h-8 px-2 text-xs text-muted-foreground" onClick={onClear}>
+          <X className="h-3.5 w-3.5 mr-1" />
+          Limpar
+        </Button>
       )}
     </div>
   )

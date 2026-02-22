@@ -25,6 +25,7 @@ export function RuleCard({ rule, onEdit, onDelete, onToggle, onResync, isResynci
 
   return (
     <Card className={!rule.enabled ? 'opacity-60' : ''}>
+      <div className="h-0.5 bg-gradient-to-r from-emerald-500/60 via-emerald-500/20 to-transparent" />
       <CardHeader className="py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

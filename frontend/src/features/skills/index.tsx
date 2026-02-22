@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { Plus, Sparkles, Download, GitBranch } from 'lucide-react'
+import { Plus, Sparkles, Download, GitBranch, LayoutGrid, Table2 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import { ImportRepoDialog } from '@/shared/components/common/import-repo-dialog'
-import { useSearchPagination, SearchBar, Pagination } from '@/shared/components/common/search-pagination'
+import { useSearchPagination, SearchBar, FilterBar, Pagination, type FilterDefinition } from '@/shared/components/common/search-pagination'
 import { SkillCard } from './components/skill-card'
+import { SkillTable } from './components/skill-table'
 import { SkillModal } from './components/skill-modal'
 import { ImportSkillDialog } from './components/import-skill-dialog'
 import { useSkills, useDeleteSkill, useToggleSkill, useResyncSkill } from './hooks/use-skills'
@@ -15,6 +16,36 @@ import type { Skill } from './types'
 
 const searchFields: (keyof Skill)[] = ['name', 'description']
 
+const filters: FilterDefinition<Skill>[] = [
+  {
+    key: 'status',
+    label: 'Status',
+    options: [
+      { value: 'enabled', label: 'Ativo' },
+      { value: 'disabled', label: 'Inativo' },
+    ],
+    match: (item, value) => value === 'enabled' ? item.enabled : !item.enabled,
+  },
+  {
+    key: 'source',
+    label: 'Origem',
+    options: [
+      { value: 'manual', label: 'Manual' },
+      { value: 'imported', label: 'Importado' },
+    ],
+    match: (item, value) => item.source === value,
+  },
+  {
+    key: 'scope',
+    label: 'Escopo',
+    options: [
+      { value: 'global', label: 'Global' },
+      { value: 'local', label: 'Local' },
+    ],
+    match: (item, value) => value === 'global' ? item.isGlobal : !item.isGlobal,
+  },
+]
+
 export default function SkillsPage() {
   const { data: skills, isLoading } = useSkills()
   const deleteMutation = useDeleteSkill()
@@ -22,11 +53,15 @@ export default function SkillsPage() {
   const resyncMutation = useResyncSkill()
   const { openCreateModal, openEditModal } = useSkillsStore()
 
-  const { paged, search, setSearch, page, setPage, totalPages, total } = useSearchPagination({
+  const { paged, search, setSearch, page, setPage, totalPages, total, activeFilters, setFilter, clearFilters, hasActiveFilters } = useSearchPagination({
     data: skills,
     searchFields,
+    filters,
   })
 
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
+    return (localStorage.getItem('skills-view') as 'grid' | 'table') || 'grid'
+  })
   const [importOpen, setImportOpen] = useState(false)
   const [repoOpen, setRepoOpen] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; skill: Skill | null }>({
@@ -70,21 +105,48 @@ export default function SkillsPage() {
         <ListSkeleton count={4} />
       ) : skills && skills.length > 0 ? (
         <>
-          <SearchBar value={search} onChange={setSearch} placeholder="Buscar skills..." total={total} />
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {paged.map((skill, index) => (
-              <div key={skill.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
-                <SkillCard
-                  skill={skill}
-                  onEdit={() => openEditModal(skill)}
-                  onDelete={() => setDeleteDialog({ open: true, skill })}
-                  onToggle={() => toggleMutation.mutate(skill.id)}
-                  onResync={() => resyncMutation.mutate(skill.id)}
-                  isResyncing={resyncMutation.isPending}
-                />
-              </div>
-            ))}
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <SearchBar value={search} onChange={setSearch} placeholder="Buscar skills..." total={total} />
+            </div>
+            <div className="flex items-center border rounded-lg p-0.5">
+              <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => { setViewMode('grid'); localStorage.setItem('skills-view', 'grid') }} title="Cards">
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant={viewMode === 'table' ? 'default' : 'ghost'} size="icon" className="h-7 w-7" onClick={() => { setViewMode('table'); localStorage.setItem('skills-view', 'table') }} title="Tabela">
+                <Table2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
+
+          <FilterBar filters={filters} activeFilters={activeFilters} onFilterChange={setFilter} onClear={clearFilters} hasActive={hasActiveFilters} />
+
+          {viewMode === 'grid' ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {paged.map((skill, index) => (
+                <div key={skill.id} className="animate-fade-in-up" style={{ animationDelay: `${index * 50}ms` }}>
+                  <SkillCard
+                    skill={skill}
+                    onEdit={() => openEditModal(skill)}
+                    onDelete={() => setDeleteDialog({ open: true, skill })}
+                    onToggle={() => toggleMutation.mutate(skill.id)}
+                    onResync={() => resyncMutation.mutate(skill.id)}
+                    isResyncing={resyncMutation.isPending}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <SkillTable
+              skills={paged}
+              onEdit={(skill) => openEditModal(skill)}
+              onDelete={(skill) => setDeleteDialog({ open: true, skill })}
+              onToggle={(skill) => toggleMutation.mutate(skill.id)}
+              onResync={(skill) => resyncMutation.mutate(skill.id)}
+              isResyncing={resyncMutation.isPending}
+            />
+          )}
+
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
       ) : (

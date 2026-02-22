@@ -1,4 +1,4 @@
-import { MoreHorizontal, Trash2, MessageSquare, ArrowRight, Clock } from 'lucide-react'
+import { MoreHorizontal, Trash2, MessageSquare, ArrowRight, Clock, Circle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -84,7 +84,27 @@ export function ConversationCard({ conversation, onDelete }: ConversationCardPro
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end mt-4 pt-3 border-t border-border/50">
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
+          <div className="flex items-center gap-1.5">
+            {'status' in conversation && conversation.status === 'running' && (
+              <span className="flex items-center gap-1 text-[11px] text-amber-500">
+                <Circle className="h-2 w-2 fill-amber-500" />
+                Executando
+              </span>
+            )}
+            {'status' in conversation && conversation.status === 'completed' && (
+              <span className="flex items-center gap-1 text-[11px] text-emerald-500">
+                <Circle className="h-2 w-2 fill-emerald-500" />
+                Concluído
+              </span>
+            )}
+            {'status' in conversation && conversation.status === 'failed' && (
+              <span className="flex items-center gap-1 text-[11px] text-destructive">
+                <Circle className="h-2 w-2 fill-destructive" />
+                Erro
+              </span>
+            )}
+          </div>
           <p className="text-[11px] text-muted-foreground flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {formatDate(conversation.updatedAt)}

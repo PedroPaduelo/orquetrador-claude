@@ -21,6 +21,7 @@ interface PluginCardProps {
 export function PluginCard({ plugin, onEdit, onDelete, onToggle, onResync }: PluginCardProps) {
   return (
     <Card className={!plugin.enabled ? 'opacity-60' : ''}>
+      <div className="h-0.5 bg-gradient-to-r from-purple-500/60 via-purple-500/20 to-transparent" />
       <CardHeader className="py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

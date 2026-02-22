@@ -132,18 +132,27 @@ export default function DashboardPage() {
             </div>
           ) : recentConversations.length === 0 ? (
             <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <div className="rounded-full bg-muted p-3 mb-3">
-                  <MessageSquare className="h-6 w-6 text-muted-foreground" />
+              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="relative mb-4">
+                  <div className="rounded-2xl bg-primary/5 p-5">
+                    <MessageSquare className="h-8 w-8 text-primary/60" />
+                  </div>
+                  <div className="absolute -inset-1 rounded-2xl bg-primary/5 blur-xl -z-10" />
                 </div>
-                <p className="text-sm font-medium">Nenhuma conversa ainda</p>
-                <p className="text-xs text-muted-foreground mt-1 mb-3">
-                  Crie um workflow e inicie sua primeira conversa
+                <p className="text-base font-semibold">Bem-vindo ao Execut!</p>
+                <p className="text-sm text-muted-foreground mt-1.5 mb-4 max-w-xs leading-relaxed">
+                  Comece criando um workflow com steps e depois inicie uma conversa para executar.
                 </p>
-                <Button size="sm" onClick={() => navigate('/conversations')}>
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Começar
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => navigate('/workflows')}>
+                    <Workflow className="h-3.5 w-3.5 mr-1.5" />
+                    Criar Workflow
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => navigate('/conversations')}>
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Nova Conversa
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (
@@ -202,10 +211,13 @@ function StatsCard({
   loading: boolean
 }) {
   return (
-    <Card>
+    <Card className="overflow-hidden">
+      <div className="h-0.5 bg-gradient-to-r from-primary/40 via-primary/20 to-transparent" />
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+          <Icon className="h-4 w-4 text-primary" />
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (

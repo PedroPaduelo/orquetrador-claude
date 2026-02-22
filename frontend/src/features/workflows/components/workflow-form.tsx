@@ -7,6 +7,7 @@ import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Label } from '@/shared/components/ui/label'
+import { Checkbox } from '@/shared/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -154,6 +155,11 @@ export function WorkflowForm() {
                 <SelectItem value="step_by_step">Passo a Passo</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              {workflowType === 'sequential'
+                ? 'Todos os steps executam automaticamente em ordem'
+                : 'Você controla quando avançar para o próximo step'}
+            </p>
           </div>
 
           <div>
@@ -208,12 +214,13 @@ export function WorkflowForm() {
                 </div>
 
                 <div>
-                  <Label>URL Base (Claude)</Label>
+                  <Label>URL Base (Claude) <span className="text-destructive">*</span></Label>
                   <Input
                     value={step.baseUrl}
                     onChange={(e) => updateStep(index, { baseUrl: e.target.value })}
                     placeholder="https://api.anthropic.com/v1"
                   />
+                  <p className="text-[11px] text-muted-foreground mt-1">Obrigatório — endpoint da API Claude para este step</p>
                 </div>
 
                 <div>
@@ -250,16 +257,15 @@ export function WorkflowForm() {
                     <div className="flex flex-wrap gap-1.5">
                       {mcpServers?.filter((s) => s.enabled).map((server) => (
                         <label key={server.id} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 rounded border hover:bg-muted/50 transition-colors">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={step.mcpServerIds.includes(server.id)}
-                            onChange={(e) => {
-                              const ids = e.target.checked
+                            onCheckedChange={(checked) => {
+                              const ids = checked
                                 ? [...step.mcpServerIds, server.id]
                                 : step.mcpServerIds.filter((id) => id !== server.id)
                               updateStep(index, { mcpServerIds: ids })
                             }}
-                            className="rounded"
+                            className="h-3.5 w-3.5"
                           />
                           {server.name}
                         </label>
@@ -284,16 +290,15 @@ export function WorkflowForm() {
                     <div className="flex flex-wrap gap-1.5">
                       {skills?.filter((s) => s.enabled).map((skill) => (
                         <label key={skill.id} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 rounded border hover:bg-muted/50 transition-colors">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={step.skillIds.includes(skill.id)}
-                            onChange={(e) => {
-                              const ids = e.target.checked
+                            onCheckedChange={(checked) => {
+                              const ids = checked
                                 ? [...step.skillIds, skill.id]
                                 : step.skillIds.filter((id) => id !== skill.id)
                               updateStep(index, { skillIds: ids })
                             }}
-                            className="rounded"
+                            className="h-3.5 w-3.5"
                           />
                           {skill.name}
                         </label>
@@ -318,16 +323,15 @@ export function WorkflowForm() {
                     <div className="flex flex-wrap gap-1.5">
                       {agents?.filter((a) => a.enabled).map((agent) => (
                         <label key={agent.id} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 rounded border hover:bg-muted/50 transition-colors">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={step.agentIds.includes(agent.id)}
-                            onChange={(e) => {
-                              const ids = e.target.checked
+                            onCheckedChange={(checked) => {
+                              const ids = checked
                                 ? [...step.agentIds, agent.id]
                                 : step.agentIds.filter((id) => id !== agent.id)
                               updateStep(index, { agentIds: ids })
                             }}
-                            className="rounded"
+                            className="h-3.5 w-3.5"
                           />
                           {agent.name}
                         </label>
@@ -352,16 +356,15 @@ export function WorkflowForm() {
                     <div className="flex flex-wrap gap-1.5">
                       {rules?.filter((r) => r.enabled).map((rule) => (
                         <label key={rule.id} className="flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 rounded border hover:bg-muted/50 transition-colors">
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={step.ruleIds.includes(rule.id)}
-                            onChange={(e) => {
-                              const ids = e.target.checked
+                            onCheckedChange={(checked) => {
+                              const ids = checked
                                 ? [...step.ruleIds, rule.id]
                                 : step.ruleIds.filter((id) => id !== rule.id)
                               updateStep(index, { ruleIds: ids })
                             }}
-                            className="rounded"
+                            className="h-3.5 w-3.5"
                           />
                           {rule.name}
                         </label>

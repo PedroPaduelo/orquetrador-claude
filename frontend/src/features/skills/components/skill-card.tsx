@@ -25,6 +25,7 @@ export function SkillCard({ skill, onEdit, onDelete, onToggle, onResync, isResyn
 
   return (
     <Card className={!skill.enabled ? 'opacity-60' : ''}>
+      <div className="h-0.5 bg-gradient-to-r from-amber-500/60 via-amber-500/20 to-transparent" />
       <CardHeader className="py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
