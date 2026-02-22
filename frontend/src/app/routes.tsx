@@ -6,6 +6,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 // Lazy load pages
 const DashboardPage = lazy(() => import('@/features/dashboard'))
 const WorkflowsPage = lazy(() => import('@/features/workflows'))
+const WorkflowWizardPage = lazy(() => import('@/features/workflows/wizard'))
 const ConversationsPage = lazy(() => import('@/features/conversations'))
 const ConversationDetailPage = lazy(() => import('@/features/conversations/[id]'))
 const SmartNotesPage = lazy(() => import('@/features/smart-notes'))
@@ -50,6 +51,24 @@ export function AppRoutes() {
           element={
             <Lazy>
               <WorkflowsPage />
+            </Lazy>
+          }
+        />
+
+        <Route
+          path="workflows/new"
+          element={
+            <Lazy>
+              <WorkflowWizardPage />
+            </Lazy>
+          }
+        />
+
+        <Route
+          path="workflows/:id/edit"
+          element={
+            <Lazy>
+              <WorkflowWizardPage />
             </Lazy>
           }
         />

@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { workflowsApi } from '../api'
-import { useWorkflowsStore } from '../store'
 import type { WorkflowInput } from '../types'
 
 export function useWorkflows() {
@@ -22,14 +21,12 @@ export function useWorkflow(id: string | undefined) {
 
 export function useCreateWorkflow() {
   const queryClient = useQueryClient()
-  const { closeModal } = useWorkflowsStore()
 
   return useMutation({
     mutationFn: (input: WorkflowInput) => workflowsApi.create(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] })
       toast.success('Workflow criado com sucesso!')
-      closeModal()
     },
     onError: () => {
       toast.error('Erro ao criar workflow')
@@ -39,7 +36,6 @@ export function useCreateWorkflow() {
 
 export function useUpdateWorkflow() {
   const queryClient = useQueryClient()
-  const { closeModal } = useWorkflowsStore()
 
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: Partial<WorkflowInput> }) =>
@@ -48,7 +44,6 @@ export function useUpdateWorkflow() {
       queryClient.invalidateQueries({ queryKey: ['workflows'] })
       queryClient.invalidateQueries({ queryKey: ['workflows', id] })
       toast.success('Workflow atualizado com sucesso!')
-      closeModal()
     },
     onError: () => {
       toast.error('Erro ao atualizar workflow')

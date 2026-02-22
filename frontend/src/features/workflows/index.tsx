@@ -1,20 +1,19 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Workflow } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import { WorkflowCard } from './components/workflow-card'
-import { WorkflowModal } from './components/workflow-modal'
 import { useWorkflows, useDeleteWorkflow, useDuplicateWorkflow } from './hooks/use-workflows'
-import { useWorkflowsStore } from './store'
 import type { Workflow as WorkflowType } from './types'
 
 export default function WorkflowsPage() {
+  const navigate = useNavigate()
   const { data: workflows, isLoading } = useWorkflows()
   const deleteMutation = useDeleteWorkflow()
   const duplicateMutation = useDuplicateWorkflow()
-  const { openCreateModal, openEditModal } = useWorkflowsStore()
 
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; workflow: WorkflowType | null }>({
     open: false,
@@ -38,7 +37,7 @@ export default function WorkflowsPage() {
             Defina os passos que o Claude vai seguir nos seus projetos
           </p>
         </div>
-        <Button onClick={openCreateModal}>
+        <Button onClick={() => navigate('/workflows/new')}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Workflow
         </Button>
@@ -57,7 +56,7 @@ export default function WorkflowsPage() {
             >
               <WorkflowCard
                 workflow={workflow}
-                onEdit={() => openEditModal(workflow)}
+                onEdit={() => navigate(`/workflows/${workflow.id}/edit`)}
                 onDelete={() => setDeleteDialog({ open: true, workflow })}
                 onDuplicate={() => duplicateMutation.mutate(workflow.id)}
               />
@@ -68,9 +67,9 @@ export default function WorkflowsPage() {
         <EmptyState
           icon={Workflow}
           title="Nenhum workflow encontrado"
-          description="Crie seu primeiro workflow para começar a automatizar tarefas com Claude."
+          description="Crie seu primeiro workflow para comecar a automatizar tarefas com Claude."
           action={
-            <Button onClick={openCreateModal}>
+            <Button onClick={() => navigate('/workflows/new')}>
               <Plus className="h-4 w-4 mr-2" />
               Criar Workflow
             </Button>
@@ -78,15 +77,12 @@ export default function WorkflowsPage() {
         />
       )}
 
-      {/* Modal */}
-      <WorkflowModal />
-
       {/* Delete confirmation */}
       <ConfirmDialog
         open={deleteDialog.open}
         onOpenChange={(open) => setDeleteDialog({ open, workflow: null })}
         title="Excluir Workflow"
-        description={`Tem certeza que deseja excluir "${deleteDialog.workflow?.name}"? Esta ação não pode ser desfeita.`}
+        description={`Tem certeza que deseja excluir "${deleteDialog.workflow?.name}"? Esta acao nao pode ser desfeita.`}
         confirmLabel="Excluir"
         onConfirm={handleDelete}
         variant="destructive"
