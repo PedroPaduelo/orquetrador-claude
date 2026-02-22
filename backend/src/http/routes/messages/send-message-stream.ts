@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { prisma } from '../../../lib/prisma.js'
 import { taskOrchestrator } from '../../../services/orchestrator/task-orchestrator.js'
 import { orchestratorEvents } from '../../../services/orchestrator/events.js'
-import { NotFoundError, ConflictError } from '../_errors/index.js'
+import { NotFoundError } from '../_errors/index.js'
 
 // Attachment schema for request body
 const attachmentSchema = z.object({
@@ -58,9 +58,13 @@ export async function sendMessageStream(app: FastifyInstance) {
         throw new NotFoundError('Conversation not found')
       }
 
-      // Check if already executing
+      // Check if already executing — if so, force-cancel the stale execution
+      // This prevents the user from getting permanently stuck
       if (taskOrchestrator.isExecuting(id)) {
-        throw new ConflictError('Execution already in progress')
+        console.log(`[sendMessageStream] Stale execution detected for ${id}, force-cancelling`)
+        taskOrchestrator.cancel(id)
+        // Give the process a moment to die
+        await new Promise(resolve => setTimeout(resolve, 500))
       }
 
       // Set SSE headers
@@ -124,12 +128,22 @@ export async function sendMessageStream(app: FastifyInstance) {
       })
 
       // Cleanup on close
+      let clientDisconnected = false
       const cleanup = () => {
         Object.entries(handlers).forEach(([event, handler]) => {
           orchestratorEvents.off(event, handler)
         })
       }
-      request.raw.on('close', cleanup)
+      request.raw.on('close', () => {
+        clientDisconnected = true
+        cleanup()
+        // Client disconnected (e.g. cancel button) — kill any running process
+        // so it doesn't keep running orphaned in the background
+        if (taskOrchestrator.isExecuting(id)) {
+          console.log(`[SSE] Client disconnected for ${id}, cancelling execution`)
+          taskOrchestrator.cancel(id)
+        }
+      })
 
       try {
         const projectPath = conversation.workflow.projectPath

@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import { taskOrchestrator } from '../../../services/orchestrator/task-orchestrator.js'
-import { NotFoundError, BadRequestError } from '../_errors/index.js'
+import { NotFoundError } from '../_errors/index.js'
 import { prisma } from '../../../lib/prisma.js'
 
 export async function cancelExecution(app: FastifyInstance) {
@@ -31,15 +31,14 @@ export async function cancelExecution(app: FastifyInstance) {
         throw new NotFoundError('Conversation not found')
       }
 
-      if (!taskOrchestrator.isExecuting(id)) {
-        throw new BadRequestError('No active execution to cancel')
-      }
-
+      // Always try to cancel — don't check isExecuting first.
+      // The process may still be running even if the orchestrator
+      // doesn't think it's "executing" (race conditions, SSE disconnect, etc.)
       const cancelled = taskOrchestrator.cancel(id)
 
       return {
-        success: cancelled,
-        message: cancelled ? 'Execution cancelled' : 'Failed to cancel execution',
+        success: true,
+        message: cancelled ? 'Execution cancelled' : 'No active process found, state cleared',
       }
     }
   )

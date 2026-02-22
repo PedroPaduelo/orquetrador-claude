@@ -200,10 +200,15 @@ export function useSSEStream(options: UseSSEStreamOptions) {
   )
 
   const cancel = useCallback(async () => {
+    // 1. Mark as cancelled immediately so UI stops
     cancelledRef.current = true
-    abortControllerRef.current?.abort()
     setStreaming(false)
 
+    // 2. Abort the HTTP connection — this also triggers the backend's
+    //    'close' handler which will kill the process
+    abortControllerRef.current?.abort()
+
+    // 3. Update step statuses in UI
     const { stepStatuses, setStepStatus: updateStepStatus } = useConversationsStore.getState()
     stepStatuses.forEach((status, id) => {
       if (status === 'running') {
@@ -211,6 +216,8 @@ export function useSSEStream(options: UseSSEStreamOptions) {
       }
     })
 
+    // 4. Also explicitly call the cancel endpoint as a safety net
+    //    (in case the SSE close event doesn't propagate)
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
       await fetch(`${apiUrl}/conversations/${conversationId}/cancel`, {
@@ -220,6 +227,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
       // Ignore cancel API errors
     }
 
+    // 5. Refetch conversation to get latest state
     queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
   }, [conversationId, setStreaming, queryClient])
 

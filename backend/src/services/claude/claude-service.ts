@@ -559,36 +559,49 @@ export class ClaudeService {
 
     for (const [processId, childProcess] of this.activeProcesses) {
       if (processId.startsWith(conversationId)) {
-        console.log(`[ClaudeService] Cancelling process ${processId} (PID: ${childProcess.pid})`)
+        const pid = childProcess.pid
+        console.log(`[ClaudeService] Cancelling process ${processId} (PID: ${pid})`)
 
         // Mark as cancelled so the close handler sets cancelled=true in the result
         this.cancelledProcesses.add(processId)
 
-        // Kill entire process group to handle sudo → claude subprocess hierarchy
-        // Negative PID sends signal to all processes in the process group
-        const pid = childProcess.pid
+        // Strategy: use multiple kill approaches to ensure the process tree dies
+        // 1. Kill the process group (handles most cases)
+        // 2. Kill child processes via pkill (handles sudo subprocess trees)
+        // 3. Direct kill as fallback
+        // 4. Force SIGKILL after 2 seconds
+
         if (pid) {
+          // Try process group kill first
           try {
             process.kill(-pid, 'SIGTERM')
-          } catch {
-            // Process group kill failed, fall back to direct kill
-            childProcess.kill('SIGTERM')
-          }
+          } catch { /* ignore */ }
+
+          // Also kill all child processes of this PID (handles sudo → claude tree)
+          try {
+            execSync(`pkill -TERM -P ${pid} 2>/dev/null; true`, { timeout: 2000 })
+          } catch { /* ignore */ }
+
+          // Direct kill
+          try {
+            process.kill(pid, 'SIGTERM')
+          } catch { /* ignore */ }
         } else {
           childProcess.kill('SIGTERM')
         }
 
-        // Force kill after 3 seconds if SIGTERM doesn't work
+        // Force SIGKILL after 2 seconds if SIGTERM doesn't work
         setTimeout(() => {
-          try {
-            if (pid) {
-              process.kill(-pid, 'SIGKILL')
-            }
-          } catch { /* already dead */ }
-          try {
-            childProcess.kill('SIGKILL')
-          } catch { /* already dead */ }
-        }, 3000)
+          if (pid) {
+            try { process.kill(-pid, 'SIGKILL') } catch { /* dead */ }
+            try { execSync(`pkill -KILL -P ${pid} 2>/dev/null; true`, { timeout: 2000 }) } catch { /* ignore */ }
+            try { process.kill(pid, 'SIGKILL') } catch { /* dead */ }
+          }
+          try { childProcess.kill('SIGKILL') } catch { /* dead */ }
+
+          // Clean up from activeProcesses in case close event didn't fire
+          this.activeProcesses.delete(processId)
+        }, 2000)
 
         cancelled = true
       }
