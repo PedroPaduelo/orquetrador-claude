@@ -36,7 +36,18 @@ export interface Message {
   stepName: string | null
   selectedForContext: boolean
   metadata?: MessageMetadata
+  attachments?: Attachment[]
   createdAt: string
+}
+
+export interface Attachment {
+  id: string
+  filename: string
+  mimeType: string
+  size?: number
+  path: string
+  projectPath: string
+  url: string
 }
 
 export interface MessageMetadata {

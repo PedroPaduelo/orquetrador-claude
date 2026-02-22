@@ -108,10 +108,32 @@ model Message {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   stepId         String?      @map("step_id")
   step           WorkflowStep? @relation(fields: [stepId], references: [id], onDelete: SetNull)
+  attachments    MessageAttachment[]
 
   @@index([conversationId])
   @@index([stepId])
   @@map("messages")
+}
+
+// ============================================
+// MESSAGE ATTACHMENTS (Images)
+// ============================================
+model MessageAttachment {
+  id          String   @id @default(uuid())
+  filename    String
+  mimeType    String   @map("mime_type")
+  size        Int      // bytes
+  path        String   // relative path on disk
+  projectPath String   @map("project_path") // absolute path in project dir (for Claude CLI)
+  url         String   @default("") // URL to serve the file
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  messageId String  @map("message_id")
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("message_attachments")
 }
 
 // ============================================

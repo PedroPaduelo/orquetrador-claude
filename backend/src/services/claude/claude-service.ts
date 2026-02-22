@@ -1,7 +1,18 @@
 import { spawn, execSync, ChildProcess } from 'child_process'
 import { existsSync } from 'fs'
+import { join } from 'path'
 import { StreamParser, type StreamEvent, type Action } from './stream-parser.js'
 import { sessionManager } from './session-manager.js'
+
+export interface MessageAttachment {
+  id: string
+  filename: string
+  mimeType: string
+  path: string
+  projectPath: string
+  url: string
+  size?: number
+}
 
 export interface ExecuteOptions {
   conversationId: string
@@ -12,6 +23,7 @@ export interface ExecuteOptions {
   projectPath?: string
   backend?: string
   model?: string
+  attachments?: MessageAttachment[]
   onEvent?: (event: StreamEvent) => void
 }
 
@@ -117,6 +129,7 @@ export class ClaudeService {
       baseUrl,
       projectPath,
       model,
+      attachments,
       onEvent,
     } = options
 
@@ -171,8 +184,43 @@ export class ClaudeService {
       args.push('--model', model)
     }
 
-    // The message is the last positional argument
-    args.push(fullMessage)
+    // Resolve image paths from attachments
+    // Use projectPath (copied to project dir) so sandbox user can access them
+    const imagePaths: string[] = []
+    if (attachments && attachments.length > 0) {
+      for (const att of attachments) {
+        if (att.projectPath && existsSync(att.projectPath)) {
+          imagePaths.push(att.projectPath)
+        } else {
+          // Fallback to uploads path
+          const uploadsBasePath = join(process.cwd(), 'uploads', 'images')
+          const fullPath = join(uploadsBasePath, att.path)
+          if (existsSync(fullPath)) {
+            imagePaths.push(fullPath)
+          } else {
+            console.log(`[ClaudeService] Warning: Attachment file not found: ${att.projectPath || fullPath}`)
+          }
+        }
+      }
+    }
+
+    // Build the final prompt: user text + image references
+    // Claude CLI gets one prompt argument. When images are attached,
+    // we append their paths so the CLI reads them using the Read tool.
+    let messageToSend = fullMessage.trim()
+    if (imagePaths.length > 0) {
+      const imageRefs = imagePaths.map(p => p).join('\n')
+      if (messageToSend) {
+        messageToSend = `${messageToSend}\n\n${imageRefs}`
+      } else {
+        messageToSend = imageRefs
+      }
+    }
+
+    // The prompt is passed as a single positional argument
+    if (messageToSend) {
+      args.push(messageToSend)
+    }
 
     // Build sanitized environment for the child process
     // Only pass what Claude CLI needs — block orchestrator secrets
@@ -237,6 +285,7 @@ export class ClaudeService {
     console.log(`${logPrefix} Base URL: ${baseUrl || env.ANTHROPIC_BASE_URL || 'default'}`)
     console.log(`${logPrefix} Model: ${model || 'default'}`)
     console.log(`${logPrefix} Message length: ${fullMessage.length} chars`)
+    console.log(`${logPrefix} Attachments: ${attachments?.length || 0} images (${imagePaths.length} resolved)`)
     console.log(`${logPrefix} System prompt: ${systemPrompt ? systemPrompt.substring(0, 100) + '...' : 'none'}`)
     console.log(`${logPrefix} ANTHROPIC_API_KEY set: ${!!env.ANTHROPIC_API_KEY}`)
     console.log(`${logPrefix} ANTHROPIC_AUTH_TOKEN set: ${!!env.ANTHROPIC_AUTH_TOKEN}`)

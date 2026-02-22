@@ -1,9 +1,12 @@
 import { create } from 'zustand'
 import type { Action, WorkflowStepSummary } from './types'
 
+export type StreamingPhase = 'idle' | 'preparing' | 'connecting' | 'ai_thinking' | 'streaming'
+
 interface ConversationsState {
   // Streaming state
   isStreaming: boolean
+  streamingPhase: StreamingPhase
   streamingContent: string
   streamingActions: Action[]
   currentStepIndex: number
@@ -17,6 +20,7 @@ interface ConversationsState {
 
   // Actions
   setStreaming: (value: boolean) => void
+  setStreamingPhase: (phase: StreamingPhase) => void
   setStreamingContent: (content: string) => void
   appendStreamingContent: (content: string) => void
   addStreamingAction: (action: Action) => void
@@ -33,6 +37,7 @@ interface ConversationsState {
 
 export const useConversationsStore = create<ConversationsState>((set, get) => ({
   isStreaming: false,
+  streamingPhase: 'idle',
   streamingContent: '',
   streamingActions: [],
   currentStepIndex: 0,
@@ -40,7 +45,9 @@ export const useConversationsStore = create<ConversationsState>((set, get) => ({
   stepStatuses: new Map(),
   actionsCache: new Map(),
 
-  setStreaming: (value) => set({ isStreaming: value }),
+  setStreaming: (value) => set({ isStreaming: value, streamingPhase: value ? 'preparing' : 'idle' }),
+
+  setStreamingPhase: (phase) => set({ streamingPhase: phase }),
 
   setStreamingContent: (content) => set({ streamingContent: content }),
 
@@ -53,12 +60,14 @@ export const useConversationsStore = create<ConversationsState>((set, get) => ({
   clearStreaming: () =>
     set({
       isStreaming: false,
+      streamingPhase: 'idle',
       streamingContent: '',
       streamingActions: [],
     }),
 
   resetStreamingContent: () =>
     set({
+      streamingPhase: 'ai_thinking',
       streamingContent: '',
       streamingActions: [],
     }),

@@ -52,6 +52,15 @@ export interface MessageSavedEvent {
   content: string
   stepId?: string
   metadata?: Record<string, unknown>
+  attachments?: Array<{
+    id: string
+    filename: string
+    mimeType: string
+    size: number
+    path: string
+    projectPath: string
+    url: string
+  }>
 }
 
 export interface ConditionRetryEvent {

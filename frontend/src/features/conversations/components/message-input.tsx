@@ -2,9 +2,13 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Send, Square, Mic, MicOff } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Textarea } from '@/shared/components/ui/textarea'
+import { ImageUploader } from './image-uploader'
+import { useImageUpload } from '../hooks/use-image-upload'
+import type { Attachment } from '../types'
 
 interface MessageInputProps {
-  onSend: (content: string) => void
+  conversationId: string
+  onSend: (content: string, attachments?: Attachment[]) => void
   onCancel: () => void
   isStreaming: boolean
   disabled?: boolean
@@ -53,16 +57,26 @@ declare global {
   }
 }
 
-export function MessageInput({ onSend, onCancel, isStreaming, disabled }: MessageInputProps) {
+export function MessageInput({ conversationId, onSend, onCancel, isStreaming, disabled }: MessageInputProps) {
   const [content, setContent] = useState('')
   const [isListening, setIsListening] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
 
+  const {
+    attachments,
+    isUploading,
+    addFiles,
+    removeAttachment,
+    clearAttachments,
+  } = useImageUpload({ conversationId })
+
   const handleSubmit = () => {
-    if (!content.trim() || isStreaming || disabled) return
-    onSend(content.trim())
+    const hasContent = content.trim() || attachments.length > 0
+    if (!hasContent || isStreaming || disabled || isUploading) return
+    onSend(content.trim(), attachments.length > 0 ? attachments : undefined)
     setContent('')
+    clearAttachments()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -71,6 +85,28 @@ export function MessageInput({ onSend, onCancel, isStreaming, disabled }: Messag
       handleSubmit()
     }
   }
+
+  // Handle Ctrl+V paste with images from clipboard
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+
+    const imageFiles: File[] = []
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (file) {
+          imageFiles.push(file)
+        }
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      e.preventDefault()
+      await addFiles(imageFiles)
+    }
+  }, [addFiles])
 
   // Auto-resize textarea
   useEffect(() => {
@@ -141,20 +177,34 @@ export function MessageInput({ onSend, onCancel, isStreaming, disabled }: Messag
   const hasSpeechRecognition = typeof window !== 'undefined' &&
     (window.SpeechRecognition || window.webkitSpeechRecognition)
 
+  const canSend = (content.trim() || attachments.length > 0) && !disabled && !isUploading
+
   return (
     <div className="border-t bg-background/95 backdrop-blur-sm p-4">
       <div className="flex items-end gap-2 max-w-4xl mx-auto">
+        {/* Image upload button */}
+        <ImageUploader
+          attachments={attachments}
+          isUploading={isUploading}
+          onAddFiles={addFiles}
+          onRemove={removeAttachment}
+          disabled={isStreaming || disabled}
+        />
+
         <div className="flex-1 relative">
           <Textarea
             ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={
               disabled
                 ? 'Workflow concluído. Inicie uma nova conversa.'
                 : isStreaming
                 ? 'Claude está processando...'
+                : attachments.length > 0
+                ? 'Adicione uma mensagem às imagens...'
                 : 'Escreva sua mensagem...'
             }
             disabled={isStreaming || disabled}
@@ -183,7 +233,7 @@ export function MessageInput({ onSend, onCancel, isStreaming, disabled }: Messag
               <Button
                 size="icon"
                 onClick={handleSubmit}
-                disabled={!content.trim() || disabled}
+                disabled={!canSend}
                 className="h-8 w-8"
               >
                 <Send className="h-3.5 w-3.5" />
@@ -193,16 +243,6 @@ export function MessageInput({ onSend, onCancel, isStreaming, disabled }: Messag
         </div>
       </div>
 
-      {isStreaming && (
-        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-2 max-w-4xl mx-auto">
-          <span className="thinking-dots flex gap-0.5">
-            <span className="w-1 h-1 rounded-full bg-primary" />
-            <span className="w-1 h-1 rounded-full bg-primary" />
-            <span className="w-1 h-1 rounded-full bg-primary" />
-          </span>
-          Claude está trabalhando...
-        </p>
-      )}
       {isListening && (
         <p className="text-xs text-red-400 mt-2 flex items-center gap-2 max-w-4xl mx-auto">
           <span className="inline-block w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />

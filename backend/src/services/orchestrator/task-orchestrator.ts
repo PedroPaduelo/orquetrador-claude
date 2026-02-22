@@ -8,18 +8,29 @@ import { smartNotesService } from '../smart-notes/context-builder.js'
 import { fileSyncService } from '../file-sync/file-sync-service.js'
 import type { WorkflowStep } from '@prisma/client'
 
+export interface MessageAttachment {
+  id: string
+  filename: string
+  mimeType: string
+  path: string
+  projectPath: string
+  url: string
+  size?: number
+}
+
 export interface ExecutionContext {
   conversationId: string
   workflowId: string
   steps: WorkflowStep[]
   projectPath: string
+  attachments?: MessageAttachment[]
 }
 
 export class TaskOrchestrator {
   private activeExecutions = new Map<string, boolean>()
 
   async executeSequential(context: ExecutionContext, userInput: string): Promise<void> {
-    const { conversationId, steps, projectPath } = context
+    const { conversationId, steps, projectPath, attachments } = context
 
     // Check if already executing
     if (this.activeExecutions.get(conversationId)) {
@@ -32,14 +43,28 @@ export class TaskOrchestrator {
     const executionState = await executionStateManager.create(conversationId)
     const executionId = executionState.id
 
-    // Save user message
+    // Save user message with attachments
     const userMessage = await prisma.message.create({
       data: {
         conversationId,
         stepId: steps[0]?.id,
         role: 'user',
         content: userInput,
+        ...(attachments && attachments.length > 0 ? {
+          attachments: {
+            create: attachments.map(att => ({
+              id: att.id,
+              filename: att.filename,
+              mimeType: att.mimeType,
+              size: att.size || 0,
+              path: att.path,
+              projectPath: att.projectPath,
+              url: att.url,
+            })),
+          },
+        } : {}),
       },
+      include: { attachments: true },
     })
 
     orchestratorEvents.emitMessageSaved({
@@ -48,6 +73,7 @@ export class TaskOrchestrator {
       messageId: userMessage.id,
       role: 'user',
       content: userInput,
+      attachments: userMessage.attachments,
     })
 
     let currentInput = userInput
@@ -106,6 +132,7 @@ export class TaskOrchestrator {
           projectPath,
           backend: step.backend || 'claude',
           model: step.model || undefined,
+          attachments: i === 0 ? attachments : undefined, // Only pass attachments on first step
           onEvent: (event) => {
             if (event.type === 'content' && event.content) {
               orchestratorEvents.emitStepStream({
@@ -335,7 +362,7 @@ export class TaskOrchestrator {
     userInput: string,
     stepIndex: number
   ): Promise<void> {
-    const { conversationId, steps, projectPath } = context
+    const { conversationId, steps, projectPath, attachments } = context
 
     if (stepIndex >= steps.length) {
       throw new Error('Step index out of bounds')
@@ -347,14 +374,28 @@ export class TaskOrchestrator {
     const executionState = await executionStateManager.create(conversationId)
     const executionId = executionState.id
 
-    // Save user message
+    // Save user message with attachments
     const userMessage = await prisma.message.create({
       data: {
         conversationId,
         stepId: step.id,
         role: 'user',
         content: userInput,
+        ...(attachments && attachments.length > 0 ? {
+          attachments: {
+            create: attachments.map(att => ({
+              id: att.id,
+              filename: att.filename,
+              mimeType: att.mimeType,
+              size: att.size || 0,
+              path: att.path,
+              projectPath: att.projectPath,
+              url: att.url,
+            })),
+          },
+        } : {}),
       },
+      include: { attachments: true },
     })
 
     orchestratorEvents.emitMessageSaved({
@@ -363,6 +404,7 @@ export class TaskOrchestrator {
       messageId: userMessage.id,
       role: 'user',
       content: userInput,
+      attachments: userMessage.attachments,
     })
 
     // Emit step start
@@ -394,6 +436,7 @@ export class TaskOrchestrator {
         projectPath,
         backend: step.backend || 'claude',
         model: step.model || undefined,
+        attachments,
         onEvent: (event) => {
           if (event.type === 'content' && event.content) {
             orchestratorEvents.emitStepStream({

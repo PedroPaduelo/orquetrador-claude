@@ -7,11 +7,13 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/components/ui/collapsible'
 import { UserQuestionCard } from './user-question-card'
-import type { Message, Action } from '../types'
+import type { Message, Action, Attachment } from '../types'
+import type { StreamingPhase } from '../store'
 
 interface MessageBubbleProps {
-  message: Message | { id: string; role: 'assistant'; content: string; metadata?: { actions?: Action[] } }
+  message: Message | { id: string; role: 'assistant'; content: string; metadata?: { actions?: Action[] }; attachments?: Attachment[] }
   isStreaming?: boolean
+  streamingPhase?: StreamingPhase
   onSendAnswer?: (answer: string) => void
   answeredText?: string
 }
@@ -55,7 +57,7 @@ function CopyButton({ text }: { text: string }) {
   )
 }
 
-export const MessageBubble = memo(function MessageBubble({ message, isStreaming, onSendAnswer, answeredText }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, isStreaming, streamingPhase, onSendAnswer, answeredText }: MessageBubbleProps) {
   const [actionsOpen, setActionsOpen] = useState(false)
   const isUser = message.role === 'user'
   const actions = (message.metadata?.actions || []) as Action[]
@@ -101,7 +103,32 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
           )}
         >
           {isUser ? (
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+            <>
+              {/* Show attached images for user messages */}
+              {'attachments' in message && message.attachments && message.attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {message.attachments.map((att) => {
+                    const imgUrl = att.url.startsWith('http') ? att.url : `${import.meta.env.VITE_API_URL || 'http://localhost:3333'}${att.url}`
+                    return (
+                      <a
+                        key={att.id}
+                        href={imgUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={att.filename}
+                          className="max-w-[200px] max-h-[150px] rounded-lg object-cover border border-primary-foreground/20"
+                        />
+                      </a>
+                    )
+                  })}
+                </div>
+              )}
+              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+            </>
           ) : message.content ? (
             <div className="prose prose-invert max-w-none break-words
               prose-p:my-2.5 prose-p:leading-relaxed
@@ -144,7 +171,12 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
             </div>
           ) : isStreaming ? (
             <div className="flex items-center gap-2 py-1">
-              <span className="text-xs text-muted-foreground">Pensando</span>
+              <span className="text-xs text-muted-foreground">
+                {streamingPhase === 'preparing' && 'Enviando...'}
+                {streamingPhase === 'connecting' && 'Conectando...'}
+                {streamingPhase === 'ai_thinking' && 'IA pensando...'}
+                {(!streamingPhase || streamingPhase === 'streaming' || streamingPhase === 'idle') && 'Pensando...'}
+              </span>
               <span className="thinking-dots flex gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
@@ -222,7 +254,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="mt-1.5 ml-1 border-l-2 border-border/40 pl-3 space-y-1.5">
+              <div className="mt-1.5 ml-1 border-l-2 border-border/40 pl-3 space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
                 {otherActions.map((action, i) => (
                   <ActionItem key={i} action={action} />
                 ))}

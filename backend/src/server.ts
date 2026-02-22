@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import fastifyCompress from '@fastify/compress'
 import fastifyCors from '@fastify/cors'
 import fastifyMultipart from '@fastify/multipart'
+import fastifyStatic from '@fastify/static'
 import fastifySwagger from '@fastify/swagger'
 import fastifySwaggerUI from '@fastify/swagger-ui'
 import {
@@ -9,6 +10,7 @@ import {
   validatorCompiler,
   jsonSchemaTransform,
 } from 'fastify-type-provider-zod'
+import { join } from 'path'
 
 import { env } from './lib/env.js'
 import { errorHandler } from './http/error-handler.js'
@@ -127,6 +129,9 @@ import {
   updateSettings,
 } from './http/routes/settings/index.js'
 
+// Attachments routes
+import { attachmentsRoutes } from './http/routes/attachments/index.js'
+
 // Import repo (bulk import)
 import { importRepo } from './http/routes/import-repo.js'
 
@@ -161,8 +166,16 @@ async function registerPlugins() {
   await app.register(fastifyMultipart, {
     limits: {
       fileSize: env.MAX_FILE_SIZE,
-      files: 1,
+      files: 10,
     },
+  })
+
+  // Static files (uploaded images)
+  const uploadsPath = join(process.cwd(), 'uploads')
+  await app.register(fastifyStatic, {
+    root: uploadsPath,
+    prefix: '/uploads/',
+    decorateReply: true,
   })
 
   // Swagger documentation
@@ -185,6 +198,7 @@ async function registerPlugins() {
         { name: 'Workflows', description: 'Workflow management' },
         { name: 'Conversations', description: 'Conversation management' },
         { name: 'Messages', description: 'Message handling and streaming' },
+        { name: 'Attachments', description: 'File uploads for messages' },
         { name: 'Smart Notes', description: 'Smart Notes integration' },
         { name: 'MCP Servers', description: 'MCP Server management' },
         { name: 'Skills', description: 'Skills management' },
@@ -300,6 +314,9 @@ async function registerRoutes() {
   // Settings
   await app.register(getSettings)
   await app.register(updateSettings)
+
+  // Attachments
+  await app.register(attachmentsRoutes)
 
   // Import repo (bulk)
   await app.register(importRepo)

@@ -10,6 +10,9 @@ dist/
 # Prisma
 prisma/migrations/*_migration.sql
 
+# Uploads
+uploads/
+
 # IDE
 .idea/
 .vscode/

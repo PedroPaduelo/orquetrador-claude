@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useConversationsStore } from '../store'
-import type { Action } from '../types'
+import type { Action, Attachment } from '../types'
 
 interface UseSSEStreamOptions {
   conversationId: string
@@ -14,12 +14,15 @@ export function useSSEStream(options: UseSSEStreamOptions) {
   const queryClient = useQueryClient()
   const abortControllerRef = useRef<AbortController | null>(null)
   const cancelledRef = useRef(false)
+  const firstContentReceivedRef = useRef(false)
 
   const {
     isStreaming,
+    streamingPhase,
     streamingContent,
     streamingActions,
     setStreaming,
+    setStreamingPhase,
     appendStreamingContent,
     addStreamingAction,
     clearStreaming,
@@ -29,30 +32,49 @@ export function useSSEStream(options: UseSSEStreamOptions) {
   } = useConversationsStore()
 
   const sendMessage = useCallback(
-    async (content: string, stepIndex?: number) => {
+    async (content: string, stepIndex?: number, attachments?: Attachment[]) => {
       if (isStreaming) return
 
       cancelledRef.current = false
+      firstContentReceivedRef.current = false
       clearStreaming()
       setStreaming(true)
+      // Phase: preparing (sending to backend)
+      setStreamingPhase('preparing')
 
       abortControllerRef.current = new AbortController()
 
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
+
+        // Phase: connecting (HTTP request in flight)
+        setStreamingPhase('connecting')
+
         const response = await fetch(
           `${apiUrl}/conversations/${conversationId}/messages/stream`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content, stepIndex }),
+            body: JSON.stringify({ content, stepIndex, attachments }),
             signal: abortControllerRef.current.signal,
           }
         )
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          let errorDetails = `HTTP error! status: ${response.status}`
+          try {
+            const errorData = await response.json()
+            if (errorData.message || errorData.error) {
+              errorDetails = errorData.message || errorData.error
+            }
+          } catch {
+            // Ignore JSON parse errors
+          }
+          throw new Error(errorDetails)
         }
+
+        // Phase: AI is thinking (SSE connected, waiting for content)
+        setStreamingPhase('ai_thinking')
 
         const reader = response.body?.getReader()
         const decoder = new TextDecoder()
@@ -91,7 +113,6 @@ export function useSSEStream(options: UseSSEStreamOptions) {
         }
       } finally {
         if (!cancelledRef.current) {
-          // Normal completion — refetch then stop streaming
           try {
             await queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
           } catch {
@@ -99,7 +120,6 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           }
           setStreaming(false)
         }
-        // If cancelled, cancel() already handled setStreaming(false)
       }
     },
     [conversationId, isStreaming, queryClient, onComplete, onError]
@@ -109,7 +129,6 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     (event: string, data: Record<string, unknown>) => {
       switch (event) {
         case 'step_start': {
-          // Mark any previously running/active steps as completed
           const { stepStatuses } = useConversationsStore.getState()
           stepStatuses.forEach((status, id) => {
             if (status === 'running' || status === 'active') {
@@ -123,14 +142,27 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           )
           setStepStatus(data.stepId as string, 'running')
           resetStreamingContent()
+          // Step started -> AI is thinking
+          setStreamingPhase('ai_thinking')
+          firstContentReceivedRef.current = false
           break
         }
 
         case 'stream':
           if (data.type === 'content' && data.content) {
+            // First content received -> now streaming
+            if (!firstContentReceivedRef.current) {
+              firstContentReceivedRef.current = true
+              setStreamingPhase('streaming')
+            }
             appendStreamingContent(data.content as string)
           } else if (data.type === 'action' && data.action) {
-            addStreamingAction(data.action as Action)
+            const action = data.action as Action
+            addStreamingAction(action)
+            // If we get a thinking action, we're in ai_thinking phase
+            if (action.type === 'thinking' && !firstContentReceivedRef.current) {
+              setStreamingPhase('ai_thinking')
+            }
           }
           break
 
@@ -164,20 +196,14 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           break
       }
     },
-    [setProgress, setStepStatus, appendStreamingContent, addStreamingAction, resetStreamingContent, onError, onComplete]
+    [setProgress, setStepStatus, setStreamingPhase, appendStreamingContent, addStreamingAction, resetStreamingContent, onError, onComplete]
   )
 
   const cancel = useCallback(async () => {
-    // Mark as cancelled so sendMessage's finally doesn't interfere
     cancelledRef.current = true
-
-    // Abort the HTTP connection immediately
     abortControllerRef.current?.abort()
-
-    // Stop streaming UI immediately
     setStreaming(false)
 
-    // Clear any 'running' step statuses so the spinner stops
     const { stepStatuses, setStepStatus: updateStepStatus } = useConversationsStore.getState()
     stepStatuses.forEach((status, id) => {
       if (status === 'running') {
@@ -185,7 +211,6 @@ export function useSSEStream(options: UseSSEStreamOptions) {
       }
     })
 
-    // Cancel backend execution
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
       await fetch(`${apiUrl}/conversations/${conversationId}/cancel`, {
@@ -195,7 +220,6 @@ export function useSSEStream(options: UseSSEStreamOptions) {
       // Ignore cancel API errors
     }
 
-    // Refetch conversation to get latest state
     queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
   }, [conversationId, setStreaming, queryClient])
 
@@ -203,6 +227,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     sendMessage,
     cancel,
     isStreaming,
+    streamingPhase,
     streamingContent,
     streamingActions,
   }

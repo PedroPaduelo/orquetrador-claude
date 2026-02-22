@@ -4,6 +4,7 @@ import { Zap, Send, ArrowDown, MessageSquare } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
+import { StreamingStatus } from './streaming-status'
 import { useSSEStream } from '../hooks/use-sse-stream'
 import { useConversationsStore } from '../store'
 import type { Conversation, Action } from '../types'
@@ -28,7 +29,7 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
   const messages = conversation.messages || []
   const currentStepIndex = conversation.currentStepIndex || 0
 
-  const { sendMessage, cancel, isStreaming, streamingContent, streamingActions } =
+  const { sendMessage, cancel, isStreaming, streamingPhase, streamingContent, streamingActions } =
     useSSEStream({
       conversationId: conversation.id,
       onComplete: () => {
@@ -169,6 +170,7 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
                 metadata: { actions: streamingActions },
               }}
               isStreaming
+              streamingPhase={streamingPhase}
             />
           )
         })()}
@@ -186,9 +188,17 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
         </Button>
       )}
 
+      {/* Streaming status bar */}
+      <StreamingStatus
+        isStreaming={isStreaming}
+        phase={streamingPhase}
+        onCancel={cancel}
+      />
+
       {/* Input */}
       <MessageInput
-        onSend={(content) => sendMessage(content, currentStepIndex)}
+        conversationId={conversation.id}
+        onSend={(content, attachments) => sendMessage(content, currentStepIndex, attachments)}
         onCancel={cancel}
         isStreaming={isStreaming}
         disabled={isWorkflowFinished}

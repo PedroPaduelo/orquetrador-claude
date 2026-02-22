@@ -26,6 +26,15 @@ export async function listMessages(app: FastifyInstance) {
             stepName: z.string().nullable(),
             selectedForContext: z.boolean(),
             metadata: z.unknown().nullable(),
+            attachments: z.array(z.object({
+              id: z.string(),
+              filename: z.string(),
+              mimeType: z.string(),
+              size: z.number(),
+              path: z.string(),
+              projectPath: z.string(),
+              url: z.string(),
+            })).optional(),
             createdAt: z.string(),
           })),
         },
@@ -47,6 +56,7 @@ export async function listMessages(app: FastifyInstance) {
         },
         include: {
           step: { select: { name: true } },
+          attachments: true,
         },
         orderBy: { createdAt: 'asc' },
       })
@@ -59,6 +69,15 @@ export async function listMessages(app: FastifyInstance) {
         stepName: m.step?.name || null,
         selectedForContext: m.selectedForContext,
         metadata: m.metadata ? (typeof m.metadata === 'string' ? JSON.parse(m.metadata) : m.metadata) : null,
+        attachments: m.attachments && m.attachments.length > 0 ? m.attachments.map(a => ({
+          id: a.id,
+          filename: a.filename,
+          mimeType: a.mimeType,
+          size: a.size,
+          path: a.path,
+          projectPath: a.projectPath,
+          url: a.url,
+        })) : undefined,
         createdAt: m.createdAt.toISOString(),
       }))
     }

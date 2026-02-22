@@ -6,6 +6,17 @@ import { taskOrchestrator } from '../../../services/orchestrator/task-orchestrat
 import { orchestratorEvents } from '../../../services/orchestrator/events.js'
 import { NotFoundError, ConflictError } from '../_errors/index.js'
 
+// Attachment schema for request body
+const attachmentSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  mimeType: z.string(),
+  path: z.string(),
+  projectPath: z.string(),
+  url: z.string(),
+  size: z.number().optional(),
+})
+
 export async function sendMessageStream(app: FastifyInstance) {
   app.withTypeProvider<ZodTypeProvider>().post(
     '/conversations/:id/messages/stream',
@@ -17,14 +28,19 @@ export async function sendMessageStream(app: FastifyInstance) {
           id: z.string(),
         }),
         body: z.object({
-          content: z.string().min(1),
+          content: z.string(), // Allow empty string when attachments are present
           stepIndex: z.number().optional(),
+          attachments: z.array(attachmentSchema).optional(),
         }),
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string }
-      const { content, stepIndex } = request.body as { content: string; stepIndex?: number }
+      const { content, stepIndex, attachments } = request.body as {
+        content: string
+        stepIndex?: number
+        attachments?: z.infer<typeof attachmentSchema>[]
+      }
 
       // Fetch conversation with workflow and steps
       const conversation = await prisma.conversation.findUnique({
@@ -129,6 +145,7 @@ export async function sendMessageStream(app: FastifyInstance) {
           workflowId: conversation.workflowId,
           steps: conversation.workflow.steps,
           projectPath,
+          attachments,
         }
 
         if (conversation.workflow.type === 'sequential') {
