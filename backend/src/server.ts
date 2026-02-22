@@ -14,129 +14,7 @@ import { join } from 'path'
 
 import { env } from './lib/env.js'
 import { errorHandler } from './http/error-handler.js'
-
-// Workflow routes
-import {
-  createWorkflow,
-  listWorkflows,
-  getWorkflow,
-  updateWorkflow,
-  deleteWorkflow,
-  duplicateWorkflow,
-} from './http/routes/workflows/index.js'
-
-// Conversation routes
-import {
-  createConversation,
-  listConversations,
-  getConversation,
-  deleteConversation,
-  cancelExecution,
-  getConversationStatus,
-  advanceStep,
-  goBackStep,
-} from './http/routes/conversations/index.js'
-
-// Message routes
-import {
-  sendMessageStream,
-  listMessages,
-  toggleMessageContext,
-  updateMessageActions,
-  deleteMessage,
-} from './http/routes/messages/index.js'
-
-// Smart Notes routes
-import {
-  getSmartNotesStatus,
-  listSmartNotesFolders,
-  createSmartNotesFolder,
-  updateSmartNotesFolder,
-  deleteSmartNotesFolder,
-  listSmartNotes,
-  searchSmartNotes,
-  getSmartNote,
-  createSmartNote,
-  updateSmartNote,
-  deleteSmartNote,
-  smartNoteActions,
-  previewSmartNotesContext,
-} from './http/routes/smart-notes/index.js'
-
-// MCP Servers routes
-import {
-  listMcpServers,
-  createMcpServer,
-  getMcpServer,
-  updateMcpServer,
-  deleteMcpServer,
-  testMcpServer,
-  toggleMcpServer,
-  quickInstallMcpServer,
-} from './http/routes/mcp-servers/index.js'
-
-// Skills routes
-import {
-  listSkills,
-  createSkill,
-  getSkill,
-  updateSkill,
-  deleteSkill,
-  toggleSkill,
-  importSkill,
-  resyncSkill,
-} from './http/routes/skills/index.js'
-
-// Agents routes
-import {
-  listAgents,
-  createAgent,
-  getAgent,
-  updateAgent,
-  deleteAgent,
-  toggleAgent,
-  importAgent,
-  resyncAgent,
-} from './http/routes/agents/index.js'
-
-// Rules routes
-import {
-  listRules,
-  createRule,
-  getRule,
-  updateRule,
-  deleteRule,
-  toggleRule,
-  importRule,
-  resyncRule,
-} from './http/routes/rules/index.js'
-
-// Plugins routes
-import {
-  listPlugins,
-  getPlugin,
-  installPlugin,
-  updatePlugin,
-  deletePlugin,
-  togglePlugin,
-  importPluginUrl,
-  resyncPlugin,
-} from './http/routes/plugins/index.js'
-
-// Settings routes
-import {
-  getSettings,
-  updateSettings,
-} from './http/routes/settings/index.js'
-
-// Attachments routes
-import { attachmentsRoutes } from './http/routes/attachments/index.js'
-
-// Import repo (bulk import)
-import { importRepo } from './http/routes/import-repo.js'
-
-// Health routes
-import { healthCheck } from './http/routes/health/index.js'
+import { domainRoutes } from './domains/index.js'
 
 const app = Fastify({
   logger: {
@@ -206,6 +84,7 @@ async function registerPlugins() {
         { name: 'Rules', description: 'Rules management' },
         { name: 'Plugins', description: 'Plugin management' },
         { name: 'Settings', description: 'Application settings' },
+        { name: 'Import', description: 'Bulk import from GitHub' },
       ],
     },
     transform: jsonSchemaTransform,
@@ -216,110 +95,11 @@ async function registerPlugins() {
   })
 }
 
-// Register routes
+// Register all domain routes
 async function registerRoutes() {
-  // Health
-  await app.register(healthCheck)
-
-  // Workflows
-  await app.register(createWorkflow)
-  await app.register(listWorkflows)
-  await app.register(getWorkflow)
-  await app.register(updateWorkflow)
-  await app.register(deleteWorkflow)
-  await app.register(duplicateWorkflow)
-
-  // Conversations
-  await app.register(createConversation)
-  await app.register(listConversations)
-  await app.register(getConversation)
-  await app.register(deleteConversation)
-  await app.register(cancelExecution)
-  await app.register(getConversationStatus)
-  await app.register(advanceStep)
-  await app.register(goBackStep)
-
-  // Messages
-  await app.register(sendMessageStream)
-  await app.register(listMessages)
-  await app.register(toggleMessageContext)
-  await app.register(updateMessageActions)
-  await app.register(deleteMessage)
-
-  // Smart Notes
-  await app.register(getSmartNotesStatus)
-  await app.register(listSmartNotesFolders)
-  await app.register(createSmartNotesFolder)
-  await app.register(updateSmartNotesFolder)
-  await app.register(deleteSmartNotesFolder)
-  await app.register(listSmartNotes)
-  await app.register(searchSmartNotes)
-  await app.register(getSmartNote)
-  await app.register(createSmartNote)
-  await app.register(updateSmartNote)
-  await app.register(deleteSmartNote)
-  await app.register(smartNoteActions)
-  await app.register(previewSmartNotesContext)
-
-  // MCP Servers
-  await app.register(listMcpServers)
-  await app.register(createMcpServer)
-  await app.register(getMcpServer)
-  await app.register(updateMcpServer)
-  await app.register(deleteMcpServer)
-  await app.register(testMcpServer)
-  await app.register(toggleMcpServer)
-  await app.register(quickInstallMcpServer)
-
-  // Skills
-  await app.register(listSkills)
-  await app.register(createSkill)
-  await app.register(getSkill)
-  await app.register(updateSkill)
-  await app.register(deleteSkill)
-  await app.register(toggleSkill)
-  await app.register(importSkill)
-  await app.register(resyncSkill)
-
-  // Agents
-  await app.register(listAgents)
-  await app.register(createAgent)
-  await app.register(getAgent)
-  await app.register(updateAgent)
-  await app.register(deleteAgent)
-  await app.register(toggleAgent)
-  await app.register(importAgent)
-  await app.register(resyncAgent)
-
-  // Rules
-  await app.register(listRules)
-  await app.register(createRule)
-  await app.register(getRule)
-  await app.register(updateRule)
-  await app.register(deleteRule)
-  await app.register(toggleRule)
-  await app.register(importRule)
-  await app.register(resyncRule)
-
-  // Plugins
-  await app.register(listPlugins)
-  await app.register(getPlugin)
-  await app.register(installPlugin)
-  await app.register(updatePlugin)
-  await app.register(deletePlugin)
-  await app.register(togglePlugin)
-  await app.register(importPluginUrl)
-  await app.register(resyncPlugin)
-
-  // Settings
-  await app.register(getSettings)
-  await app.register(updateSettings)
-
-  // Attachments
-  await app.register(attachmentsRoutes)
-
-  // Import repo (bulk)
-  await app.register(importRepo)
+  for (const registerDomain of domainRoutes) {
+    await app.register(registerDomain)
+  }
 }
 
 // Start server

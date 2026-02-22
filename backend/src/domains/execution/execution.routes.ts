@@ -1,0 +1,338 @@
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { z } from 'zod'
+import { prisma } from '../../lib/prisma.js'
+import { taskOrchestrator } from './orchestrator/task-orchestrator.js'
+import { orchestratorEvents } from './orchestrator/events.js'
+import { messagesRepository } from './messages.repository.js'
+import { NotFoundError } from '../../http/errors/index.js'
+
+const attachmentSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  mimeType: z.string(),
+  path: z.string(),
+  projectPath: z.string(),
+  url: z.string(),
+  size: z.number().optional(),
+})
+
+export async function executionRoutes(app: FastifyInstance) {
+  const server = app.withTypeProvider<ZodTypeProvider>()
+
+  // POST /conversations/:id/messages/stream - SSE streaming endpoint
+  server.post(
+    '/conversations/:id/messages/stream',
+    {
+      schema: {
+        tags: ['Messages'],
+        summary: 'Send message and receive SSE stream',
+        params: z.object({
+          id: z.string(),
+        }),
+        body: z.object({
+          content: z.string(),
+          stepIndex: z.number().optional(),
+          attachments: z.array(attachmentSchema).optional(),
+        }),
+        // No response schema — raw SSE response
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string }
+      const { content, stepIndex, attachments } = request.body as {
+        content: string
+        stepIndex?: number
+        attachments?: z.infer<typeof attachmentSchema>[]
+      }
+
+      // Fetch conversation with workflow and steps
+      const conversation = await prisma.conversation.findUnique({
+        where: { id },
+        include: {
+          workflow: {
+            include: {
+              steps: { orderBy: { stepOrder: 'asc' } },
+            },
+          },
+        },
+      })
+
+      if (!conversation) {
+        throw new NotFoundError('Conversation not found')
+      }
+
+      // If a stale execution is running, force-cancel it before proceeding
+      if (taskOrchestrator.isExecuting(id)) {
+        console.log(`[executionRoutes] Stale execution detected for ${id}, force-cancelling`)
+        taskOrchestrator.cancel(id)
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      }
+
+      // Set SSE headers
+      reply.raw.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*',
+        'X-Accel-Buffering': 'no',
+      })
+
+      // Helper to write SSE events
+      const sendEvent = (event: string, data: unknown) => {
+        try {
+          reply.raw.write(`event: ${event}\n`)
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`)
+        } catch {
+          // Connection may have already closed
+        }
+      }
+
+      // Filter events to only pass through those belonging to this conversation
+      const filterByConversation = (data: unknown): boolean => {
+        const d = data as { conversationId?: string }
+        return d.conversationId === id
+      }
+
+      const handlers: Record<string, (...args: unknown[]) => void> = {
+        'step:start': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('step_start', data)
+        },
+        'step:stream': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('stream', data)
+        },
+        'step:complete': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('step_complete', data)
+        },
+        'step:error': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('step_error', data)
+        },
+        'message:saved': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('message_saved', data)
+        },
+        'condition:retry': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('condition_retry', data)
+        },
+        'condition:jump': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('condition_jump', data)
+        },
+        'execution:cancelled': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('cancelled', data)
+        },
+        'execution:complete': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('complete', data)
+        },
+      }
+
+      // Register all event listeners
+      Object.entries(handlers).forEach(([event, handler]) => {
+        orchestratorEvents.on(event, handler)
+      })
+
+      // Cleanup helper — removes all registered listeners
+      const cleanup = () => {
+        Object.entries(handlers).forEach(([event, handler]) => {
+          orchestratorEvents.off(event, handler)
+        })
+      }
+
+      // On client disconnect: cleanup and cancel any running execution
+      request.raw.on('close', () => {
+        cleanup()
+        if (taskOrchestrator.isExecuting(id)) {
+          console.log(`[SSE] Client disconnected for ${id}, cancelling execution`)
+          taskOrchestrator.cancel(id)
+        }
+      })
+
+      try {
+        const projectPath = conversation.workflow.projectPath
+        if (!projectPath) {
+          sendEvent('error', {
+            message: 'Workflow nao tem projectPath configurado. Configure o caminho do projeto no workflow.',
+          })
+          return
+        }
+
+        const context = {
+          conversationId: id,
+          workflowId: conversation.workflowId,
+          steps: conversation.workflow.steps,
+          projectPath,
+          attachments,
+        }
+
+        if (conversation.workflow.type === 'sequential') {
+          await taskOrchestrator.executeSequential(context, content)
+        } else {
+          // step_by_step mode
+          const currentIndex =
+            stepIndex ??
+            (conversation.currentStepId
+              ? conversation.workflow.steps.findIndex((s) => s.id === conversation.currentStepId)
+              : 0)
+          await taskOrchestrator.executeStepByStep(context, content, Math.max(0, currentIndex))
+        }
+      } catch (error) {
+        sendEvent('error', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        })
+      } finally {
+        cleanup()
+        reply.raw.end()
+      }
+    }
+  )
+
+  // GET /conversations/:id/messages - list messages with optional stepId filter
+  server.get(
+    '/conversations/:id/messages',
+    {
+      schema: {
+        tags: ['Messages'],
+        summary: 'List conversation messages',
+        params: z.object({
+          id: z.string(),
+        }),
+        querystring: z.object({
+          stepId: z.string().optional(),
+        }),
+        response: {
+          200: z.array(
+            z.object({
+              id: z.string(),
+              role: z.string(),
+              content: z.string(),
+              stepId: z.string().nullable(),
+              stepName: z.string().nullable(),
+              selectedForContext: z.boolean(),
+              metadata: z.unknown().nullable(),
+              attachments: z
+                .array(
+                  z.object({
+                    id: z.string(),
+                    filename: z.string(),
+                    mimeType: z.string(),
+                    size: z.number(),
+                    path: z.string(),
+                    projectPath: z.string(),
+                    url: z.string(),
+                  })
+                )
+                .optional(),
+              createdAt: z.string(),
+            })
+          ),
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params
+      const { stepId } = request.query
+
+      const conversation = await prisma.conversation.findUnique({ where: { id } })
+      if (!conversation) {
+        throw new NotFoundError('Conversation not found')
+      }
+
+      return messagesRepository.findByConversation(id, stepId)
+    }
+  )
+
+  // PUT /messages/:id/select - toggle message context selection
+  server.put(
+    '/messages/:id/select',
+    {
+      schema: {
+        tags: ['Messages'],
+        summary: 'Toggle message context selection',
+        params: z.object({
+          id: z.string(),
+        }),
+        body: z.object({
+          selected: z.boolean(),
+        }),
+        response: {
+          200: z.object({
+            id: z.string(),
+            selectedForContext: z.boolean(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params
+      const { selected } = request.body
+
+      const message = await messagesRepository.findById(id)
+      if (!message) {
+        throw new NotFoundError('Message not found')
+      }
+
+      return messagesRepository.toggleContext(id, selected)
+    }
+  )
+
+  // PUT /messages/:id/actions - update message actions metadata
+  server.put(
+    '/messages/:id/actions',
+    {
+      schema: {
+        tags: ['Messages'],
+        summary: 'Update message actions metadata',
+        params: z.object({
+          id: z.string(),
+        }),
+        body: z.object({
+          actions: z.array(z.unknown()),
+        }),
+        response: {
+          200: z.object({
+            id: z.string(),
+            success: z.boolean(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params
+      const { actions } = request.body
+
+      const message = await messagesRepository.findById(id)
+      if (!message) {
+        throw new NotFoundError('Message not found')
+      }
+
+      return messagesRepository.updateActions(id, actions)
+    }
+  )
+
+  // DELETE /messages/:id - delete message
+  server.delete(
+    '/messages/:id',
+    {
+      schema: {
+        tags: ['Messages'],
+        summary: 'Delete message',
+        params: z.object({
+          id: z.string(),
+        }),
+        response: {
+          204: z.null(),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params
+
+      const message = await messagesRepository.findById(id)
+      if (!message) {
+        throw new NotFoundError('Message not found')
+      }
+
+      await messagesRepository.delete(id)
+
+      return reply.status(204).send(null)
+    }
+  )
+}

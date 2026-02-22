@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { JWT } from '@fastify/jwt'
 import fastifyPlugin from 'fastify-plugin'
-import { UnauthorizedError } from '../http/routes/_errors/index.js'
+import { UnauthorizedError } from '../http/errors/index.js'
 
 declare module 'fastify' {
   interface FastifyRequest {

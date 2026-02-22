@@ -7,7 +7,7 @@ import {
   UnauthorizedError,
   NotFoundError,
   ConflictError,
-} from './routes/_errors/index.js'
+} from './errors/index.js'
 
 type FastifyErrorHandler = (
   error: FastifyError,
