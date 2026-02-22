@@ -10,7 +10,6 @@ import {
   Bot,
   ScrollText,
   Package,
-  Settings,
 } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 
@@ -63,11 +62,6 @@ const configItems = [
     to: '/plugins',
     icon: Package,
     label: 'Plugins',
-  },
-  {
-    to: '/settings',
-    icon: Settings,
-    label: 'Configuracoes',
   },
 ]
 

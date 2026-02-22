@@ -15,7 +15,6 @@ const SkillsPage = lazy(() => import('@/features/skills'))
 const AgentsPage = lazy(() => import('@/features/agents'))
 const RulesPage = lazy(() => import('@/features/rules'))
 const PluginsPage = lazy(() => import('@/features/plugins'))
-const SettingsPage = lazy(() => import('@/features/settings'))
 
 // Page loader
 function PageLoader() {
@@ -145,14 +144,7 @@ export function AppRoutes() {
           }
         />
 
-        <Route
-          path="settings"
-          element={
-            <Lazy>
-              <SettingsPage />
-            </Lazy>
-          }
-        />
+
       </Route>
 
       {/* Catch all - go to dashboard */}

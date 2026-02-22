@@ -354,18 +354,6 @@ model Plugin {
   @@map("plugins")
 }
 
-// ============================================
-// APP SETTINGS
-// ============================================
-model AppSettings {
-  id                 String   @id @default("singleton")
-  defaultModel       String?  @map("default_model")
-  defaultProjectPath String?  @map("default_project_path")
-  claudeBinPath      String?  @map("claude_bin_path")
-  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
-
-  @@map("app_settings")
-}
 
 // ============================================
 // JOIN TABLES

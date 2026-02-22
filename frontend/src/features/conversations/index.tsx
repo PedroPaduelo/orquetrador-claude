@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, MessageSquare, Search, Filter } from 'lucide-react'
+import { Plus, MessageSquare, LayoutGrid, Table2 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
+import { Label } from '@/shared/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -18,37 +19,76 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/components/ui/dialog'
-import { Label } from '@/shared/components/ui/label'
-import { Skeleton } from '@/shared/components/ui/skeleton'
 import { EmptyState } from '@/shared/components/common/empty-state'
+import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
+import {
+  useSearchPagination,
+  SearchBar,
+  FilterBar,
+  Pagination,
+  type FilterDefinition,
+} from '@/shared/components/common/search-pagination'
 import { ConversationCard } from './components/conversation-card'
+import { ConversationTable } from './components/conversation-table'
 import { useConversations, useCreateConversation, useDeleteConversation } from './hooks/use-conversations'
 import { useWorkflows } from '../workflows/hooks/use-workflows'
+import type { Conversation } from './types'
+
+const searchFields: (keyof Conversation)[] = ['title', 'workflowName']
 
 export default function ConversationsPage() {
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
-  const [workflowFilter, setWorkflowFilter] = useState<string>('all')
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState('')
-  const [newTitle, setNewTitle] = useState('')
-
   const { data: conversations, isLoading } = useConversations()
   const { data: workflows } = useWorkflows()
   const createMutation = useCreateConversation()
   const deleteMutation = useDeleteConversation()
 
-  const filteredConversations = conversations?.filter((conv) => {
-    const matchesSearch =
-      !search ||
-      conv.title?.toLowerCase().includes(search.toLowerCase()) ||
-      conv.workflowName?.toLowerCase().includes(search.toLowerCase())
+  const filters = useMemo<FilterDefinition<Conversation>[]>(() => {
+    const workflowOptions = (workflows ?? []).map((wf) => ({
+      value: wf.id,
+      label: wf.name,
+    }))
 
-    const matchesWorkflow =
-      workflowFilter === 'all' || conv.workflowId === workflowFilter
+    return [
+      {
+        key: 'workflow',
+        label: 'Workflow',
+        options: workflowOptions,
+        match: (item, value) => item.workflowId === value,
+      },
+      {
+        key: 'type',
+        label: 'Tipo',
+        options: [
+          { value: 'sequential', label: 'Sequencial' },
+          { value: 'step_by_step', label: 'Passo a Passo' },
+        ],
+        match: (item, value) => item.workflowType === value,
+      },
+    ]
+  }, [workflows])
 
-    return matchesSearch && matchesWorkflow
+  const {
+    paged,
+    search,
+    setSearch,
+    page,
+    setPage,
+    totalPages,
+    total,
+    activeFilters,
+    setFilter,
+    clearFilters,
+    hasActiveFilters,
+  } = useSearchPagination({ data: conversations, searchFields, filters })
+
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
+    return (localStorage.getItem('conversations-view') as 'grid' | 'table') || 'grid'
   })
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState('')
+  const [newTitle, setNewTitle] = useState('')
 
   const handleCreate = async () => {
     if (!selectedWorkflowId) return
@@ -135,74 +175,88 @@ export default function ConversationsPage() {
         </Dialog>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar conversas..."
-            className="pl-10"
-          />
-        </div>
-
-        <Select value={workflowFilter} onValueChange={setWorkflowFilter}>
-          <SelectTrigger className="w-[200px]">
-            <Filter className="mr-2 h-4 w-4" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os workflows</SelectItem>
-            {workflows?.map((wf) => (
-              <SelectItem key={wf.id} value={wf.id}>
-                {wf.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Conversations Grid */}
+      {/* Content */}
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-40 rounded-xl" />
-          ))}
-        </div>
-      ) : filteredConversations?.length === 0 ? (
+        <ListSkeleton count={6} />
+      ) : conversations && conversations.length > 0 ? (
+        <>
+          {/* Search + View Toggle */}
+          <div className="flex items-center gap-3">
+            <SearchBar
+              value={search}
+              onChange={setSearch}
+              placeholder="Buscar conversas..."
+              total={total}
+            />
+            <div className="flex items-center border rounded-lg p-0.5">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => { setViewMode('grid'); localStorage.setItem('conversations-view', 'grid') }}
+                title="Cards"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => { setViewMode('table'); localStorage.setItem('conversations-view', 'table') }}
+                title="Tabela"
+              >
+                <Table2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <FilterBar
+            filters={filters}
+            activeFilters={activeFilters}
+            onFilterChange={setFilter}
+            onClear={clearFilters}
+            hasActive={hasActiveFilters}
+          />
+
+          {/* Grid / Table */}
+          {viewMode === 'grid' ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {paged.map((conversation, index) => (
+                <div
+                  key={conversation.id}
+                  className="animate-fade-in-up"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <ConversationCard
+                    conversation={conversation}
+                    onDelete={() => deleteMutation.mutate(conversation.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <ConversationTable
+              conversations={paged}
+              onDelete={(conv) => deleteMutation.mutate(conv.id)}
+            />
+          )}
+
+          {/* Pagination */}
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        </>
+      ) : (
         <EmptyState
           icon={MessageSquare}
           title="Nenhuma conversa ainda"
-          description={
-            search || workflowFilter !== 'all'
-              ? 'Nenhum resultado para esses filtros. Tente outra busca.'
-              : 'Selecione um workflow e inicie sua primeira conversa com o Claude.'
-          }
+          description="Selecione um workflow e inicie sua primeira conversa com o Claude."
           action={
-            !search && workflowFilter === 'all' ? (
-              <Button onClick={() => setIsDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Conversa
-              </Button>
-            ) : undefined
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Conversa
+            </Button>
           }
         />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredConversations?.map((conversation, index) => (
-            <div
-              key={conversation.id}
-              className="animate-fade-in-up"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <ConversationCard
-                conversation={conversation}
-                onDelete={() => deleteMutation.mutate(conversation.id)}
-              />
-            </div>
-          ))}
-        </div>
       )}
     </div>
   )

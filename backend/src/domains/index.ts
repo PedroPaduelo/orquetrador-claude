@@ -1,7 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 
 import { healthRoutes } from './health/health.routes.js'
-import { settingsRoutes } from './settings/settings.routes.js'
 import { skillsRoutes } from './skills/skills.routes.js'
 import { agentsRoutes } from './agents/agents.routes.js'
 import { rulesRoutes } from './rules/rules.routes.js'
@@ -16,7 +15,6 @@ import { importRepoRoutes } from './import-repo/import-repo.routes.js'
 
 export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   healthRoutes,
-  settingsRoutes,
   skillsRoutes,
   agentsRoutes,
   rulesRoutes,
