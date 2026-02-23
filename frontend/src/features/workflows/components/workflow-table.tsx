@@ -1,4 +1,4 @@
-import { MoreVertical, Pencil, Trash2, Play, Copy, GitBranch, MessageSquare, FolderOpen } from 'lucide-react'
+import { MoreVertical, Pencil, Trash2, Play, Copy, GitBranch, MessageSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
@@ -31,7 +31,6 @@ export function WorkflowTable({ workflows, onEdit, onDelete, onDuplicate }: Work
             <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tipo</th>
             <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Steps</th>
             <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Conversas</th>
-            <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Projeto</th>
             <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Atualizado</th>
             <th className="text-right px-4 py-2.5 w-12"></th>
           </tr>
@@ -74,16 +73,6 @@ export function WorkflowTable({ workflows, onEdit, onDelete, onDuplicate }: Work
                   <MessageSquare className="h-3.5 w-3.5" />
                   <span>{workflow.conversationsCount || 0}</span>
                 </div>
-              </td>
-              <td className="px-4 py-3 hidden lg:table-cell">
-                {workflow.projectPath ? (
-                  <span className="text-xs text-muted-foreground truncate block max-w-[200px] flex items-center gap-1">
-                    <FolderOpen className="h-3 w-3 shrink-0" />
-                    {workflow.projectPath}
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
-                )}
               </td>
               <td className="px-4 py-3 hidden lg:table-cell">
                 <span className="text-xs text-muted-foreground">{formatDate(workflow.updatedAt)}</span>

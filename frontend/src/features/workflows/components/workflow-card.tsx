@@ -1,4 +1,4 @@
-import { MoreHorizontal, Pencil, Trash2, MessageSquare, GitBranch, FolderOpen, Play, Copy } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2, MessageSquare, GitBranch, Play, Copy } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -111,15 +111,7 @@ export function WorkflowCard({ workflow, onEdit, onDelete, onDuplicate }: Workfl
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
-          {workflow.projectPath ? (
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1 truncate max-w-[60%]">
-              <FolderOpen className="h-3 w-3 shrink-0" />
-              {workflow.projectPath}
-            </p>
-          ) : (
-            <span />
-          )}
+        <div className="flex items-center justify-end mt-4 pt-3 border-t border-border/50">
           <p className="text-[11px] text-muted-foreground">
             {formatDate(workflow.updatedAt)}
           </p>

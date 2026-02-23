@@ -143,7 +143,6 @@ export default function WorkflowWizardPage() {
       name: basicInfo.name,
       description: basicInfo.description || undefined,
       type: basicInfo.type,
-      projectPath: basicInfo.projectPath || undefined,
       steps: formSteps.map((step) => ({
         name: step.name,
         baseUrl: step.baseUrl,
