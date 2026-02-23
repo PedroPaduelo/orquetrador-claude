@@ -21,7 +21,7 @@ export const conversationsRepository = {
     return conversations.map((c) => ({
       id: c.id,
       title: c.title,
-      projectPath: c.projectPath,
+      projectPath: c.projectPath ?? null,
       workflowId: c.workflowId,
       workflowName: c.workflow.name,
       workflowType: c.workflow.type,
