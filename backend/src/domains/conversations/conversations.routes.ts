@@ -210,6 +210,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
         tags: ['Conversations'],
         summary: 'Advance to the next step in a step_by_step conversation',
         params: z.object({ id: z.string() }),
+        body: z.any().optional(),
         response: {
           200: z.object({
             id: z.string(),
@@ -233,6 +234,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
         tags: ['Conversations'],
         summary: 'Go back to the previous step in a step_by_step conversation',
         params: z.object({ id: z.string() }),
+        body: z.any().optional(),
         response: {
           200: z.object({
             id: z.string(),
@@ -256,6 +258,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
         tags: ['Conversations'],
         summary: 'Cancel an active execution for a conversation',
         params: z.object({ id: z.string() }),
+        body: z.any().optional(),
         response: {
           200: z.object({
             success: z.boolean(),

@@ -13,9 +13,25 @@ export const conversationsService = {
     }
 
     const steps = conversation.workflow.steps
+    if (steps.length === 0) {
+      throw new BadRequestError('Workflow has no steps')
+    }
+
     const currentIndex = conversation.currentStepIndex
 
-    if (currentIndex < 0 || currentIndex >= steps.length - 1) {
+    // currentStepId null (conversa recem-criada) -> avanca para o primeiro step
+    if (currentIndex < 0) {
+      const firstStep = steps[0]
+      await conversationsRepository.updateCurrentStep(id, firstStep.id)
+      return {
+        id,
+        currentStepId: firstStep.id,
+        currentStepIndex: 0,
+        message: `Advanced to step: ${firstStep.name}`,
+      }
+    }
+
+    if (currentIndex >= steps.length - 1) {
       throw new BadRequestError('Already at the last step')
     }
 

@@ -28,17 +28,17 @@ export const conversationsApi = {
   },
 
   cancel: async (id: string): Promise<{ success: boolean; message: string }> => {
-    const { data } = await apiClient.post(`/conversations/${id}/cancel`)
+    const { data } = await apiClient.post(`/conversations/${id}/cancel`, {})
     return data
   },
 
   advanceStep: async (id: string): Promise<Conversation> => {
-    const { data } = await apiClient.post(`/conversations/${id}/advance-step`)
+    const { data } = await apiClient.post(`/conversations/${id}/advance-step`, {})
     return data
   },
 
   goBackStep: async (id: string): Promise<Conversation> => {
-    const { data } = await apiClient.post(`/conversations/${id}/go-back-step`)
+    const { data } = await apiClient.post(`/conversations/${id}/go-back-step`, {})
     return data
   },
 }

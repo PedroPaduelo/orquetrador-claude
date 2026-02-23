@@ -1,6 +1,48 @@
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { toast } from 'sonner'
 import { Zap, Send, ArrowDown, MessageSquare } from 'lucide-react'
+
+function playCompletionSound() {
+  try {
+    const ctx = new AudioContext()
+    const now = ctx.currentTime
+
+    // Nota 1
+    const o1 = ctx.createOscillator()
+    const g1 = ctx.createGain()
+    o1.type = 'sine'
+    o1.frequency.value = 523.25 // C5
+    g1.gain.setValueAtTime(0.3, now)
+    g1.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
+    o1.connect(g1).connect(ctx.destination)
+    o1.start(now)
+    o1.stop(now + 0.15)
+
+    // Nota 2
+    const o2 = ctx.createOscillator()
+    const g2 = ctx.createGain()
+    o2.type = 'sine'
+    o2.frequency.value = 659.25 // E5
+    g2.gain.setValueAtTime(0.3, now + 0.15)
+    g2.gain.exponentialRampToValueAtTime(0.01, now + 0.3)
+    o2.connect(g2).connect(ctx.destination)
+    o2.start(now + 0.15)
+    o2.stop(now + 0.3)
+
+    // Nota 3
+    const o3 = ctx.createOscillator()
+    const g3 = ctx.createGain()
+    o3.type = 'sine'
+    o3.frequency.value = 783.99 // G5
+    g3.gain.setValueAtTime(0.3, now + 0.3)
+    g3.gain.exponentialRampToValueAtTime(0.01, now + 0.55)
+    o3.connect(g3).connect(ctx.destination)
+    o3.start(now + 0.3)
+    o3.stop(now + 0.55)
+
+    setTimeout(() => ctx.close(), 1000)
+  } catch { /* audio not available */ }
+}
 import { Button } from '@/shared/components/ui/button'
 import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
@@ -33,6 +75,7 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
     useSSEStream({
       conversationId: conversation.id,
       onComplete: () => {
+        playCompletionSound()
         if (conversation.workflow?.type === 'step_by_step') {
           // Don't show "execution complete" for step_by_step - the chat continues
         } else {
