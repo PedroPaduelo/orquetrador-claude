@@ -9,7 +9,6 @@ export const workflowsService = {
       name: `${original.name} (Cópia)`,
       description: original.description,
       type: original.type,
-      projectPath: original.projectPath,
       steps: original.steps.map((step) => ({
         name: step.name,
         baseUrl: step.baseUrl,

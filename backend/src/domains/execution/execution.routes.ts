@@ -146,10 +146,10 @@ export async function executionRoutes(app: FastifyInstance) {
       })
 
       try {
-        const projectPath = conversation.workflow.projectPath
+        const projectPath = conversation.projectPath
         if (!projectPath) {
           sendEvent('error', {
-            message: 'Workflow nao tem projectPath configurado. Configure o caminho do projeto no workflow.',
+            message: 'Conversa nao tem projectPath configurado. Defina a pasta do projeto ao criar a conversa.',
           })
           return
         }

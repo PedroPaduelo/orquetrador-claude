@@ -1,6 +1,7 @@
 export interface Conversation {
   id: string
   title: string | null
+  projectPath: string | null
   workflowId: string
   workflowName?: string
   workflowType?: 'sequential' | 'step_by_step'
@@ -18,7 +19,6 @@ export interface ConversationWorkflow {
   id: string
   name: string
   type: 'sequential' | 'step_by_step'
-  projectPath: string | null
   steps: WorkflowStepSummary[]
 }
 
@@ -69,6 +69,13 @@ export interface Action {
 export interface CreateConversationInput {
   workflowId: string
   title?: string
+  projectPath: string
+}
+
+export interface ProjectFolder {
+  name: string
+  path: string
+  conversationsCount: number
 }
 
 export interface StreamEvent {

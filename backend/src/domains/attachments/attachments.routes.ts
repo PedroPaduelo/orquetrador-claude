@@ -38,15 +38,11 @@ export async function attachmentsRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { id: conversationId } = request.params
 
-      // Get projectPath from conversation's workflow relation
       const conversation = await prisma.conversation.findUnique({
         where: { id: conversationId },
-        include: {
-          workflow: { select: { projectPath: true } },
-        },
       })
 
-      const projectPath = conversation?.workflow?.projectPath || undefined
+      const projectPath = conversation?.projectPath || undefined
 
       try {
         const parts = request.files()

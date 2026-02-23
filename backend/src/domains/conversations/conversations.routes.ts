@@ -1,12 +1,67 @@
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
+import { readdirSync, mkdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { conversationsRepository } from './conversations.repository.js'
 import { conversationsService } from './conversations.service.js'
+import { prisma } from '../../lib/prisma.js'
 import { NotFoundError } from '../../http/errors/index.js'
+
+const PROJECT_BASE_PATH = process.env.PROJECT_BASE_PATH || '/workspace/temp-orquestrador'
 
 export async function conversationsRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>()
+
+  // GET /folders — list project folders
+  server.get(
+    '/folders',
+    {
+      schema: {
+        tags: ['Conversations'],
+        summary: 'List available project folders',
+        response: {
+          200: z.array(z.object({
+            name: z.string(),
+            path: z.string(),
+            conversationsCount: z.number(),
+          })),
+        },
+      },
+    },
+    async () => {
+      mkdirSync(PROJECT_BASE_PATH, { recursive: true })
+
+      const entries = readdirSync(PROJECT_BASE_PATH)
+      const dirs = entries.filter((entry) => {
+        try {
+          return statSync(join(PROJECT_BASE_PATH, entry)).isDirectory()
+        } catch {
+          return false
+        }
+      })
+
+      const counts = await prisma.conversation.groupBy({
+        by: ['projectPath'],
+        _count: { id: true },
+        where: { projectPath: { not: null } },
+      })
+
+      const countMap = new Map<string, number>()
+      for (const c of counts) {
+        if (c.projectPath) countMap.set(c.projectPath, c._count.id)
+      }
+
+      return dirs.map((name) => {
+        const fullPath = join(PROJECT_BASE_PATH, name)
+        return {
+          name,
+          path: fullPath,
+          conversationsCount: countMap.get(fullPath) || 0,
+        }
+      })
+    }
+  )
 
   // POST /conversations
   server.post(
@@ -18,12 +73,14 @@ export async function conversationsRoutes(app: FastifyInstance) {
         body: z.object({
           workflowId: z.string(),
           title: z.string().optional(),
+          projectPath: z.string(),
         }),
         response: {
           201: z.object({
             id: z.string(),
             workflowId: z.string(),
             title: z.string().nullable(),
+            projectPath: z.string().nullable(),
             currentStepId: z.string().nullable(),
             createdAt: z.string(),
           }),
@@ -51,6 +108,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
           200: z.array(z.object({
             id: z.string(),
             title: z.string().nullable(),
+            projectPath: z.string().nullable(),
             workflowId: z.string(),
             workflowName: z.string(),
             workflowType: z.string(),
@@ -80,12 +138,12 @@ export async function conversationsRoutes(app: FastifyInstance) {
           200: z.object({
             id: z.string(),
             title: z.string().nullable(),
+            projectPath: z.string().nullable(),
             workflowId: z.string(),
             workflow: z.object({
               id: z.string(),
               name: z.string(),
               type: z.string(),
-              projectPath: z.string().nullable(),
               steps: z.array(z.object({
                 id: z.string(),
                 name: z.string(),

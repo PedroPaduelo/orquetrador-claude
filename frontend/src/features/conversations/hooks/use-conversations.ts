@@ -11,6 +11,13 @@ export function useConversations(workflowId?: string) {
   })
 }
 
+export function useFolders() {
+  return useQuery({
+    queryKey: ['folders'],
+    queryFn: () => conversationsApi.listFolders(),
+  })
+}
+
 export function useConversation(id: string | undefined) {
   return useQuery({
     queryKey: ['conversations', id, 'detail'],
@@ -28,6 +35,7 @@ export function useCreateConversation() {
     mutationFn: (input: CreateConversationInput) => conversationsApi.create(input),
     onSuccess: (conversation) => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['folders'] })
       toast.success('Conversa criada!')
       navigate(`/conversations/${conversation.id}`)
     },

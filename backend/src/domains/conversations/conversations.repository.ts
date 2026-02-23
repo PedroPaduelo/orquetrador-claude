@@ -21,6 +21,7 @@ export const conversationsRepository = {
     return conversations.map((c) => ({
       id: c.id,
       title: c.title,
+      projectPath: c.projectPath,
       workflowId: c.workflowId,
       workflowName: c.workflow.name,
       workflowType: c.workflow.type,
@@ -64,12 +65,12 @@ export const conversationsRepository = {
     return {
       id: conversation.id,
       title: conversation.title,
+      projectPath: conversation.projectPath,
       workflowId: conversation.workflowId,
       workflow: {
         id: conversation.workflow.id,
         name: conversation.workflow.name,
         type: conversation.workflow.type,
-        projectPath: conversation.workflow.projectPath,
         steps: steps.map((s) => ({ id: s.id, name: s.name, stepOrder: s.stepOrder })),
       },
       currentStepId: conversation.currentStepId,
@@ -102,7 +103,7 @@ export const conversationsRepository = {
     }
   },
 
-  async create(input: { workflowId: string; title?: string }) {
+  async create(input: { workflowId: string; title?: string; projectPath: string }) {
     const workflow = await prisma.workflow.findUnique({
       where: { id: input.workflowId },
       include: {
@@ -121,6 +122,7 @@ export const conversationsRepository = {
       data: {
         workflowId: input.workflowId,
         title: input.title ?? null,
+        projectPath: input.projectPath,
         currentStepId: firstStep?.id ?? null,
       },
     })
@@ -129,6 +131,7 @@ export const conversationsRepository = {
       id: conversation.id,
       workflowId: conversation.workflowId,
       title: conversation.title,
+      projectPath: conversation.projectPath,
       currentStepId: conversation.currentStepId,
       createdAt: conversation.createdAt.toISOString(),
     }

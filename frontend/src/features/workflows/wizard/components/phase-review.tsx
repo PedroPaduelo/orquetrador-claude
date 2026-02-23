@@ -1,4 +1,4 @@
-import { Pencil, Server, Sparkles, Bot, ScrollText, GitBranch, FolderOpen } from 'lucide-react'
+import { Pencil, Server, Sparkles, Bot, ScrollText, GitBranch } from 'lucide-react'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -59,12 +59,6 @@ export function PhaseReview({ onEditPhase }: PhaseReviewProps) {
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Server className="h-3.5 w-3.5" />
                     <span>{totalResources} recursos</span>
-                  </div>
-                )}
-                {basicInfo.projectPath && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <FolderOpen className="h-3.5 w-3.5" />
-                    <span className="truncate max-w-[200px]">{basicInfo.projectPath}</span>
                   </div>
                 )}
               </div>

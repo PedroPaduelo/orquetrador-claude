@@ -15,7 +15,6 @@ model Workflow {
   name        String
   description String?
   type        String       @default("sequential")
-  projectPath String?      @map("project_path")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @default(now()) @updatedAt @map("updated_at")
 
@@ -71,9 +70,10 @@ model WorkflowStep {
 // CONVERSATIONS
 // ============================================
 model Conversation {
-  id        String   @id @default(uuid())
-  title     String?
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  title       String?
+  projectPath String?  @map("project_path")
+  createdAt   DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   // Relations

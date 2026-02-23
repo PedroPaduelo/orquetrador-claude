@@ -58,7 +58,6 @@ export const workflowsRepository = {
       name: w.name,
       description: w.description,
       type: w.type,
-      projectPath: w.projectPath,
       stepsCount: w._count.steps,
       conversationsCount: w._count.conversations,
       createdAt: w.createdAt.toISOString(),
@@ -89,7 +88,6 @@ export const workflowsRepository = {
       name: workflow.name,
       description: workflow.description,
       type: workflow.type,
-      projectPath: workflow.projectPath,
       createdAt: workflow.createdAt.toISOString(),
       updatedAt: workflow.updatedAt.toISOString(),
       steps: workflow.steps.map(parseStep),
@@ -117,7 +115,6 @@ export const workflowsRepository = {
     name: string
     description?: string | null
     type?: string
-    projectPath?: string | null
     steps?: Array<{
       name: string
       baseUrl?: string
@@ -140,7 +137,6 @@ export const workflowsRepository = {
         name: input.name,
         description: input.description,
         type: input.type ?? 'sequential',
-        projectPath: input.projectPath,
         steps: input.steps
           ? {
               create: input.steps.map((step, index) => ({
@@ -178,7 +174,6 @@ export const workflowsRepository = {
       name: workflow.name,
       description: workflow.description,
       type: workflow.type,
-      projectPath: workflow.projectPath,
       createdAt: workflow.createdAt.toISOString(),
     }
   },
@@ -189,7 +184,6 @@ export const workflowsRepository = {
       name?: string
       description?: string | null
       type?: string
-      projectPath?: string | null
       steps?: Array<{
         id?: string
         name: string
@@ -213,7 +207,6 @@ export const workflowsRepository = {
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description
     if (input.type !== undefined) data.type = input.type
-    if (input.projectPath !== undefined) data.projectPath = input.projectPath
 
     if (input.steps !== undefined) {
       // Get all step IDs for this workflow to delete join tables
@@ -271,7 +264,6 @@ export const workflowsRepository = {
       name: workflow.name,
       description: workflow.description,
       type: workflow.type,
-      projectPath: workflow.projectPath,
       updatedAt: workflow.updatedAt.toISOString(),
     }
   },

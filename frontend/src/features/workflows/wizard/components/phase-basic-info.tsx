@@ -54,39 +54,27 @@ export function PhaseBasicInfo({ errors }: PhaseBasicInfoProps) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>Tipo</Label>
-            <Select
-              value={basicInfo.type}
-              onValueChange={(value) =>
-                setBasicInfo({ type: value as 'sequential' | 'step_by_step' })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sequential">Sequencial</SelectItem>
-                <SelectItem value="step_by_step">Passo a Passo</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground mt-1.5">
-              {basicInfo.type === 'sequential'
-                ? 'Todos os steps executam automaticamente em ordem'
-                : 'Voce controla quando avancar para o proximo step'}
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="wiz-projectPath">Caminho do Projeto</Label>
-            <Input
-              id="wiz-projectPath"
-              value={basicInfo.projectPath}
-              onChange={(e) => setBasicInfo({ projectPath: e.target.value })}
-              placeholder="/caminho/do/projeto"
-            />
-          </div>
+        <div>
+          <Label>Tipo</Label>
+          <Select
+            value={basicInfo.type}
+            onValueChange={(value) =>
+              setBasicInfo({ type: value as 'sequential' | 'step_by_step' })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sequential">Sequencial</SelectItem>
+              <SelectItem value="step_by_step">Passo a Passo</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground mt-1.5">
+            {basicInfo.type === 'sequential'
+              ? 'Todos os steps executam automaticamente em ordem'
+              : 'Voce controla quando avancar para o proximo step'}
+          </p>
         </div>
       </div>
     </div>

@@ -3,7 +3,6 @@ export interface Workflow {
   name: string
   description: string | null
   type: 'sequential' | 'step_by_step'
-  projectPath: string | null
   steps?: WorkflowStep[]
   stepsCount?: number
   conversationsCount?: number
@@ -45,6 +44,5 @@ export interface WorkflowInput {
   name: string
   description?: string
   type: 'sequential' | 'step_by_step'
-  projectPath?: string
   steps: Omit<WorkflowStep, 'id' | 'stepOrder'>[]
 }

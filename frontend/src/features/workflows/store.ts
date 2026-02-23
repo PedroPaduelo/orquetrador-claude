@@ -6,7 +6,6 @@ interface BasicInfo {
   name: string
   description: string
   type: 'sequential' | 'step_by_step'
-  projectPath: string
 }
 
 interface WorkflowsState {
@@ -62,7 +61,6 @@ const defaultBasicInfo: BasicInfo = {
   name: '',
   description: '',
   type: 'sequential',
-  projectPath: '',
 }
 
 export const useWorkflowsStore = create<WorkflowsState>((set, get) => ({
@@ -137,7 +135,6 @@ export const useWorkflowsStore = create<WorkflowsState>((set, get) => ({
         name: workflow.name || '',
         description: workflow.description || '',
         type: workflow.type || 'sequential',
-        projectPath: workflow.projectPath || '',
       },
       editingWorkflow: workflow,
       isLoadingEdit: true,
@@ -169,7 +166,6 @@ export const useWorkflowsStore = create<WorkflowsState>((set, get) => ({
           name: full.name || '',
           description: full.description || '',
           type: full.type || 'sequential',
-          projectPath: full.projectPath || '',
         },
       })
     } catch {

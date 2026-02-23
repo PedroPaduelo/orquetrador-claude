@@ -108,12 +108,12 @@ export default function ConversationDetailPage() {
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                   <span className="truncate">{conversation.workflow?.name || 'Workflow'}</span>
-                  {conversation.workflow?.projectPath && (
+                  {conversation.projectPath && (
                     <>
                       <span className="text-border">|</span>
                       <span className="flex items-center gap-1 truncate">
                         <FolderOpen className="h-3 w-3 shrink-0" />
-                        {conversation.workflow.projectPath}
+                        {conversation.projectPath}
                       </span>
                     </>
                   )}

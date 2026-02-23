@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, MessageSquare, LayoutGrid, Table2 } from 'lucide-react'
+import { Plus, MessageSquare, LayoutGrid, Table2, FolderOpen, FolderPlus, Check } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
+import { Badge } from '@/shared/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -19,6 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/components/ui/dialog'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/components/ui/tabs'
 import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import {
@@ -30,9 +32,12 @@ import {
 } from '@/shared/components/common/search-pagination'
 import { ConversationCard } from './components/conversation-card'
 import { ConversationTable } from './components/conversation-table'
-import { useConversations, useCreateConversation, useDeleteConversation } from './hooks/use-conversations'
+import { useConversations, useCreateConversation, useDeleteConversation, useFolders } from './hooks/use-conversations'
 import { useWorkflows } from '../workflows/hooks/use-workflows'
 import type { Conversation } from './types'
+
+const PROJECT_BASE_PATH = '/workspace/temp-orquestrador'
+const FOLDER_NAME_REGEX = /^[a-zA-Z0-9_-]+$/
 
 const searchFields: (keyof Conversation)[] = ['title', 'workflowName']
 
@@ -40,6 +45,7 @@ export default function ConversationsPage() {
   const navigate = useNavigate()
   const { data: conversations, isLoading } = useConversations()
   const { data: workflows } = useWorkflows()
+  const { data: folders } = useFolders()
   const createMutation = useCreateConversation()
   const deleteMutation = useDeleteConversation()
 
@@ -89,18 +95,36 @@ export default function ConversationsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedWorkflowId, setSelectedWorkflowId] = useState('')
   const [newTitle, setNewTitle] = useState('')
+  const [folderMode, setFolderMode] = useState<'select' | 'create'>('create')
+  const [selectedFolder, setSelectedFolder] = useState('')
+  const [newFolderName, setNewFolderName] = useState('')
+
+  const folderNameError = useMemo(() => {
+    if (folderMode !== 'create' || !newFolderName) return ''
+    if (!FOLDER_NAME_REGEX.test(newFolderName)) return 'Apenas letras, numeros, hifens e underscores'
+    if (folders?.some((f) => f.name === newFolderName)) return 'Pasta ja existe'
+    return ''
+  }, [folderMode, newFolderName, folders])
+
+  const folderName = folderMode === 'create' ? newFolderName.trim() : selectedFolder
+  const projectPath = folderName ? `${PROJECT_BASE_PATH}/${folderName}` : ''
+  const canCreate = selectedWorkflowId && folderName && !folderNameError && (folderMode === 'select' || (folderMode === 'create' && FOLDER_NAME_REGEX.test(newFolderName)))
 
   const handleCreate = async () => {
-    if (!selectedWorkflowId) return
+    if (!canCreate) return
 
     const result = await createMutation.mutateAsync({
       workflowId: selectedWorkflowId,
       title: newTitle || undefined,
+      projectPath,
     })
 
     setIsDialogOpen(false)
     setSelectedWorkflowId('')
     setNewTitle('')
+    setNewFolderName('')
+    setSelectedFolder('')
+    setFolderMode('create')
     navigate(`/conversations/${result.id}`)
   }
 
@@ -151,12 +175,81 @@ export default function ConversationsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Título (opcional)</Label>
+                <Label>Titulo (opcional)</Label>
                 <Input
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Ex: Análise do projeto X"
+                  placeholder="Ex: Analise do projeto X"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Pasta do Projeto</Label>
+                <Tabs value={folderMode} onValueChange={(v) => setFolderMode(v as 'select' | 'create')}>
+                  <TabsList className="w-full">
+                    <TabsTrigger value="create" className="flex-1 gap-1.5">
+                      <FolderPlus className="h-3.5 w-3.5" />
+                      Criar nova
+                    </TabsTrigger>
+                    <TabsTrigger value="select" className="flex-1 gap-1.5">
+                      <FolderOpen className="h-3.5 w-3.5" />
+                      Selecionar existente
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="create" className="space-y-2">
+                    <Input
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      placeholder="nome-do-projeto"
+                    />
+                    {folderNameError && (
+                      <p className="text-xs text-destructive">{folderNameError}</p>
+                    )}
+                    {newFolderName && !folderNameError && (
+                      <p className="text-xs text-muted-foreground">
+                        {PROJECT_BASE_PATH}/{newFolderName}
+                      </p>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="select">
+                    {folders && folders.length > 0 ? (
+                      <div className="max-h-[200px] overflow-y-auto border rounded-lg divide-y">
+                        {folders.map((folder) => (
+                          <button
+                            key={folder.path}
+                            type="button"
+                            className={`w-full flex items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors ${
+                              selectedFolder === folder.name
+                                ? 'bg-primary/5 border-l-2 border-l-primary'
+                                : ''
+                            }`}
+                            onClick={() => setSelectedFolder(folder.name)}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              {selectedFolder === folder.name ? (
+                                <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                              ) : (
+                                <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              )}
+                              <span className="truncate">{folder.name}</span>
+                            </div>
+                            {folder.conversationsCount > 0 && (
+                              <Badge variant="secondary" className="text-[10px] ml-2 shrink-0">
+                                {folder.conversationsCount}
+                              </Badge>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhuma pasta existente. Crie uma nova.
+                      </p>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
 
@@ -166,7 +259,7 @@ export default function ConversationsPage() {
               </Button>
               <Button
                 onClick={handleCreate}
-                disabled={!selectedWorkflowId || createMutation.isPending}
+                disabled={!canCreate || createMutation.isPending}
               >
                 {createMutation.isPending ? 'Criando...' : 'Criar'}
               </Button>

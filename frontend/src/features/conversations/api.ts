@@ -1,7 +1,12 @@
 import { apiClient } from '@/shared/lib/api-client'
-import type { Conversation, CreateConversationInput } from './types'
+import type { Conversation, CreateConversationInput, ProjectFolder } from './types'
 
 export const conversationsApi = {
+  listFolders: async (): Promise<ProjectFolder[]> => {
+    const { data } = await apiClient.get('/folders')
+    return data
+  },
+
   list: async (workflowId?: string): Promise<Conversation[]> => {
     const params = workflowId ? { workflowId } : {}
     const { data } = await apiClient.get('/conversations', { params })
