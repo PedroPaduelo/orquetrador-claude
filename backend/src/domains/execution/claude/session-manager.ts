@@ -1,5 +1,18 @@
 import { prisma } from '../../../lib/prisma.js'
 
+/**
+ * Verifica se um step existe no banco. Usado para evitar erros de FK
+ * quando um workflow e editado durante uma execucao.
+ */
+async function stepExists(stepId: string): Promise<boolean> {
+  try {
+    const count = await prisma.workflowStep.count({ where: { id: stepId } })
+    return count > 0
+  } catch {
+    return false
+  }
+}
+
 export class SessionManager {
   async getSession(conversationId: string, stepId: string): Promise<string | null> {
     const session = await prisma.conversationSession.findUnique({
@@ -15,6 +28,14 @@ export class SessionManager {
   }
 
   async saveSession(conversationId: string, stepId: string, claudeSessionId: string): Promise<void> {
+    // Verifica se o step ainda existe antes de tentar salvar
+    // Isso evita erros de FK quando o workflow e editado durante execucao
+    const stepValid = await stepExists(stepId)
+    if (!stepValid) {
+      console.warn(`[SessionManager] Step ${stepId} nao existe mais, ignorando saveSession`)
+      return
+    }
+
     await prisma.conversationSession.upsert({
       where: {
         conversationId_stepId: {
