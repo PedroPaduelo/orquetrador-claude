@@ -307,6 +307,129 @@ export async function executionRoutes(app: FastifyInstance) {
     }
   )
 
+  // GET /conversations/:id/traces - list execution traces for a conversation
+  server.get(
+    '/conversations/:id/traces',
+    {
+      schema: {
+        tags: ['Messages'],
+        summary: 'List execution traces for a conversation',
+        params: z.object({
+          id: z.string(),
+        }),
+        response: {
+          200: z.array(
+            z.object({
+              id: z.string(),
+              executionId: z.string(),
+              stepId: z.string(),
+              resultStatus: z.string(),
+              durationMs: z.number().nullable(),
+              contentLength: z.number(),
+              actionsCount: z.number(),
+              errorMessage: z.string().nullable(),
+              createdAt: z.string(),
+            })
+          ),
+        },
+      },
+    },
+    async (request) => {
+      const { id } = request.params
+
+      const conversation = await prisma.conversation.findUnique({ where: { id } })
+      if (!conversation) {
+        throw new NotFoundError('Conversation not found')
+      }
+
+      const traces = await prisma.executionTrace.findMany({
+        where: { conversationId: id },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          executionId: true,
+          stepId: true,
+          resultStatus: true,
+          durationMs: true,
+          contentLength: true,
+          actionsCount: true,
+          errorMessage: true,
+          createdAt: true,
+        },
+      })
+
+      return traces.map(t => ({
+        ...t,
+        createdAt: t.createdAt.toISOString(),
+      }))
+    }
+  )
+
+  // GET /traces/:traceId - get full trace detail
+  server.get(
+    '/traces/:traceId',
+    {
+      schema: {
+        tags: ['Messages'],
+        summary: 'Get execution trace detail',
+        params: z.object({
+          traceId: z.string(),
+        }),
+        response: {
+          200: z.object({
+            id: z.string(),
+            executionId: z.string(),
+            conversationId: z.string(),
+            stepId: z.string(),
+            commandLine: z.string(),
+            messageLength: z.number(),
+            systemPrompt: z.string().nullable(),
+            resumeToken: z.string().nullable(),
+            model: z.string().nullable(),
+            projectPath: z.string(),
+            pid: z.number().nullable(),
+            stdoutRaw: z.string(),
+            stderrRaw: z.string(),
+            parsedEvents: z.string(),
+            startedAt: z.string(),
+            firstByteAt: z.string().nullable(),
+            firstContentAt: z.string().nullable(),
+            completedAt: z.string().nullable(),
+            durationMs: z.number().nullable(),
+            exitCode: z.number().nullable(),
+            signal: z.string().nullable(),
+            resultStatus: z.string(),
+            errorMessage: z.string().nullable(),
+            contentLength: z.number(),
+            actionsCount: z.number(),
+            resumeTokenOut: z.string().nullable(),
+            createdAt: z.string(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const { traceId } = request.params
+
+      const trace = await prisma.executionTrace.findUnique({
+        where: { id: traceId },
+      })
+
+      if (!trace) {
+        throw new NotFoundError('Trace not found')
+      }
+
+      return {
+        ...trace,
+        startedAt: trace.startedAt.toISOString(),
+        firstByteAt: trace.firstByteAt?.toISOString() ?? null,
+        firstContentAt: trace.firstContentAt?.toISOString() ?? null,
+        completedAt: trace.completedAt?.toISOString() ?? null,
+        createdAt: trace.createdAt.toISOString(),
+      }
+    }
+  )
+
   // DELETE /messages/:id - delete message
   server.delete(
     '/messages/:id',

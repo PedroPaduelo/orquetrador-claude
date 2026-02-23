@@ -1,11 +1,12 @@
 import { prisma } from '../../../lib/prisma.js'
-import { claudeService } from '../claude/claude-service.js'
-import { sessionManager } from '../claude/session-manager.js'
+import { defaultEngine, type CliEngine } from '../engine/index.js'
+import { sessionManager } from '../session/session-manager.js'
 import { conditionsEvaluator, type StepConditions } from './conditions-evaluator.js'
 import { executionStateManager } from './execution-state.js'
 import { orchestratorEvents } from './events.js'
 import { smartNotesService } from '../../smart-notes/context-builder.js'
 import { fileSyncService } from '../file-sync/file-sync-service.js'
+import { ExecutionMonitor } from '../monitoring/execution-monitor.js'
 import type { WorkflowStep } from '@prisma/client'
 
 export interface MessageAttachment {
@@ -28,26 +29,123 @@ export interface ExecutionContext {
 
 export class TaskOrchestrator {
   private activeExecutions = new Map<string, boolean>()
+  private engine: CliEngine
+
+  constructor(engine?: CliEngine) {
+    this.engine = engine || defaultEngine
+  }
+
+  private async executeStep(
+    executionId: string,
+    conversationId: string,
+    step: WorkflowStep,
+    input: string,
+    projectPath: string,
+    attachments?: MessageAttachment[],
+  ) {
+    // Get session (resume token) for this step
+    const resumeToken = await sessionManager.getSession(conversationId, step.id)
+
+    // Get context messages only on cold start
+    const contextMessages = !resumeToken
+      ? await sessionManager.getSelectedContext(conversationId)
+      : []
+
+    // Create monitor for this execution
+    const monitor = new ExecutionMonitor(executionId, conversationId, step.id)
+    monitor.setInputMetadata({
+      messageLength: input.length,
+      systemPrompt: await smartNotesService.buildSystemPrompt(step),
+      resumeToken,
+      model: step.model || null,
+      projectPath,
+    })
+
+    const systemPrompt = await smartNotesService.buildSystemPrompt(step)
+
+    // Sync files (skills, agents, .mcp.json) for this step
+    if (projectPath) {
+      await fileSyncService.syncForStep(projectPath, step.id)
+    }
+
+    const result = await this.engine.execute({
+      conversationId,
+      stepId: step.id,
+      message: input,
+      systemPrompt,
+      apiBaseUrl: step.baseUrl,
+      projectPath,
+      model: step.model || undefined,
+      attachments,
+      resumeToken,
+      contextMessages,
+      onEvent: (event) => {
+        monitor.onParsedEvent(event)
+        if (event.type === 'content' && event.content) {
+          orchestratorEvents.emitStepStream({
+            executionId,
+            conversationId,
+            stepId: step.id,
+            type: 'content',
+            content: event.content,
+          })
+        } else if (event.type === 'action' && event.action) {
+          orchestratorEvents.emitStepStream({
+            executionId,
+            conversationId,
+            stepId: step.id,
+            type: 'action',
+            action: event.action,
+          })
+        }
+      },
+      onRawStdout: (chunk) => monitor.onStdout(chunk),
+      onRawStderr: (chunk) => monitor.onStderr(chunk),
+    })
+
+    // Save session if we got a new one
+    if (result.resumeToken) {
+      await sessionManager.saveSession(conversationId, step.id, result.resumeToken)
+    }
+
+    // Determine status for monitoring
+    let resultStatus = 'success'
+    if (result.error) resultStatus = 'error'
+    else if (result.timedOut) resultStatus = 'timeout'
+    else if (result.cancelled) resultStatus = 'cancelled'
+    else if (result.needsUserInput) resultStatus = 'needs_input'
+
+    // Flush trace (fire-and-forget)
+    monitor.flush({
+      exitCode: result.exitCode,
+      signal: result.signal,
+      resultStatus,
+      errorMessage: result.error,
+      contentLength: result.content.length,
+      actionsCount: result.actions.length,
+      resumeTokenOut: result.resumeToken,
+    })
+
+    return result
+  }
 
   async executeSequential(context: ExecutionContext, userInput: string): Promise<void> {
     const { conversationId, steps, projectPath, attachments } = context
 
-    // Check if already executing
     if (this.activeExecutions.get(conversationId)) {
       throw new Error('Execution already in progress for this conversation')
     }
 
     this.activeExecutions.set(conversationId, true)
 
-    // Create execution state
-    const executionState = await executionStateManager.create(conversationId)
+    const startIndex = 0
+    const executionState = await executionStateManager.create(conversationId, startIndex)
     const executionId = executionState.id
 
-    // Save user message with attachments
     const userMessage = await prisma.message.create({
       data: {
         conversationId,
-        stepId: steps[0]?.id,
+        stepId: steps[startIndex]?.id,
         role: 'user',
         content: userInput,
         ...(attachments && attachments.length > 0 ? {
@@ -82,7 +180,6 @@ export class TaskOrchestrator {
     try {
       let i = 0
       while (i < steps.length) {
-        // Check if cancelled
         if (!this.activeExecutions.get(conversationId)) {
           orchestratorEvents.emitExecutionCancelled({ executionId, conversationId })
           await executionStateManager.markCancelled(executionId)
@@ -91,10 +188,8 @@ export class TaskOrchestrator {
 
         const step = steps[i]
 
-        // Update execution state
         await executionStateManager.updateStepIndex(executionId, i)
 
-        // Log step start
         await executionStateManager.logEvent(
           executionId,
           conversationId,
@@ -104,7 +199,6 @@ export class TaskOrchestrator {
           step.name
         )
 
-        // Emit step start event
         orchestratorEvents.emitStepStart({
           executionId,
           conversationId,
@@ -114,47 +208,15 @@ export class TaskOrchestrator {
           totalSteps: steps.length,
         })
 
-        // Build system prompt with Smart Notes
-        const systemPrompt = await smartNotesService.buildSystemPrompt(step)
-
-        // Sync files (skills, agents, .mcp.json) for this step
-        if (projectPath) {
-          await fileSyncService.syncForStep(projectPath, step.id)
-        }
-
-        // Execute Claude
-        const result = await claudeService.execute({
+        const result = await this.executeStep(
+          executionId,
           conversationId,
-          stepId: step.id,
-          message: currentInput,
-          systemPrompt,
-          baseUrl: step.baseUrl,
+          step,
+          currentInput,
           projectPath,
-          backend: step.backend || 'claude',
-          model: step.model || undefined,
-          attachments: i === 0 ? attachments : undefined, // Only pass attachments on first step
-          onEvent: (event) => {
-            if (event.type === 'content' && event.content) {
-              orchestratorEvents.emitStepStream({
-                executionId,
-                conversationId,
-                stepId: step.id,
-                type: 'content',
-                content: event.content,
-              })
-            } else if (event.type === 'action' && event.action) {
-              orchestratorEvents.emitStepStream({
-                executionId,
-                conversationId,
-                stepId: step.id,
-                type: 'action',
-                action: event.action,
-              })
-            }
-          },
-        })
+          i === 0 ? attachments : undefined,
+        )
 
-        // Check if cancelled during execution
         if (result.cancelled || !this.activeExecutions.get(conversationId)) {
           orchestratorEvents.emitExecutionCancelled({ executionId, conversationId })
           await executionStateManager.markCancelled(executionId)
@@ -162,7 +224,6 @@ export class TaskOrchestrator {
           return
         }
 
-        // Handle errors
         if (result.error) {
           orchestratorEvents.emitStepError({
             executionId,
@@ -177,7 +238,6 @@ export class TaskOrchestrator {
           return
         }
 
-        // Save assistant message
         const assistantMessage = await prisma.message.create({
           data: {
             conversationId,
@@ -186,7 +246,7 @@ export class TaskOrchestrator {
             content: result.content,
             metadata: JSON.stringify({
               actions: result.actions,
-              sessionId: result.sessionId,
+              sessionId: result.resumeToken,
               stepName: step.name,
               stepOrder: i + 1,
             }),
@@ -200,10 +260,9 @@ export class TaskOrchestrator {
           role: 'assistant',
           content: result.content,
           stepId: step.id,
-          metadata: { sessionId: result.sessionId },
+          metadata: { sessionId: result.resumeToken },
         })
 
-        // Evaluate conditions
         let conditionsData: unknown = step.conditions
         if (typeof step.conditions === 'string') {
           try { conditionsData = JSON.parse(step.conditions) } catch { conditionsData = null }
@@ -211,20 +270,17 @@ export class TaskOrchestrator {
         const conditions = (conditionsData || { rules: [], default: 'continue' }) as unknown as StepConditions
         const conditionResult = conditionsEvaluator.evaluate(result.content, conditions)
 
-        // Resolve next step
         const nextStep = conditionsEvaluator.resolveNextStep(
           conditionResult.action,
           steps.map((s) => ({ id: s.id, name: s.name })),
           i
         )
 
-        // Handle retry
         if (nextStep.isRetry) {
           const currentRetry = (retryCounts[step.id] || 0) + 1
           const maxRetries = conditionResult.rule?.maxRetries || step.maxRetries || 3
 
           if (currentRetry >= maxRetries) {
-            // Max retries reached, move to next
             orchestratorEvents.emitStepComplete({
               executionId,
               conversationId,
@@ -232,7 +288,7 @@ export class TaskOrchestrator {
               stepName: step.name,
               stepOrder: i + 1,
               content: result.content,
-              sessionId: result.sessionId || undefined,
+              sessionId: result.resumeToken || undefined,
               finished: false,
             })
 
@@ -240,7 +296,6 @@ export class TaskOrchestrator {
             i++
             currentInput = result.content
           } else {
-            // Retry
             retryCounts[step.id] = currentRetry
             await executionStateManager.updateRetryCounts(executionId, retryCounts)
 
@@ -260,10 +315,8 @@ export class TaskOrchestrator {
             })
 
             currentInput = retryMessage
-            // i stays the same for retry
           }
         } else if (nextStep.isFinished) {
-          // Workflow finished
           orchestratorEvents.emitStepComplete({
             executionId,
             conversationId,
@@ -271,12 +324,11 @@ export class TaskOrchestrator {
             stepName: step.name,
             stepOrder: i + 1,
             content: result.content,
-            sessionId: result.sessionId || undefined,
+            sessionId: result.resumeToken || undefined,
             finished: true,
           })
           break
         } else {
-          // Move to next/jump step
           orchestratorEvents.emitStepComplete({
             executionId,
             conversationId,
@@ -284,18 +336,16 @@ export class TaskOrchestrator {
             stepName: step.name,
             stepOrder: i + 1,
             content: result.content,
-            sessionId: result.sessionId || undefined,
+            sessionId: result.resumeToken || undefined,
             finished: nextStep.nextIndex >= steps.length,
           })
 
           if (nextStep.nextIndex < i && conditionResult.matched && conditionResult.rule) {
-            // BACKWARD JUMP — apply retry counting to prevent infinite loops
             const jumpKey = `jump_${step.id}_to_${nextStep.nextIndex}`
             const currentRetry = (retryCounts[jumpKey] || 0) + 1
             const maxRetries = conditionResult.rule.maxRetries || 3
 
             if (currentRetry >= maxRetries) {
-              // Max loop-backs reached, force advance
               delete retryCounts[jumpKey]
               i = i + 1
               currentInput = result.content
@@ -321,7 +371,6 @@ export class TaskOrchestrator {
               currentInput = retryMessage
             }
           } else {
-            // Forward jump or simple next — clear retry counts for this step
             const keysToDelete = Object.keys(retryCounts).filter(k => k.startsWith(`jump_${step.id}`))
             keysToDelete.forEach(k => delete retryCounts[k])
 
@@ -341,7 +390,6 @@ export class TaskOrchestrator {
         }
       }
 
-      // Mark as completed
       await executionStateManager.markCompleted(executionId)
       orchestratorEvents.emitExecutionComplete({
         executionId,
@@ -370,11 +418,19 @@ export class TaskOrchestrator {
 
     const step = steps[stepIndex]
 
-    // Create execution state
-    const executionState = await executionStateManager.create(conversationId)
+    const executionState = await executionStateManager.create(conversationId, stepIndex)
     const executionId = executionState.id
 
-    // Save user message with attachments
+    // Log step start
+    await executionStateManager.logEvent(
+      executionId,
+      conversationId,
+      'step_start',
+      { stepOrder: stepIndex + 1, totalSteps: steps.length },
+      step.id,
+      step.name
+    )
+
     const userMessage = await prisma.message.create({
       data: {
         conversationId,
@@ -407,7 +463,6 @@ export class TaskOrchestrator {
       attachments: userMessage.attachments,
     })
 
-    // Emit step start
     orchestratorEvents.emitStepStart({
       executionId,
       conversationId,
@@ -418,48 +473,24 @@ export class TaskOrchestrator {
     })
 
     try {
-      // Build system prompt
-      const systemPrompt = await smartNotesService.buildSystemPrompt(step)
-
-      // Sync files (skills, agents, .mcp.json) for this step
-      if (projectPath) {
-        await fileSyncService.syncForStep(projectPath, step.id)
-      }
-
-      // Execute Claude
-      const result = await claudeService.execute({
+      const result = await this.executeStep(
+        executionId,
         conversationId,
-        stepId: step.id,
-        message: userInput,
-        systemPrompt,
-        baseUrl: step.baseUrl,
+        step,
+        userInput,
         projectPath,
-        backend: step.backend || 'claude',
-        model: step.model || undefined,
         attachments,
-        onEvent: (event) => {
-          if (event.type === 'content' && event.content) {
-            orchestratorEvents.emitStepStream({
-              executionId,
-              conversationId,
-              stepId: step.id,
-              type: 'content',
-              content: event.content,
-            })
-          } else if (event.type === 'action' && event.action) {
-            orchestratorEvents.emitStepStream({
-              executionId,
-              conversationId,
-              stepId: step.id,
-              type: 'action',
-              action: event.action,
-            })
-          }
-        },
-      })
+      )
 
-      // Handle errors (but NOT needsUserInput - that's normal flow)
       if (result.error) {
+        await executionStateManager.logEvent(
+          executionId,
+          conversationId,
+          'step_error',
+          { error: result.error, stepOrder: stepIndex + 1 },
+          step.id,
+          step.name
+        )
         orchestratorEvents.emitStepError({
           executionId,
           conversationId,
@@ -471,7 +502,6 @@ export class TaskOrchestrator {
         return
       }
 
-      // Save assistant message (even if partial due to user input needed)
       if (result.content) {
         const assistantMessage = await prisma.message.create({
           data: {
@@ -481,7 +511,7 @@ export class TaskOrchestrator {
             content: result.content,
             metadata: JSON.stringify({
               actions: result.actions,
-              sessionId: result.sessionId,
+              sessionId: result.resumeToken,
               stepName: step.name,
               stepOrder: stepIndex + 1,
               needsUserInput: result.needsUserInput,
@@ -496,14 +526,24 @@ export class TaskOrchestrator {
           role: 'assistant',
           content: result.content,
           stepId: step.id,
-          metadata: { sessionId: result.sessionId, needsUserInput: result.needsUserInput },
+          metadata: { sessionId: result.resumeToken, needsUserInput: result.needsUserInput },
         })
       }
 
-      // Do NOT auto-advance currentStepId - the user controls step advancement
-      // via the advance-step endpoint. Each step is an open chat session.
+      await executionStateManager.logEvent(
+        executionId,
+        conversationId,
+        'step_complete',
+        {
+          stepOrder: stepIndex + 1,
+          contentLength: result.content.length,
+          actionsCount: result.actions.length,
+          needsUserInput: result.needsUserInput,
+        },
+        step.id,
+        step.name
+      )
 
-      // Emit step complete (this message round-trip is done, but the step stays active)
       orchestratorEvents.emitStepComplete({
         executionId,
         conversationId,
@@ -511,8 +551,8 @@ export class TaskOrchestrator {
         stepName: step.name,
         stepOrder: stepIndex + 1,
         content: result.content,
-        sessionId: result.sessionId || undefined,
-        finished: false, // step_by_step: never auto-finish, user controls advancement
+        sessionId: result.resumeToken || undefined,
+        finished: false,
         needsUserInput: result.needsUserInput,
       })
 
@@ -531,9 +571,8 @@ export class TaskOrchestrator {
 
   cancel(conversationId: string): boolean {
     this.activeExecutions.delete(conversationId)
-    const killed = claudeService.cancel(conversationId)
+    const killed = this.engine.cancel(conversationId)
 
-    // Clear saved sessions so next execution starts fresh (cancelled sessions are corrupt)
     sessionManager.deleteAllSessions(conversationId).catch(() => {})
 
     return killed
@@ -543,7 +582,6 @@ export class TaskOrchestrator {
     return this.activeExecutions.get(conversationId) === true
   }
 
-  // Event subscription helpers
   on(event: string, handler: (...args: unknown[]) => void) {
     orchestratorEvents.on(event, handler)
   }

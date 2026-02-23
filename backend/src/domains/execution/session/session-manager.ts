@@ -1,9 +1,5 @@
 import { prisma } from '../../../lib/prisma.js'
 
-/**
- * Verifica se um step existe no banco. Usado para evitar erros de FK
- * quando um workflow e editado durante uma execucao.
- */
 async function stepExists(stepId: string): Promise<boolean> {
   try {
     const count = await prisma.workflowStep.count({ where: { id: stepId } })
@@ -28,8 +24,6 @@ export class SessionManager {
   }
 
   async saveSession(conversationId: string, stepId: string, claudeSessionId: string): Promise<void> {
-    // Verifica se o step ainda existe antes de tentar salvar
-    // Isso evita erros de FK quando o workflow e editado durante execucao
     const stepValid = await stepExists(stepId)
     if (!stepValid) {
       console.warn(`[SessionManager] Step ${stepId} nao existe mais, ignorando saveSession`)
@@ -69,11 +63,6 @@ export class SessionManager {
     })
   }
 
-  /**
-   * Get context messages that the USER explicitly selected via selectedForContext toggle.
-   * Used only on cold start of a new step (no existing session to resume).
-   * Returns exactly what the user chose — no truncation, no limits.
-   */
   async getSelectedContext(conversationId: string): Promise<Array<{ role: string; content: string }>> {
     const messages = await prisma.message.findMany({
       where: {

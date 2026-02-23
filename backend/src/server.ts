@@ -15,6 +15,7 @@ import { join } from 'path'
 import { env } from './lib/env.js'
 import { errorHandler } from './http/error-handler.js'
 import { domainRoutes } from './domains/index.js'
+import { startTraceCleanup } from './domains/execution/monitoring/trace-cleanup.js'
 
 const app = Fastify({
   logger: {
@@ -112,6 +113,8 @@ async function start() {
       host: env.HOST,
       port: env.PORT,
     })
+
+    startTraceCleanup()
 
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗

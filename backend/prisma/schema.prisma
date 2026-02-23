@@ -87,6 +87,7 @@ model Conversation {
   sessions        ConversationSession[]
   executionStates ExecutionState[]
   executionLogs   ExecutionLog[]
+  executionTraces ExecutionTrace[]
 
   @@index([workflowId])
   @@map("conversations")
@@ -354,6 +355,58 @@ model Plugin {
   @@map("plugins")
 }
 
+
+// ============================================
+// EXECUTION TRACES (Monitoring)
+// ============================================
+model ExecutionTrace {
+  id             String    @id @default(uuid())
+  executionId    String    @map("execution_id")
+  conversationId String    @map("conversation_id")
+  stepId         String    @map("step_id")
+
+  // Input
+  commandLine    String    @map("command_line")
+  envSnapshot    String    @default("{}") @map("env_snapshot")
+  messageLength  Int       @map("message_length")
+  systemPrompt   String?   @map("system_prompt_preview")
+  resumeToken    String?   @map("resume_token")
+  model          String?
+  projectPath    String    @map("project_path")
+  pid            Int?
+
+  // Raw I/O
+  stdoutRaw      String    @default("") @map("stdout_raw")
+  stderrRaw      String    @default("") @map("stderr_raw")
+
+  // Timeline
+  parsedEvents   String    @default("[]") @map("parsed_events")
+
+  // Timing
+  startedAt      DateTime  @map("started_at")
+  firstByteAt    DateTime? @map("first_byte_at")
+  firstContentAt DateTime? @map("first_content_at")
+  completedAt    DateTime? @map("completed_at")
+  durationMs     Int?      @map("duration_ms")
+
+  // Result
+  exitCode       Int?      @map("exit_code")
+  signal         String?
+  resultStatus   String    @map("result_status")
+  errorMessage   String?   @map("error_message")
+  contentLength  Int       @default(0) @map("content_length")
+  actionsCount   Int       @default(0) @map("actions_count")
+  resumeTokenOut String?   @map("resume_token_out")
+
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([executionId])
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("execution_traces")
+}
 
 // ============================================
 // JOIN TABLES

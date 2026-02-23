@@ -25,9 +25,8 @@ export class StreamParser {
     this.buffer += chunk
     const events: StreamEvent[] = []
 
-    // Split by newlines and process each complete line
     const lines = this.buffer.split('\n')
-    this.buffer = lines.pop() || '' // Keep incomplete last line in buffer
+    this.buffer = lines.pop() || ''
 
     for (const line of lines) {
       const trimmedLine = line.trim()
@@ -38,7 +37,6 @@ export class StreamParser {
         const parsedEvents = this.parseJsonEvent(data)
         events.push(...parsedEvents)
       } catch {
-        // Not valid JSON - might be raw text output
         if (trimmedLine) {
           events.push({ type: 'content', content: trimmedLine })
         }
@@ -56,10 +54,6 @@ export class StreamParser {
     const obj = data as Record<string, unknown>
     const type = obj.type as string
 
-    // Log every JSON event type for debugging
-    console.log(`[StreamParser] Event type: ${type}${obj.subtype ? '/' + obj.subtype : ''} keys: ${Object.keys(obj).join(',')}`)
-
-    // ---- system events (init, compact_boundary) ----
     if (type === 'system') {
       if (obj.session_id) {
         events.push({
@@ -70,7 +64,6 @@ export class StreamParser {
       return events
     }
 
-    // ---- result event (terminal event with metrics) ----
     if (type === 'result') {
       if (obj.session_id) {
         events.push({
@@ -79,7 +72,6 @@ export class StreamParser {
         })
       }
 
-      // Check for error in result
       if (obj.subtype === 'error_during_execution' ||
           obj.subtype === 'error_max_turns' ||
           obj.subtype === 'error_max_budget_usd' ||
@@ -101,7 +93,6 @@ export class StreamParser {
       return events
     }
 
-    // ---- assistant message (text + tool_use + thinking blocks) ----
     if (type === 'assistant' && obj.message) {
       const message = obj.message as Record<string, unknown>
       const contentBlocks = message.content as Array<Record<string, unknown>>
@@ -142,7 +133,6 @@ export class StreamParser {
       return events
     }
 
-    // ---- user message (tool results) ----
     if (type === 'user' && obj.message) {
       const message = obj.message as Record<string, unknown>
       const contentBlocks = message.content as Array<Record<string, unknown>>
@@ -165,11 +155,9 @@ export class StreamParser {
       return events
     }
 
-    // ---- stream_event (token-level streaming with --include-partial-messages) ----
     if (type === 'stream_event' && obj.event) {
       const event = obj.event as Record<string, unknown>
 
-      // content_block_delta - incremental text/tool_input/thinking
       if (event.type === 'content_block_delta' && event.delta) {
         const delta = event.delta as Record<string, unknown>
         if (delta.type === 'text_delta' && delta.text) {
@@ -188,7 +176,6 @@ export class StreamParser {
         }
       }
 
-      // content_block_start - beginning of a tool_use block
       if (event.type === 'content_block_start') {
         const contentBlock = event.content_block as Record<string, unknown> | undefined
         if (contentBlock?.type === 'tool_use') {
@@ -203,7 +190,6 @@ export class StreamParser {
       return events
     }
 
-    // ---- content_block_delta (direct, not wrapped in stream_event) ----
     if (type === 'content_block_delta' && obj.delta) {
       const delta = obj.delta as Record<string, unknown>
       if (delta.type === 'text_delta' && delta.text) {
@@ -215,13 +201,9 @@ export class StreamParser {
       return events
     }
 
-    // ---- progress events (hook progress, etc.) - ignore silently ----
     if (type === 'progress') {
       return events
     }
-
-    // Unknown event type - log but don't treat as error
-    console.log(`[StreamParser] Unhandled event type: ${type}, keys: ${Object.keys(obj).join(',')}`)
 
     return events
   }

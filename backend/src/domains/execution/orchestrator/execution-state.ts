@@ -12,7 +12,7 @@ export interface ExecutionStateData {
 }
 
 export class ExecutionStateManager {
-  async create(conversationId: string): Promise<ExecutionStateData> {
+  async create(conversationId: string, stepIndex = 0): Promise<ExecutionStateData> {
     const id = `exec_${conversationId}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
 
     const state = await prisma.executionState.create({
@@ -20,7 +20,7 @@ export class ExecutionStateManager {
         id,
         conversationId,
         state: 'running',
-        currentStepIndex: 0,
+        currentStepIndex: stepIndex,
         retryCounts: JSON.stringify({}),
         metadata: JSON.stringify({
           startedAt: new Date().toISOString(),
