@@ -250,9 +250,8 @@ export class ClaudeService {
       env.HOME = `/home/${SANDBOX_USER}`
     }
 
-    // Validate and resolve projectPath
-    const resolvedCwd = projectPath || process.cwd()
-    if (projectPath && !existsSync(projectPath)) {
+    // Validate projectPath — MUST be provided, no fallback to process.cwd()
+    if (!projectPath) {
       return {
         content: '',
         sessionId: null,
@@ -260,9 +259,21 @@ export class ClaudeService {
         timedOut: false,
         cancelled: false,
         needsUserInput: false,
-        error: `O diretorio do projeto nao existe: ${projectPath}. Verifique o projectPath do workflow.`,
+        error: 'projectPath nao foi fornecido. A conversa precisa ter um projectPath configurado.',
       }
     }
+    if (!existsSync(projectPath)) {
+      return {
+        content: '',
+        sessionId: null,
+        actions: [],
+        timedOut: false,
+        cancelled: false,
+        needsUserInput: false,
+        error: `O diretorio do projeto nao existe: ${projectPath}. Verifique o projectPath da conversa.`,
+      }
+    }
+    const resolvedCwd = projectPath
 
     // Resolve the claude binary path to an absolute path
     // This is critical for sandbox mode because sudo resets PATH
