@@ -23,12 +23,8 @@
       }
     },
     "execut": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["/workspace/orquetrador-claude/mcp-server/dist/server.js"],
-      "env": {
-        "EXECUT_API_URL": "http://localhost:3333"
-      }
+      "type": "http",
+      "url": "http://localhost:3334/mcp"
     }
   }
 }

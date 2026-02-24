@@ -7,7 +7,6 @@ import { registerMcpServerTools } from './mcp-servers.js'
 import { registerPluginTools } from './plugins.js'
 import { registerConversationTools } from './conversations.js'
 import { registerExecutionTraceTools } from './execution-traces.js'
-import { registerSmartNoteTools } from './smart-notes.js'
 import { registerSystemTools } from './system.js'
 
 export function registerAllTools(server: McpServer) {
@@ -20,5 +19,4 @@ export function registerAllTools(server: McpServer) {
   registerPluginTools(server)
   registerConversationTools(server)
   registerExecutionTraceTools(server)
-  registerSmartNoteTools(server)
 }
