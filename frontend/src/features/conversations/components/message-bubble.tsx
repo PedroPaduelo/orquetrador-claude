@@ -1,5 +1,5 @@
 import { User, Bot, ChevronDown, ChevronRight, Terminal, Brain, AlertTriangle, FileCode, Copy, Check } from 'lucide-react'
-import { useState, memo, useCallback, useMemo } from 'react'
+import { useState, memo, useCallback, useMemo, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/shared/lib/utils'
@@ -63,6 +63,14 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
   const actions = (message.metadata?.actions || []) as Action[]
 
   const { questions, otherActions } = extractUserQuestions(actions)
+
+  const actionsListRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (actionsOpen && actionsListRef.current) {
+      actionsListRef.current.scrollTop = actionsListRef.current.scrollHeight
+    }
+  }, [actionsOpen, otherActions.length])
 
   // Count action types for summary
   const actionSummary = useMemo(() => {
@@ -255,7 +263,7 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="mt-1.5 ml-1 border-l-2 border-border/40 pl-3 space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
+              <div ref={actionsListRef} className="mt-1.5 ml-1 border-l-2 border-border/40 pl-3 space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
                 {otherActions.map((action, i) => (
                   <ActionItem key={i} action={action} />
                 ))}
