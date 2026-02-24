@@ -72,6 +72,32 @@ export const conversationsService = {
     }
   },
 
+  async jumpToStep(id: string, stepId: string) {
+    const conversation = await conversationsRepository.findById(id)
+    if (!conversation) throw new NotFoundError('Conversation not found')
+
+    if (conversation.workflow.type !== 'step_by_step') {
+      throw new BadRequestError('jump-to-step is only available for step_by_step workflows')
+    }
+
+    const steps = conversation.workflow.steps
+    const targetIndex = steps.findIndex((s) => s.id === stepId)
+
+    if (targetIndex < 0) {
+      throw new BadRequestError('Step not found in this workflow')
+    }
+
+    const targetStep = steps[targetIndex]
+    await conversationsRepository.updateCurrentStep(id, targetStep.id)
+
+    return {
+      id,
+      currentStepId: targetStep.id,
+      currentStepIndex: targetIndex,
+      message: `Jumped to step: ${targetStep.name}`,
+    }
+  },
+
   async cancel(id: string) {
     taskOrchestrator.cancel(id)
     return { success: true, message: 'Execution cancelled' }

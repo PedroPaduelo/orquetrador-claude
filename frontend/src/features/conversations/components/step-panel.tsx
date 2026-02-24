@@ -5,7 +5,7 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import type { WorkflowStepSummary } from '../types'
 import { useConversationsStore } from '../store'
-import { useAdvanceStep, useGoBackStep } from '../hooks/use-conversations'
+import { useAdvanceStep, useGoBackStep, useJumpToStep } from '../hooks/use-conversations'
 
 interface StepPanelProps {
   steps: WorkflowStepSummary[]
@@ -19,6 +19,7 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
   const { stepStatuses } = useConversationsStore()
   const advanceStepMutation = useAdvanceStep(conversationId)
   const goBackStepMutation = useGoBackStep(conversationId)
+  const jumpToStepMutation = useJumpToStep(conversationId)
 
   const canAdvance = workflowType === 'step_by_step' &&
     !isExecuting &&
@@ -129,14 +130,21 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
             const isCurrent = index === currentStepIndex
             const isActiveChat = status === 'active' && isCurrent
 
+            const canClick = workflowType === 'step_by_step' && !isExecuting && !isCurrent && !jumpToStepMutation.isPending
+
             return (
               <div
                 key={step.id}
+                role={canClick ? 'button' : undefined}
+                tabIndex={canClick ? 0 : undefined}
+                onClick={() => canClick && jumpToStepMutation.mutate(step.id)}
+                onKeyDown={(e) => canClick && e.key === 'Enter' && jumpToStepMutation.mutate(step.id)}
                 className={cn(
                   'flex items-center gap-3 p-3 rounded-lg transition-all duration-200',
                   isCurrent && 'bg-primary/8 border border-primary/30 shadow-sm shadow-primary/10',
                   isCompleted && !isCurrent && 'opacity-60',
-                  !isCurrent && !isCompleted && 'hover:bg-muted/30'
+                  !isCurrent && !isCompleted && 'hover:bg-muted/30',
+                  canClick && 'cursor-pointer hover:bg-muted/50 active:scale-[0.98]'
                 )}
               >
                 {/* Status indicator */}

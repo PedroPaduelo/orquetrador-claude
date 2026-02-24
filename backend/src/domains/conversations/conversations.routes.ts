@@ -250,6 +250,32 @@ export async function conversationsRoutes(app: FastifyInstance) {
     }
   )
 
+  // POST /conversations/:id/jump-to-step
+  server.post(
+    '/conversations/:id/jump-to-step',
+    {
+      schema: {
+        tags: ['Conversations'],
+        summary: 'Jump directly to any step in a step_by_step conversation',
+        params: z.object({ id: z.string() }),
+        body: z.object({
+          stepId: z.string(),
+        }),
+        response: {
+          200: z.object({
+            id: z.string(),
+            currentStepId: z.string(),
+            currentStepIndex: z.number(),
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      return conversationsService.jumpToStep(request.params.id, request.body.stepId)
+    }
+  )
+
   // POST /conversations/:id/cancel
   server.post(
     '/conversations/:id/cancel',

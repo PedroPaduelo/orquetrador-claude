@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState, useMemo } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import { Zap, Send, ArrowDown, MessageSquare } from 'lucide-react'
 

@@ -21,6 +21,14 @@
       "headers": {
         "Authorization": "Bearer ctx7sk-a3853a85-f006-4527-b6fc-5c8bf4c36ac3"
       }
+    },
+    "execut": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/workspace/orquetrador-claude/mcp-server/dist/server.js"],
+      "env": {
+        "EXECUT_API_URL": "http://localhost:3333"
+      }
     }
   }
 }

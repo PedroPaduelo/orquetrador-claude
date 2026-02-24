@@ -101,3 +101,17 @@ export function useGoBackStep(conversationId: string) {
     },
   })
 }
+
+export function useJumpToStep(conversationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (stepId: string) => conversationsApi.jumpToStep(conversationId, stepId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
+    },
+    onError: () => {
+      toast.error('Erro ao pular para o step')
+    },
+  })
+}

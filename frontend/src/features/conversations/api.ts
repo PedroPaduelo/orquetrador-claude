@@ -41,4 +41,9 @@ export const conversationsApi = {
     const { data } = await apiClient.post(`/conversations/${id}/go-back-step`, {})
     return data
   },
+
+  jumpToStep: async (id: string, stepId: string): Promise<Conversation> => {
+    const { data } = await apiClient.post(`/conversations/${id}/jump-to-step`, { stepId })
+    return data
+  },
 }
