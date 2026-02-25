@@ -57,7 +57,10 @@ export class TaskOrchestrator {
       ? await sessionManager.getSelectedContext(conversationId)
       : []
 
-    const systemPrompt = buildSystemPrompt(step.systemPrompt)
+    const systemPrompt = buildSystemPrompt({
+      stepSystemPrompt: step.systemPrompt,
+      projectPath,
+    })
 
     // Create monitor for this execution
     const monitor = new ExecutionMonitor(executionId, conversationId, step.id)
