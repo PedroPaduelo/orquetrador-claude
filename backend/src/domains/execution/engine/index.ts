@@ -3,6 +3,7 @@ import type { CliEngine } from './types.js'
 
 export type { CliEngine, EngineExecuteOptions, EngineExecuteResult, EngineAttachment } from './types.js'
 export type { Action, StreamEvent } from './claude/stream-parser.js'
+export { buildSystemPrompt, getBaseSystemPrompt } from './base-system-prompt.js'
 
 export function createEngine(_backend?: string): CliEngine {
   return new ClaudeCodeEngine()

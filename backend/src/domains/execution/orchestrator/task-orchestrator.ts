@@ -6,6 +6,7 @@ import { executionStateManager } from './execution-state.js'
 import { orchestratorEvents } from './events.js'
 import { fileSyncService } from '../file-sync/file-sync-service.js'
 import { ExecutionMonitor } from '../monitoring/execution-monitor.js'
+import { buildSystemPrompt } from '../engine/base-system-prompt.js'
 import type { WorkflowStep } from '@prisma/client'
 
 export interface MessageAttachment {
@@ -56,7 +57,7 @@ export class TaskOrchestrator {
       ? await sessionManager.getSelectedContext(conversationId)
       : []
 
-    const systemPrompt = step.systemPrompt || null
+    const systemPrompt = buildSystemPrompt(step.systemPrompt)
 
     // Create monitor for this execution
     const monitor = new ExecutionMonitor(executionId, conversationId, step.id)
