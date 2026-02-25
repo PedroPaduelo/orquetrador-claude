@@ -1,7 +1,6 @@
 import { Input } from '@/shared/components/ui/input'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { Label } from '@/shared/components/ui/label'
-import { ScrollArea } from '@/shared/components/ui/scroll-area'
 import { Separator } from '@/shared/components/ui/separator'
 import { StepResourceTabs } from './step-resource-tabs'
 import { useWorkflowsStore } from '../../store'
@@ -19,7 +18,7 @@ export function StepDetailEditor() {
   }
 
   return (
-    <ScrollArea className="flex-1 min-h-0">
+    <div className="flex-1 overflow-y-auto min-h-0">
       <div className="p-5 space-y-5">
         <div>
           <h3 className="text-sm font-semibold">
@@ -62,7 +61,7 @@ export function StepDetailEditor() {
               value={step.systemPrompt || ''}
               onChange={(e) => updateStep(selectedStepIndex, { systemPrompt: e.target.value })}
               placeholder="Instrucoes para este step..."
-              rows={4}
+              rows={3}
             />
           </div>
 
@@ -83,6 +82,6 @@ export function StepDetailEditor() {
 
         <StepResourceTabs />
       </div>
-    </ScrollArea>
+    </div>
   )
 }

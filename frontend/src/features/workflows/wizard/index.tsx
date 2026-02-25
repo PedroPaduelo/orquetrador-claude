@@ -195,9 +195,9 @@ export default function WorkflowWizardPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex flex-col h-screen overflow-hidden">
       {/* Top bar */}
-      <div className="border-b px-6 py-3 flex items-center gap-3">
+      <div className="shrink-0 border-b px-6 py-3 flex items-center gap-3">
         <Button
           type="button"
           variant="ghost"
@@ -229,7 +229,7 @@ export default function WorkflowWizardPage() {
 
       {/* Phase content */}
       {currentPhase === 2 ? (
-        <div className="flex-1 flex flex-col overflow-hidden px-6 py-4 min-h-0">
+        <div className="flex-1 flex flex-col overflow-hidden px-3 py-3 min-h-0 min-w-0">
           <PhaseStepBuilder />
         </div>
       ) : (

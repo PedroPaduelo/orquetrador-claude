@@ -41,7 +41,7 @@ export function StepResourceTabs() {
     <div className="space-y-3">
       <h4 className="text-sm font-medium text-muted-foreground">Recursos</h4>
       <Tabs defaultValue="mcp" className="w-full">
-        <TabsList className="w-full grid grid-cols-5 h-9">
+        <TabsList className="w-full flex flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="mcp" className="text-xs gap-1.5">
             <Server className="h-3 w-3" />
             MCP

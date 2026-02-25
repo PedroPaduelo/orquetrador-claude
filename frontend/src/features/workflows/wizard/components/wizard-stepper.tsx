@@ -15,7 +15,7 @@ const phases = [
 
 export function WizardStepper({ currentPhase, onPhaseClick, completedPhases }: WizardStepperProps) {
   return (
-    <div className="flex items-center justify-center gap-0 py-6 px-4">
+    <div className="flex items-center justify-center gap-0 py-3 px-4 border-b shrink-0">
       {phases.map((phase, i) => {
         const isCompleted = completedPhases.includes(phase.number)
         const isCurrent = currentPhase === phase.number

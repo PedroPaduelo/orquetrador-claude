@@ -126,8 +126,8 @@ export function ResourceSelectPanel({
         total={total}
       />
 
-      <ScrollArea className="h-[280px]">
-        <div className="grid grid-cols-2 gap-1.5 pr-3">
+      <ScrollArea className="h-[160px]">
+        <div className="grid grid-cols-1 gap-1 pr-3">
           {sortedPage.map((item) => (
             <label
               key={item.id}
