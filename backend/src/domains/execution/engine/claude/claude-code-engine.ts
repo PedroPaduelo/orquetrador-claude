@@ -1,7 +1,7 @@
 import { spawn, execSync, ChildProcess } from 'child_process'
 import { existsSync } from 'fs'
 import { join } from 'path'
-import { StreamParser, type StreamEvent, type Action } from './stream-parser.js'
+import { StreamParser, type Action } from './stream-parser.js'
 import type { CliEngine, EngineExecuteOptions, EngineExecuteResult } from '../types.js'
 
 const USER_INPUT_TOOLS = new Set([
@@ -205,11 +205,6 @@ export class ClaudeCodeEngine implements CliEngine {
     }
 
     const logPrefix = `[Claude][${processId.substring(0, 8)}]`
-
-    // Build command line string for monitoring (before spawn)
-    const commandLine = SANDBOX_ENABLED
-      ? `sudo -n -u ${SANDBOX_USER} -g ${SANDBOX_GROUP} --preserve-env -- ${claudeBin} ${args.map(a => a.length > 80 ? a.substring(0, 80) + '...' : a).join(' ')}`
-      : `${claudeBin} ${args.map(a => a.length > 80 ? a.substring(0, 80) + '...' : a).join(' ')}`
 
     const emitDebug = (msg: string) => {
       const debugAction: Action = {
