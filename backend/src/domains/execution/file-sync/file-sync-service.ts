@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, chmodSync } from 'fs'
 import { join, dirname } from 'path'
 import { prisma } from '../../../lib/prisma.js'
+import { getBaseMcpEntries } from './base-mcp-servers.js'
 
 interface McpServerData {
   id: string
@@ -138,10 +139,8 @@ export class FileSyncService {
     // Sync directory isolation hook + user hooks to settings.json
     this.syncHooksToSettings(projectPath, allHooks)
 
-    // Sync ALL MCP servers to .mcp.json
-    if (allServers.length > 0) {
-      this.syncMcpConfig(projectPath, allServers)
-    }
+    // Sync ALL MCP servers to .mcp.json (sempre executa - base servers sao hardcoded)
+    this.syncMcpConfig(projectPath, allServers)
 
     // Sync ALL skills (DB is truth, no source check)
     for (const skill of allSkills) {
@@ -305,9 +304,11 @@ exit 0
    * Sync .mcp.json with all MCP server types.
    */
   syncMcpConfig(projectPath: string, servers: McpServerData[]): void {
-    const mcpServers: Record<string, unknown> = {}
+    // Comeca com os MCP servers base (hardcoded, sempre presentes)
+    const mcpServers: Record<string, unknown> = { ...getBaseMcpEntries() }
 
     for (const server of servers) {
+      // Servers do step/global sobrescrevem base servers com mesmo nome
       const envVars = safeJsonParse<Record<string, string>>(server.envVars, {})
 
       if (server.type === 'stdio' && server.command) {
