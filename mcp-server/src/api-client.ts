@@ -1,4 +1,5 @@
 const BASE_URL = process.env.EXECUT_API_URL || 'http://localhost:3333'
+const API_KEY = process.env.EXECUT_API_KEY || ''
 
 interface ApiResponse<T = unknown> {
   ok: boolean
@@ -6,8 +7,16 @@ interface ApiResponse<T = unknown> {
   data: T
 }
 
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (API_KEY) {
+    headers['Authorization'] = `Bearer ${API_KEY}`
+  }
+  return headers
+}
+
 export async function apiGet<T = unknown>(path: string): Promise<ApiResponse<T>> {
-  const res = await fetch(`${BASE_URL}${path}`)
+  const res = await fetch(`${BASE_URL}${path}`, { headers: authHeaders() })
   const data = res.ok ? await res.json() as T : (await res.text() as unknown as T)
   return { ok: res.ok, status: res.status, data }
 }
@@ -15,7 +24,7 @@ export async function apiGet<T = unknown>(path: string): Promise<ApiResponse<T>>
 export async function apiPost<T = unknown>(path: string, body?: unknown): Promise<ApiResponse<T>> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: body ? JSON.stringify(body) : undefined,
   })
   const text = await res.text()
@@ -31,7 +40,7 @@ export async function apiPost<T = unknown>(path: string, body?: unknown): Promis
 export async function apiPut<T = unknown>(path: string, body?: unknown): Promise<ApiResponse<T>> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: body ? JSON.stringify(body) : undefined,
   })
   const text = await res.text()
@@ -47,7 +56,7 @@ export async function apiPut<T = unknown>(path: string, body?: unknown): Promise
 export async function apiPatch<T = unknown>(path: string, body?: unknown): Promise<ApiResponse<T>> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: body ? JSON.stringify(body) : undefined,
   })
   const text = await res.text()
@@ -61,7 +70,7 @@ export async function apiPatch<T = unknown>(path: string, body?: unknown): Promi
 }
 
 export async function apiDelete<T = unknown>(path: string): Promise<ApiResponse<T>> {
-  const res = await fetch(`${BASE_URL}${path}`, { method: 'DELETE' })
+  const res = await fetch(`${BASE_URL}${path}`, { method: 'DELETE', headers: authHeaders() })
   if (res.status === 204) return { ok: true, status: 204, data: null as T }
   const text = await res.text()
   let data: T

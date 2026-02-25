@@ -14,6 +14,7 @@ import { attachmentsRoutes } from './attachments/attachments.routes.js'
 import { importRepoRoutes } from './import-repo/import-repo.routes.js'
 import { hooksRoutes } from './hooks/hooks.routes.js'
 import { gitRoutes } from './git/git.routes.js'
+import { apiKeysRoutes } from './api-keys/api-keys.routes.js'
 
 export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   authRoutes,
@@ -30,4 +31,5 @@ export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   importRepoRoutes,
   hooksRoutes,
   gitRoutes,
+  apiKeysRoutes,
 ]
