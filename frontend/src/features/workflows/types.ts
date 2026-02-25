@@ -16,15 +16,13 @@ export interface WorkflowStep {
   baseUrl: string
   stepOrder?: number
   systemPrompt?: string
-  systemPromptNoteId?: string
-  contextNoteIds: string[]
-  memoryNoteIds: string[]
   conditions: StepConditions
   maxRetries: number
   mcpServerIds: string[]
   skillIds: string[]
   agentIds: string[]
   ruleIds: string[]
+  hookIds: string[]
 }
 
 export interface StepConditions {

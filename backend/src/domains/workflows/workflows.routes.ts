@@ -34,9 +34,6 @@ const stepSchema = z.object({
   name: z.string().min(1),
   baseUrl: z.string().default(''),
   systemPrompt: z.string().nullable().optional(),
-  systemPromptNoteId: z.string().nullable().optional(),
-  contextNoteIds: z.array(z.string()).default([]),
-  memoryNoteIds: z.array(z.string()).default([]),
   conditions: conditionsSchema
     .nullable()
     .default({ rules: [], default: 'next' })
@@ -48,6 +45,7 @@ const stepSchema = z.object({
   skillIds: z.array(z.string()).default([]),
   agentIds: z.array(z.string()).default([]),
   ruleIds: z.array(z.string()).default([]),
+  hookIds: z.array(z.string()).default([]),
 })
 
 const stepResponseSchema = z.object({
@@ -56,9 +54,6 @@ const stepResponseSchema = z.object({
   baseUrl: z.string(),
   stepOrder: z.number(),
   systemPrompt: z.string().nullable(),
-  systemPromptNoteId: z.string().nullable(),
-  contextNoteIds: z.array(z.string()),
-  memoryNoteIds: z.array(z.string()),
   conditions: z.unknown(),
   maxRetries: z.number(),
   backend: z.string(),
@@ -67,6 +62,7 @@ const stepResponseSchema = z.object({
   skillIds: z.array(z.string()),
   agentIds: z.array(z.string()),
   ruleIds: z.array(z.string()),
+  hookIds: z.array(z.string()),
 })
 
 export async function workflowsRoutes(app: FastifyInstance) {

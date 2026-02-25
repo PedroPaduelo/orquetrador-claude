@@ -1,4 +1,4 @@
-import { Pencil, Server, Sparkles, Bot, ScrollText, GitBranch } from 'lucide-react'
+import { Pencil, Server, Sparkles, Bot, ScrollText, Webhook, GitBranch } from 'lucide-react'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -18,7 +18,8 @@ export function PhaseReview({ onEditPhase }: PhaseReviewProps) {
       step.mcpServerIds.length +
       step.skillIds.length +
       step.agentIds.length +
-      step.ruleIds.length,
+      step.ruleIds.length +
+      step.hookIds.length,
     0
   )
 
@@ -127,7 +128,8 @@ export function PhaseReview({ onEditPhase }: PhaseReviewProps) {
                   {(step.mcpServerIds.length > 0 ||
                     step.skillIds.length > 0 ||
                     step.agentIds.length > 0 ||
-                    step.ruleIds.length > 0) && (
+                    step.ruleIds.length > 0 ||
+                    step.hookIds.length > 0) && (
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {step.mcpServerIds.length > 0 && (
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
@@ -151,6 +153,12 @@ export function PhaseReview({ onEditPhase }: PhaseReviewProps) {
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
                           <ScrollText className="h-2.5 w-2.5" />
                           {step.ruleIds.length} Rules
+                        </Badge>
+                      )}
+                      {step.hookIds.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+                          <Webhook className="h-2.5 w-2.5" />
+                          {step.hookIds.length} Hooks
                         </Badge>
                       )}
                     </div>

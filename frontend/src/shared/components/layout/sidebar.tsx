@@ -2,7 +2,6 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   MessageSquare,
   Workflow,
-  StickyNote,
   LayoutDashboard,
   Zap,
   Server,
@@ -10,6 +9,7 @@ import {
   Bot,
   ScrollText,
   Package,
+  Webhook,
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
@@ -31,11 +31,6 @@ const navItems = [
     to: '/workflows',
     icon: Workflow,
     label: 'Workflows',
-  },
-  {
-    to: '/smart-notes',
-    icon: StickyNote,
-    label: 'Smart Notes',
   },
 ]
 
@@ -64,6 +59,11 @@ const configItems = [
     to: '/plugins',
     icon: Package,
     label: 'Plugins',
+  },
+  {
+    to: '/hooks',
+    icon: Webhook,
+    label: 'Hooks',
   },
 ]
 

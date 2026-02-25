@@ -12,12 +12,12 @@ const WorkflowsPage = lazy(() => import('@/features/workflows'))
 const WorkflowWizardPage = lazy(() => import('@/features/workflows/wizard'))
 const ConversationsPage = lazy(() => import('@/features/conversations'))
 const ConversationDetailPage = lazy(() => import('@/features/conversations/[id]'))
-const SmartNotesPage = lazy(() => import('@/features/smart-notes'))
 const McpServersPage = lazy(() => import('@/features/mcp-servers'))
 const SkillsPage = lazy(() => import('@/features/skills'))
 const AgentsPage = lazy(() => import('@/features/agents'))
 const RulesPage = lazy(() => import('@/features/rules'))
 const PluginsPage = lazy(() => import('@/features/plugins'))
+const HooksPage = lazy(() => import('@/features/hooks'))
 
 // Page loader
 function PageLoader() {
@@ -101,14 +101,6 @@ export function AppRoutes() {
           }
         />
 
-        <Route
-          path="smart-notes"
-          element={
-            <Lazy>
-              <SmartNotesPage />
-            </Lazy>
-          }
-        />
 
         <Route
           path="mcp-servers"
@@ -151,6 +143,15 @@ export function AppRoutes() {
           element={
             <Lazy>
               <PluginsPage />
+            </Lazy>
+          }
+        />
+
+        <Route
+          path="hooks"
+          element={
+            <Lazy>
+              <HooksPage />
             </Lazy>
           }
         />

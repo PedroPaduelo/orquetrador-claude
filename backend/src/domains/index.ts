@@ -10,9 +10,9 @@ import { pluginsRoutes } from './plugins/plugins.routes.js'
 import { workflowsRoutes } from './workflows/workflows.routes.js'
 import { conversationsRoutes } from './conversations/conversations.routes.js'
 import { executionRoutes } from './execution/execution.routes.js'
-import { smartNotesRoutes } from './smart-notes/smart-notes.routes.js'
 import { attachmentsRoutes } from './attachments/attachments.routes.js'
 import { importRepoRoutes } from './import-repo/import-repo.routes.js'
+import { hooksRoutes } from './hooks/hooks.routes.js'
 
 export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   authRoutes,
@@ -25,7 +25,7 @@ export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   workflowsRoutes,
   conversationsRoutes,
   executionRoutes,
-  smartNotesRoutes,
   attachmentsRoutes,
   importRepoRoutes,
+  hooksRoutes,
 ]

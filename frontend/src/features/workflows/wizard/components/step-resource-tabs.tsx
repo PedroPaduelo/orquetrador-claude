@@ -1,4 +1,4 @@
-import { Server, Sparkles, Bot, ScrollText } from 'lucide-react'
+import { Server, Sparkles, Bot, ScrollText, Webhook } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
 import { Badge } from '@/shared/components/ui/badge'
 import { ResourceSelectPanel } from './resource-select-panel'
@@ -6,6 +6,7 @@ import { useMcpServers } from '@/features/mcp-servers/hooks/use-mcp-servers'
 import { useSkills } from '@/features/skills/hooks/use-skills'
 import { useAgents } from '@/features/agents/hooks/use-agents'
 import { useRules } from '@/features/rules/hooks/use-rules'
+import { useHooks } from '@/features/hooks/hooks/use-hooks'
 import { useWorkflowsStore } from '../../store'
 
 export function StepResourceTabs() {
@@ -16,11 +17,12 @@ export function StepResourceTabs() {
   const { data: skills } = useSkills()
   const { data: agents } = useAgents()
   const { data: rules } = useRules()
+  const { data: hooks } = useHooks()
 
   if (!step) return null
 
   const handleToggle = (
-    field: 'mcpServerIds' | 'skillIds' | 'agentIds' | 'ruleIds',
+    field: 'mcpServerIds' | 'skillIds' | 'agentIds' | 'ruleIds' | 'hookIds',
     id: string,
     checked: boolean
   ) => {
@@ -31,7 +33,7 @@ export function StepResourceTabs() {
     updateStep(selectedStepIndex, { [field]: updated })
   }
 
-  const handleClear = (field: 'mcpServerIds' | 'skillIds' | 'agentIds' | 'ruleIds') => {
+  const handleClear = (field: 'mcpServerIds' | 'skillIds' | 'agentIds' | 'ruleIds' | 'hookIds') => {
     updateStep(selectedStepIndex, { [field]: [] })
   }
 
@@ -39,7 +41,7 @@ export function StepResourceTabs() {
     <div className="space-y-3">
       <h4 className="text-sm font-medium text-muted-foreground">Recursos</h4>
       <Tabs defaultValue="mcp" className="w-full">
-        <TabsList className="w-full grid grid-cols-4 h-9">
+        <TabsList className="w-full grid grid-cols-5 h-9">
           <TabsTrigger value="mcp" className="text-xs gap-1.5">
             <Server className="h-3 w-3" />
             MCP
@@ -73,6 +75,15 @@ export function StepResourceTabs() {
             {step.ruleIds.length > 0 && (
               <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">
                 {step.ruleIds.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="hooks" className="text-xs gap-1.5">
+            <Webhook className="h-3 w-3" />
+            Hooks
+            {step.hookIds.length > 0 && (
+              <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">
+                {step.hookIds.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -119,6 +130,17 @@ export function StepResourceTabs() {
             onClear={() => handleClear('ruleIds')}
             emptyMessage="Nenhuma rule disponivel"
             searchPlaceholder="Buscar rules..."
+          />
+        </TabsContent>
+
+        <TabsContent value="hooks" className="mt-3">
+          <ResourceSelectPanel
+            items={hooks}
+            selectedIds={step.hookIds}
+            onToggle={(id, checked) => handleToggle('hookIds', id, checked)}
+            onClear={() => handleClear('hookIds')}
+            emptyMessage="Nenhum hook disponivel"
+            searchPlaceholder="Buscar hooks..."
           />
         </TabsContent>
       </Tabs>

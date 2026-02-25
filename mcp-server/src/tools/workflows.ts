@@ -6,9 +6,6 @@ const stepSchema = z.object({
   name: z.string().describe('Nome do step'),
   baseUrl: z.string().optional().describe('URL base do step (se diferente do workflow)'),
   systemPrompt: z.string().optional().describe('System prompt customizado para este step'),
-  systemPromptNoteId: z.string().optional().describe('ID de nota Smart Notes para usar como system prompt'),
-  contextNoteIds: z.array(z.string()).optional().describe('IDs de notas para contexto adicional'),
-  memoryNoteIds: z.array(z.string()).optional().describe('IDs de notas para memoria persistente'),
   maxRetries: z.number().optional().describe('Maximo de retries em caso de falha'),
   backend: z.enum(['claude', 'api']).optional().describe('Backend: claude (CLI) ou api (Anthropic API)'),
   model: z.string().optional().describe('Modelo a usar (ex: claude-sonnet-4-20250514)'),
@@ -16,6 +13,7 @@ const stepSchema = z.object({
   skillIds: z.array(z.string()).optional().describe('IDs das skills ativas neste step'),
   agentIds: z.array(z.string()).optional().describe('IDs dos agentes disponiveis neste step'),
   ruleIds: z.array(z.string()).optional().describe('IDs das rules ativas neste step'),
+  hookIds: z.array(z.string()).optional().describe('IDs dos hooks ativos neste step'),
   conditions: z.unknown().optional().describe('Condicoes de avaliacao do output (JSON)'),
 })
 

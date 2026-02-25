@@ -47,14 +47,13 @@ interface WorkflowsState {
 const defaultStep: WorkflowStep = {
   name: '',
   baseUrl: '',
-  contextNoteIds: [],
-  memoryNoteIds: [],
   conditions: { rules: [], default: 'next' },
   maxRetries: 0,
   mcpServerIds: [],
   skillIds: [],
   agentIds: [],
   ruleIds: [],
+  hookIds: [],
 }
 
 const defaultBasicInfo: BasicInfo = {
@@ -108,8 +107,7 @@ export const useWorkflowsStore = create<WorkflowsState>((set, get) => ({
         skillIds: [...original.skillIds],
         agentIds: [...original.agentIds],
         ruleIds: [...original.ruleIds],
-        contextNoteIds: [...original.contextNoteIds],
-        memoryNoteIds: [...original.memoryNoteIds],
+        hookIds: [...original.hookIds],
         conditions: { ...original.conditions, rules: [...original.conditions.rules] },
       }
       const steps = [...state.formSteps]
@@ -152,8 +150,7 @@ export const useWorkflowsStore = create<WorkflowsState>((set, get) => ({
           skillIds: s.skillIds || [],
           agentIds: s.agentIds || [],
           ruleIds: s.ruleIds || [],
-          contextNoteIds: s.contextNoteIds || [],
-          memoryNoteIds: s.memoryNoteIds || [],
+          hookIds: s.hookIds || [],
           conditions: s.conditions || { rules: [], default: 'next' },
           maxRetries: s.maxRetries ?? 0,
         })) || [{ ...defaultStep }]

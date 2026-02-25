@@ -7,9 +7,6 @@ function parseStep(step: {
   baseUrl: string
   stepOrder: number
   systemPrompt: string | null
-  systemPromptNoteId: string | null
-  contextNoteIds: string
-  memoryNoteIds: string
   conditions: string
   maxRetries: number
   backend: string
@@ -18,6 +15,7 @@ function parseStep(step: {
   skills: { skillId: string }[]
   agents: { agentId: string }[]
   rules: { ruleId: string }[]
+  hooks: { hookId: string }[]
 }) {
   return {
     id: step.id,
@@ -25,9 +23,6 @@ function parseStep(step: {
     baseUrl: step.baseUrl,
     stepOrder: step.stepOrder,
     systemPrompt: step.systemPrompt,
-    systemPromptNoteId: step.systemPromptNoteId,
-    contextNoteIds: safeJsonParse<string[]>(step.contextNoteIds, []),
-    memoryNoteIds: safeJsonParse<string[]>(step.memoryNoteIds, []),
     conditions: safeJsonParse<unknown>(step.conditions, { rules: [], default: 'next' }),
     maxRetries: step.maxRetries,
     backend: step.backend,
@@ -36,6 +31,7 @@ function parseStep(step: {
     skillIds: step.skills.map((s) => s.skillId),
     agentIds: step.agents.map((s) => s.agentId),
     ruleIds: step.rules.map((s) => s.ruleId),
+    hookIds: step.hooks.map((s) => s.hookId),
   }
 }
 
@@ -77,6 +73,7 @@ export const workflowsRepository = {
             skills: true,
             agents: true,
             rules: true,
+            hooks: true,
           },
         },
       },
@@ -106,6 +103,7 @@ export const workflowsRepository = {
             skills: true,
             agents: true,
             rules: true,
+            hooks: true,
           },
         },
       },
@@ -120,9 +118,6 @@ export const workflowsRepository = {
       name: string
       baseUrl?: string
       systemPrompt?: string | null
-      systemPromptNoteId?: string | null
-      contextNoteIds?: string[]
-      memoryNoteIds?: string[]
       conditions?: unknown
       maxRetries?: number
       backend?: string
@@ -131,6 +126,7 @@ export const workflowsRepository = {
       skillIds?: string[]
       agentIds?: string[]
       ruleIds?: string[]
+      hookIds?: string[]
     }>
   }, userId: string) {
     const workflow = await prisma.workflow.create({
@@ -146,9 +142,6 @@ export const workflowsRepository = {
                 baseUrl: step.baseUrl ?? '',
                 stepOrder: index,
                 systemPrompt: step.systemPrompt,
-                systemPromptNoteId: step.systemPromptNoteId,
-                contextNoteIds: JSON.stringify(step.contextNoteIds ?? []),
-                memoryNoteIds: JSON.stringify(step.memoryNoteIds ?? []),
                 conditions: JSON.stringify(step.conditions ?? { rules: [], default: 'next' }),
                 maxRetries: step.maxRetries ?? 0,
                 backend: step.backend ?? 'claude',
@@ -164,6 +157,9 @@ export const workflowsRepository = {
                   : undefined,
                 rules: step.ruleIds?.length
                   ? { create: step.ruleIds.map((ruleId) => ({ ruleId })) }
+                  : undefined,
+                hooks: step.hookIds?.length
+                  ? { create: step.hookIds.map((hookId) => ({ hookId })) }
                   : undefined,
               })),
             }
@@ -191,9 +187,6 @@ export const workflowsRepository = {
         name: string
         baseUrl?: string
         systemPrompt?: string | null
-        systemPromptNoteId?: string | null
-        contextNoteIds?: string[]
-        memoryNoteIds?: string[]
         conditions?: unknown
         maxRetries?: number
         backend?: string
@@ -202,6 +195,7 @@ export const workflowsRepository = {
         skillIds?: string[]
         agentIds?: string[]
         ruleIds?: string[]
+        hookIds?: string[]
       }>
     },
   ) {
@@ -223,6 +217,7 @@ export const workflowsRepository = {
         await prisma.workflowStepSkill.deleteMany({ where: { stepId: { in: stepIds } } })
         await prisma.workflowStepAgent.deleteMany({ where: { stepId: { in: stepIds } } })
         await prisma.workflowStepRule.deleteMany({ where: { stepId: { in: stepIds } } })
+        await prisma.workflowStepHook.deleteMany({ where: { stepId: { in: stepIds } } })
       }
 
       await prisma.workflowStep.deleteMany({ where: { workflowId: id } })
@@ -233,9 +228,6 @@ export const workflowsRepository = {
           baseUrl: step.baseUrl ?? '',
           stepOrder: index,
           systemPrompt: step.systemPrompt,
-          systemPromptNoteId: step.systemPromptNoteId,
-          contextNoteIds: JSON.stringify(step.contextNoteIds ?? []),
-          memoryNoteIds: JSON.stringify(step.memoryNoteIds ?? []),
           conditions: JSON.stringify(step.conditions ?? { rules: [], default: 'next' }),
           maxRetries: step.maxRetries ?? 0,
           backend: step.backend ?? 'claude',

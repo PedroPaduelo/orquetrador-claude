@@ -13,9 +13,6 @@ export const workflowsService = {
         name: step.name,
         baseUrl: step.baseUrl,
         systemPrompt: step.systemPrompt,
-        systemPromptNoteId: step.systemPromptNoteId,
-        contextNoteIds: JSON.parse(step.contextNoteIds) as string[],
-        memoryNoteIds: JSON.parse(step.memoryNoteIds) as string[],
         conditions: JSON.parse(step.conditions),
         maxRetries: step.maxRetries,
         backend: step.backend,
@@ -24,6 +21,7 @@ export const workflowsService = {
         skillIds: step.skills.map((s) => s.skillId),
         agentIds: step.agents.map((s) => s.agentId),
         ruleIds: step.rules.map((s) => s.ruleId),
+        hookIds: step.hooks.map((s) => s.hookId),
       })),
     }, userId)
   },

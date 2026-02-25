@@ -147,15 +147,13 @@ export default function WorkflowWizardPage() {
         name: step.name,
         baseUrl: step.baseUrl,
         systemPrompt: step.systemPrompt,
-        systemPromptNoteId: step.systemPromptNoteId,
-        contextNoteIds: step.contextNoteIds,
-        memoryNoteIds: step.memoryNoteIds,
         conditions: step.conditions,
         maxRetries: step.maxRetries,
         mcpServerIds: step.mcpServerIds,
         skillIds: step.skillIds,
         agentIds: step.agentIds,
         ruleIds: step.ruleIds,
+        hookIds: step.hookIds,
       })),
     }
 

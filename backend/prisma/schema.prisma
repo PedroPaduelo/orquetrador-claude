@@ -25,6 +25,7 @@ model User {
   agents        Agent[]
   rules         Rule[]
   plugins       Plugin[]
+  hooks         Hook[]
 
   @@map("users")
 }
@@ -59,11 +60,6 @@ model WorkflowStep {
 
   // Prompts
   systemPrompt       String? @map("system_prompt")
-  systemPromptNoteId String? @map("system_prompt_note_id")
-
-  // Smart Notes arrays (stored as JSON)
-  contextNoteIds String @default("[]") @map("context_note_ids")
-  memoryNoteIds  String @default("[]") @map("memory_note_ids")
 
   // Conditions
   conditions String @default("{}")
@@ -82,11 +78,12 @@ model WorkflowStep {
   currentConversations Conversation[]        @relation("CurrentStep")
   executionLogs        ExecutionLog[]
 
-  // Join tables for MCP/Skills/Agents/Rules
+  // Join tables for MCP/Skills/Agents/Rules/Hooks
   mcpServers WorkflowStepMcpServer[]
   skills     WorkflowStepSkill[]
   agents     WorkflowStepAgent[]
   rules      WorkflowStepRule[]
+  hooks      WorkflowStepHook[]
 
   @@index([workflowId])
   @@map("workflow_steps")
@@ -453,6 +450,39 @@ model ExecutionTrace {
 }
 
 // ============================================
+// HOOKS (Claude Code Hooks)
+// ============================================
+model Hook {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  eventType     String   @map("event_type") // PreToolUse, PostToolUse, Stop, etc.
+  matcher       String?  // regex pattern for matchers (tool name, session type, etc.)
+  handlerType   String   @default("command") @map("handler_type") // command | prompt | agent
+  command       String?  // shell command (for command handler)
+  prompt        String?  // prompt text (for prompt/agent handler)
+  timeout       Int      @default(60000) // timeout in ms
+  isAsync       Boolean  @default(false) @map("is_async")
+  statusMessage String?  @map("status_message") // message shown during execution
+  enabled       Boolean  @default(true)
+  isGlobal      Boolean  @default(true) @map("is_global")
+  projectPath   String?  @map("project_path") // project-specific hook
+  isTemplate    Boolean  @default(false) @map("is_template") // system template
+  templateId    String?  @map("template_id") // if created from template
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  userId        String   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stepHooks     WorkflowStepHook[]
+
+  @@index([userId])
+  @@index([eventType])
+  @@map("hooks")
+}
+
+// ============================================
 // JOIN TABLES
 // ============================================
 model WorkflowStepMcpServer {
@@ -497,4 +527,15 @@ model WorkflowStepRule {
 
   @@unique([stepId, ruleId])
   @@map("workflow_step_rules")
+}
+
+model WorkflowStepHook {
+  id     String       @id @default(uuid())
+  stepId String       @map("step_id")
+  hookId String       @map("hook_id")
+  step   WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  hook   Hook         @relation(fields: [hookId], references: [id], onDelete: Cascade)
+
+  @@unique([stepId, hookId])
+  @@map("workflow_step_hooks")
 }

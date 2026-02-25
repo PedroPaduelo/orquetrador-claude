@@ -4,7 +4,6 @@ import { sessionManager } from '../session/session-manager.js'
 import { conditionsEvaluator, type StepConditions } from './conditions-evaluator.js'
 import { executionStateManager } from './execution-state.js'
 import { orchestratorEvents } from './events.js'
-import { smartNotesService } from '../../smart-notes/context-builder.js'
 import { fileSyncService } from '../file-sync/file-sync-service.js'
 import { ExecutionMonitor } from '../monitoring/execution-monitor.js'
 import type { WorkflowStep } from '@prisma/client'
@@ -57,7 +56,7 @@ export class TaskOrchestrator {
       ? await sessionManager.getSelectedContext(conversationId)
       : []
 
-    const systemPrompt = await smartNotesService.buildSystemPrompt(step)
+    const systemPrompt = step.systemPrompt || null
 
     // Create monitor for this execution
     const monitor = new ExecutionMonitor(executionId, conversationId, step.id)

@@ -8,6 +8,7 @@ import { registerPluginTools } from './plugins.js'
 import { registerConversationTools } from './conversations.js'
 import { registerExecutionTraceTools } from './execution-traces.js'
 import { registerSystemTools } from './system.js'
+import { registerHookTools } from './hooks.js'
 
 export function registerAllTools(server: McpServer) {
   registerSystemTools(server)
@@ -19,4 +20,5 @@ export function registerAllTools(server: McpServer) {
   registerPluginTools(server)
   registerConversationTools(server)
   registerExecutionTraceTools(server)
+  registerHookTools(server)
 }
