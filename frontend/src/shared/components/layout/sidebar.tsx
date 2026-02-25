@@ -10,6 +10,7 @@ import {
   ScrollText,
   Package,
   Webhook,
+  Settings,
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
@@ -64,6 +65,11 @@ const configItems = [
     to: '/hooks',
     icon: Webhook,
     label: 'Hooks',
+  },
+  {
+    to: '/settings',
+    icon: Settings,
+    label: 'Configuracoes',
   },
 ]
 

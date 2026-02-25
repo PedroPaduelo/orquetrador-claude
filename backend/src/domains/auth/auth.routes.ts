@@ -40,6 +40,7 @@ export async function authRoutes(app: FastifyInstance) {
               email: z.string(),
               name: z.string().nullable(),
               basePath: z.string(),
+              hasGithub: z.boolean(),
             }),
           }),
         },
@@ -64,7 +65,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       return reply.status(201).send({
         token,
-        user: { id: user.id, email: user.email, name: user.name, basePath },
+        user: { id: user.id, email: user.email, name: user.name, basePath, hasGithub: false },
       })
     },
   )
@@ -88,6 +89,7 @@ export async function authRoutes(app: FastifyInstance) {
               email: z.string(),
               name: z.string().nullable(),
               basePath: z.string(),
+              hasGithub: z.boolean(),
             }),
           }),
         },
@@ -111,7 +113,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       return {
         token,
-        user: { id: user.id, email: user.email, name: user.name, basePath },
+        user: { id: user.id, email: user.email, name: user.name, basePath, hasGithub: !!user.githubToken },
       }
     },
   )
@@ -129,6 +131,7 @@ export async function authRoutes(app: FastifyInstance) {
             email: z.string(),
             name: z.string().nullable(),
             basePath: z.string(),
+            hasGithub: z.boolean(),
             createdAt: z.string(),
           }),
         },
@@ -149,6 +152,7 @@ export async function authRoutes(app: FastifyInstance) {
         email: user.email,
         name: user.name,
         basePath,
+        hasGithub: !!user.githubToken,
         createdAt: user.createdAt.toISOString(),
       }
     },

@@ -5,6 +5,7 @@ export interface AuthUser {
   email: string
   name: string | null
   basePath: string
+  hasGithub: boolean
 }
 
 export interface AuthResponse {

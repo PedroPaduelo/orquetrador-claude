@@ -46,12 +46,16 @@ export function extractNameFromUrl(url?: string): string | null {
  * Fetch markdown content from a URL, auto-converting GitHub/GitLab blob URLs to raw.
  * Throws if the response is HTML or fails.
  */
-export async function fetchMarkdownFromUrl(url: string): Promise<string> {
+export async function fetchMarkdownFromUrl(url: string, token?: string | null): Promise<string> {
   const fetchUrl = toRawUrl(url)
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 15000)
   try {
-    const response = await fetch(fetchUrl, { signal: controller.signal })
+    const headers: Record<string, string> = {}
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    const response = await fetch(fetchUrl, { signal: controller.signal, headers })
     if (!response.ok) {
       throw new Error(`Erro ao buscar URL: ${response.status} ${response.statusText}`)
     }
@@ -67,14 +71,22 @@ export async function fetchMarkdownFromUrl(url: string): Promise<string> {
 
 /**
  * Fetch JSON from a URL (with GitHub API headers).
+ * Accepts optional token for authenticated requests (higher rate limits + private repos).
  */
-export async function fetchJson<T>(url: string): Promise<T> {
+export async function fetchJson<T>(url: string, token?: string | null): Promise<T> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30000)
   try {
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github+json',
+      'User-Agent': 'Execut-Orchestrator',
+    }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'Execut-Orchestrator' },
+      headers,
     })
     if (!response.ok) throw new Error(`GitHub API: ${response.status} ${response.statusText}`)
     return await response.json() as T
@@ -86,11 +98,15 @@ export async function fetchJson<T>(url: string): Promise<T> {
 /**
  * Fetch raw text from a URL.
  */
-export async function fetchText(url: string): Promise<string> {
+export async function fetchText(url: string, token?: string | null): Promise<string> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 15000)
   try {
-    const response = await fetch(url, { signal: controller.signal })
+    const headers: Record<string, string> = {}
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    const response = await fetch(url, { signal: controller.signal, headers })
     if (!response.ok) throw new Error(`Fetch: ${response.status}`)
     return await response.text()
   } finally {

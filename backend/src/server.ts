@@ -96,6 +96,7 @@ async function registerPlugins() {
         { name: 'Settings', description: 'Application settings' },
         { name: 'Hooks', description: 'Claude Code hooks management' },
         { name: 'Import', description: 'Bulk import from GitHub' },
+        { name: 'Git', description: 'GitHub token and git operations' },
       ],
     },
     transform: jsonSchemaTransform,

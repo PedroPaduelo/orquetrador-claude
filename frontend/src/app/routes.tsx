@@ -18,6 +18,7 @@ const AgentsPage = lazy(() => import('@/features/agents'))
 const RulesPage = lazy(() => import('@/features/rules'))
 const PluginsPage = lazy(() => import('@/features/plugins'))
 const HooksPage = lazy(() => import('@/features/hooks'))
+const SettingsPage = lazy(() => import('@/features/settings'))
 
 // Page loader
 function PageLoader() {
@@ -152,6 +153,15 @@ export function AppRoutes() {
           element={
             <Lazy>
               <HooksPage />
+            </Lazy>
+          }
+        />
+
+        <Route
+          path="settings"
+          element={
+            <Lazy>
+              <SettingsPage />
             </Lazy>
           }
         />

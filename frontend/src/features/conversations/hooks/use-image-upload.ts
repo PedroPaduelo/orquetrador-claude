@@ -44,8 +44,12 @@ export function useImageUpload(options: UseImageUploadOptions) {
         formData.append('file', file)
       }
 
+      const token = localStorage.getItem('token')
       const response = await fetch(`${apiUrl}/conversations/${conversationId}/attachments`, {
         method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: formData,
       })
 
