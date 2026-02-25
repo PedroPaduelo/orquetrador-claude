@@ -2,8 +2,20 @@ import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
+import { mkdirSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { prisma } from '../../lib/prisma.js'
 import { BadRequestError, UnauthorizedError } from '../../http/errors/index.js'
+
+const PROJECT_BASE_PATH = process.env.PROJECT_BASE_PATH || '/workspace/temp-orquestrador'
+
+function ensureUserDir(userId: string): string {
+  const userDir = join(PROJECT_BASE_PATH, 'users', userId, 'projetos')
+  if (!existsSync(userDir)) {
+    mkdirSync(userDir, { recursive: true })
+  }
+  return userDir
+}
 
 export async function authRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>()
@@ -27,6 +39,7 @@ export async function authRoutes(app: FastifyInstance) {
               id: z.string(),
               email: z.string(),
               name: z.string().nullable(),
+              basePath: z.string(),
             }),
           }),
         },
@@ -46,11 +59,12 @@ export async function authRoutes(app: FastifyInstance) {
         data: { email, passwordHash, name },
       })
 
+      const basePath = ensureUserDir(user.id)
       const token = app.jwt.sign({ sub: user.id }, { expiresIn: '7d' })
 
       return reply.status(201).send({
         token,
-        user: { id: user.id, email: user.email, name: user.name },
+        user: { id: user.id, email: user.email, name: user.name, basePath },
       })
     },
   )
@@ -73,6 +87,7 @@ export async function authRoutes(app: FastifyInstance) {
               id: z.string(),
               email: z.string(),
               name: z.string().nullable(),
+              basePath: z.string(),
             }),
           }),
         },
@@ -91,11 +106,12 @@ export async function authRoutes(app: FastifyInstance) {
         throw new UnauthorizedError('Email ou senha invalidos')
       }
 
+      const basePath = ensureUserDir(user.id)
       const token = app.jwt.sign({ sub: user.id }, { expiresIn: '7d' })
 
       return {
         token,
-        user: { id: user.id, email: user.email, name: user.name },
+        user: { id: user.id, email: user.email, name: user.name, basePath },
       }
     },
   )
@@ -112,6 +128,7 @@ export async function authRoutes(app: FastifyInstance) {
             id: z.string(),
             email: z.string(),
             name: z.string().nullable(),
+            basePath: z.string(),
             createdAt: z.string(),
           }),
         },
@@ -125,10 +142,13 @@ export async function authRoutes(app: FastifyInstance) {
         throw new UnauthorizedError('Usuario nao encontrado')
       }
 
+      const basePath = ensureUserDir(user.id)
+
       return {
         id: user.id,
         email: user.email,
         name: user.name,
+        basePath,
         createdAt: user.createdAt.toISOString(),
       }
     },

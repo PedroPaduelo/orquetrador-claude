@@ -34,15 +34,17 @@ import { ConversationCard } from './components/conversation-card'
 import { ConversationTable } from './components/conversation-table'
 import { useConversations, useCreateConversation, useDeleteConversation, useFolders } from './hooks/use-conversations'
 import { useWorkflows } from '../workflows/hooks/use-workflows'
+import { useAuthStore } from '../auth/store'
 import type { Conversation } from './types'
 
-const PROJECT_BASE_PATH = '/workspace/temp-orquestrador'
 const FOLDER_NAME_REGEX = /^[a-zA-Z0-9_-]+$/
 
 const searchFields: (keyof Conversation)[] = ['title', 'workflowName']
 
 export default function ConversationsPage() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const basePath = user?.basePath || ''
   const { data: conversations, isLoading } = useConversations()
   const { data: workflows } = useWorkflows()
   const { data: folders } = useFolders()
@@ -107,7 +109,7 @@ export default function ConversationsPage() {
   }, [folderMode, newFolderName, folders])
 
   const folderName = folderMode === 'create' ? newFolderName.trim() : selectedFolder
-  const projectPath = folderName ? `${PROJECT_BASE_PATH}/${folderName}` : ''
+  const projectPath = folderName ? `${basePath}/${folderName}` : ''
   const canCreate = selectedWorkflowId && folderName && !folderNameError && (folderMode === 'select' || (folderMode === 'create' && FOLDER_NAME_REGEX.test(newFolderName)))
 
   const handleCreate = async () => {
@@ -208,7 +210,7 @@ export default function ConversationsPage() {
                     )}
                     {newFolderName && !folderNameError && (
                       <p className="text-xs text-muted-foreground">
-                        {PROJECT_BASE_PATH}/{newFolderName}
+                        {basePath}/{newFolderName}
                       </p>
                     )}
                   </TabsContent>

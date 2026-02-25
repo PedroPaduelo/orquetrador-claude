@@ -10,10 +10,14 @@ import { NotFoundError } from '../../http/errors/index.js'
 
 const PROJECT_BASE_PATH = process.env.PROJECT_BASE_PATH || '/workspace/temp-orquestrador'
 
+function getUserProjectsDir(userId: string): string {
+  return join(PROJECT_BASE_PATH, 'users', userId, 'projetos')
+}
+
 export async function conversationsRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>()
 
-  // GET /folders — list project folders
+  // GET /folders — list project folders for the logged-in user
   server.get(
     '/folders',
     {
@@ -31,12 +35,13 @@ export async function conversationsRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const userId = await request.getCurrentUserId()
-      mkdirSync(PROJECT_BASE_PATH, { recursive: true })
+      const userProjectsDir = getUserProjectsDir(userId)
+      mkdirSync(userProjectsDir, { recursive: true })
 
-      const entries = readdirSync(PROJECT_BASE_PATH)
+      const entries = readdirSync(userProjectsDir)
       const dirs = entries.filter((entry) => {
         try {
-          return statSync(join(PROJECT_BASE_PATH, entry)).isDirectory()
+          return statSync(join(userProjectsDir, entry)).isDirectory()
         } catch {
           return false
         }
@@ -54,7 +59,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
       }
 
       return dirs.map((name) => {
-        const fullPath = join(PROJECT_BASE_PATH, name)
+        const fullPath = join(userProjectsDir, name)
         return {
           name,
           path: fullPath,
