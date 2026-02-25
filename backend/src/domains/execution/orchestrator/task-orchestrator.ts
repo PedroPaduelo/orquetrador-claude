@@ -35,6 +35,12 @@ export class TaskOrchestrator {
     this.engine = engine || defaultEngine
   }
 
+  private isPromptTooLongError(error: string | undefined): boolean {
+    if (!error) return false
+    const lower = error.toLowerCase()
+    return lower.includes('prompt is too long') || lower.includes('prompt_too_long')
+  }
+
   private async executeStep(
     executionId: string,
     conversationId: string,
@@ -44,28 +50,49 @@ export class TaskOrchestrator {
     attachments?: MessageAttachment[],
   ) {
     // Get session (resume token) for this step
-    const resumeToken = await sessionManager.getSession(conversationId, step.id)
+    let resumeToken = await sessionManager.getSession(conversationId, step.id)
 
     // Get context messages only on cold start
-    const contextMessages = !resumeToken
+    let contextMessages = !resumeToken
       ? await sessionManager.getSelectedContext(conversationId)
       : []
+
+    const systemPrompt = await smartNotesService.buildSystemPrompt(step)
 
     // Create monitor for this execution
     const monitor = new ExecutionMonitor(executionId, conversationId, step.id)
     monitor.setInputMetadata({
       messageLength: input.length,
-      systemPrompt: await smartNotesService.buildSystemPrompt(step),
+      systemPrompt,
       resumeToken,
       model: step.model || null,
       projectPath,
     })
 
-    const systemPrompt = await smartNotesService.buildSystemPrompt(step)
-
     // Sync files (skills, agents, .mcp.json) for this step
     if (projectPath) {
       await fileSyncService.syncForStep(projectPath, step.id)
+    }
+
+    const makeOnEvent = (mon: ExecutionMonitor) => (event: import('../engine/claude/stream-parser.js').StreamEvent) => {
+      mon.onParsedEvent(event)
+      if (event.type === 'content' && event.content) {
+        orchestratorEvents.emitStepStream({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          type: 'content',
+          content: event.content,
+        })
+      } else if (event.type === 'action' && event.action) {
+        orchestratorEvents.emitStepStream({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          type: 'action',
+          action: event.action,
+        })
+      }
     }
 
     const result = await this.engine.execute({
@@ -79,29 +106,86 @@ export class TaskOrchestrator {
       attachments,
       resumeToken,
       contextMessages,
-      onEvent: (event) => {
-        monitor.onParsedEvent(event)
-        if (event.type === 'content' && event.content) {
-          orchestratorEvents.emitStepStream({
-            executionId,
-            conversationId,
-            stepId: step.id,
-            type: 'content',
-            content: event.content,
-          })
-        } else if (event.type === 'action' && event.action) {
-          orchestratorEvents.emitStepStream({
-            executionId,
-            conversationId,
-            stepId: step.id,
-            type: 'action',
-            action: event.action,
-          })
-        }
-      },
+      onEvent: makeOnEvent(monitor),
       onRawStdout: (chunk) => monitor.onStdout(chunk),
       onRawStderr: (chunk) => monitor.onStderr(chunk),
     })
+
+    // If "Prompt is too long" and we were resuming a session, retry with a fresh session
+    if (this.isPromptTooLongError(result.error) && resumeToken) {
+      // Flush the failed trace first
+      monitor.flush({
+        exitCode: result.exitCode,
+        signal: result.signal,
+        resultStatus: 'error',
+        errorMessage: result.error,
+        contentLength: result.content.length,
+        actionsCount: result.actions.length,
+        resumeTokenOut: result.resumeToken,
+      })
+
+      // Notify the frontend that we are resetting the context
+      orchestratorEvents.emitContextReset({
+        executionId,
+        conversationId,
+        stepId: step.id,
+        stepName: step.name,
+        reason: 'O contexto da sessao excedeu o limite. Abrindo uma sessao nova automaticamente.',
+      })
+
+      // Delete the old session so we start fresh
+      await sessionManager.deleteSession(conversationId, step.id)
+      resumeToken = null
+      contextMessages = await sessionManager.getSelectedContext(conversationId)
+
+      // Create a new monitor for the retry
+      const retryMonitor = new ExecutionMonitor(executionId, conversationId, step.id)
+      retryMonitor.setInputMetadata({
+        messageLength: input.length,
+        systemPrompt,
+        resumeToken: null,
+        model: step.model || null,
+        projectPath,
+      })
+
+      const retryResult = await this.engine.execute({
+        conversationId,
+        stepId: step.id,
+        message: input,
+        systemPrompt,
+        apiBaseUrl: step.baseUrl,
+        projectPath,
+        model: step.model || undefined,
+        attachments,
+        resumeToken: null,
+        contextMessages,
+        onEvent: makeOnEvent(retryMonitor),
+        onRawStdout: (chunk) => retryMonitor.onStdout(chunk),
+        onRawStderr: (chunk) => retryMonitor.onStderr(chunk),
+      })
+
+      if (retryResult.resumeToken) {
+        await sessionManager.saveSession(conversationId, step.id, retryResult.resumeToken)
+      }
+
+      let retryStatus = 'success'
+      if (retryResult.error) retryStatus = 'error'
+      else if (retryResult.timedOut) retryStatus = 'timeout'
+      else if (retryResult.cancelled) retryStatus = 'cancelled'
+      else if (retryResult.needsUserInput) retryStatus = 'needs_input'
+
+      retryMonitor.flush({
+        exitCode: retryResult.exitCode,
+        signal: retryResult.signal,
+        resultStatus: retryStatus,
+        errorMessage: retryResult.error,
+        contentLength: retryResult.content.length,
+        actionsCount: retryResult.actions.length,
+        resumeTokenOut: retryResult.resumeToken,
+      })
+
+      return retryResult
+    }
 
     // Save session if we got a new one
     if (result.resumeToken) {

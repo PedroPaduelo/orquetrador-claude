@@ -116,6 +116,9 @@ export async function executionRoutes(app: FastifyInstance) {
         'condition:jump': (data: unknown) => {
           if (filterByConversation(data)) sendEvent('condition_jump', data)
         },
+        'context:reset': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('context_reset', data)
+        },
         'execution:cancelled': (data: unknown) => {
           if (filterByConversation(data)) sendEvent('cancelled', data)
         },

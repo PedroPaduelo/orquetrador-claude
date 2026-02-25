@@ -1,4 +1,4 @@
-import { User, Bot, ChevronDown, ChevronRight, Terminal, Brain, AlertTriangle, FileCode, Copy, Check } from 'lucide-react'
+import { User, Bot, ChevronDown, ChevronRight, Terminal, Brain, AlertTriangle, FileCode, Copy, Check, RefreshCw } from 'lucide-react'
 import { useState, memo, useCallback, useMemo, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -315,6 +315,13 @@ const ActionItem = memo(function ActionItem({ action }: { action: Action }) {
           label: 'Log',
           color: 'text-warning',
           bgColor: 'bg-warning/5 border-warning/10',
+        }
+      case 'system':
+        return {
+          icon: <RefreshCw className="h-3 w-3" />,
+          label: 'Sistema',
+          color: 'text-amber-500',
+          bgColor: 'bg-amber-500/5 border-amber-500/10',
         }
       default:
         return {

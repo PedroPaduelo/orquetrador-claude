@@ -179,6 +179,19 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           onError?.(data.error as string)
           break
 
+        case 'context_reset':
+          // Context was too large, orchestrator is retrying with a fresh session
+          resetStreamingContent()
+          setStepStatus(data.stepId as string, 'running')
+          setStreamingPhase('ai_thinking')
+          firstContentReceivedRef.current = false
+          // Emit a visible action so the user knows what happened
+          addStreamingAction({
+            type: 'system',
+            content: data.reason as string || 'Contexto excedeu o limite. Reiniciando com sessao nova...',
+          })
+          break
+
         case 'condition_retry':
           setStepStatus(data.stepId as string, 'retry')
           break

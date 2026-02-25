@@ -1,5 +1,5 @@
 export interface Action {
-  type: 'tool_use' | 'tool_result' | 'thinking' | 'error' | 'stderr'
+  type: 'tool_use' | 'tool_result' | 'thinking' | 'error' | 'stderr' | 'system'
   name?: string
   input?: unknown
   output?: unknown

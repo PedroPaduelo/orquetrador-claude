@@ -86,6 +86,14 @@ export interface ExecutionCompleteEvent {
   success: boolean
 }
 
+export interface ContextResetEvent {
+  executionId: string
+  conversationId: string
+  stepId: string
+  stepName: string
+  reason: string
+}
+
 export interface ExecutionCancelledEvent {
   executionId: string
   conversationId: string
@@ -123,6 +131,10 @@ export class OrchestratorEvents extends EventEmitter {
 
   emitExecutionComplete(data: ExecutionCompleteEvent) {
     this.emit('execution:complete', data)
+  }
+
+  emitContextReset(data: ContextResetEvent) {
+    this.emit('context:reset', data)
   }
 
   emitExecutionCancelled(data: ExecutionCancelledEvent) {
