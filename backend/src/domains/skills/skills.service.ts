@@ -8,12 +8,12 @@ interface GitHubTreeItem {
 }
 
 export const skillsService = {
-  async importFromUrl(url: string, isGlobal: boolean) {
+  async importFromUrl(url: string, isGlobal: boolean, userId?: string) {
     const markdown = await fetchMarkdownFromUrl(url)
-    return skillsService.importFromContent(markdown, isGlobal, url)
+    return skillsService.importFromContent(markdown, isGlobal, url, userId)
   },
 
-  async importFromContent(markdown: string, isGlobal: boolean, url?: string) {
+  async importFromContent(markdown: string, isGlobal: boolean, url?: string, userId?: string) {
     const { frontmatter, body } = parseFrontmatter(markdown)
 
     const name = (frontmatter.name as string) || extractNameFromUrl(url) || `skill-${Date.now()}`
@@ -35,7 +35,7 @@ export const skillsService = {
       frontmatter: JSON.stringify(frontmatter),
       enabled: true,
       isGlobal,
-    })
+    }, userId!)
   },
 
   async resync(id: string) {

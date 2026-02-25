@@ -39,6 +39,7 @@ export async function executionRoutes(app: FastifyInstance) {
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      await request.getCurrentUserId()
       const { id } = request.params as { id: string }
       const { content, stepIndex, attachments } = request.body as {
         content: string
@@ -230,6 +231,7 @@ export async function executionRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const { id } = request.params
       const { stepId } = request.query
 
@@ -264,6 +266,7 @@ export async function executionRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const { id } = request.params
       const { selected } = request.body
 
@@ -298,6 +301,7 @@ export async function executionRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const { id } = request.params
       const { actions } = request.body
 
@@ -338,6 +342,7 @@ export async function executionRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const { id } = request.params
 
       const conversation = await prisma.conversation.findUnique({ where: { id } })
@@ -412,6 +417,7 @@ export async function executionRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const { traceId } = request.params
 
       const trace = await prisma.executionTrace.findUnique({
@@ -449,6 +455,7 @@ export async function executionRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       const { id } = request.params
 
       const message = await messagesRepository.findById(id)

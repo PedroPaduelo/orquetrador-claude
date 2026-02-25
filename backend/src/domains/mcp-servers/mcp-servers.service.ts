@@ -77,7 +77,7 @@ export const mcpServersService = {
     description?: string
     envVars?: Record<string, string>
     isGlobal?: boolean
-  }) {
+  }, userId: string) {
     const parts = parseCommand(input.command.trim())
     if (parts.length === 0) throw new Error('Comando vazio')
 
@@ -108,6 +108,6 @@ export const mcpServersService = {
       envVars: input.envVars ?? {},
       enabled: true,
       isGlobal: input.isGlobal ?? true,
-    })
+    }, userId)
   },
 }

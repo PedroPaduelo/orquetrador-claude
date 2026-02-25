@@ -8,6 +8,28 @@ datasource db {
 }
 
 // ============================================
+// USERS
+// ============================================
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  workflows     Workflow[]
+  conversations Conversation[]
+  mcpServers    McpServer[]
+  skills        Skill[]
+  agents        Agent[]
+  rules         Rule[]
+  plugins       Plugin[]
+
+  @@map("users")
+}
+
+// ============================================
 // WORKFLOWS
 // ============================================
 model Workflow {
@@ -18,9 +40,13 @@ model Workflow {
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @default(now()) @updatedAt @map("updated_at")
 
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   steps         WorkflowStep[]
   conversations Conversation[]
 
+  @@index([userId])
   @@map("workflows")
 }
 
@@ -77,6 +103,8 @@ model Conversation {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   // Relations
+  userId        String       @map("user_id")
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   workflowId    String       @map("workflow_id")
   workflow      Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   currentStepId String?      @map("current_step_id")
@@ -89,6 +117,7 @@ model Conversation {
   executionLogs   ExecutionLog[]
   executionTraces ExecutionTrace[]
 
+  @@index([userId])
   @@index([workflowId])
   @@map("conversations")
 }
@@ -218,10 +247,13 @@ model McpServer {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   stepServers WorkflowStepMcpServer[]
   pluginId    String?  @map("plugin_id")
   plugin      Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
   @@map("mcp_servers")
 }
 
@@ -253,11 +285,14 @@ model Skill {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   stepSkills WorkflowStepSkill[]
   rules      Rule[]
   pluginId   String?  @map("plugin_id")
   plugin     Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
   @@map("skills")
 }
 
@@ -291,10 +326,13 @@ model Agent {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
 
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   stepAgents WorkflowStepAgent[]
   pluginId   String?  @map("plugin_id")
   plugin     Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
   @@map("agents")
 }
 
@@ -319,6 +357,8 @@ model Rule {
   repoPath     String?  @map("repo_path")
   lastSyncedAt DateTime? @map("last_synced_at")
 
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   skillId     String?  @map("skill_id")
   skill       Skill?   @relation(fields: [skillId], references: [id], onDelete: SetNull)
   pluginId    String?  @map("plugin_id")
@@ -327,6 +367,7 @@ model Rule {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
+  @@index([userId])
   @@map("rules")
 }
 
@@ -347,11 +388,14 @@ model Plugin {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   mcpServers McpServer[]
   skills     Skill[]
   agents     Agent[]
   rules      Rule[]
 
+  @@index([userId])
   @@map("plugins")
 }
 

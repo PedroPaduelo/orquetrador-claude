@@ -37,7 +37,10 @@ export async function skillsRoutes(app: FastifyInstance) {
         },
       },
     },
-    async () => skillsRepository.findAll()
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      return skillsRepository.findAll(userId)
+    }
   )
 
   // POST /skills
@@ -66,7 +69,8 @@ export async function skillsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const skill = await skillsRepository.create(request.body)
+      const userId = await request.getCurrentUserId()
+      const skill = await skillsRepository.create(request.body, userId)
       return reply.status(201).send({
         id: skill.id,
         name: skill.name,
@@ -101,6 +105,7 @@ export async function skillsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const skill = await skillsRepository.findById(request.params.id)
       if (!skill) throw new NotFoundError('Skill not found')
       return skill
@@ -134,6 +139,7 @@ export async function skillsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const existing = await skillsRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('Skill not found')
 
@@ -154,6 +160,7 @@ export async function skillsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       const existing = await skillsRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('Skill not found')
 
@@ -179,6 +186,7 @@ export async function skillsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const existing = await skillsRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('Skill not found')
 
@@ -209,6 +217,7 @@ export async function skillsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const userId = await request.getCurrentUserId()
       const { url, content, isGlobal } = request.body
 
       if (!url && !content) {
@@ -217,9 +226,9 @@ export async function skillsRoutes(app: FastifyInstance) {
 
       let skill
       if (url) {
-        skill = await skillsService.importFromUrl(url, isGlobal)
+        skill = await skillsService.importFromUrl(url, isGlobal, userId)
       } else {
-        skill = await skillsService.importFromContent(content!, isGlobal)
+        skill = await skillsService.importFromContent(content!, isGlobal, undefined, userId)
       }
 
       return reply.status(201).send({
@@ -250,6 +259,7 @@ export async function skillsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const result = await skillsService.resync(request.params.id)
       if (!result) throw new NotFoundError('Skill not found')
       return result

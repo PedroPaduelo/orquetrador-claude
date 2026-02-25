@@ -71,8 +71,8 @@ function fromDb(record: {
 }
 
 export const skillsRepository = {
-  async findAll() {
-    const skills = await prisma.skill.findMany({ orderBy: { createdAt: 'desc' } })
+  async findAll(userId: string) {
+    const skills = await prisma.skill.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } })
     return skills.map(fromDb)
   },
 
@@ -104,9 +104,9 @@ export const skillsRepository = {
     fileManifest?: string
     projectPath?: string | null
     lastSyncedAt?: Date | null
-  }) {
+  }, userId: string) {
     const skill = await prisma.skill.create({
-      data: toDb(input as Parameters<typeof toDb>[0]),
+      data: { ...toDb(input as Parameters<typeof toDb>[0]), userId },
     })
     return fromDb(skill)
   },

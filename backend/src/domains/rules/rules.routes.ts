@@ -34,7 +34,10 @@ export async function rulesRoutes(app: FastifyInstance) {
         },
       },
     },
-    async () => rulesRepository.findAll()
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      return rulesRepository.findAll(userId)
+    }
   )
 
   server.post(
@@ -61,7 +64,8 @@ export async function rulesRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const rule = await rulesRepository.create(request.body)
+      const userId = await request.getCurrentUserId()
+      const rule = await rulesRepository.create(request.body, userId)
       return reply.status(201).send({
         id: rule.id,
         name: rule.name,
@@ -97,6 +101,7 @@ export async function rulesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const rule = await rulesRepository.findById(request.params.id)
       if (!rule) throw new NotFoundError('Rule not found')
       return rule
@@ -128,6 +133,7 @@ export async function rulesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const existing = await rulesRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('Rule not found')
 
@@ -147,6 +153,7 @@ export async function rulesRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       const existing = await rulesRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('Rule not found')
 
@@ -168,6 +175,7 @@ export async function rulesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const existing = await rulesRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('Rule not found')
 
@@ -197,13 +205,14 @@ export async function rulesRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const userId = await request.getCurrentUserId()
       const { url, content, isGlobal } = request.body
 
       if (!url && !content) throw new Error('Informe url ou content')
 
       const rule = url
-        ? await rulesService.importFromUrl(url, isGlobal)
-        : await rulesService.importFromContent(content!, isGlobal)
+        ? await rulesService.importFromUrl(url, isGlobal, userId)
+        : await rulesService.importFromContent(content!, isGlobal, undefined, userId)
 
       return reply.status(201).send({
         id: rule.id,
@@ -231,6 +240,7 @@ export async function rulesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const result = await rulesService.resync(request.params.id)
       if (!result) throw new NotFoundError('Rule not found')
       return result

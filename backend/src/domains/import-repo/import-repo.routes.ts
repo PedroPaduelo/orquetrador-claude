@@ -39,8 +39,9 @@ export async function importRepoRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      const userId = await request.getCurrentUserId()
       const { url, projectPath, saveToDb } = request.body
-      return importFromUrl(url, projectPath, saveToDb)
+      return importFromUrl(url, projectPath, saveToDb, userId)
     }
   )
 }

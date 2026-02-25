@@ -63,8 +63,8 @@ function fromDb(record: {
 }
 
 export const agentsRepository = {
-  async findAll() {
-    const agents = await prisma.agent.findMany({ orderBy: { createdAt: 'desc' } })
+  async findAll(userId: string) {
+    const agents = await prisma.agent.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } })
     return agents.map(fromDb)
   },
 
@@ -98,10 +98,11 @@ export const agentsRepository = {
     repoPath?: string | null
     projectPath?: string | null
     lastSyncedAt?: Date | null
-  }) {
+  }, userId: string) {
     const agent = await prisma.agent.create({
       data: {
         name: input.name,
+        userId,
         description: input.description,
         systemPrompt: input.systemPrompt ?? '',
         tools: JSON.stringify(input.tools ?? []),

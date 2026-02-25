@@ -36,6 +36,7 @@ export async function attachmentsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       const { id: conversationId } = request.params
 
       const conversation = await prisma.conversation.findUnique({

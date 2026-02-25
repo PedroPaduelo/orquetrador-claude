@@ -50,11 +50,15 @@ export function useSSEStream(options: UseSSEStreamOptions) {
         // Phase: connecting (HTTP request in flight)
         setStreamingPhase('connecting')
 
+        const token = localStorage.getItem('token')
         const response = await fetch(
           `${apiUrl}/conversations/${conversationId}/messages/stream`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify({ content, stepIndex, attachments }),
             signal: abortControllerRef.current.signal,
           }
@@ -233,8 +237,10 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     //    (in case the SSE close event doesn't propagate)
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
+      const cancelToken = localStorage.getItem('token')
       await fetch(`${apiUrl}/conversations/${conversationId}/cancel`, {
         method: 'POST',
+        headers: cancelToken ? { Authorization: `Bearer ${cancelToken}` } : {},
       })
     } catch {
       // Ignore cancel API errors

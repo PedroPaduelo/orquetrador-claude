@@ -1,9 +1,9 @@
 import { prisma } from '../../lib/prisma.js'
 
 export const conversationsRepository = {
-  async findAll(workflowId?: string) {
+  async findAll(userId: string, workflowId?: string) {
     const conversations = await prisma.conversation.findMany({
-      where: workflowId ? { workflowId } : undefined,
+      where: { userId, ...(workflowId ? { workflowId } : {}) },
       orderBy: { createdAt: 'desc' },
       include: {
         workflow: {
@@ -103,9 +103,9 @@ export const conversationsRepository = {
     }
   },
 
-  async create(input: { workflowId: string; title?: string; projectPath: string }) {
+  async create(input: { workflowId: string; title?: string; projectPath: string }, userId: string) {
     const workflow = await prisma.workflow.findUnique({
-      where: { id: input.workflowId },
+      where: { id: input.workflowId, userId },
       include: {
         steps: {
           orderBy: { stepOrder: 'asc' },
@@ -124,6 +124,7 @@ export const conversationsRepository = {
         title: input.title ?? null,
         projectPath: input.projectPath,
         currentStepId: firstStep?.id ?? null,
+        userId,
       },
     })
 

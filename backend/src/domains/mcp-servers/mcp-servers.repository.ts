@@ -74,8 +74,8 @@ function fromDbFull(record: {
 }
 
 export const mcpServersRepository = {
-  async findAll() {
-    const servers = await prisma.mcpServer.findMany({ orderBy: { createdAt: 'desc' } })
+  async findAll(userId: string) {
+    const servers = await prisma.mcpServer.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } })
     return servers.map(fromDbList)
   },
 
@@ -94,7 +94,7 @@ export const mcpServersRepository = {
     envVars?: Record<string, string>
     enabled?: boolean
     isGlobal?: boolean
-  }) {
+  }, userId: string) {
     const server = await prisma.mcpServer.create({
       data: {
         name: input.name,
@@ -106,6 +106,7 @@ export const mcpServersRepository = {
         envVars: JSON.stringify(input.envVars ?? {}),
         enabled: input.enabled ?? true,
         isGlobal: input.isGlobal ?? true,
+        userId,
       },
     })
     return fromDbFull(server)

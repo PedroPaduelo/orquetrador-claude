@@ -23,5 +23,5 @@
     }
   },
   "include": ["src/**/*", "prisma/**/*"],
-  "exclude": ["node_modules", "dist", "prisma/seed.ts", "prisma/update-workflow.ts"]
+  "exclude": ["node_modules", "dist", "prisma/seed.ts", "prisma/update-workflow.ts", "prisma/update-generic-workflow.ts"]
 }

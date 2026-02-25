@@ -74,7 +74,7 @@ function writeFileSafe(filePath: string, content: string) {
 // ---- Service ----
 
 export const pluginsService = {
-  async install(input: PluginManifest) {
+  async install(input: PluginManifest, userId?: string) {
     const existing = await pluginsRepository.findByName(input.name)
     if (existing) {
       throw new Error(`Plugin with name "${input.name}" already exists`)
@@ -91,20 +91,20 @@ export const pluginsService = {
       mcpServers: input.mcpServers ?? [],
       skills: input.skills ?? [],
       agents: input.agents ?? [],
-    })
+    }, userId!)
   },
 
-  async importFromUrl(url: string, projectPath?: string) {
+  async importFromUrl(url: string, projectPath?: string, userId?: string) {
     if (isGitHubRepoUrl(url)) {
-      return pluginsService._importFromGitHubRepo(url, projectPath)
+      return pluginsService._importFromGitHubRepo(url, projectPath, userId)
     }
     // Direct JSON manifest URL
     const rawUrl = toRawUrl(url)
     const manifest = await fetchJson<PluginManifest>(rawUrl)
-    return pluginsService.install(manifest)
+    return pluginsService.install(manifest, userId)
   },
 
-  async _importFromGitHubRepo(repoUrl: string, projectPath?: string) {
+  async _importFromGitHubRepo(repoUrl: string, projectPath?: string, userId?: string) {
     const { owner, repo, branch, subPath } = parseGitHubRepoUrl(repoUrl)
 
     // Fetch file tree
@@ -244,7 +244,7 @@ export const pluginsService = {
       mcpServers,
       skills,
       agents,
-    })
+    }, userId!)
   },
 
   async resync(id: string, overridePath?: string) {

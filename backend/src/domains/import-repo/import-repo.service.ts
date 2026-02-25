@@ -28,7 +28,8 @@ type ImportResult = {
 export async function importFromUrl(
   url: string,
   projectPath: string,
-  saveToDb: boolean
+  saveToDb: boolean,
+  userId?: string
 ): Promise<ImportResult> {
   const parsed = parseGitHubUrl(url)
   if (!parsed) {
@@ -41,7 +42,7 @@ export async function importFromUrl(
 
   // If it's a single file URL (blob), import just that file directly
   if (isFile && subpath) {
-    return importSingleFile(owner, repo, branch, subpath, projectPath, saveToDb)
+    return importSingleFile(owner, repo, branch, subpath, projectPath, saveToDb, userId)
   }
 
   // Get repo tree via GitHub API
@@ -127,7 +128,7 @@ export async function importFromUrl(
 
         // Also save to DB for UI management if requested
         if (saveToDb) {
-          await saveItemToDb(item, owner, repo, branch, projectPath, fileContents)
+          await saveItemToDb(item, owner, repo, branch, projectPath, fileContents, userId)
         }
       }
     } catch (err) {
@@ -280,7 +281,8 @@ export async function importSingleFile(
   branch: string,
   filePath: string,
   projectPath: string,
-  saveToDb: boolean
+  saveToDb: boolean,
+  userId?: string
 ): Promise<ImportResult> {
   const rawFileUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`
   const content = await fetchText(rawFileUrl)
@@ -391,6 +393,7 @@ export async function importSingleFile(
             repoUrl: skillRepoUrl,
             projectPath,
             ...githubFields,
+            userId: userId!,
           },
         })
       } catch { /* non-fatal */ }
@@ -457,6 +460,7 @@ export async function importSingleFile(
             repoUrl: agentRepoUrl,
             projectPath,
             ...githubFields,
+            userId: userId!,
           },
         })
       } catch { /* non-fatal */ }
@@ -478,7 +482,8 @@ export async function saveItemToDb(
   repo: string,
   branch: string,
   projPath: string,
-  fileContents: Map<string, string>
+  fileContents: Map<string, string>,
+  userId?: string
 ): Promise<void> {
   const repoUrl = `https://github.com/${owner}/${repo}/tree/${branch}/${item.dir}`
   const now = new Date()
@@ -544,6 +549,7 @@ export async function saveItemToDb(
           repoUrl,
           projectPath: projPath,
           ...githubFields,
+          userId: userId!,
         },
       })
     } else if (item.type === 'agent') {
@@ -610,6 +616,7 @@ export async function saveItemToDb(
           repoUrl,
           projectPath: projPath,
           ...githubFields,
+          userId: userId!,
         },
       })
     } else if (item.type === 'rule') {
@@ -645,6 +652,7 @@ export async function saveItemToDb(
           repoUrl,
           projectPath: projPath,
           ...githubFields,
+          userId: userId!,
         },
       })
     }

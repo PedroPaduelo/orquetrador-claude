@@ -1,6 +1,7 @@
 import Fastify from 'fastify'
 import fastifyCompress from '@fastify/compress'
 import fastifyCors from '@fastify/cors'
+import fastifyJwt from '@fastify/jwt'
 import fastifyMultipart from '@fastify/multipart'
 import fastifyStatic from '@fastify/static'
 import fastifySwagger from '@fastify/swagger'
@@ -14,6 +15,7 @@ import { join } from 'path'
 
 import { env } from './lib/env.js'
 import { errorHandler } from './http/error-handler.js'
+import { auth } from './middlewares/auth.js'
 import { domainRoutes } from './domains/index.js'
 import { startTraceCleanup } from './domains/execution/monitoring/trace-cleanup.js'
 
@@ -40,6 +42,14 @@ async function registerPlugins() {
     origin: true,
     credentials: true,
   })
+
+  // JWT
+  await app.register(fastifyJwt, {
+    secret: env.JWT_SECRET,
+  })
+
+  // Auth middleware (adds getCurrentUserId to every request)
+  await app.register(auth)
 
   // Multipart (file uploads)
   await app.register(fastifyMultipart, {

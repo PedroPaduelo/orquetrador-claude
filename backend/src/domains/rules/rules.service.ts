@@ -2,12 +2,12 @@ import { rulesRepository } from './rules.repository.js'
 import { fetchMarkdownFromUrl, extractNameFromUrl, fetchText, rawGitHubUrl } from '../../lib/github.js'
 
 export const rulesService = {
-  async importFromUrl(url: string, isGlobal: boolean) {
+  async importFromUrl(url: string, isGlobal: boolean, userId?: string) {
     const markdown = await fetchMarkdownFromUrl(url)
-    return rulesService.importFromContent(markdown, isGlobal, url)
+    return rulesService.importFromContent(markdown, isGlobal, url, userId)
   },
 
-  async importFromContent(markdown: string, isGlobal: boolean, url?: string) {
+  async importFromContent(markdown: string, isGlobal: boolean, url?: string, userId?: string) {
     const name = extractNameFromUrl(url) || `rule-${Date.now()}`
     const body = markdown.trim()
 
@@ -22,7 +22,7 @@ export const rulesService = {
       body,
       enabled: true,
       isGlobal,
-    })
+    }, userId!)
   },
 
   async resync(id: string) {

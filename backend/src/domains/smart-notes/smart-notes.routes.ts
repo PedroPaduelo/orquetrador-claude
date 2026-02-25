@@ -23,7 +23,8 @@ export async function smartNotesRoutes(app: FastifyInstance) {
         },
       },
     },
-    async () => {
+    async (request) => {
+      await request.getCurrentUserId()
       const configured = smartNotesMCPClient.isConfigured()
       let connected = false
 
@@ -52,7 +53,8 @@ export async function smartNotesRoutes(app: FastifyInstance) {
         },
       },
     },
-    async () => {
+    async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -81,6 +83,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -110,6 +113,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -132,6 +136,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -157,6 +162,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -181,6 +187,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -203,6 +210,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -236,6 +244,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -264,6 +273,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -286,6 +296,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -308,6 +319,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -327,6 +339,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -346,6 +359,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -365,6 +379,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -384,6 +399,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -404,6 +420,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -423,6 +440,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }
@@ -450,6 +468,7 @@ export async function smartNotesRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       if (!smartNotesMCPClient.isConfigured()) {
         throw new BadRequestError('Smart Notes nao configurado')
       }

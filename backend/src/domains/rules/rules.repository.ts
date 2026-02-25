@@ -43,8 +43,9 @@ function fromDb(record: {
 }
 
 export const rulesRepository = {
-  async findAll() {
+  async findAll(userId: string) {
     const rules = await prisma.rule.findMany({
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       include: { skill: { select: { name: true } } },
     })
@@ -79,10 +80,11 @@ export const rulesRepository = {
     repoPath?: string | null
     projectPath?: string | null
     lastSyncedAt?: Date | null
-  }) {
+  }, userId: string) {
     const rule = await prisma.rule.create({
       data: {
         name: input.name,
+        userId,
         description: input.description,
         body: input.body ?? '',
         enabled: input.enabled ?? true,

@@ -32,7 +32,10 @@ export async function mcpServersRoutes(app: FastifyInstance) {
         },
       },
     },
-    async () => mcpServersRepository.findAll()
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      return mcpServersRepository.findAll(userId)
+    }
   )
 
   server.post(
@@ -63,7 +66,8 @@ export async function mcpServersRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const s = await mcpServersRepository.create(request.body)
+      const userId = await request.getCurrentUserId()
+      const s = await mcpServersRepository.create(request.body, userId)
       return reply.status(201).send({
         id: s.id,
         name: s.name,
@@ -103,6 +107,7 @@ export async function mcpServersRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const s = await mcpServersRepository.findById(request.params.id)
       if (!s) throw new NotFoundError('MCP Server not found')
       return s
@@ -138,6 +143,7 @@ export async function mcpServersRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const existing = await mcpServersRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('MCP Server not found')
 
@@ -157,6 +163,7 @@ export async function mcpServersRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       const existing = await mcpServersRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('MCP Server not found')
 
@@ -178,6 +185,7 @@ export async function mcpServersRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const existing = await mcpServersRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('MCP Server not found')
 
@@ -205,6 +213,7 @@ export async function mcpServersRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const result = await mcpServersService.test(request.params.id)
       if (!result) throw new NotFoundError('MCP Server not found')
       return result
@@ -237,7 +246,8 @@ export async function mcpServersRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const s = await mcpServersService.quickInstall(request.body)
+      const userId = await request.getCurrentUserId()
+      const s = await mcpServersService.quickInstall(request.body, userId)
       return reply.status(201).send({
         id: s.id,
         name: s.name,

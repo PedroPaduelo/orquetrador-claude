@@ -40,8 +40,9 @@ function parseStep(step: {
 }
 
 export const workflowsRepository = {
-  async findAll() {
+  async findAll(userId: string) {
     const workflows = await prisma.workflow.findMany({
+      where: { userId },
       orderBy: { updatedAt: 'desc' },
       include: {
         _count: {
@@ -131,12 +132,13 @@ export const workflowsRepository = {
       agentIds?: string[]
       ruleIds?: string[]
     }>
-  }) {
+  }, userId: string) {
     const workflow = await prisma.workflow.create({
       data: {
         name: input.name,
         description: input.description,
         type: input.type ?? 'sequential',
+        userId,
         steps: input.steps
           ? {
               create: input.steps.map((step, index) => ({

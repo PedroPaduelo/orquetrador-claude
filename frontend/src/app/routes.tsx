@@ -2,8 +2,11 @@ import { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AppLayout } from './app-layout'
 import { Skeleton } from '@/shared/components/ui/skeleton'
+import { ProtectedRoute } from '@/features/auth/protected-route'
 
 // Lazy load pages
+const LoginPage = lazy(() => import('@/features/auth/login'))
+const RegisterPage = lazy(() => import('@/features/auth/register'))
 const DashboardPage = lazy(() => import('@/features/dashboard'))
 const WorkflowsPage = lazy(() => import('@/features/workflows'))
 const WorkflowWizardPage = lazy(() => import('@/features/workflows/wizard'))
@@ -34,8 +37,16 @@ function Lazy({ children }: { children: React.ReactNode }) {
 export function AppRoutes() {
   return (
     <Routes>
-      {/* Main layout */}
-      <Route path="/" element={<AppLayout />}>
+      {/* Public routes */}
+      <Route path="/login" element={<Lazy><LoginPage /></Lazy>} />
+      <Route path="/register" element={<Lazy><RegisterPage /></Lazy>} />
+
+      {/* Protected routes */}
+      <Route path="/" element={
+        <ProtectedRoute>
+          <AppLayout />
+        </ProtectedRoute>
+      }>
         <Route
           index
           element={
@@ -144,14 +155,15 @@ export function AppRoutes() {
           }
         />
 
-
       </Route>
 
-      {/* Catch all - go to dashboard */}
+      {/* Catch all - go to dashboard (protected) */}
       <Route path="*" element={
-        <Lazy>
-          <DashboardPage />
-        </Lazy>
+        <ProtectedRoute>
+          <Lazy>
+            <DashboardPage />
+          </Lazy>
+        </ProtectedRoute>
       } />
     </Routes>
   )

@@ -96,7 +96,8 @@ export async function workflowsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const workflow = await workflowsRepository.create(request.body)
+      const userId = await request.getCurrentUserId()
+      const workflow = await workflowsRepository.create(request.body, userId)
       return reply.status(201).send(workflow)
     },
   )
@@ -123,7 +124,10 @@ export async function workflowsRoutes(app: FastifyInstance) {
         },
       },
     },
-    async () => workflowsRepository.findAll(),
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      return workflowsRepository.findAll(userId)
+    },
   )
 
   server.get(
@@ -147,6 +151,7 @@ export async function workflowsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const workflow = await workflowsRepository.findById(request.params.id)
       if (!workflow) throw new NotFoundError('Workflow not found')
       return workflow
@@ -178,6 +183,7 @@ export async function workflowsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const existing = await workflowsRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('Workflow not found')
 
@@ -196,6 +202,7 @@ export async function workflowsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       const existing = await workflowsRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('Workflow not found')
 
@@ -223,7 +230,8 @@ export async function workflowsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const workflow = await workflowsService.duplicate(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const workflow = await workflowsService.duplicate(request.params.id, userId)
       if (!workflow) throw new NotFoundError('Workflow not found')
       return reply.status(201).send(workflow)
     },

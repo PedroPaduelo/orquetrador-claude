@@ -33,8 +33,9 @@ function fromDb(record: {
 }
 
 export const pluginsRepository = {
-  async findAll() {
+  async findAll(userId: string) {
     const plugins = await prisma.plugin.findMany({
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -118,10 +119,11 @@ export const pluginsRepository = {
       maxTurns?: number | null
       skills?: string[]
     }>
-  }) {
+  }, userId: string) {
     const plugin = await prisma.plugin.create({
       data: {
         name: input.name,
+        userId,
         description: input.description ?? null,
         version: input.version ?? null,
         author: input.author ?? null,
@@ -142,6 +144,7 @@ export const pluginsRepository = {
                 envVars: JSON.stringify(s.envVars ?? {}),
                 enabled: true,
                 isGlobal: false,
+                userId,
               })),
             }
           : undefined,
@@ -155,6 +158,7 @@ export const pluginsRepository = {
                 model: s.model ?? null,
                 enabled: true,
                 isGlobal: false,
+                userId,
               })),
             }
           : undefined,
@@ -172,6 +176,7 @@ export const pluginsRepository = {
                 skills: JSON.stringify(a.skills ?? []),
                 enabled: true,
                 isGlobal: false,
+                userId,
               })),
             }
           : undefined,

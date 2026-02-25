@@ -29,7 +29,8 @@ export async function conversationsRoutes(app: FastifyInstance) {
         },
       },
     },
-    async () => {
+    async (request) => {
+      const userId = await request.getCurrentUserId()
       mkdirSync(PROJECT_BASE_PATH, { recursive: true })
 
       const entries = readdirSync(PROJECT_BASE_PATH)
@@ -44,7 +45,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
       const counts = await prisma.conversation.groupBy({
         by: ['projectPath'],
         _count: { id: true },
-        where: { projectPath: { not: null } },
+        where: { projectPath: { not: null }, userId },
       })
 
       const countMap = new Map<string, number>()
@@ -88,7 +89,8 @@ export async function conversationsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const conversation = await conversationsRepository.create(request.body)
+      const userId = await request.getCurrentUserId()
+      const conversation = await conversationsRepository.create(request.body, userId)
       if (!conversation) throw new NotFoundError('Workflow not found')
       return reply.status(201).send(conversation)
     }
@@ -122,7 +124,8 @@ export async function conversationsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      return conversationsRepository.findAll(request.query.workflowId)
+      const userId = await request.getCurrentUserId()
+      return conversationsRepository.findAll(userId, request.query.workflowId)
     }
   )
 
@@ -176,6 +179,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const conversation = await conversationsRepository.findById(request.params.id)
       if (!conversation) throw new NotFoundError('Conversation not found')
       return conversation
@@ -194,6 +198,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.getCurrentUserId()
       const existing = await conversationsRepository.findByIdSimple(request.params.id)
       if (!existing) throw new NotFoundError('Conversation not found')
 
@@ -222,6 +227,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       return conversationsService.advanceStep(request.params.id)
     }
   )
@@ -246,6 +252,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       return conversationsService.goBack(request.params.id)
     }
   )
@@ -272,6 +279,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       return conversationsService.jumpToStep(request.params.id, request.body.stepId)
     }
   )
@@ -294,6 +302,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const existing = await conversationsRepository.findByIdSimple(request.params.id)
       if (!existing) throw new NotFoundError('Conversation not found')
 
@@ -324,6 +333,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
+      await request.getCurrentUserId()
       const existing = await conversationsRepository.findByIdSimple(request.params.id)
       if (!existing) throw new NotFoundError('Conversation not found')
 

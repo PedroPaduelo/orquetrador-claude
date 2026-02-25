@@ -1,7 +1,7 @@
 import { workflowsRepository } from './workflows.repository.js'
 
 export const workflowsService = {
-  async duplicate(id: string) {
+  async duplicate(id: string, userId: string) {
     const original = await workflowsRepository.findByIdRaw(id)
     if (!original) return null
 
@@ -25,6 +25,6 @@ export const workflowsService = {
         agentIds: step.agents.map((s) => s.agentId),
         ruleIds: step.rules.map((s) => s.ruleId),
       })),
-    })
+    }, userId)
   },
 }

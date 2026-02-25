@@ -3,12 +3,12 @@ import { parseFrontmatter } from '../../lib/frontmatter.js'
 import { fetchMarkdownFromUrl, extractNameFromUrl, fetchText, rawGitHubUrl, toJsonArray } from '../../lib/github.js'
 
 export const agentsService = {
-  async importFromUrl(url: string, isGlobal: boolean) {
+  async importFromUrl(url: string, isGlobal: boolean, userId: string) {
     const markdown = await fetchMarkdownFromUrl(url)
-    return agentsService.importFromContent(markdown, isGlobal, url)
+    return agentsService.importFromContent(markdown, isGlobal, url, userId)
   },
 
-  async importFromContent(markdown: string, isGlobal: boolean, url?: string) {
+  async importFromContent(markdown: string, isGlobal: boolean, url?: string, userId?: string) {
     const { frontmatter, body } = parseFrontmatter(markdown)
 
     const name = frontmatter.name as string || extractNameFromUrl(url) || `agent-${Date.now()}`
@@ -37,7 +37,7 @@ export const agentsService = {
       skills: Array.isArray(skills) ? skills : [],
       enabled: true,
       isGlobal,
-    })
+    }, userId!)
   },
 
   async resync(id: string) {
