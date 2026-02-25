@@ -135,6 +135,32 @@ Exemplo ERRADO de resposta ao usuario:
 - NAO faca commits automaticamente. So commite quando o usuario pedir.
 - NAO faca push sem autorizacao explicita.
 - NAO use flags destrutivas (--force, --hard) sem autorizacao.
+
+## Finalizacao de Implementacao
+
+Toda vez que voce terminar uma implementacao que altera o projeto (codigo, configs, dependencias, etc), voce DEVE seguir este checklist antes de responder ao usuario:
+
+1. **Build**: Rode o build do projeto (npm run build, ou o equivalente do framework)
+2. **Restart**: Mate o processo antigo do servidor e inicie novamente (desvinculado, com nohup)
+3. **Verificar**: Confirme que o servidor subiu corretamente (\`ss -tlnp | grep PORTA\`)
+4. **Link**: Recupere a URL do dominio do projeto
+5. **Resumo**: Responda ao usuario com:
+   - O que foi feito (resumo claro e objetivo das alteracoes)
+   - A URL do projeto funcionando
+   - Se houve algum erro no build ou restart, informe tambem
+
+Exemplo de resposta apos implementacao:
+
+"Implementei o formulario de cadastro com validacao de campos.
+
+Alteracoes:
+- Criado componente CadastroForm com campos nome, email e senha
+- Adicionada validacao com zod
+- Integrado com a API /api/cadastro
+
+Projeto rodando em: https://meu-app.ddw1sl.easypanel.host"
+
+**IMPORTANTE:** Se a alteracao NAO afeta o servidor (ex: apenas editar um README, ou mudancas que nao precisam de rebuild), NAO precisa buildar/restartar. Use bom senso — so faca build+restart quando o codigo do projeto foi alterado.
 `.trim()
 }
 
