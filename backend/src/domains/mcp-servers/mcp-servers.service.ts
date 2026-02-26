@@ -36,8 +36,8 @@ function extractPackageName(parts: string[]): string | null {
 }
 
 export const mcpServersService = {
-  async test(id: string) {
-    const server = await mcpServersRepository.findById(id)
+  async test(id: string, userId: string) {
+    const server = await mcpServersRepository.findById(id, userId)
     if (!server) return null
 
     try {

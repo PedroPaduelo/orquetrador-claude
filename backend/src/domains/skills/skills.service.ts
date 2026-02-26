@@ -21,7 +21,7 @@ export const skillsService = {
     const allowedTools = frontmatter['allowed-tools'] || frontmatter.allowedTools || []
     const model = (frontmatter.model as string) || null
 
-    const existing = await skillsRepository.findByName(name)
+    const existing = await skillsRepository.findByName(name, userId)
     if (existing) {
       throw new Error(`Skill com nome "${name}" ja existe`)
     }
@@ -38,8 +38,8 @@ export const skillsService = {
     }, userId!)
   },
 
-  async resync(id: string) {
-    const skill = await skillsRepository.findById(id)
+  async resync(id: string, userId: string) {
+    const skill = await skillsRepository.findById(id, userId)
     if (!skill) return null
 
     if (skill.source !== 'imported' || !skill.repoOwner || !skill.repoName) {
@@ -89,7 +89,7 @@ export const skillsService = {
 
     // Parse SKILL.md for DB fields
     const now = new Date()
-    const updateData: Parameters<typeof skillsRepository.update>[1] = {
+    const updateData: Parameters<typeof skillsRepository.update>[2] = {
       fileManifest: JSON.stringify(manifest),
       lastSyncedAt: now,
     }
@@ -103,7 +103,7 @@ export const skillsService = {
       if (frontmatter.description) updateData.description = frontmatter.description as string
     }
 
-    await skillsRepository.update(id, updateData)
+    await skillsRepository.update(id, userId, updateData)
 
     return {
       id: skill.id,

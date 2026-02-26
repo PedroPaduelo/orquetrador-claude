@@ -59,9 +59,9 @@ export const pluginsRepository = {
     }))
   },
 
-  async findById(id: string) {
-    const plugin = await prisma.plugin.findUnique({
-      where: { id },
+  async findById(id: string, userId: string) {
+    const plugin = await prisma.plugin.findFirst({
+      where: { id, userId },
       include: {
         mcpServers: { select: { id: true, name: true, type: true, enabled: true } },
         skills: { select: { id: true, name: true, description: true, enabled: true } },
@@ -77,8 +77,8 @@ export const pluginsRepository = {
     }
   },
 
-  async findByName(name: string) {
-    const plugin = await prisma.plugin.findUnique({ where: { name } })
+  async findByName(name: string, userId: string) {
+    const plugin = await prisma.plugin.findFirst({ where: { name, userId } })
     return plugin ? fromDb(plugin) : null
   },
 
@@ -185,7 +185,7 @@ export const pluginsRepository = {
     return fromDb(plugin)
   },
 
-  async update(id: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string | null
     version?: string | null
@@ -208,14 +208,14 @@ export const pluginsRepository = {
     return fromDb(plugin)
   },
 
-  async delete(id: string) {
-    await prisma.mcpServer.deleteMany({ where: { pluginId: id } })
-    await prisma.skill.deleteMany({ where: { pluginId: id } })
-    await prisma.agent.deleteMany({ where: { pluginId: id } })
-    await prisma.plugin.delete({ where: { id } })
+  async delete(id: string, userId: string) {
+    await prisma.mcpServer.deleteMany({ where: { pluginId: id, userId } })
+    await prisma.skill.deleteMany({ where: { pluginId: id, userId } })
+    await prisma.agent.deleteMany({ where: { pluginId: id, userId } })
+    await prisma.plugin.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, currentEnabled: boolean) {
+  async toggle(id: string, userId: string, currentEnabled: boolean) {
     const next = !currentEnabled
     const [plugin] = await prisma.$transaction([
       prisma.plugin.update({ where: { id }, data: { enabled: next } }),

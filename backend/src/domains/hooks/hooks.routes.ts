@@ -200,8 +200,8 @@ export async function hooksRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const hook = await hooksRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const hook = await hooksRepository.findById(request.params.id, userId)
       if (!hook) throw new NotFoundError('Hook not found')
       return hook
     }
@@ -236,10 +236,10 @@ export async function hooksRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const existing = await hooksRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const existing = await hooksRepository.findById(request.params.id, userId)
       if (!existing) throw new NotFoundError('Hook not found')
-      return hooksRepository.update(request.params.id, request.body)
+      return hooksRepository.update(request.params.id, userId, request.body)
     }
   )
 
@@ -255,10 +255,10 @@ export async function hooksRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      await request.getCurrentUserId()
-      const existing = await hooksRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const existing = await hooksRepository.findById(request.params.id, userId)
       if (!existing) throw new NotFoundError('Hook not found')
-      await hooksRepository.delete(request.params.id)
+      await hooksRepository.delete(request.params.id, userId)
       return reply.status(204).send(null)
     }
   )
@@ -277,10 +277,10 @@ export async function hooksRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const existing = await hooksRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const existing = await hooksRepository.findById(request.params.id, userId)
       if (!existing) throw new NotFoundError('Hook not found')
-      return hooksRepository.toggle(request.params.id, existing.enabled)
+      return hooksRepository.toggle(request.params.id, userId, existing.enabled)
     }
   )
 }

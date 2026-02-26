@@ -79,8 +79,8 @@ export const mcpServersRepository = {
     return servers.map(fromDbList)
   },
 
-  async findById(id: string) {
-    const server = await prisma.mcpServer.findUnique({ where: { id } })
+  async findById(id: string, userId: string) {
+    const server = await prisma.mcpServer.findFirst({ where: { id, userId } })
     return server ? fromDbFull(server) : null
   },
 
@@ -112,7 +112,7 @@ export const mcpServersRepository = {
     return fromDbFull(server)
   },
 
-  async update(id: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string | null
     type?: string
@@ -141,11 +141,11 @@ export const mcpServersRepository = {
     return fromDbFull(server)
   },
 
-  async delete(id: string) {
-    await prisma.mcpServer.delete({ where: { id } })
+  async delete(id: string, userId: string) {
+    await prisma.mcpServer.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, currentEnabled: boolean) {
+  async toggle(id: string, userId: string, currentEnabled: boolean) {
     const server = await prisma.mcpServer.update({
       where: { id },
       data: { enabled: !currentEnabled },

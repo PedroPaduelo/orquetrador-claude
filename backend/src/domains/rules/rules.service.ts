@@ -11,7 +11,7 @@ export const rulesService = {
     const name = extractNameFromUrl(url) || `rule-${Date.now()}`
     const body = markdown.trim()
 
-    const existing = await rulesRepository.findByName(name)
+    const existing = await rulesRepository.findByName(name, userId)
     if (existing) {
       throw new Error(`Rule com nome "${name}" ja existe`)
     }
@@ -25,8 +25,8 @@ export const rulesService = {
     }, userId!)
   },
 
-  async resync(id: string) {
-    const rule = await rulesRepository.findById(id)
+  async resync(id: string, userId: string) {
+    const rule = await rulesRepository.findById(id, userId)
     if (!rule) return null
 
     if (rule.source !== 'imported' || !rule.repoOwner || !rule.repoName || !rule.repoPath) {
@@ -39,7 +39,7 @@ export const rulesService = {
     const content = await fetchText(rawGitHubUrl(repoOwner, repoName, branch, repoPath))
     const now = new Date()
 
-    await rulesRepository.update(id, {
+    await rulesRepository.update(id, userId, {
       body: content,
       lastSyncedAt: now,
     })

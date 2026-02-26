@@ -76,13 +76,13 @@ export const skillsRepository = {
     return skills.map(fromDb)
   },
 
-  async findById(id: string) {
-    const skill = await prisma.skill.findUnique({ where: { id } })
+  async findById(id: string, userId: string) {
+    const skill = await prisma.skill.findFirst({ where: { id, userId } })
     return skill ? fromDb(skill) : null
   },
 
-  async findByName(name: string) {
-    const skill = await prisma.skill.findUnique({ where: { name } })
+  async findByName(name: string, userId: string) {
+    const skill = await prisma.skill.findFirst({ where: { name, userId } })
     return skill ? fromDb(skill) : null
   },
 
@@ -111,7 +111,7 @@ export const skillsRepository = {
     return fromDb(skill)
   },
 
-  async update(id: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string
     body?: string
@@ -142,11 +142,11 @@ export const skillsRepository = {
     return fromDb(skill)
   },
 
-  async delete(id: string) {
-    await prisma.skill.delete({ where: { id } })
+  async delete(id: string, userId: string) {
+    await prisma.skill.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, currentEnabled: boolean) {
+  async toggle(id: string, userId: string, currentEnabled: boolean) {
     const skill = await prisma.skill.update({
       where: { id },
       data: { enabled: !currentEnabled },

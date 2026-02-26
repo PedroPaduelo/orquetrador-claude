@@ -110,8 +110,8 @@ export async function agentsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const agent = await agentsRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const agent = await agentsRepository.findById(request.params.id, userId)
       if (!agent) throw new NotFoundError('Agent not found')
       return agent
     }
@@ -147,11 +147,11 @@ export async function agentsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const existing = await agentsRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const existing = await agentsRepository.findById(request.params.id, userId)
       if (!existing) throw new NotFoundError('Agent not found')
 
-      const agent = await agentsRepository.update(request.params.id, request.body)
+      const agent = await agentsRepository.update(request.params.id, userId, request.body)
       return { id: agent.id, name: agent.name, updatedAt: agent.updatedAt }
     }
   )
@@ -167,11 +167,11 @@ export async function agentsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      await request.getCurrentUserId()
-      const existing = await agentsRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const existing = await agentsRepository.findById(request.params.id, userId)
       if (!existing) throw new NotFoundError('Agent not found')
 
-      await agentsRepository.delete(request.params.id)
+      await agentsRepository.delete(request.params.id, userId)
       return reply.status(204).send(null)
     }
   )
@@ -189,11 +189,11 @@ export async function agentsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const existing = await agentsRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const existing = await agentsRepository.findById(request.params.id, userId)
       if (!existing) throw new NotFoundError('Agent not found')
 
-      return agentsRepository.toggle(request.params.id, existing.enabled)
+      return agentsRepository.toggle(request.params.id, userId, existing.enabled)
     }
   )
 
@@ -254,8 +254,8 @@ export async function agentsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const result = await agentsService.resync(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const result = await agentsService.resync(request.params.id, userId)
       if (!result) throw new NotFoundError('Agent not found')
       return result
     }

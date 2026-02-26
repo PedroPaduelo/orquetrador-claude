@@ -20,7 +20,7 @@ export const agentsService = {
     const disallowedTools = frontmatter['disallowed-tools'] || frontmatter.disallowedTools || []
     const skills = frontmatter.skills || []
 
-    const existing = await agentsRepository.findByName(name)
+    const existing = await agentsRepository.findByName(name, userId)
     if (existing) {
       throw new Error(`Agent com nome "${name}" ja existe`)
     }
@@ -40,8 +40,8 @@ export const agentsService = {
     }, userId!)
   },
 
-  async resync(id: string) {
-    const agent = await agentsRepository.findById(id)
+  async resync(id: string, userId: string) {
+    const agent = await agentsRepository.findById(id, userId)
     if (!agent) return null
 
     if (agent.source !== 'imported' || !agent.repoOwner || !agent.repoName || !agent.repoPath) {
@@ -55,7 +55,7 @@ export const agentsService = {
     const { frontmatter, body } = parseFrontmatter(content)
     const now = new Date()
 
-    await agentsRepository.update(id, {
+    await agentsRepository.update(id, userId, {
       description: (frontmatter.description as string) || agent.description,
       systemPrompt: body,
       tools: JSON.parse(toJsonArray(frontmatter.tools)),

@@ -282,7 +282,7 @@ model McpServer {
 // ============================================
 model Skill {
   id           String   @id @default(uuid())
-  name         String   @unique
+  name         String
   description  String?
   frontmatter  String   @default("{}")
   body         String   @default("")
@@ -312,6 +312,7 @@ model Skill {
   pluginId   String?  @map("plugin_id")
   plugin     Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
 
+  @@unique([name, userId])
   @@index([userId])
   @@map("skills")
 }
@@ -321,7 +322,7 @@ model Skill {
 // ============================================
 model Agent {
   id              String   @id @default(uuid())
-  name            String   @unique
+  name            String
   description     String?
   systemPrompt    String   @default("") @map("system_prompt")
   tools           String   @default("[]")
@@ -352,6 +353,7 @@ model Agent {
   pluginId   String?  @map("plugin_id")
   plugin     Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
 
+  @@unique([name, userId])
   @@index([userId])
   @@map("agents")
 }
@@ -361,7 +363,7 @@ model Agent {
 // ============================================
 model Rule {
   id          String   @id @default(uuid())
-  name        String   @unique
+  name        String
   description String?
   body        String   @default("")
   enabled     Boolean  @default(true)
@@ -387,6 +389,7 @@ model Rule {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
+  @@unique([name, userId])
   @@index([userId])
   @@map("rules")
 }
@@ -396,7 +399,7 @@ model Rule {
 // ============================================
 model Plugin {
   id          String   @id @default(uuid())
-  name        String   @unique
+  name        String
   description String?
   version     String?
   author      String?
@@ -415,6 +418,7 @@ model Plugin {
   agents     Agent[]
   rules      Rule[]
 
+  @@unique([name, userId])
   @@index([userId])
   @@map("plugins")
 }

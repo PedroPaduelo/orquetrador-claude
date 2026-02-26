@@ -75,7 +75,7 @@ function writeFileSafe(filePath: string, content: string) {
 
 export const pluginsService = {
   async install(input: PluginManifest, userId?: string) {
-    const existing = await pluginsRepository.findByName(input.name)
+    const existing = await pluginsRepository.findByName(input.name, userId)
     if (existing) {
       throw new Error(`Plugin with name "${input.name}" already exists`)
     }
@@ -136,7 +136,7 @@ export const pluginsService = {
     // Build plugin name from repo
     const pluginName = subPath ? `${repo}/${subPath}` : repo
 
-    const existing = await pluginsRepository.findByName(pluginName)
+    const existing = await pluginsRepository.findByName(pluginName, userId)
     if (existing) {
       throw new Error(`Plugin with name "${pluginName}" already exists`)
     }
@@ -247,8 +247,8 @@ export const pluginsService = {
     }, userId!)
   },
 
-  async resync(id: string, overridePath?: string) {
-    const plugin = await pluginsRepository.findById(id)
+  async resync(id: string, userId: string, overridePath?: string) {
+    const plugin = await pluginsRepository.findById(id, userId)
     if (!plugin) return null
 
     if (plugin.source !== 'imported' || !plugin.repoUrl) {
@@ -305,10 +305,10 @@ export const pluginsService = {
     const now = new Date()
 
     // Update plugin metadata (bump updatedAt via projectPath write)
-    const updateData: Parameters<typeof pluginsRepository.update>[1] = {}
+    const updateData: Parameters<typeof pluginsRepository.update>[2] = {}
     if (overridePath) updateData.projectPath = overridePath
 
-    await pluginsRepository.update(id, updateData)
+    await pluginsRepository.update(id, userId, updateData)
 
     return {
       id: plugin.id,

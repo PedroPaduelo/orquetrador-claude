@@ -68,13 +68,13 @@ export const agentsRepository = {
     return agents.map(fromDb)
   },
 
-  async findById(id: string) {
-    const agent = await prisma.agent.findUnique({ where: { id } })
+  async findById(id: string, userId: string) {
+    const agent = await prisma.agent.findFirst({ where: { id, userId } })
     return agent ? fromDb(agent) : null
   },
 
-  async findByName(name: string) {
-    const agent = await prisma.agent.findUnique({ where: { name } })
+  async findByName(name: string, userId: string) {
+    const agent = await prisma.agent.findFirst({ where: { name, userId } })
     return agent ? fromDb(agent) : null
   },
 
@@ -126,7 +126,7 @@ export const agentsRepository = {
     return fromDb(agent)
   },
 
-  async update(id: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string | null
     systemPrompt?: string
@@ -161,11 +161,11 @@ export const agentsRepository = {
     return fromDb(agent)
   },
 
-  async delete(id: string) {
-    await prisma.agent.delete({ where: { id } })
+  async delete(id: string, userId: string) {
+    await prisma.agent.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, currentEnabled: boolean) {
+  async toggle(id: string, userId: string, currentEnabled: boolean) {
     const agent = await prisma.agent.update({
       where: { id },
       data: { enabled: !currentEnabled },

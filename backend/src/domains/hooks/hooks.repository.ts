@@ -51,8 +51,8 @@ export const hooksRepository = {
     return hooks.map(fromDb)
   },
 
-  async findById(id: string) {
-    const hook = await prisma.hook.findUnique({ where: { id } })
+  async findById(id: string, userId: string) {
+    const hook = await prisma.hook.findFirst({ where: { id, userId } })
     return hook ? fromDb(hook) : null
   },
 
@@ -96,7 +96,7 @@ export const hooksRepository = {
     return fromDb(hook)
   },
 
-  async update(id: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string | null
     eventType?: string
@@ -133,11 +133,11 @@ export const hooksRepository = {
     return fromDb(hook)
   },
 
-  async delete(id: string) {
-    await prisma.hook.delete({ where: { id } })
+  async delete(id: string, userId: string) {
+    await prisma.hook.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, currentEnabled: boolean) {
+  async toggle(id: string, userId: string, currentEnabled: boolean) {
     const hook = await prisma.hook.update({
       where: { id },
       data: { enabled: !currentEnabled },

@@ -186,8 +186,8 @@ export async function pluginsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const plugin = await pluginsRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const plugin = await pluginsRepository.findById(request.params.id, userId)
       if (!plugin) throw new NotFoundError('Plugin not found')
       return plugin
     }
@@ -219,11 +219,11 @@ export async function pluginsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const existing = await pluginsRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const existing = await pluginsRepository.findById(request.params.id, userId)
       if (!existing) throw new NotFoundError('Plugin not found')
 
-      const plugin = await pluginsRepository.update(request.params.id, request.body)
+      const plugin = await pluginsRepository.update(request.params.id, userId, request.body)
       return { id: plugin.id, name: plugin.name, updatedAt: plugin.updatedAt }
     }
   )
@@ -240,11 +240,11 @@ export async function pluginsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      await request.getCurrentUserId()
-      const existing = await pluginsRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const existing = await pluginsRepository.findById(request.params.id, userId)
       if (!existing) throw new NotFoundError('Plugin not found')
 
-      await pluginsRepository.delete(request.params.id)
+      await pluginsRepository.delete(request.params.id, userId)
       return reply.status(204).send(null)
     }
   )
@@ -266,11 +266,11 @@ export async function pluginsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const existing = await pluginsRepository.findById(request.params.id)
+      const userId = await request.getCurrentUserId()
+      const existing = await pluginsRepository.findById(request.params.id, userId)
       if (!existing) throw new NotFoundError('Plugin not found')
 
-      return pluginsRepository.toggle(request.params.id, existing.enabled)
+      return pluginsRepository.toggle(request.params.id, userId, existing.enabled)
     }
   )
 
@@ -296,8 +296,8 @@ export async function pluginsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
-      const result = await pluginsService.resync(request.params.id, request.body.projectPath)
+      const userId = await request.getCurrentUserId()
+      const result = await pluginsService.resync(request.params.id, userId, request.body.projectPath)
       if (!result) throw new NotFoundError('Plugin not found')
       return result
     }

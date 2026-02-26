@@ -52,16 +52,16 @@ export const rulesRepository = {
     return rules.map(fromDb)
   },
 
-  async findById(id: string) {
-    const rule = await prisma.rule.findUnique({
-      where: { id },
+  async findById(id: string, userId: string) {
+    const rule = await prisma.rule.findFirst({
+      where: { id, userId },
       include: { skill: { select: { name: true } } },
     })
     return rule ? fromDb(rule) : null
   },
 
-  async findByName(name: string) {
-    const rule = await prisma.rule.findUnique({ where: { name } })
+  async findByName(name: string, userId: string) {
+    const rule = await prisma.rule.findFirst({ where: { name, userId } })
     return rule ? fromDb(rule) : null
   },
 
@@ -103,7 +103,7 @@ export const rulesRepository = {
     return fromDb(rule)
   },
 
-  async update(id: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string | null
     body?: string
@@ -128,11 +128,11 @@ export const rulesRepository = {
     return fromDb(rule)
   },
 
-  async delete(id: string) {
-    await prisma.rule.delete({ where: { id } })
+  async delete(id: string, userId: string) {
+    await prisma.rule.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, currentEnabled: boolean) {
+  async toggle(id: string, userId: string, currentEnabled: boolean) {
     const rule = await prisma.rule.update({
       where: { id },
       data: { enabled: !currentEnabled },
