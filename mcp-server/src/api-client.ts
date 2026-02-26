@@ -1,5 +1,4 @@
 const BASE_URL = process.env.EXECUT_API_URL || 'http://localhost:3333'
-const API_KEY = process.env.EXECUT_API_KEY || ''
 
 interface ApiResponse<T = unknown> {
   ok: boolean
@@ -7,10 +6,29 @@ interface ApiResponse<T = unknown> {
   data: T
 }
 
+// Per-session API key storage
+const sessionApiKeys: Record<string, string> = {}
+
+export function setSessionApiKey(sessionId: string, apiKey: string) {
+  sessionApiKeys[sessionId] = apiKey
+}
+
+export function removeSessionApiKey(sessionId: string) {
+  delete sessionApiKeys[sessionId]
+}
+
+// Active session context (set before each tool call)
+let currentSessionId: string | undefined
+
+export function setCurrentSession(sessionId: string | undefined) {
+  currentSessionId = sessionId
+}
+
 function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (API_KEY) {
-    headers['Authorization'] = `Bearer ${API_KEY}`
+  const apiKey = currentSessionId ? sessionApiKeys[currentSessionId] : undefined
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`
   }
   return headers
 }

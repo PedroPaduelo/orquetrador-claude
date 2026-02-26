@@ -7,6 +7,7 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import { randomUUID } from 'crypto'
 import { createServer, IncomingMessage, ServerResponse } from 'http'
 import { registerAllTools } from './tools/index.js'
+import { setSessionApiKey, removeSessionApiKey, setCurrentSession } from './api-client.js'
 
 const PORT = parseInt(process.env.MCP_PORT || '3334', 10)
 const API_URL = process.env.EXECUT_API_URL || 'http://localhost:3333'
@@ -22,10 +23,18 @@ function createMcpServer(): McpServer {
   return server
 }
 
+function extractApiKey(req: IncomingMessage): string | undefined {
+  const auth = req.headers['authorization']
+  if (auth?.startsWith('Bearer ')) {
+    return auth.replace('Bearer ', '')
+  }
+  return undefined
+}
+
 const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, mcp-session-id, last-event-id, mcp-protocol-version')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, mcp-session-id, last-event-id, mcp-protocol-version')
   res.setHeader('Access-Control-Expose-Headers', 'mcp-session-id')
 
   if (req.method === 'OPTIONS') {
@@ -38,6 +47,7 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
 
   if (url.pathname === '/mcp') {
     const sessionId = req.headers['mcp-session-id'] as string | undefined
+    const apiKey = extractApiKey(req)
 
     if (req.method === 'POST') {
       const body = await new Promise<string>((resolve) => {
@@ -67,13 +77,27 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
         const newSessionId = transport.sessionId
         if (newSessionId) {
           transports[newSessionId] = transport
-          transport.onclose = () => { delete transports[newSessionId] }
+          // Store API key for this session
+          if (apiKey) {
+            setSessionApiKey(newSessionId, apiKey)
+          }
+          transport.onclose = () => {
+            delete transports[newSessionId]
+            removeSessionApiKey(newSessionId)
+          }
         }
         return
       }
 
       if (sessionId && transports[sessionId]) {
+        // Update API key if sent again
+        if (apiKey) {
+          setSessionApiKey(sessionId, apiKey)
+        }
+        // Set current session so tools use the right key
+        setCurrentSession(sessionId)
         await transports[sessionId].handleRequest(req, res, parsedBody)
+        setCurrentSession(undefined)
         return
       }
 
@@ -88,7 +112,12 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
         res.end('Invalid session')
         return
       }
+      if (apiKey) {
+        setSessionApiKey(sessionId, apiKey)
+      }
+      setCurrentSession(sessionId)
       await transports[sessionId].handleRequest(req, res)
+      setCurrentSession(undefined)
       return
     }
 
@@ -96,6 +125,7 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
       if (sessionId && transports[sessionId]) {
         await transports[sessionId].close()
         delete transports[sessionId]
+        removeSessionApiKey(sessionId)
         res.writeHead(200)
         res.end(JSON.stringify({ success: true }))
       } else {
