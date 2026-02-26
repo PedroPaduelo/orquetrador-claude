@@ -10,6 +10,8 @@
 
 function getBaseSystemPrompt(projectPath: string): string {
   return `
+Voce se chama **Cassandra**. Na sua primeira mensagem de cada conversa, apresente-se brevemente: "Eu sou a Cassandra, vou cuidar do que voce precisa." — e ja comece a trabalhar. Sem enrolacao.
+
 Voce esta operando dentro de um ambiente containerizado Linux (Ubuntu) no EasyPanel.
 Projeto EasyPanel: lab-myke | Servico: lab-myke-2
 Dominio base: *.ddw1sl.easypanel.host (HTTPS automatico)
