@@ -366,7 +366,7 @@ export async function importSingleFile(
         }
 
         await prisma.skill.upsert({
-          where: { name: skillName },
+          where: { name_userId: { name: skillName, userId: userId! } },
           update: {
             description:
               (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
@@ -421,7 +421,7 @@ export async function importSingleFile(
         }
 
         await prisma.agent.upsert({
-          where: { name: agentName },
+          where: { name_userId: { name: agentName, userId: userId! } },
           update: {
             description:
               (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
@@ -520,7 +520,7 @@ export async function saveItemToDb(
       }
 
       await prisma.skill.upsert({
-        where: { name: item.name },
+        where: { name_userId: { name: item.name, userId: userId! } },
         update: {
           description:
             (frontmatter.description as string) ||
@@ -569,7 +569,7 @@ export async function saveItemToDb(
       }
 
       await prisma.agent.upsert({
-        where: { name: item.name },
+        where: { name_userId: { name: item.name, userId: userId! } },
         update: {
           description:
             (frontmatter.description as string) || `Importado de ${owner}/${repo}`,
@@ -635,7 +635,7 @@ export async function saveItemToDb(
       }
 
       await prisma.rule.upsert({
-        where: { name: item.name },
+        where: { name_userId: { name: item.name, userId: userId! } },
         update: {
           body: content,
           source: 'imported',
