@@ -115,3 +115,18 @@ export function useJumpToStep(conversationId: string) {
     },
   })
 }
+
+export function useResetStepSession(conversationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (stepId: string) => conversationsApi.resetStepSession(conversationId, stepId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
+      toast.success('Sessão do step resetada!')
+    },
+    onError: () => {
+      toast.error('Erro ao resetar sessão do step')
+    },
+  })
+}

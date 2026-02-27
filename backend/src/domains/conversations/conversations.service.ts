@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma.js'
 import { conversationsRepository } from './conversations.repository.js'
 import { taskOrchestrator } from '../execution/orchestrator/task-orchestrator.js'
+import { sessionManager } from '../execution/session/session-manager.js'
 import { BadRequestError, NotFoundError } from '../../http/errors/index.js'
 
 export const conversationsService = {
@@ -96,6 +97,17 @@ export const conversationsService = {
       currentStepIndex: targetIndex,
       message: `Jumped to step: ${targetStep.name}`,
     }
+  },
+
+  async resetStepSession(conversationId: string, stepId: string) {
+    const conversation = await conversationsRepository.findById(conversationId)
+    if (!conversation) throw new NotFoundError('Conversation not found')
+
+    if (conversation.workflow.type !== 'step_by_step') {
+      throw new BadRequestError('reset-session is only available for step_by_step workflows')
+    }
+
+    await sessionManager.deleteSession(conversationId, stepId)
   },
 
   async cancel(id: string) {

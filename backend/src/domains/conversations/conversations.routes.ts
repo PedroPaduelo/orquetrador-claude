@@ -289,6 +289,27 @@ export async function conversationsRoutes(app: FastifyInstance) {
     }
   )
 
+  // DELETE /conversations/:id/sessions/:stepId
+  server.delete(
+    '/conversations/:id/sessions/:stepId',
+    {
+      schema: {
+        tags: ['Conversations'],
+        summary: 'Reset session for a specific step',
+        params: z.object({
+          id: z.string(),
+          stepId: z.string(),
+        }),
+        response: { 204: z.null() },
+      },
+    },
+    async (request, reply) => {
+      await request.getCurrentUserId()
+      await conversationsService.resetStepSession(request.params.id, request.params.stepId)
+      return reply.status(204).send(null)
+    }
+  )
+
   // POST /conversations/:id/cancel
   server.post(
     '/conversations/:id/cancel',

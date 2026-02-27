@@ -5,7 +5,8 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import type { WorkflowStepSummary } from '../types'
 import { useConversationsStore } from '../store'
-import { useAdvanceStep, useGoBackStep, useJumpToStep } from '../hooks/use-conversations'
+import { useAdvanceStep, useGoBackStep, useJumpToStep, useResetStepSession } from '../hooks/use-conversations'
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/shared/components/ui/tooltip'
 
 interface StepPanelProps {
   steps: WorkflowStepSummary[]
@@ -20,6 +21,7 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
   const advanceStepMutation = useAdvanceStep(conversationId)
   const goBackStepMutation = useGoBackStep(conversationId)
   const jumpToStepMutation = useJumpToStep(conversationId)
+  const resetSessionMutation = useResetStepSession(conversationId)
 
   const canAdvance = workflowType === 'step_by_step' &&
     !isExecuting &&
@@ -122,7 +124,7 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
 
       {/* Steps list */}
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-1">
+        <div className="p-2 space-y-0.5">
           {steps.map((step, index) => {
             const status = stepStatuses.get(step.id) || 'pending'
             const isExecutingStep = index === currentStepIndex && isExecuting
@@ -140,7 +142,7 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
                 onClick={() => canClick && jumpToStepMutation.mutate(step.id)}
                 onKeyDown={(e) => canClick && e.key === 'Enter' && jumpToStepMutation.mutate(step.id)}
                 className={cn(
-                  'flex items-center gap-3 p-3 rounded-lg transition-all duration-200',
+                  'flex items-center gap-2 px-2 py-2 rounded-md transition-all duration-200 overflow-hidden',
                   isCurrent && 'bg-primary/8 border border-primary/30 shadow-sm shadow-primary/10',
                   isCompleted && !isCurrent && 'opacity-60',
                   !isCurrent && !isCompleted && 'hover:bg-muted/30',
@@ -157,16 +159,16 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
                 />
 
                 {/* Step info */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-hidden">
                   <p className={cn(
-                    'text-sm font-medium truncate',
+                    'text-xs font-medium truncate',
                     isCurrent && 'text-foreground',
                     isCompleted && 'text-muted-foreground',
                     !isCurrent && !isCompleted && 'text-muted-foreground'
-                  )}>
+                  )} title={step.name}>
                     {step.name}
                   </p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[10px] text-muted-foreground truncate">
                     {isCompleted ? 'Concluído' :
                      isExecutingStep ? 'Executando...' :
                      isActiveChat ? 'Em conversa' :
@@ -176,6 +178,37 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
                      'Pendente'}
                   </p>
                 </div>
+
+                {/* Reset session button (step_by_step only) */}
+                {workflowType === 'step_by_step' && !isExecutingStep && (
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            resetSessionMutation.mutate(step.id)
+                          }}
+                          disabled={resetSessionMutation.isPending}
+                          className={cn(
+                            'p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors shrink-0',
+                            resetSessionMutation.isPending && 'opacity-50 pointer-events-none'
+                          )}
+                        >
+                          {resetSessionMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RotateCcw className="h-3 w-3" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left">
+                        <p>Resetar sessão</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             )
           })}
@@ -198,12 +231,12 @@ function StepIndicator({
   isActiveChat: boolean
   status: string
 }) {
-  const baseClasses = 'flex items-center justify-center w-7 h-7 rounded-full border-2 shrink-0 transition-all duration-200 text-xs'
+  const baseClasses = 'flex items-center justify-center w-6 h-6 rounded-full border-2 shrink-0 transition-all duration-200 text-[10px]'
 
   if (isCompleted) {
     return (
       <div className={cn(baseClasses, 'bg-success/15 border-success text-success')}>
-        <Check className="h-3.5 w-3.5" />
+        <Check className="h-3 w-3" />
       </div>
     )
   }
@@ -219,7 +252,7 @@ function StepIndicator({
   if (isActiveChat) {
     return (
       <div className={cn(baseClasses, 'bg-info/10 border-info text-info')}>
-        <MessageCircle className="h-3.5 w-3.5" />
+        <MessageCircle className="h-3 w-3" />
       </div>
     )
   }
@@ -227,7 +260,7 @@ function StepIndicator({
   if (status === 'cancelled') {
     return (
       <div className={cn(baseClasses, 'border-muted-foreground bg-muted-foreground/10 text-muted-foreground')}>
-        <StopCircle className="h-3.5 w-3.5" />
+        <StopCircle className="h-3 w-3" />
       </div>
     )
   }
@@ -235,7 +268,7 @@ function StepIndicator({
   if (status === 'error') {
     return (
       <div className={cn(baseClasses, 'border-destructive bg-destructive/10 text-destructive')}>
-        <AlertCircle className="h-3.5 w-3.5" />
+        <AlertCircle className="h-3 w-3" />
       </div>
     )
   }
@@ -243,7 +276,7 @@ function StepIndicator({
   if (status === 'retry') {
     return (
       <div className={cn(baseClasses, 'border-warning bg-warning/10 text-warning')}>
-        <RotateCcw className="h-3.5 w-3.5" />
+        <RotateCcw className="h-3 w-3" />
       </div>
     )
   }

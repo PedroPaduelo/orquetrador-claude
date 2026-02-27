@@ -46,4 +46,8 @@ export const conversationsApi = {
     const { data } = await apiClient.post(`/conversations/${id}/jump-to-step`, { stepId })
     return data
   },
+
+  resetStepSession: async (conversationId: string, stepId: string): Promise<void> => {
+    await apiClient.delete(`/conversations/${conversationId}/sessions/${stepId}`)
+  },
 }
