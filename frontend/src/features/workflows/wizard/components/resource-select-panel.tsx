@@ -1,15 +1,9 @@
-import { useMemo } from 'react'
-import { X } from 'lucide-react'
-import { Checkbox } from '@/shared/components/ui/checkbox'
-import { Badge } from '@/shared/components/ui/badge'
+import { useState, useMemo } from 'react'
+import { Search, X, Check } from 'lucide-react'
+import { Input } from '@/shared/components/ui/input'
 import { Button } from '@/shared/components/ui/button'
-import { Separator } from '@/shared/components/ui/separator'
 import { ScrollArea } from '@/shared/components/ui/scroll-area'
-import {
-  useSearchPagination,
-  SearchBar,
-  Pagination,
-} from '@/shared/components/common/search-pagination'
+import { cn } from '@/shared/lib/utils'
 
 interface ResourceItem {
   id: string
@@ -34,117 +28,96 @@ export function ResourceSelectPanel({
   emptyMessage,
   searchPlaceholder,
 }: ResourceSelectPanelProps) {
+  const [search, setSearch] = useState('')
+
   const enabledItems = useMemo(
     () => items?.filter((item) => item.enabled !== false) ?? [],
     [items]
   )
 
-  const { paged, search, setSearch, page, setPage, totalPages, total } =
-    useSearchPagination({
-      data: enabledItems,
-      searchFields: ['name'] as const,
-      pageSize: 20,
-    })
-
-  const itemMap = useMemo(() => {
-    const map = new Map<string, ResourceItem>()
-    for (const item of enabledItems) map.set(item.id, item)
-    return map
-  }, [enabledItems])
-
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
 
-  const selectedItems = useMemo(
-    () =>
-      selectedIds
-        .map((id) => itemMap.get(id))
-        .filter((item): item is ResourceItem => !!item),
-    [selectedIds, itemMap]
-  )
-
-  const sortedPage = useMemo(
-    () =>
-      [...paged].sort((a, b) => {
-        const aSelected = selectedSet.has(a.id) ? 0 : 1
-        const bSelected = selectedSet.has(b.id) ? 0 : 1
-        return aSelected - bSelected
-      }),
-    [paged, selectedSet]
-  )
+  // Ordem estável: mantém a ordem original dos items, sem reordenar ao selecionar
+  const filteredItems = useMemo(() => {
+    if (!search.trim()) return enabledItems
+    const q = search.toLowerCase()
+    return enabledItems.filter((item) => item.name.toLowerCase().includes(q))
+  }, [enabledItems, search])
 
   if (enabledItems.length === 0) {
     return <p className="text-xs text-muted-foreground py-2">{emptyMessage}</p>
   }
 
   return (
-    <div className="space-y-3">
-      {selectedItems.length > 0 && (
-        <>
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                Selecionados ({selectedItems.length}):
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs text-muted-foreground"
-                onClick={onClear}
-              >
-                Limpar
-              </Button>
-            </div>
-            <ScrollArea className="max-h-[72px]">
-              <div className="flex flex-wrap gap-1">
-                {selectedItems.map((item) => (
-                  <Badge
-                    key={item.id}
-                    variant="secondary"
-                    className="text-xs gap-1 pr-1"
-                  >
-                    {item.name}
-                    <button
-                      type="button"
-                      className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                      onClick={() => onToggle(item.id, false)}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-          <Separator />
-        </>
-      )}
-
-      <SearchBar
-        value={search}
-        onChange={setSearch}
-        placeholder={searchPlaceholder}
-        total={total}
-      />
-
-      <ScrollArea className="h-[160px]">
-        <div className="grid grid-cols-1 gap-1 pr-3">
-          {sortedPage.map((item) => (
-            <label
-              key={item.id}
-              className="flex items-center gap-2 text-xs cursor-pointer px-2.5 py-2 rounded-md border hover:bg-muted/50 transition-colors"
+    <div className="space-y-2">
+      {/* Header: search + clear */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={searchPlaceholder}
+            className="pl-8 h-8 text-xs"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              <Checkbox
-                checked={selectedSet.has(item.id)}
-                onCheckedChange={(checked) => onToggle(item.id, !!checked)}
-                className="h-3.5 w-3.5"
-              />
-              <span className="truncate">{item.name}</span>
-            </label>
-          ))}
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        {selectedIds.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-[11px] text-muted-foreground shrink-0"
+            onClick={onClear}
+          >
+            Limpar ({selectedIds.length})
+          </Button>
+        )}
+      </div>
+
+      {/* Item list — ordem estável, sem pular */}
+      <ScrollArea className="h-[200px]">
+        <div className="space-y-px pr-2">
+          {filteredItems.map((item) => {
+            const isSelected = selectedSet.has(item.id)
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onToggle(item.id, !isSelected)}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-left text-xs transition-colors',
+                  isSelected
+                    ? 'bg-primary/10 text-foreground'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                )}
+              >
+                <div className={cn(
+                  'flex items-center justify-center w-4 h-4 rounded-sm border shrink-0 transition-colors',
+                  isSelected
+                    ? 'bg-primary border-primary text-primary-foreground'
+                    : 'border-muted-foreground/30'
+                )}>
+                  {isSelected && <Check className="h-3 w-3" />}
+                </div>
+                <span className="truncate">{item.name}</span>
+              </button>
+            )
+          })}
+          {filteredItems.length === 0 && search && (
+            <p className="text-[11px] text-muted-foreground py-3 text-center">
+              Nenhum resultado para "{search}"
+            </p>
+          )}
         </div>
       </ScrollArea>
-
-      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   )
 }

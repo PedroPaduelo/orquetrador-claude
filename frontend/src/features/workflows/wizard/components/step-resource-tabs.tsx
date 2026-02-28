@@ -1,6 +1,5 @@
 import { Server, Sparkles, Bot, ScrollText, Webhook } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs'
-import { Badge } from '@/shared/components/ui/badge'
 import { ResourceSelectPanel } from './resource-select-panel'
 import { useMcpServers } from '@/features/mcp-servers/hooks/use-mcp-servers'
 import { useSkills } from '@/features/skills/hooks/use-skills'
@@ -8,6 +7,15 @@ import { useAgents } from '@/features/agents/hooks/use-agents'
 import { useRules } from '@/features/rules/hooks/use-rules'
 import { useHooks } from '@/features/hooks/hooks/use-hooks'
 import { useWorkflowsStore } from '../../store'
+import { cn } from '@/shared/lib/utils'
+
+const tabs = [
+  { value: 'mcp', label: 'MCP', icon: Server, field: 'mcpServerIds' as const },
+  { value: 'skills', label: 'Skills', icon: Sparkles, field: 'skillIds' as const },
+  { value: 'agents', label: 'Agents', icon: Bot, field: 'agentIds' as const },
+  { value: 'rules', label: 'Rules', icon: ScrollText, field: 'ruleIds' as const },
+  { value: 'hooks', label: 'Hooks', icon: Webhook, field: 'hookIds' as const },
+] as const
 
 export function StepResourceTabs() {
   const { formSteps, selectedStepIndex, updateStep } = useWorkflowsStore()
@@ -37,112 +45,63 @@ export function StepResourceTabs() {
     updateStep(selectedStepIndex, { [field]: [] })
   }
 
+  const dataMap = {
+    mcp: mcpServers,
+    skills: skills,
+    agents: agents,
+    rules: rules,
+    hooks: hooks,
+  } as const
+
+  const placeholders = {
+    mcp: { empty: 'Nenhum servidor MCP disponivel', search: 'Buscar MCP...' },
+    skills: { empty: 'Nenhuma skill disponivel', search: 'Buscar skills...' },
+    agents: { empty: 'Nenhum agent disponivel', search: 'Buscar agents...' },
+    rules: { empty: 'Nenhuma rule disponivel', search: 'Buscar rules...' },
+    hooks: { empty: 'Nenhum hook disponivel', search: 'Buscar hooks...' },
+  } as const
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <h4 className="text-sm font-medium text-muted-foreground">Recursos</h4>
       <Tabs defaultValue="mcp" className="w-full">
-        <TabsList className="w-full flex flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="mcp" className="text-xs gap-1.5">
-            <Server className="h-3 w-3" />
-            MCP
-            {step.mcpServerIds.length > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">
-                {step.mcpServerIds.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="skills" className="text-xs gap-1.5">
-            <Sparkles className="h-3 w-3" />
-            Skills
-            {step.skillIds.length > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">
-                {step.skillIds.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="agents" className="text-xs gap-1.5">
-            <Bot className="h-3 w-3" />
-            Agents
-            {step.agentIds.length > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">
-                {step.agentIds.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="rules" className="text-xs gap-1.5">
-            <ScrollText className="h-3 w-3" />
-            Rules
-            {step.ruleIds.length > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">
-                {step.ruleIds.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="hooks" className="text-xs gap-1.5">
-            <Webhook className="h-3 w-3" />
-            Hooks
-            {step.hookIds.length > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">
-                {step.hookIds.length}
-              </Badge>
-            )}
-          </TabsTrigger>
+        <TabsList className="w-full grid grid-cols-5 h-9 p-0.5">
+          {tabs.map((tab) => {
+            const count = step[tab.field].length
+            const Icon = tab.icon
+            return (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="text-[11px] gap-1 px-1 py-1.5 data-[state=active]:shadow-sm"
+              >
+                <Icon className="h-3 w-3 shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                {count > 0 && (
+                  <span className={cn(
+                    'inline-flex items-center justify-center min-w-[16px] h-4 rounded-full text-[10px] font-medium px-1',
+                    'bg-primary/15 text-primary'
+                  )}>
+                    {count}
+                  </span>
+                )}
+              </TabsTrigger>
+            )
+          })}
         </TabsList>
 
-        <TabsContent value="mcp" className="mt-3">
-          <ResourceSelectPanel
-            items={mcpServers}
-            selectedIds={step.mcpServerIds}
-            onToggle={(id, checked) => handleToggle('mcpServerIds', id, checked)}
-            onClear={() => handleClear('mcpServerIds')}
-            emptyMessage="Nenhum servidor MCP disponivel"
-            searchPlaceholder="Buscar servidores MCP..."
-          />
-        </TabsContent>
-
-        <TabsContent value="skills" className="mt-3">
-          <ResourceSelectPanel
-            items={skills}
-            selectedIds={step.skillIds}
-            onToggle={(id, checked) => handleToggle('skillIds', id, checked)}
-            onClear={() => handleClear('skillIds')}
-            emptyMessage="Nenhuma skill disponivel"
-            searchPlaceholder="Buscar skills..."
-          />
-        </TabsContent>
-
-        <TabsContent value="agents" className="mt-3">
-          <ResourceSelectPanel
-            items={agents}
-            selectedIds={step.agentIds}
-            onToggle={(id, checked) => handleToggle('agentIds', id, checked)}
-            onClear={() => handleClear('agentIds')}
-            emptyMessage="Nenhum agent disponivel"
-            searchPlaceholder="Buscar agents..."
-          />
-        </TabsContent>
-
-        <TabsContent value="rules" className="mt-3">
-          <ResourceSelectPanel
-            items={rules}
-            selectedIds={step.ruleIds}
-            onToggle={(id, checked) => handleToggle('ruleIds', id, checked)}
-            onClear={() => handleClear('ruleIds')}
-            emptyMessage="Nenhuma rule disponivel"
-            searchPlaceholder="Buscar rules..."
-          />
-        </TabsContent>
-
-        <TabsContent value="hooks" className="mt-3">
-          <ResourceSelectPanel
-            items={hooks}
-            selectedIds={step.hookIds}
-            onToggle={(id, checked) => handleToggle('hookIds', id, checked)}
-            onClear={() => handleClear('hookIds')}
-            emptyMessage="Nenhum hook disponivel"
-            searchPlaceholder="Buscar hooks..."
-          />
-        </TabsContent>
+        {tabs.map((tab) => (
+          <TabsContent key={tab.value} value={tab.value} className="mt-2">
+            <ResourceSelectPanel
+              items={dataMap[tab.value]}
+              selectedIds={step[tab.field]}
+              onToggle={(id, checked) => handleToggle(tab.field, id, checked)}
+              onClear={() => handleClear(tab.field)}
+              emptyMessage={placeholders[tab.value].empty}
+              searchPlaceholder={placeholders[tab.value].search}
+            />
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   )

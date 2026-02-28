@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Trash2, PanelRightOpen, PanelRightClose, FolderOpen } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
@@ -28,6 +28,14 @@ export default function ConversationDetailPage() {
   const { data: conversation, isLoading, error } = useConversation(id!)
   const deleteMutation = useDeleteConversation()
   const { stepStatuses, currentStepIndex: storeStepIndex, isStreaming: storeIsStreaming } = useConversationsStore()
+
+  useEffect(() => {
+    if (conversation) {
+      const title = conversation.title || 'Conversa sem título'
+      document.title = title
+    }
+    return () => { document.title = 'Orquestrador' }
+  }, [conversation])
 
   const handleDelete = async () => {
     await deleteMutation.mutateAsync(id!)
