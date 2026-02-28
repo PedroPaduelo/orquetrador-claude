@@ -258,6 +258,8 @@ export class TaskOrchestrator {
       messageId: userMessage.id,
       role: 'user',
       content: userInput,
+      stepId: steps[startIndex]?.id,
+      stepName: steps[startIndex]?.name,
       attachments: userMessage.attachments,
     })
 
@@ -347,7 +349,8 @@ export class TaskOrchestrator {
           role: 'assistant',
           content: result.content,
           stepId: step.id,
-          metadata: { sessionId: result.resumeToken },
+          stepName: step.name,
+          metadata: { sessionId: result.resumeToken, actions: result.actions },
         })
 
         let conditionsData: unknown = step.conditions
@@ -547,6 +550,8 @@ export class TaskOrchestrator {
       messageId: userMessage.id,
       role: 'user',
       content: userInput,
+      stepId: step.id,
+      stepName: step.name,
       attachments: userMessage.attachments,
     })
 
@@ -613,7 +618,8 @@ export class TaskOrchestrator {
           role: 'assistant',
           content: result.content,
           stepId: step.id,
-          metadata: { sessionId: result.resumeToken, needsUserInput: result.needsUserInput },
+          stepName: step.name,
+          metadata: { sessionId: result.resumeToken, needsUserInput: result.needsUserInput, actions: result.actions },
         })
       }
 

@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useConversationsStore } from '../store'
-import type { Action, Attachment } from '../types'
+import type { Action, Attachment, Conversation } from '../types'
 
 interface UseSSEStreamOptions {
   conversationId: string
@@ -196,6 +196,41 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           })
           break
 
+        case 'message_saved': {
+          // Inserir a mensagem no cache do React Query em tempo real
+          // para que apareça no chat sem esperar o refetch final
+          const queryKey = ['conversations', conversationId, 'detail']
+          queryClient.setQueryData<Conversation>(queryKey, (old) => {
+            if (!old) return old
+            const existingIds = new Set(old.messages?.map(m => m.id) || [])
+            if (existingIds.has(data.messageId as string)) return old
+            const newMessage = {
+              id: data.messageId as string,
+              role: data.role as 'user' | 'assistant',
+              content: data.content as string,
+              stepId: (data.stepId as string) || null,
+              stepName: (data.stepName as string) || null,
+              selectedForContext: false,
+              metadata: data.metadata ? { actions: (data.metadata as Record<string, unknown>).actions as Action[] || [] } : undefined,
+              attachments: (data.attachments as Array<{
+                id: string
+                filename: string
+                mimeType: string
+                size: number
+                path: string
+                projectPath: string
+                url: string
+              }>) || undefined,
+              createdAt: new Date().toISOString(),
+            }
+            return {
+              ...old,
+              messages: [...(old.messages || []), newMessage],
+            }
+          })
+          break
+        }
+
         case 'condition_retry':
           setStepStatus(data.stepId as string, 'retry')
           break
@@ -213,7 +248,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           break
       }
     },
-    [setProgress, setStepStatus, setStreamingPhase, appendStreamingContent, addStreamingAction, resetStreamingContent, onError, onComplete]
+    [conversationId, queryClient, setProgress, setStepStatus, setStreamingPhase, appendStreamingContent, addStreamingAction, resetStreamingContent, onError, onComplete]
   )
 
   const cancel = useCallback(async () => {

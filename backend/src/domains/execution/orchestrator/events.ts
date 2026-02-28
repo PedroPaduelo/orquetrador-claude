@@ -51,6 +51,7 @@ export interface MessageSavedEvent {
   role: 'user' | 'assistant'
   content: string
   stepId?: string
+  stepName?: string
   metadata?: Record<string, unknown>
   attachments?: Array<{
     id: string
