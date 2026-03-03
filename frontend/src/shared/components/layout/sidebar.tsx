@@ -12,6 +12,7 @@ import {
   Webhook,
   Settings,
   LogOut,
+  PanelLeftClose,
 } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { useAuthStore } from '@/features/auth/store'
@@ -73,7 +74,11 @@ const configItems = [
   },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  onCollapse?: () => void
+}
+
+export function Sidebar({ onCollapse }: SidebarProps) {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
 
@@ -83,15 +88,26 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-[240px] border-r border-border/50 bg-card/30 flex flex-col shrink-0">
+    <div className="flex flex-col h-full w-60">
       {/* Logo */}
-      <div className="h-14 flex items-center px-5 gap-2.5 border-b border-border/50">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 shadow-sm shadow-teal-500/20">
-          <Zap className="h-3.5 w-3.5 text-white" />
+      <div className="h-14 flex items-center justify-between px-5 border-b border-border/50">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 shadow-sm shadow-teal-500/20">
+            <Zap className="h-3.5 w-3.5 text-white" />
+          </div>
+          <span className="text-base font-bold tracking-tight">
+            <span className="text-gradient">Execut</span>
+          </span>
         </div>
-        <span className="text-base font-bold tracking-tight">
-          <span className="text-gradient">Execut</span>
-        </span>
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            title="Recolher menu"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -166,6 +182,6 @@ export function Sidebar() {
           <span>Sair</span>
         </button>
       </div>
-    </aside>
+    </div>
   )
 }

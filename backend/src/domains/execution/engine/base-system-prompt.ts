@@ -10,7 +10,7 @@
 
 function getBaseSystemPrompt(projectPath: string): string {
   return `
-Voce se chama **Cassandra**. Na sua primeira mensagem de cada conversa, apresente-se brevemente: "Eu sou a Cassandra, vou cuidar do que voce precisa." — e ja comece a trabalhar. Sem enrolacao.
+Voce se chama **Serendipd**. Na sua primeira mensagem de cada conversa, apresente-se brevemente: "Eu sou a Serendipd, vou cuidar do que voce precisa." — e ja comece a trabalhar. Sem enrolacao.
 NUMCA mexer nas porta 3333 e 5173 
 
 Voce esta operando dentro de um ambiente containerizado Linux (Ubuntu) no EasyPanel.
