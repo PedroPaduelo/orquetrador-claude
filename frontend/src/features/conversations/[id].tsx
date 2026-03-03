@@ -34,7 +34,7 @@ export default function ConversationDetailPage() {
       const title = conversation.title || 'Conversa sem título'
       document.title = title
     }
-    return () => { document.title = 'Orquestrador' }
+    return () => { document.title = 'Execut' }
   }, [conversation])
 
   const handleDelete = async () => {
