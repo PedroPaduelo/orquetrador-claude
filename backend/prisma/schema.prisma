@@ -260,7 +260,7 @@ model McpServer {
   args        String   @default("[]")
   envVars     String   @default("{}") @map("env_vars")
   enabled     Boolean  @default(true)
-  isGlobal    Boolean  @default(true) @map("is_global")
+  isGlobal    Boolean  @default(false) @map("is_global")
   toolsCache  String?  @map("tools_cache")
   lastTestAt  DateTime? @map("last_test_at")
   lastTestOk  Boolean?  @map("last_test_ok")
@@ -289,7 +289,7 @@ model Skill {
   allowedTools String   @default("[]") @map("allowed_tools")
   model        String?
   enabled      Boolean  @default(true)
-  isGlobal     Boolean  @default(true) @map("is_global")
+  isGlobal     Boolean  @default(false) @map("is_global")
   source       String   @default("manual") // manual | imported
   repoUrl      String?  @map("repo_url")
   projectPath  String?  @map("project_path")
@@ -332,7 +332,7 @@ model Agent {
   maxTurns        Int?     @map("max_turns")
   skills          String   @default("[]")
   enabled         Boolean  @default(true)
-  isGlobal        Boolean  @default(true) @map("is_global")
+  isGlobal        Boolean  @default(false) @map("is_global")
   source          String   @default("manual") // manual | imported
   repoUrl         String?  @map("repo_url")
   projectPath     String?  @map("project_path")
@@ -367,7 +367,7 @@ model Rule {
   description String?
   body        String   @default("")
   enabled     Boolean  @default(true)
-  isGlobal    Boolean  @default(true) @map("is_global")
+  isGlobal    Boolean  @default(false) @map("is_global")
   source      String   @default("manual")
   repoUrl     String?  @map("repo_url")
   projectPath String?  @map("project_path")
@@ -492,7 +492,7 @@ model Hook {
   isAsync       Boolean  @default(false) @map("is_async")
   statusMessage String?  @map("status_message") // message shown during execution
   enabled       Boolean  @default(true)
-  isGlobal      Boolean  @default(true) @map("is_global")
+  isGlobal      Boolean  @default(false) @map("is_global")
   projectPath   String?  @map("project_path") // project-specific hook
   isTemplate    Boolean  @default(false) @map("is_template") // system template
   templateId    String?  @map("template_id") // if created from template
