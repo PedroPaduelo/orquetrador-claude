@@ -11,7 +11,7 @@ export const rulesService = {
     const name = extractNameFromUrl(url) || `rule-${Date.now()}`
     const body = markdown.trim()
 
-    const existing = await rulesRepository.findByName(name, userId)
+    const existing = await rulesRepository.findByName(name, userId!)
     if (existing) {
       throw new Error(`Rule com nome "${name}" ja existe`)
     }

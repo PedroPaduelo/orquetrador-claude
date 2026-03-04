@@ -149,6 +149,13 @@ export const conversationsRepository = {
     })
   },
 
+  async updateTitle(id: string, title: string) {
+    await prisma.conversation.update({
+      where: { id },
+      data: { title },
+    })
+  },
+
   async findByIdSimple(id: string) {
     return prisma.conversation.findUnique({ where: { id } })
   },

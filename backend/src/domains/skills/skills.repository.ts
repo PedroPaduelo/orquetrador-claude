@@ -111,7 +111,7 @@ export const skillsRepository = {
     return fromDb(skill)
   },
 
-  async update(id: string, userId: string, input: {
+  async update(id: string, _userId: string, input: {
     name?: string
     description?: string
     body?: string
@@ -146,7 +146,7 @@ export const skillsRepository = {
     await prisma.skill.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, userId: string, currentEnabled: boolean) {
+  async toggle(id: string, _userId: string, currentEnabled: boolean) {
     const skill = await prisma.skill.update({
       where: { id },
       data: { enabled: !currentEnabled },

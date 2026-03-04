@@ -185,7 +185,7 @@ export const pluginsRepository = {
     return fromDb(plugin)
   },
 
-  async update(id: string, userId: string, input: {
+  async update(id: string, _userId: string, input: {
     name?: string
     description?: string | null
     version?: string | null
@@ -215,7 +215,7 @@ export const pluginsRepository = {
     await prisma.plugin.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, userId: string, currentEnabled: boolean) {
+  async toggle(id: string, _userId: string, currentEnabled: boolean) {
     const next = !currentEnabled
     const [plugin] = await prisma.$transaction([
       prisma.plugin.update({ where: { id }, data: { enabled: next } }),

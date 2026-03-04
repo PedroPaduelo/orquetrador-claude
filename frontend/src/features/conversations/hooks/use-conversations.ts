@@ -116,6 +116,21 @@ export function useJumpToStep(conversationId: string) {
   })
 }
 
+export function useUpdateConversationTitle(conversationId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (title: string) => conversationsApi.updateTitle(conversationId, title),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar titulo')
+    },
+  })
+}
+
 export function useResetStepSession(conversationId: string) {
   const queryClient = useQueryClient()
 

@@ -112,7 +112,7 @@ export const mcpServersRepository = {
     return fromDbFull(server)
   },
 
-  async update(id: string, userId: string, input: {
+  async update(id: string, _userId: string, input: {
     name?: string
     description?: string | null
     type?: string
@@ -145,7 +145,7 @@ export const mcpServersRepository = {
     await prisma.mcpServer.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, userId: string, currentEnabled: boolean) {
+  async toggle(id: string, _userId: string, currentEnabled: boolean) {
     const server = await prisma.mcpServer.update({
       where: { id },
       data: { enabled: !currentEnabled },

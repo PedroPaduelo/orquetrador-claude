@@ -126,7 +126,7 @@ export const agentsRepository = {
     return fromDb(agent)
   },
 
-  async update(id: string, userId: string, input: {
+  async update(id: string, _userId: string, input: {
     name?: string
     description?: string | null
     systemPrompt?: string
@@ -165,7 +165,7 @@ export const agentsRepository = {
     await prisma.agent.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, userId: string, currentEnabled: boolean) {
+  async toggle(id: string, _userId: string, currentEnabled: boolean) {
     const agent = await prisma.agent.update({
       where: { id },
       data: { enabled: !currentEnabled },

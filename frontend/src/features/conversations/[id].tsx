@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Trash2, PanelRightOpen, PanelRightClose, FolderOpen } from 'lucide-react'
+import { ArrowLeft, Trash2, PanelRightOpen, PanelRightClose, FolderOpen, Pencil } from 'lucide-react'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -17,7 +17,7 @@ import {
 } from '@/shared/components/ui/alert-dialog'
 import { ChatContainer } from './components/chat-container'
 import { StepPanel } from './components/step-panel'
-import { useConversation, useDeleteConversation } from './hooks/use-conversations'
+import { useConversation, useDeleteConversation, useUpdateConversationTitle } from './hooks/use-conversations'
 import { useConversationsStore } from './store'
 import { cn } from '@/shared/lib/utils'
 
@@ -25,8 +25,12 @@ export default function ConversationDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [showStepPanel, setShowStepPanel] = useState(true)
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const titleInputRef = useRef<HTMLInputElement>(null)
   const { data: conversation, isLoading, error } = useConversation(id!)
   const deleteMutation = useDeleteConversation()
+  const updateTitleMutation = useUpdateConversationTitle(id!)
   const { stepStatuses, currentStepIndex: storeStepIndex, isStreaming: storeIsStreaming } = useConversationsStore()
 
   useEffect(() => {
@@ -40,6 +44,24 @@ export default function ConversationDetailPage() {
   const handleDelete = async () => {
     await deleteMutation.mutateAsync(id!)
     navigate('/conversations')
+  }
+
+  const startEditingTitle = () => {
+    setEditTitle(conversation?.title || '')
+    setIsEditingTitle(true)
+    setTimeout(() => titleInputRef.current?.select(), 0)
+  }
+
+  const saveTitle = () => {
+    const trimmed = editTitle.trim()
+    if (trimmed && trimmed !== conversation?.title) {
+      updateTitleMutation.mutate(trimmed)
+    }
+    setIsEditingTitle(false)
+  }
+
+  const cancelEditTitle = () => {
+    setIsEditingTitle(false)
   }
 
   if (isLoading) {
@@ -105,9 +127,31 @@ export default function ConversationDetailPage() {
 
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h1 className="font-semibold truncate text-sm">
-                    {conversation.title || 'Conversa sem título'}
-                  </h1>
+                  {isEditingTitle ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        ref={titleInputRef}
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveTitle()
+                          if (e.key === 'Escape') cancelEditTitle()
+                        }}
+                        onBlur={saveTitle}
+                        className="font-semibold text-sm bg-transparent border border-border rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-ring w-48"
+                        maxLength={200}
+                      />
+                    </div>
+                  ) : (
+                    <h1
+                      className="font-semibold truncate text-sm cursor-pointer hover:text-muted-foreground transition-colors group flex items-center gap-1"
+                      onClick={startEditingTitle}
+                      title="Clique para editar"
+                    >
+                      {conversation.title || 'Conversa sem título'}
+                      <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-50 shrink-0" />
+                    </h1>
+                  )}
                   {conversation.workflow?.type === 'step_by_step' && steps.length > 0 && (
                     <Badge variant="outline" className="text-[10px] shrink-0 h-5 px-2">
                       Step {currentStepIndex + 1}/{steps.length}

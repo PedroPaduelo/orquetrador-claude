@@ -21,7 +21,7 @@ export const skillsService = {
     const allowedTools = frontmatter['allowed-tools'] || frontmatter.allowedTools || []
     const model = (frontmatter.model as string) || null
 
-    const existing = await skillsRepository.findByName(name, userId)
+    const existing = await skillsRepository.findByName(name, userId!)
     if (existing) {
       throw new Error(`Skill com nome "${name}" ja existe`)
     }

@@ -20,7 +20,7 @@ export const agentsService = {
     const disallowedTools = frontmatter['disallowed-tools'] || frontmatter.disallowedTools || []
     const skills = frontmatter.skills || []
 
-    const existing = await agentsRepository.findByName(name, userId)
+    const existing = await agentsRepository.findByName(name, userId!)
     if (existing) {
       throw new Error(`Agent com nome "${name}" ja existe`)
     }

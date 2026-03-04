@@ -191,6 +191,28 @@ export async function conversationsRoutes(app: FastifyInstance) {
     }
   )
 
+  // PATCH /conversations/:id
+  server.patch(
+    '/conversations/:id',
+    {
+      schema: {
+        tags: ['Conversations'],
+        summary: 'Update conversation title',
+        params: z.object({ id: z.string() }),
+        body: z.object({ title: z.string().min(1).max(200) }),
+        response: { 204: z.null() },
+      },
+    },
+    async (request, reply) => {
+      await request.getCurrentUserId()
+      const existing = await conversationsRepository.findByIdSimple(request.params.id)
+      if (!existing) throw new NotFoundError('Conversation not found')
+
+      await conversationsRepository.updateTitle(request.params.id, request.body.title)
+      return reply.status(204).send(null)
+    }
+  )
+
   // DELETE /conversations/:id
   server.delete(
     '/conversations/:id',

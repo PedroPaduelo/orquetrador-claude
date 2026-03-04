@@ -103,7 +103,7 @@ export const rulesRepository = {
     return fromDb(rule)
   },
 
-  async update(id: string, userId: string, input: {
+  async update(id: string, _userId: string, input: {
     name?: string
     description?: string | null
     body?: string
@@ -132,7 +132,7 @@ export const rulesRepository = {
     await prisma.rule.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, userId: string, currentEnabled: boolean) {
+  async toggle(id: string, _userId: string, currentEnabled: boolean) {
     const rule = await prisma.rule.update({
       where: { id },
       data: { enabled: !currentEnabled },

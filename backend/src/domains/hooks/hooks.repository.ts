@@ -96,7 +96,7 @@ export const hooksRepository = {
     return fromDb(hook)
   },
 
-  async update(id: string, userId: string, input: {
+  async update(id: string, _userId: string, input: {
     name?: string
     description?: string | null
     eventType?: string
@@ -137,7 +137,7 @@ export const hooksRepository = {
     await prisma.hook.deleteMany({ where: { id, userId } })
   },
 
-  async toggle(id: string, userId: string, currentEnabled: boolean) {
+  async toggle(id: string, _userId: string, currentEnabled: boolean) {
     const hook = await prisma.hook.update({
       where: { id },
       data: { enabled: !currentEnabled },

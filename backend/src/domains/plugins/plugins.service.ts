@@ -75,7 +75,7 @@ function writeFileSafe(filePath: string, content: string) {
 
 export const pluginsService = {
   async install(input: PluginManifest, userId?: string) {
-    const existing = await pluginsRepository.findByName(input.name, userId)
+    const existing = await pluginsRepository.findByName(input.name, userId!)
     if (existing) {
       throw new Error(`Plugin with name "${input.name}" already exists`)
     }
@@ -136,7 +136,7 @@ export const pluginsService = {
     // Build plugin name from repo
     const pluginName = subPath ? `${repo}/${subPath}` : repo
 
-    const existing = await pluginsRepository.findByName(pluginName, userId)
+    const existing = await pluginsRepository.findByName(pluginName, userId!)
     if (existing) {
       throw new Error(`Plugin with name "${pluginName}" already exists`)
     }

@@ -47,6 +47,10 @@ export const conversationsApi = {
     return data
   },
 
+  updateTitle: async (id: string, title: string): Promise<void> => {
+    await apiClient.patch(`/conversations/${id}`, { title })
+  },
+
   resetStepSession: async (conversationId: string, stepId: string): Promise<void> => {
     await apiClient.delete(`/conversations/${conversationId}/sessions/${stepId}`)
   },
