@@ -1,3 +1,4 @@
+import React from 'react'
 import { MoreHorizontal, Trash2, MessageSquare, ArrowRight, Clock, Circle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/shared/components/ui/card'
@@ -20,10 +21,18 @@ interface ConversationCardProps {
 export function ConversationCard({ conversation, onDelete }: ConversationCardProps) {
   const navigate = useNavigate()
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      window.open(`/conversations/${conversation.id}`, '_blank')
+    } else {
+      navigate(`/conversations/${conversation.id}`)
+    }
+  }
+
   return (
     <Card
       className="group hover:border-primary/30 transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 cursor-pointer overflow-hidden"
-      onClick={() => navigate(`/conversations/${conversation.id}`)}
+      onClick={handleClick}
     >
       <CardContent className="p-5">
         {/* Header */}

@@ -41,7 +41,13 @@ export function ConversationTable({ conversations, onDelete }: ConversationTable
                 key={conv.id}
                 className="border-b last:border-b-0 hover:bg-muted/30 transition-colors animate-fade-in-up cursor-pointer"
                 style={{ animationDelay: `${index * 30}ms` }}
-                onClick={() => navigate(`/conversations/${conv.id}`)}
+                onClick={(e) => {
+                  if (e.ctrlKey || e.metaKey) {
+                    window.open(`/conversations/${conv.id}`, '_blank')
+                  } else {
+                    navigate(`/conversations/${conv.id}`)
+                  }
+                }}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
