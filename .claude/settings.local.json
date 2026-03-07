@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /workspace/orquetrador-claude/backend && npx prisma migrate dev --name add_message_attachments)"
+    ]
+  }
+}
