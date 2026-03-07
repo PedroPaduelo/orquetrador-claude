@@ -3,5 +3,12 @@
     "allow": [
       "Bash(cd /workspace/orquetrador-claude/backend && npx prisma migrate dev --name add_message_attachments)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "web-search-prime",
+    "browser",
+    "mcp-easypanel",
+    "context7",
+    "execut"
+  ]
 }

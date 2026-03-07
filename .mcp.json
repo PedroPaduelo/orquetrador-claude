@@ -1,12 +1,5 @@
 {
   "mcpServers": {
-    "web-search-prime": {
-      "type": "http",
-      "url": "https://api.z.ai/api/mcp/web_reader/mcp",
-      "headers": {
-        "Authorization": "Bearer a1b0ec2671f246ad8cccc3440e2cbf89.axlWCIyrWxp5fIPW"
-      }
-    },
     "browser": {
       "type": "http",
       "url": "http://localhost:8080/mcp"
@@ -14,17 +7,6 @@
     "mcp-easypanel": {
       "type": "http",
       "url": "https://nommand-mcp-easypanel.ddw1sl.easypanel.host/mcp"
-    },
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "Authorization": "Bearer ctx7sk-a3853a85-f006-4527-b6fc-5c8bf4c36ac3"
-      }
-    },
-    "execut": {
-      "type": "http",
-      "url": "http://localhost:3334/mcp"
     }
   }
 }

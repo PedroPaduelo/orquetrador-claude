@@ -63,24 +63,6 @@ export class SessionManager {
     })
   }
 
-  async getSelectedContext(conversationId: string): Promise<Array<{ role: string; content: string }>> {
-    const messages = await prisma.message.findMany({
-      where: {
-        conversationId,
-        selectedForContext: true,
-      },
-      orderBy: { createdAt: 'asc' },
-      select: {
-        role: true,
-        content: true,
-      },
-    })
-
-    return messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }))
-  }
 }
 
 export const sessionManager = new SessionManager()

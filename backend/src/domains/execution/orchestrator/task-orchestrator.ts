@@ -52,11 +52,6 @@ export class TaskOrchestrator {
     // Get session (resume token) for this step
     let resumeToken = await sessionManager.getSession(conversationId, step.id)
 
-    // Get context messages only on cold start
-    let contextMessages = !resumeToken
-      ? await sessionManager.getSelectedContext(conversationId)
-      : []
-
     const systemPrompt = buildSystemPrompt({
       stepSystemPrompt: step.systemPrompt,
       projectPath,
@@ -108,7 +103,6 @@ export class TaskOrchestrator {
       model: step.model || undefined,
       attachments,
       resumeToken,
-      contextMessages,
       onEvent: makeOnEvent(monitor),
       onRawStdout: (chunk) => monitor.onStdout(chunk),
       onRawStderr: (chunk) => monitor.onStderr(chunk),
@@ -139,7 +133,6 @@ export class TaskOrchestrator {
       // Delete the old session so we start fresh
       await sessionManager.deleteSession(conversationId, step.id)
       resumeToken = null
-      contextMessages = await sessionManager.getSelectedContext(conversationId)
 
       // Create a new monitor for the retry
       const retryMonitor = new ExecutionMonitor(executionId, conversationId, step.id)
@@ -161,7 +154,6 @@ export class TaskOrchestrator {
         model: step.model || undefined,
         attachments,
         resumeToken: null,
-        contextMessages,
         onEvent: makeOnEvent(retryMonitor),
         onRawStdout: (chunk) => retryMonitor.onStdout(chunk),
         onRawStderr: (chunk) => retryMonitor.onStderr(chunk),

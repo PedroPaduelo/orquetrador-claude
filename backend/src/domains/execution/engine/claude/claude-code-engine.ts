@@ -66,7 +66,6 @@ export class ClaudeCodeEngine implements CliEngine {
       model,
       attachments,
       resumeToken,
-      contextMessages,
       onEvent,
       onRawStdout,
       onRawStderr,
@@ -85,15 +84,6 @@ export class ClaudeCodeEngine implements CliEngine {
     let rawStderr = ''
     let exitCode: number | null = null
     let exitSignal: string | null = null
-
-    // Build message with context if provided
-    let fullMessage = message
-    if (contextMessages && contextMessages.length > 0 && !resumeToken) {
-      const contextStr = contextMessages
-        .map((m) => `[${m.role === 'user' ? 'User' : 'Assistant'}]: ${m.content}`)
-        .join('\n\n')
-      fullMessage = `<selected-context>\n${contextStr}\n</selected-context>\n\n${message}`
-    }
 
     // Build command arguments
     const args = [
@@ -132,7 +122,7 @@ export class ClaudeCodeEngine implements CliEngine {
     }
 
     // Build the final prompt
-    let messageToSend = fullMessage.trim()
+    let messageToSend = message.trim()
     if (imagePaths.length > 0) {
       const imageRefs = imagePaths.join('\n')
       if (messageToSend) {
