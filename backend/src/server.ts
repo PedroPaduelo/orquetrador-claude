@@ -25,6 +25,16 @@ const app = Fastify({
   },
 })
 
+// Allow empty body with Content-Type: application/json (fixes DELETE requests from MCP clients)
+app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+  try {
+    const str = (body as string).trim()
+    done(null, str ? JSON.parse(str) : undefined)
+  } catch (err) {
+    done(err as Error, undefined)
+  }
+})
+
 // Set validators
 app.setValidatorCompiler(validatorCompiler)
 app.setSerializerCompiler(serializerCompiler)

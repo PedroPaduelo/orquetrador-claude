@@ -60,6 +60,24 @@ export function useDeleteConversation() {
   })
 }
 
+export function useCloneConversation() {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+
+  return useMutation({
+    mutationFn: (id: string) => conversationsApi.clone(id),
+    onSuccess: (conversation) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['folders'] })
+      toast.success('Conversa clonada!')
+      navigate(`/conversations/${conversation.id}`)
+    },
+    onError: () => {
+      toast.error('Erro ao clonar conversa')
+    },
+  })
+}
+
 export function useCancelExecution(conversationId: string) {
   return useMutation({
     mutationFn: () => conversationsApi.cancel(conversationId),

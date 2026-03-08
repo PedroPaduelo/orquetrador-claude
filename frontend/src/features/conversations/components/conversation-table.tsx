@@ -1,4 +1,4 @@
-import { MoreVertical, Trash2, ArrowRight, MessageSquare, Circle, ExternalLink } from 'lucide-react'
+import { MoreVertical, Trash2, Copy, ArrowRight, MessageSquare, Circle, ExternalLink } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
@@ -14,9 +14,10 @@ import type { Conversation } from '../types'
 interface ConversationTableProps {
   conversations: Conversation[]
   onDelete: (conversation: Conversation) => void
+  onClone: (conversation: Conversation) => void
 }
 
-export function ConversationTable({ conversations, onDelete }: ConversationTableProps) {
+export function ConversationTable({ conversations, onDelete, onClone }: ConversationTableProps) {
   const navigate = useNavigate()
 
   return (
@@ -106,6 +107,10 @@ export function ConversationTable({ conversations, onDelete }: ConversationTable
                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/conversations/${conv.id}`) }}>
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Abrir
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onClone(conv) }}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Clonar
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={(e) => { e.stopPropagation(); onDelete(conv) }}

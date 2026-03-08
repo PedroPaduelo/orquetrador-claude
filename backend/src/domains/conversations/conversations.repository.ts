@@ -159,4 +159,43 @@ export const conversationsRepository = {
   async findByIdSimple(id: string) {
     return prisma.conversation.findUnique({ where: { id } })
   },
+
+  async clone(sourceId: string, userId: string) {
+    const source = await prisma.conversation.findUnique({
+      where: { id: sourceId },
+      include: {
+        workflow: {
+          include: {
+            steps: {
+              orderBy: { stepOrder: 'asc' as const },
+              take: 1,
+            },
+          },
+        },
+      },
+    })
+
+    if (!source) return null
+
+    const firstStep = source.workflow.steps[0] ?? null
+
+    const conversation = await prisma.conversation.create({
+      data: {
+        workflowId: source.workflowId,
+        title: source.title ? `${source.title} (cópia)` : null,
+        projectPath: source.projectPath,
+        currentStepId: firstStep?.id ?? null,
+        userId,
+      },
+    })
+
+    return {
+      id: conversation.id,
+      workflowId: conversation.workflowId,
+      title: conversation.title,
+      projectPath: conversation.projectPath,
+      currentStepId: conversation.currentStepId,
+      createdAt: conversation.createdAt.toISOString(),
+    }
+  },
 }

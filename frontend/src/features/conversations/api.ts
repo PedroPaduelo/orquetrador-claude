@@ -27,6 +27,11 @@ export const conversationsApi = {
     await apiClient.delete(`/conversations/${id}`)
   },
 
+  clone: async (id: string): Promise<Conversation> => {
+    const { data } = await apiClient.post(`/conversations/${id}/clone`, {})
+    return data
+  },
+
   cancel: async (id: string): Promise<{ success: boolean; message: string }> => {
     const { data } = await apiClient.post(`/conversations/${id}/cancel`, {})
     return data

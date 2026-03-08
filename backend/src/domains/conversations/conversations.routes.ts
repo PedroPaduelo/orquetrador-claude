@@ -213,6 +213,35 @@ export async function conversationsRoutes(app: FastifyInstance) {
     }
   )
 
+  // POST /conversations/:id/clone
+  server.post(
+    '/conversations/:id/clone',
+    {
+      schema: {
+        tags: ['Conversations'],
+        summary: 'Clone a conversation (same workflow and project folder)',
+        params: z.object({ id: z.string() }),
+        body: z.any().optional(),
+        response: {
+          201: z.object({
+            id: z.string(),
+            workflowId: z.string(),
+            title: z.string().nullable(),
+            projectPath: z.string().nullable(),
+            currentStepId: z.string().nullable(),
+            createdAt: z.string(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const userId = await request.getCurrentUserId()
+      const cloned = await conversationsRepository.clone(request.params.id, userId)
+      if (!cloned) throw new NotFoundError('Conversation not found')
+      return reply.status(201).send(cloned)
+    }
+  )
+
   // DELETE /conversations/:id
   server.delete(
     '/conversations/:id',

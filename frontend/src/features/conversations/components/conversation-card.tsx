@@ -1,5 +1,5 @@
 import React from 'react'
-import { MoreHorizontal, Trash2, MessageSquare, ArrowRight, Clock, Circle } from 'lucide-react'
+import { MoreHorizontal, Trash2, Copy, MessageSquare, ArrowRight, Clock, Circle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
@@ -16,9 +16,10 @@ import type { Conversation } from '../types'
 interface ConversationCardProps {
   conversation: Conversation
   onDelete: () => void
+  onClone: () => void
 }
 
-export function ConversationCard({ conversation, onDelete }: ConversationCardProps) {
+export function ConversationCard({ conversation, onDelete, onClone }: ConversationCardProps) {
   const navigate = useNavigate()
 
   const handleClick = (e: React.MouseEvent) => {
@@ -52,6 +53,15 @@ export function ConversationCard({ conversation, onDelete }: ConversationCardPro
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClone()
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Clonar
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation()

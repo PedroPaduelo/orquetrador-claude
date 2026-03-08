@@ -1,6 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { apiGet, apiPost, apiDelete, formatResult } from '../api-client.js'
+import { apiGet, apiPost, apiDelete, apiPostSSE, formatResult, type SSEResult } from '../api-client.js'
+
+// Background executions store for async pattern
+const backgroundExecutions = new Map<string, {
+  promise: Promise<{ ok: boolean; status: number; data: SSEResult }>
+  startedAt: Date
+}>()
 
 export function registerConversationTools(server: McpServer) {
   server.tool(
@@ -123,6 +129,196 @@ USE para ler o historico de mensagens de uma conversa.`,
     async ({ id, stepId }) => {
       const query = stepId ? `?stepId=${stepId}` : ''
       return formatResult(await apiGet(`/conversations/${id}/messages${query}`))
+    }
+  )
+
+  // ─────────────────────────────────────────────────────────
+  // SEND MESSAGE (synchronous — waits for full execution)
+  // ─────────────────────────────────────────────────────────
+  server.tool(
+    'conversation_send_message',
+    `Envia uma mensagem para uma conversa e AGUARDA o resultado completo da execucao do workflow.
+
+ESTA E A TOOL PRINCIPAL PARA ORQUESTRACAO E SWARM DE AGENTES.
+
+INPUT:
+- id: ID da conversa (obrigatorio)
+- content: Mensagem a enviar (obrigatorio)
+- stepIndex: Indice do step a executar (opcional, para step_by_step)
+- timeoutMs: Timeout em ms (opcional, padrao 600000 = 10min)
+
+RETORNA:
+- executionId: ID da execucao
+- content: Resposta completa do assistente (ultimo step)
+- stepsCompleted: Array com nome e ordem de cada step completado
+- error: Mensagem de erro (se houver)
+
+FLUXO:
+1. Conecta no endpoint SSE de streaming
+2. Aguarda todos os steps do workflow executarem
+3. Retorna o resultado final agregado
+
+EXEMPLO DE ORQUESTRACAO (swarm):
+1. conversation_create → cria conversa com workflow "Frontend"
+2. conversation_send_message → envia demanda, recebe resultado
+3. conversation_create → cria conversa com workflow "Backend"
+4. conversation_send_message → envia demanda + contexto do frontend
+5. conversation_create → cria conversa com workflow "Code Review"
+6. conversation_send_message → envia outputs anteriores para revisao
+
+IMPORTANTE: Para workflows longos (>10min), use conversation_send_message_async.`,
+    {
+      id: z.string().describe('ID da conversa'),
+      content: z.string().describe('Mensagem a enviar'),
+      stepIndex: z.number().optional().describe('Indice do step (para step_by_step)'),
+      timeoutMs: z.number().optional().describe('Timeout em ms (padrao: 600000 = 10min)'),
+    },
+    async ({ id, content, stepIndex, timeoutMs }) => {
+      const body: Record<string, unknown> = { content }
+      if (stepIndex !== undefined) body.stepIndex = stepIndex
+
+      const result = await apiPostSSE(
+        `/conversations/${id}/messages/stream`,
+        body,
+        { timeoutMs: timeoutMs || 600000 }
+      )
+
+      return formatResult(result)
+    }
+  )
+
+  // ─────────────────────────────────────────────────────────
+  // SEND MESSAGE ASYNC (fire-and-forget — returns immediately)
+  // ─────────────────────────────────────────────────────────
+  server.tool(
+    'conversation_send_message_async',
+    `Envia uma mensagem para uma conversa em BACKGROUND e retorna imediatamente.
+
+A execucao continua no servidor MCP em background. Use conversation_await_execution
+para esperar o resultado, ou conversation_status + conversation_messages para verificar.
+
+IDEAL PARA:
+- Disparar multiplas conversas em paralelo
+- Workflows que demoram muito
+- Swarm de agentes onde voce quer iniciar varios ao mesmo tempo
+
+INPUT:
+- id: ID da conversa (obrigatorio)
+- content: Mensagem a enviar (obrigatorio)
+- stepIndex: Indice do step (opcional, para step_by_step)
+
+RETORNA: { conversationId, status: "started", startedAt }
+
+FLUXO PARALELO:
+1. conversation_send_message_async → conversa A (retorna imediato)
+2. conversation_send_message_async → conversa B (retorna imediato)
+3. conversation_await_execution → espera A terminar
+4. conversation_await_execution → espera B terminar
+5. Usa resultados de A e B para proxima etapa`,
+    {
+      id: z.string().describe('ID da conversa'),
+      content: z.string().describe('Mensagem a enviar'),
+      stepIndex: z.number().optional().describe('Indice do step (para step_by_step)'),
+    },
+    async ({ id, content, stepIndex }) => {
+      // Check if there's already a background execution for this conversation
+      if (backgroundExecutions.has(id)) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({
+            conversationId: id,
+            status: 'already_running',
+            message: 'Ja existe uma execucao em background para esta conversa. Use conversation_await_execution para aguardar.',
+          }, null, 2) }],
+          isError: true,
+        }
+      }
+
+      const body: Record<string, unknown> = { content }
+      if (stepIndex !== undefined) body.stepIndex = stepIndex
+
+      // Start SSE connection in background (keeps alive in MCP server process)
+      const promise = apiPostSSE(`/conversations/${id}/messages/stream`, body)
+      backgroundExecutions.set(id, { promise, startedAt: new Date() })
+
+      // Clean up when done (regardless of success/failure)
+      promise.finally(() => {
+        backgroundExecutions.delete(id)
+      })
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify({
+          conversationId: id,
+          status: 'started',
+          startedAt: new Date().toISOString(),
+          message: 'Execucao iniciada em background. Use conversation_await_execution para aguardar o resultado.',
+        }, null, 2) }],
+      }
+    }
+  )
+
+  // ─────────────────────────────────────────────────────────
+  // AWAIT EXECUTION (wait for async execution to complete)
+  // ─────────────────────────────────────────────────────────
+  server.tool(
+    'conversation_await_execution',
+    `Aguarda uma execucao em background (iniciada por conversation_send_message_async) terminar.
+
+INPUT:
+- id: ID da conversa (obrigatorio)
+- timeoutMs: Timeout em ms (opcional, padrao: 600000 = 10min)
+
+RETORNA:
+- Se execucao em background existe: aguarda e retorna o resultado completo
+- Se nao existe: retorna o status atual da conversa via API
+
+USE apos conversation_send_message_async para coletar o resultado.`,
+    {
+      id: z.string().describe('ID da conversa'),
+      timeoutMs: z.number().optional().describe('Timeout em ms (padrao: 600000 = 10min)'),
+    },
+    async ({ id, timeoutMs }) => {
+      const bg = backgroundExecutions.get(id)
+
+      if (!bg) {
+        // No background execution — check status via API
+        const status = await apiGet(`/conversations/${id}/status`)
+        if (!status.ok) return formatResult(status)
+
+        // If not executing, get the latest messages
+        const messages = await apiGet(`/conversations/${id}/messages`)
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({
+            status: 'no_background_execution',
+            executionStatus: status.data,
+            latestMessages: messages.ok ? messages.data : null,
+            message: 'Nenhuma execucao em background encontrada. Mostrando status atual e ultimas mensagens.',
+          }, null, 2) }],
+        }
+      }
+
+      // Wait for the background execution with optional timeout
+      const timeout = timeoutMs || 600000
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('await_timeout')), timeout)
+      })
+
+      try {
+        const result = await Promise.race([bg.promise, timeoutPromise])
+        backgroundExecutions.delete(id)
+        return formatResult(result)
+      } catch (err) {
+        if (err instanceof Error && err.message === 'await_timeout') {
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify({
+              conversationId: id,
+              status: 'still_running',
+              runningFor: `${Date.now() - bg.startedAt.getTime()}ms`,
+              message: `Execucao ainda em andamento apos ${timeout}ms. Chame conversation_await_execution novamente ou use conversation_status para verificar.`,
+            }, null, 2) }],
+          }
+        }
+        throw err
+      }
     }
   )
 

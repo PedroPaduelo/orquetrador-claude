@@ -32,7 +32,7 @@ import {
 } from '@/shared/components/common/search-pagination'
 import { ConversationCard } from './components/conversation-card'
 import { ConversationTable } from './components/conversation-table'
-import { useConversations, useCreateConversation, useDeleteConversation, useFolders } from './hooks/use-conversations'
+import { useConversations, useCreateConversation, useDeleteConversation, useCloneConversation, useFolders } from './hooks/use-conversations'
 import { useWorkflows } from '../workflows/hooks/use-workflows'
 import { useAuthStore } from '../auth/store'
 import type { Conversation } from './types'
@@ -50,6 +50,7 @@ export default function ConversationsPage() {
   const { data: folders } = useFolders()
   const createMutation = useCreateConversation()
   const deleteMutation = useDeleteConversation()
+  const cloneMutation = useCloneConversation()
 
   const filters = useMemo<FilterDefinition<Conversation>[]>(() => {
     const workflowOptions = (workflows ?? []).map((wf) => ({
@@ -326,6 +327,7 @@ export default function ConversationsPage() {
                   <ConversationCard
                     conversation={conversation}
                     onDelete={() => deleteMutation.mutate(conversation.id)}
+                    onClone={() => cloneMutation.mutate(conversation.id)}
                   />
                 </div>
               ))}
@@ -334,6 +336,7 @@ export default function ConversationsPage() {
             <ConversationTable
               conversations={paged}
               onDelete={(conv) => deleteMutation.mutate(conv.id)}
+              onClone={(conv) => cloneMutation.mutate(conv.id)}
             />
           )}
 
