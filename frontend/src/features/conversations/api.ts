@@ -59,4 +59,65 @@ export const conversationsApi = {
   resetStepSession: async (conversationId: string, stepId: string): Promise<void> => {
     await apiClient.delete(`/conversations/${conversationId}/sessions/${stepId}`)
   },
+
+  getTokenUsage: async (conversationId: string): Promise<{
+    conversationId: string
+    steps: Array<{
+      stepId: string
+      stepName: string
+      inputTokens: number
+      outputTokens: number
+      totalTokens: number
+    }>
+    totalInputTokens: number
+    totalOutputTokens: number
+    grandTotalTokens: number
+  }> => {
+    const { data } = await apiClient.get(`/conversations/${conversationId}/token-usage`)
+    return data
+  },
+
+  getExecutionStats: async (conversationId: string): Promise<{
+    conversationId: string
+    tokens: {
+      input: number
+      output: number
+      cacheCreation: number
+      cacheRead: number
+      total: number
+    }
+    cost: {
+      estimatedUsd: number | null
+      totalCostUsd: number | null
+    }
+    performance: {
+      totalDurationMs: number | null
+      apiDurationMs: number | null
+      numTurns: number
+    }
+    tools: {
+      webSearchRequests: number
+      webFetchRequests: number
+    }
+    steps: Array<{
+      stepId: string
+      stepName: string
+      inputTokens: number
+      outputTokens: number
+      totalTokens: number
+      durationMs: number | null
+      actionsCount: number
+      exitCode: number | null
+      resultStatus: string
+    }>
+    session: {
+      claudeCodeVersion: string | null
+      sessionId: string | null
+      model: string | null
+      stopReason: string | null
+    } | null
+  }> => {
+    const { data } = await apiClient.get(`/conversations/${conversationId}/execution-stats`)
+    return data
+  },
 }

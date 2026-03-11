@@ -1,5 +1,5 @@
 import { prisma } from '../../../lib/prisma.js'
-import type { StreamEvent } from '../engine/types.js'
+import type { StreamEvent, Metadata } from '../engine/types.js'
 
 const MAX_RAW_SIZE = 50 * 1024 // 50KB per stdout/stderr
 
@@ -39,6 +39,15 @@ export class ExecutionMonitor {
   private model: string | null = null
   private projectPath = ''
   private pid: number | null = null
+  private inputTokens = 0
+  private outputTokens = 0
+  private cacheCreationInputTokens = 0
+  private cacheReadInputTokens = 0
+  private webSearchRequests = 0
+  private webFetchRequests = 0
+
+  // Accumulated metadata from stream-json events
+  private metadata: Partial<Metadata> = {}
 
   constructor(executionId: string, conversationId: string, stepId: string) {
     this.executionId = executionId
@@ -103,6 +112,29 @@ export class ExecutionMonitor {
       compact.d = { msg: event.error?.substring(0, 200) }
     } else if (event.type === 'session') {
       compact.d = { sid: event.sessionId }
+    } else if (event.type === 'usage' && event.usage) {
+      // Accumulate tokens from usage events
+      this.inputTokens += event.usage.input_tokens
+      this.outputTokens += event.usage.output_tokens
+      this.cacheCreationInputTokens += event.usage.cache_creation_input_tokens
+      this.cacheReadInputTokens += event.usage.cache_read_input_tokens
+
+      // Accumulate server tool usage
+      if (event.usage.server_tool_use) {
+        this.webSearchRequests += event.usage.server_tool_use.web_search_requests
+        this.webFetchRequests += event.usage.server_tool_use.web_fetch_requests
+      }
+
+      compact.d = {
+        in: event.usage.input_tokens,
+        out: event.usage.output_tokens,
+        cacheIn: event.usage.cache_creation_input_tokens,
+        cacheRead: event.usage.cache_read_input_tokens,
+      }
+    } else if (event.type === 'metadata' && event.metadata) {
+      // Accumulate metadata from stream-json events
+      Object.assign(this.metadata, event.metadata)
+      compact.d = event.metadata
     }
 
     this.events.push(compact)
@@ -141,6 +173,32 @@ export class ExecutionMonitor {
         contentLength: opts.contentLength,
         actionsCount: opts.actionsCount,
         resumeTokenOut: opts.resumeTokenOut ?? null,
+        // Token usage
+        inputTokens: this.inputTokens,
+        outputTokens: this.outputTokens,
+        cacheCreationInputTokens: this.cacheCreationInputTokens,
+        cacheReadInputTokens: this.cacheReadInputTokens,
+        // Server tool usage
+        webSearchRequests: this.webSearchRequests,
+        webFetchRequests: this.webFetchRequests,
+        // Cost and performance (from accumulated metadata)
+        totalCostUsd: this.metadata.total_cost_usd,
+        durationApiMs: this.metadata.duration_api_ms,
+        numTurns: this.metadata.num_turns ?? 0,
+        stopReason: this.metadata.stop_reason,
+        // Claude Code metadata (from accumulated metadata)
+        claudeCodeVersion: this.metadata.claude_code_version,
+        outputStyle: this.metadata.output_style,
+        fastModeState: this.metadata.fast_mode_state,
+        permissionMode: this.metadata.permission_mode,
+        sessionId: this.metadata.session_id,
+        // Additional metadata (JSON fields)
+        serviceTier: this.metadata.service_tier,
+        inferenceGeo: this.metadata.inference_geo,
+        iterations: this.metadata.iterations ? JSON.stringify(this.metadata.iterations) : undefined,
+        modelUsage: this.metadata.model_usage ? JSON.stringify(this.metadata.model_usage) : undefined,
+        permissionDenials: this.metadata.permission_denials ? JSON.stringify(this.metadata.permission_denials) : undefined,
+        cacheCreation: this.metadata.cache_creation ? JSON.stringify(this.metadata.cache_creation) : undefined,
       },
     }).catch((err) => {
       console.error('[ExecutionMonitor] Failed to persist trace:', err.message)

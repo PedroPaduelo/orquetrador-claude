@@ -1,4 +1,4 @@
-export { type Action, type StreamEvent } from './claude/stream-parser.js'
+export { type Action, type StreamEvent, type Metadata } from './claude/stream-parser.js'
 
 export interface EngineAttachment {
   id: string

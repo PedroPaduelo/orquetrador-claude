@@ -17,6 +17,7 @@ import {
 } from '@/shared/components/ui/alert-dialog'
 import { ChatContainer } from './components/chat-container'
 import { StepPanel } from './components/step-panel'
+import { UsageStatsButton } from './components/usage-stats-dialog'
 import { useConversation, useDeleteConversation, useUpdateConversationTitle } from './hooks/use-conversations'
 import { useConversationsStore } from './store'
 import { cn } from '@/shared/lib/utils'
@@ -174,6 +175,11 @@ export default function ConversationDetailPage() {
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
+              <UsageStatsButton
+                conversationId={conversation.id}
+                steps={steps}
+              />
+
               <Button
                 variant="ghost"
                 size="icon"

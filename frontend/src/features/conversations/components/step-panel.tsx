@@ -5,7 +5,7 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import type { WorkflowStepSummary } from '../types'
 import { useConversationsStore } from '../store'
-import { useAdvanceStep, useGoBackStep, useJumpToStep, useResetStepSession } from '../hooks/use-conversations'
+import { useAdvanceStep, useGoBackStep, useJumpToStep, useResetStepSession, useTokenUsage } from '../hooks/use-conversations'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/shared/components/ui/tooltip'
 
 interface StepPanelProps {
@@ -22,6 +22,10 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
   const goBackStepMutation = useGoBackStep(conversationId)
   const jumpToStepMutation = useJumpToStep(conversationId)
   const resetSessionMutation = useResetStepSession(conversationId)
+  const { data: tokenUsage } = useTokenUsage(conversationId)
+
+  // Create a map of stepId -> token count for quick lookup
+  const tokensByStep = new Map(tokenUsage?.steps.map(s => [s.stepId, s.totalTokens]) || [])
 
   const canAdvance = workflowType === 'step_by_step' &&
     !isExecuting &&
@@ -86,6 +90,14 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
               Concluído
             </Badge>
           )}
+          {tokenUsage && tokenUsage.grandTotalTokens > 0 && (
+            <Badge variant="outline" className="text-[10px] px-2 h-5">
+              <Zap className="h-3 w-3 mr-1" />
+              {tokenUsage.grandTotalTokens >= 1000
+                ? `${(tokenUsage.grandTotalTokens / 1000).toFixed(1)}k`
+                : tokenUsage.grandTotalTokens} tokens
+            </Badge>
+          )}
         </div>
 
         {/* Navigation buttons */}
@@ -131,6 +143,7 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
             const isCompleted = status === 'completed' || index < currentStepIndex
             const isCurrent = index === currentStepIndex
             const isActiveChat = status === 'active' && isCurrent
+            const stepTokens = tokensByStep.get(step.id) || 0
 
             const canClick = workflowType === 'step_by_step' && !isExecuting && !isCurrent && !jumpToStepMutation.isPending
 
@@ -178,6 +191,25 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
                      'Pendente'}
                   </p>
                 </div>
+
+                {/* Token count badge */}
+                {stepTokens > 0 && (
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={cn(
+                          'text-[9px] px-1.5 py-0.5 rounded font-medium tabular-nums shrink-0',
+                          isCurrent ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+                        )}>
+                          {stepTokens >= 1000 ? `${(stepTokens / 1000).toFixed(1)}k` : stepTokens}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="left">
+                        <p>{stepTokens.toLocaleString()} tokens usados neste step</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
 
                 {/* Reset session button (step_by_step only) */}
                 {workflowType === 'step_by_step' && !isExecutingStep && (

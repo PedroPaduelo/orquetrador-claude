@@ -163,3 +163,21 @@ export function useResetStepSession(conversationId: string) {
     },
   })
 }
+
+export function useTokenUsage(conversationId: string | undefined) {
+  return useQuery({
+    queryKey: ['token-usage', conversationId],
+    queryFn: () => conversationsApi.getTokenUsage(conversationId!),
+    enabled: !!conversationId,
+    refetchInterval: false,
+  })
+}
+
+export function useExecutionStats(conversationId: string | undefined) {
+  return useQuery({
+    queryKey: ['execution-stats', conversationId],
+    queryFn: () => conversationsApi.getExecutionStats(conversationId!),
+    enabled: !!conversationId,
+    refetchInterval: false,
+  })
+}

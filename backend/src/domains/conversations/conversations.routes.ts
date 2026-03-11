@@ -417,4 +417,104 @@ export async function conversationsRoutes(app: FastifyInstance) {
       return conversationsService.getStatus(request.params.id)
     }
   )
+
+  // GET /conversations/:id/token-usage
+  server.get(
+    '/conversations/:id/token-usage',
+    {
+      schema: {
+        tags: ['Conversations'],
+        summary: 'Get token usage per step for a conversation',
+        params: z.object({ id: z.string() }),
+        response: {
+          200: z.object({
+            conversationId: z.string(),
+            steps: z.array(z.object({
+              stepId: z.string(),
+              stepName: z.string(),
+              inputTokens: z.number(),
+              outputTokens: z.number(),
+              totalTokens: z.number(),
+            })),
+            totalInputTokens: z.number(),
+            totalOutputTokens: z.number(),
+            grandTotalTokens: z.number(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      await request.getCurrentUserId()
+      const existing = await conversationsRepository.findByIdSimple(request.params.id)
+      if (!existing) throw new NotFoundError('Conversation not found')
+
+      return conversationsService.getTokenUsage(request.params.id)
+    }
+  )
+
+  // GET /conversations/:id/execution-stats
+  server.get(
+    '/conversations/:id/execution-stats',
+    {
+      schema: {
+        tags: ['Conversations'],
+        summary: 'Get detailed execution statistics for a conversation',
+        params: z.object({ id: z.string() }),
+        response: {
+          200: z.object({
+            conversationId: z.string(),
+            // Token usage
+            tokens: z.object({
+              input: z.number(),
+              output: z.number(),
+              cacheCreation: z.number(),
+              cacheRead: z.number(),
+              total: z.number(),
+            }),
+            // Cost and performance
+            cost: z.object({
+              estimatedUsd: z.number().nullable(),
+              totalCostUsd: z.number().nullable(),
+            }),
+            performance: z.object({
+              totalDurationMs: z.number().nullable(),
+              apiDurationMs: z.number().nullable(),
+              numTurns: z.number(),
+            }),
+            // Tools usage
+            tools: z.object({
+              webSearchRequests: z.number(),
+              webFetchRequests: z.number(),
+            }),
+            // Steps breakdown
+            steps: z.array(z.object({
+              stepId: z.string(),
+              stepName: z.string(),
+              inputTokens: z.number(),
+              outputTokens: z.number(),
+              totalTokens: z.number(),
+              durationMs: z.number().nullable(),
+              actionsCount: z.number(),
+              exitCode: z.number().nullable(),
+              resultStatus: z.string(),
+            })),
+            // Session info
+            session: z.object({
+              claudeCodeVersion: z.string().nullable(),
+              sessionId: z.string().nullable(),
+              model: z.string().nullable(),
+              stopReason: z.string().nullable(),
+            }).nullable(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      await request.getCurrentUserId()
+      const existing = await conversationsRepository.findByIdSimple(request.params.id)
+      if (!existing) throw new NotFoundError('Conversation not found')
+
+      return conversationsService.getExecutionStats(request.params.id)
+    }
+  )
 }

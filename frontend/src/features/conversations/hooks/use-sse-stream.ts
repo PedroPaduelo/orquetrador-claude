@@ -119,6 +119,8 @@ export function useSSEStream(options: UseSSEStreamOptions) {
         if (!cancelledRef.current) {
           try {
             await queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
+            await queryClient.invalidateQueries({ queryKey: ['token-usage', conversationId] })
+            await queryClient.invalidateQueries({ queryKey: ['execution-stats', conversationId] })
           } catch {
             // Ignore refetch errors
           }
