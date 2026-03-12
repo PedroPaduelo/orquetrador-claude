@@ -3,6 +3,8 @@ import { join, dirname } from 'path'
 import { prisma } from '../../../lib/prisma.js'
 import { getBaseMcpEntries } from './base-mcp-servers.js'
 
+const LOG_PREFIX = '[FileSync]'
+
 interface McpServerData {
   id: string
   name: string
@@ -68,13 +70,18 @@ export class FileSyncService {
    * Returns true if the file was written, false if already up-to-date.
    */
   private syncFile(filePath: string, expectedContent: string): boolean {
-    if (existsSync(filePath)) {
-      const currentContent = readFileSync(filePath, 'utf-8')
-      if (currentContent === expectedContent) return false
+    try {
+      if (existsSync(filePath)) {
+        const currentContent = readFileSync(filePath, 'utf-8')
+        if (currentContent === expectedContent) return false
+      }
+      mkdirSync(dirname(filePath), { recursive: true, mode: 0o755 })
+      writeFileSync(filePath, expectedContent, { encoding: 'utf-8', mode: 0o644 })
+      return true
+    } catch (err) {
+      console.error(`${LOG_PREFIX} Failed to sync file ${filePath}:`, err)
+      throw err
     }
-    mkdirSync(dirname(filePath), { recursive: true })
-    writeFileSync(filePath, expectedContent, 'utf-8')
-    return true
   }
 
   /**
@@ -86,6 +93,7 @@ export class FileSyncService {
     const step = await prisma.workflowStep.findUnique({
       where: { id: stepId },
       include: {
+        workflow: { select: { userId: true } },
         mcpServers: { include: { server: true } },
         skills: { include: { skill: true } },
         agents: { include: { agent: true } },
@@ -96,21 +104,25 @@ export class FileSyncService {
 
     if (!step) return
 
-    // Get global resources (enabled + isGlobal)
+    // Scope global resources to the workflow owner
+    const userId = step.workflow.userId
+
+    // Get global resources (enabled + isGlobal + same user)
     const [globalServers, globalSkills, globalAgents, globalRules, globalHooks] = await Promise.all([
-      prisma.mcpServer.findMany({ where: { enabled: true, isGlobal: true } }),
-      prisma.skill.findMany({ where: { enabled: true, isGlobal: true } }),
-      prisma.agent.findMany({ where: { enabled: true, isGlobal: true } }),
-      prisma.rule.findMany({ where: { enabled: true, isGlobal: true }, include: { skill: { select: { name: true } } } }),
-      prisma.hook.findMany({ where: { enabled: true, isGlobal: true } }),
+      prisma.mcpServer.findMany({ where: { enabled: true, isGlobal: true, userId } }),
+      prisma.skill.findMany({ where: { enabled: true, isGlobal: true, userId } }),
+      prisma.agent.findMany({ where: { enabled: true, isGlobal: true, userId } }),
+      prisma.rule.findMany({ where: { enabled: true, isGlobal: true, userId }, include: { skill: { select: { name: true } } } }),
+      prisma.hook.findMany({ where: { enabled: true, isGlobal: true, userId } }),
     ])
 
     // Merge step-specific + global (dedupe by id)
     const stepServerIds = new Set(step.mcpServers.map((s) => s.serverId))
-    const allServers = [
-      ...step.mcpServers.map((s) => s.server).filter((s) => s.enabled),
-      ...globalServers.filter((s) => !stepServerIds.has(s.id)),
-    ]
+    const stepServers = step.mcpServers.map((s) => s.server).filter((s) => s.enabled)
+    const extraGlobalServers = globalServers.filter((s) => !stepServerIds.has(s.id))
+    const allServers = [...stepServers, ...extraGlobalServers]
+
+    console.log(`${LOG_PREFIX} Step "${stepId}" MCP merge: ${stepServers.length} step-specific [${stepServers.map(s => s.name).join(', ')}] + ${extraGlobalServers.length} global [${extraGlobalServers.map(s => s.name).join(', ')}] = ${allServers.length} total`)
 
     const stepSkillIds = new Set(step.skills.map((s) => s.skillId))
     const allSkills = [
@@ -307,6 +319,10 @@ exit 0
     // Comeca com os MCP servers base (hardcoded, sempre presentes)
     const mcpServers: Record<string, unknown> = { ...getBaseMcpEntries() }
 
+    // Track URLs already added to deduplicate (HTTP MCP servers with same URL
+    // cause "Server already initialized" errors because they share state)
+    const seenUrls = new Map<string, string>() // url -> server name
+
     for (const server of servers) {
       // Servers do step/global sobrescrevem base servers com mesmo nome
       const envVars = safeJsonParse<Record<string, string>>(server.envVars, {})
@@ -322,6 +338,26 @@ exit 0
         }
         mcpServers[server.name] = entry
       } else if ((server.type === 'http' || server.type === 'sse') && server.uri) {
+        // Deduplicate by URL: if another server with the same URL already exists,
+        // keep the one with more headers (more complete config)
+        const existingName = seenUrls.get(server.uri)
+        if (existingName) {
+          const existingEntry = mcpServers[existingName] as Record<string, unknown> | undefined
+          const existingHasHeaders = existingEntry && existingEntry.headers && Object.keys(existingEntry.headers as object).length > 0
+          const newHasHeaders = Object.keys(envVars).length > 0
+
+          if (newHasHeaders && !existingHasHeaders) {
+            // New one has headers, old one doesn't: replace
+            delete mcpServers[existingName]
+            seenUrls.set(server.uri, server.name)
+          } else {
+            // Keep the existing one, skip this duplicate
+            console.log(`${LOG_PREFIX} Skipping duplicate MCP server "${server.name}" (same URL as "${existingName}": ${server.uri})`)
+            continue
+          }
+        }
+
+        seenUrls.set(server.uri, server.name)
         const entry: Record<string, unknown> = {
           type: server.type,
           url: server.uri,
@@ -335,7 +371,23 @@ exit 0
 
     const configPath = join(projectPath, '.mcp.json')
     const content = JSON.stringify({ mcpServers }, null, 2)
-    this.syncFile(configPath, content)
+    const written = this.syncFile(configPath, content)
+
+    const serverNames = Object.keys(mcpServers)
+    console.log(`${LOG_PREFIX} .mcp.json ${written ? 'UPDATED' : 'unchanged'} at ${configPath} - servers: [${serverNames.join(', ')}]`)
+
+    // Verify the file is readable after write
+    if (written) {
+      try {
+        const verify = readFileSync(configPath, 'utf-8')
+        const parsed = JSON.parse(verify)
+        if (!parsed.mcpServers) {
+          console.error(`${LOG_PREFIX} WARNING: .mcp.json written but mcpServers key missing!`)
+        }
+      } catch (err) {
+        console.error(`${LOG_PREFIX} WARNING: .mcp.json written but verification failed:`, err)
+      }
+    }
   }
 
   /**

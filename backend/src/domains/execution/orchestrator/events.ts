@@ -20,6 +20,7 @@ export interface StepStreamEvent {
     name?: string
     input?: unknown
     output?: unknown
+    content?: string
     id?: string
   }
 }

@@ -135,6 +135,14 @@ async function start() {
       port: env.PORT,
     })
 
+    // SSE connections can last several minutes (Claude executions).
+    // Increase Node.js HTTP server timeouts to avoid premature disconnects.
+    const httpServer = app.server
+    httpServer.keepAliveTimeout = 10 * 60 * 1000 // 10 min
+    httpServer.headersTimeout = 10 * 60 * 1000 + 1000 // must be > keepAliveTimeout
+    httpServer.requestTimeout = 0 // no limit for SSE streams
+    httpServer.timeout = 0 // no socket timeout
+
     startTraceCleanup()
 
     console.log(`

@@ -69,7 +69,12 @@ export class TaskOrchestrator {
 
     // Sync files (skills, agents, .mcp.json) for this step
     if (projectPath) {
-      await fileSyncService.syncForStep(projectPath, step.id)
+      try {
+        await fileSyncService.syncForStep(projectPath, step.id)
+      } catch (syncError) {
+        console.error(`[Orchestrator] File sync failed for step ${step.id}:`, syncError)
+        // Continue execution even if sync fails - base MCP servers may still work
+      }
     }
 
     const makeOnEvent = (mon: ExecutionMonitor) => (event: import('../engine/claude/stream-parser.js').StreamEvent) => {
@@ -89,6 +94,20 @@ export class TaskOrchestrator {
           stepId: step.id,
           type: 'action',
           action: event.action,
+        })
+      } else if (event.type === 'metadata' && event.metadata?.mcp_servers) {
+        // Emit MCP server status as a system action so the frontend can show it
+        const failed = event.metadata.mcp_servers.filter(s => s.status !== 'connected')
+        const connected = event.metadata.mcp_servers.filter(s => s.status === 'connected')
+        orchestratorEvents.emitStepStream({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          type: 'action',
+          action: {
+            type: 'system',
+            content: `MCP Servers: ${connected.length} conectados${failed.length > 0 ? `, ${failed.length} falharam (${failed.map(s => s.name).join(', ')})` : ''}`,
+          },
         })
       }
     }

@@ -19,6 +19,12 @@ export interface Action {
   message?: string
 }
 
+export interface McpServerStatus {
+  name: string
+  status: 'connected' | 'failed' | string
+  error?: string
+}
+
 export interface Metadata {
   // From system.init
   claude_code_version?: string
@@ -27,6 +33,8 @@ export interface Metadata {
   permission_mode?: string
   session_id?: string
   model?: string
+  mcp_servers?: McpServerStatus[]
+  tools?: string[]
   // From result
   total_cost_usd?: number
   duration_api_ms?: number
@@ -101,6 +109,14 @@ export class StreamParser {
 
       // Extract metadata from system.init event
       if (subtype === 'init') {
+        const mcpServers = Array.isArray(obj.mcp_servers)
+          ? (obj.mcp_servers as Array<Record<string, unknown>>).map(s => ({
+              name: s.name as string,
+              status: s.status as string,
+              error: s.error as string | undefined,
+            }))
+          : undefined
+
         events.push({
           type: 'metadata',
           metadata: {
@@ -110,8 +126,18 @@ export class StreamParser {
             permission_mode: obj.permissionMode as string | undefined,
             session_id: obj.session_id as string | undefined,
             model: obj.model as string | undefined,
+            mcp_servers: mcpServers,
+            tools: Array.isArray(obj.tools) ? obj.tools as string[] : undefined,
           },
         })
+
+        // Log MCP server failures for debugging
+        if (mcpServers) {
+          const failed = mcpServers.filter(s => s.status !== 'connected')
+          if (failed.length > 0) {
+            console.warn(`[StreamParser] MCP servers with failures: ${failed.map(s => `${s.name}(${s.status})`).join(', ')}`)
+          }
+        }
       }
 
       return events

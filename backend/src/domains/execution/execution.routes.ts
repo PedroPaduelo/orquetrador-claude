@@ -89,6 +89,15 @@ export async function executionRoutes(app: FastifyInstance) {
         }
       }
 
+      // Heartbeat to keep SSE alive through proxies and prevent idle timeouts
+      const heartbeat = setInterval(() => {
+        try {
+          reply.raw.write(`:heartbeat\n\n`)
+        } catch {
+          clearInterval(heartbeat)
+        }
+      }, 15_000)
+
       // Filter events to only pass through those belonging to this conversation
       const filterByConversation = (data: unknown): boolean => {
         const d = data as { conversationId?: string }
@@ -135,6 +144,7 @@ export async function executionRoutes(app: FastifyInstance) {
 
       // Cleanup helper — removes all registered listeners
       const cleanup = () => {
+        clearInterval(heartbeat)
         Object.entries(handlers).forEach(([event, handler]) => {
           orchestratorEvents.off(event, handler)
         })
