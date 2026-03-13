@@ -19,6 +19,8 @@ const RulesPage = lazy(() => import('@/features/rules'))
 const PluginsPage = lazy(() => import('@/features/plugins'))
 const HooksPage = lazy(() => import('@/features/hooks'))
 const SettingsPage = lazy(() => import('@/features/settings'))
+const AdminPage = lazy(() => import('@/features/admin'))
+const WebhooksPage = lazy(() => import('@/features/webhooks'))
 
 // Page loader
 function PageLoader() {
@@ -162,6 +164,24 @@ export function AppRoutes() {
           element={
             <Lazy>
               <SettingsPage />
+            </Lazy>
+          }
+        />
+
+        <Route
+          path="admin/users"
+          element={
+            <Lazy>
+              <AdminPage />
+            </Lazy>
+          }
+        />
+
+        <Route
+          path="webhooks"
+          element={
+            <Lazy>
+              <WebhooksPage />
             </Lazy>
           }
         />

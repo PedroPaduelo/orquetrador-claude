@@ -16,8 +16,14 @@ import { join } from 'path'
 import { env } from './lib/env.js'
 import { errorHandler } from './http/error-handler.js'
 import { auth } from './middlewares/auth.js'
+import { registerRateLimit } from './middlewares/rate-limit.js'
 import { domainRoutes } from './domains/index.js'
 import { startTraceCleanup } from './domains/execution/monitoring/trace-cleanup.js'
+import { projectPathLock } from './domains/execution/lock/project-path-lock.js'
+import { startExecutionWorker, stopExecutionWorker } from './domains/execution/queue/execution-worker.js'
+import { closeExecutionQueue } from './domains/execution/queue/execution-queue.js'
+import { closeAllRedis } from './lib/redis.js'
+import { recoverStaleExecutions } from './domains/execution/orchestrator/recovery.js'
 
 const app = Fastify({
   logger: {
@@ -57,6 +63,9 @@ async function registerPlugins() {
   await app.register(fastifyJwt, {
     secret: env.JWT_SECRET,
   })
+
+  // Rate limiting
+  await registerRateLimit(app)
 
   // Auth middleware (adds getCurrentUserId to every request)
   await app.register(auth)
@@ -145,6 +154,12 @@ async function start() {
 
     startTraceCleanup()
 
+    // Recover stale executions from previous server crash
+    await recoverStaleExecutions()
+
+    // Start BullMQ execution worker
+    startExecutionWorker()
+
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
@@ -168,7 +183,11 @@ const signals = ['SIGINT', 'SIGTERM']
 signals.forEach((signal) => {
   process.on(signal, async () => {
     console.log(`\n${signal} received, shutting down gracefully...`)
+    projectPathLock.cleanup()
+    await stopExecutionWorker()
+    await closeExecutionQueue()
     await app.close()
+    await closeAllRedis()
     process.exit(0)
   })
 })

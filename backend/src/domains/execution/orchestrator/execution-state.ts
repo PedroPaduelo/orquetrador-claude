@@ -134,6 +134,31 @@ export class ExecutionStateManager {
     })
   }
 
+  async saveCheckpoint(executionId: string, stepIndex: number, output: string, nextInput: string): Promise<void> {
+    const current = await prisma.executionState.findUnique({
+      where: { id: executionId },
+      select: { metadata: true },
+    })
+    const currentMeta = typeof current?.metadata === 'string' ? JSON.parse(current.metadata) : (current?.metadata || {})
+    const checkpoints = currentMeta.checkpoints || []
+    checkpoints.push({ stepIndex, outputLength: output.length, nextInputLength: nextInput.length, savedAt: new Date().toISOString() })
+    const mergedMetadata = { ...currentMeta, checkpoints, lastCheckpointStepIndex: stepIndex, lastCheckpointAt: new Date().toISOString() }
+    await prisma.executionState.update({
+      where: { id: executionId },
+      data: { metadata: JSON.stringify(mergedMetadata) },
+    })
+  }
+
+  async getCheckpoint(executionId: string): Promise<{ stepIndex: number } | null> {
+    const state = await this.get(executionId)
+    if (!state) return null
+    const meta = state.metadata as Record<string, unknown>
+    if (meta.lastCheckpointStepIndex !== undefined) {
+      return { stepIndex: meta.lastCheckpointStepIndex as number }
+    }
+    return null
+  }
+
   async logEvent(
     executionId: string,
     conversationId: string,

@@ -5,12 +5,30 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🏗️  Seeding Software House Workflow...\n')
 
+  // Find or create a seed user
+  let user = await prisma.user.findFirst()
+  if (!user) {
+    const bcrypt = await import('bcryptjs')
+    user = await prisma.user.create({
+      data: {
+        email: 'admin@execut.dev',
+        passwordHash: await bcrypt.hash('admin123', 10),
+        name: 'Admin',
+        role: 'admin',
+      },
+    })
+    console.log('👤 Created seed user:', user.email)
+  } else {
+    console.log('👤 Using existing user:', user.email)
+  }
+
   // ============================================
   // WORKFLOW: Software House Pipeline
   // ============================================
   const workflow = await prisma.workflow.create({
     data: {
       name: 'Software House Pipeline',
+      userId: user.id,
       description:
         'Workflow completo de uma Software House. Recebe solicitações (feature, bug fix, melhoria, novo sistema) e conduz por todas as etapas: triagem, requisitos, arquitetura, implementação, code review, testes, QA e deploy. Cada step gera um arquivo .md que serve como handoff para o próximo step.',
       type: 'step_by_step',
@@ -108,8 +126,6 @@ Após gerar o arquivo, forneça a seguinte mensagem de handoff para o próximo s
 "A triagem da solicitação foi concluída. O arquivo \`01-triagem.md\` contém a classificação completa. Tipo: [TIPO], Prioridade: [PRIORIDADE], Complexidade: [COMPLEXIDADE]. Leia o arquivo 01-triagem.md e elabore os requisitos detalhados."
 ---`,
             conditions: JSON.stringify({}),
-            contextNoteIds: '[]',
-            memoryNoteIds: '[]',
             backend: 'claude',
           },
 
@@ -224,8 +240,6 @@ Após gerar o arquivo, forneça a mensagem de handoff:
 "Requisitos detalhados em \`02-requisitos.md\`. Total: [X] user stories, [Y] requisitos funcionais, [Z] não-funcionais. Leia os arquivos 01-triagem.md e 02-requisitos.md para projetar a arquitetura técnica da solução."
 ---`,
             conditions: JSON.stringify({}),
-            contextNoteIds: '[]',
-            memoryNoteIds: '[]',
             backend: 'claude',
           },
 
@@ -355,8 +369,6 @@ Mensagem de handoff:
 "Arquitetura definida em \`03-arquitetura.md\`. Stack: [STACK]. Arquitetura: [TIPO]. Leia os arquivos 01-triagem.md, 02-requisitos.md e 03-arquitetura.md para quebrar a implementação em tarefas detalhadas."
 ---`,
             conditions: JSON.stringify({}),
-            contextNoteIds: '[]',
-            memoryNoteIds: '[]',
             backend: 'claude',
           },
 
@@ -469,8 +481,6 @@ Mensagem de handoff:
 "Planejamento de tarefas completo em \`04-tarefas.md\`. Total: [X] épicos, [Y] tarefas, [Z] story points. Começe a implementação seguindo a ordem definida. Leia os arquivos 01-triagem.md, 02-requisitos.md, 03-arquitetura.md e 04-tarefas.md e implemente tarefa por tarefa seguindo a ordem de execução."
 ---`,
             conditions: JSON.stringify({}),
-            contextNoteIds: '[]',
-            memoryNoteIds: '[]',
             backend: 'claude',
           },
 
@@ -596,8 +606,6 @@ Mensagem de handoff:
 "Implementação concluída. Relatório em \`05-implementacao.md\`. [X] tarefas implementadas, [Y] arquivos criados, [Z] arquivos modificados. Leia os arquivos 01-triagem.md, 02-requisitos.md, 03-arquitetura.md, 04-tarefas.md e 05-implementacao.md e realize o code review completo do código implementado."
 ---`,
             conditions: JSON.stringify({}),
-            contextNoteIds: '[]',
-            memoryNoteIds: '[]',
             backend: 'claude',
           },
 
@@ -751,8 +759,6 @@ Se o veredito for ❌:
 "Code review reprovou. [X] achados críticos encontrados. Leia \`06-code-review.md\` e corrija todos os achados marcados como 🔴 Críticos. Após correção, retorne para review."
 ---`,
             conditions: JSON.stringify({}),
-            contextNoteIds: '[]',
-            memoryNoteIds: '[]',
             backend: 'claude',
           },
 
@@ -895,8 +901,6 @@ Se reprovado:
 "QA reprovou. [X] bugs encontrados. Leia \`07-testes-qa.md\` e corrija todos os bugs. Após correção, o código passará por review e QA novamente."
 ---`,
             conditions: JSON.stringify({}),
-            contextNoteIds: '[]',
-            memoryNoteIds: '[]',
             backend: 'claude',
           },
 
@@ -1069,8 +1073,6 @@ Mensagem final:
 "Projeto finalizado. Documentação de entrega em \`08-entrega.md\`. Todos os 8 artefatos foram gerados. O projeto está pronto para deploy seguindo o checklist definido."
 ---`,
             conditions: JSON.stringify({}),
-            contextNoteIds: '[]',
-            memoryNoteIds: '[]',
             backend: 'claude',
           },
         ],

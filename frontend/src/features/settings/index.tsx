@@ -17,12 +17,14 @@ import {
   Copy,
   Plus,
   Shield,
+  Coins,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
+import { Progress } from '@/shared/components/ui/progress'
 import {
   Dialog,
   DialogContent,
@@ -40,8 +42,118 @@ import {
   useGitClone,
 } from './hooks/use-git'
 import { useApiKeys, useCreateApiKey, useRevokeApiKey } from './hooks/use-api-keys'
+import { useBudget } from './hooks/use-budget'
 import type { GitRepo } from './api'
 import { toast } from 'sonner'
+
+function formatTokenCount(value: number): string {
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(0)}K`
+  }
+  return String(value)
+}
+
+function getBudgetBadge(percent: number) {
+  if (percent >= 100) {
+    return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Limite atingido</Badge>
+  }
+  if (percent >= 80) {
+    return (
+      <Badge variant="outline" className="border-yellow-500/30 text-yellow-600 bg-yellow-500/10 text-[10px] px-1.5 py-0">
+        Quase no limite
+      </Badge>
+    )
+  }
+  return null
+}
+
+function getProgressColor(percent: number): string {
+  if (percent >= 100) return '[&>div]:bg-destructive'
+  if (percent >= 80) return '[&>div]:bg-yellow-500'
+  return ''
+}
+
+function TokenBudgetSection() {
+  const { data: budget, isLoading } = useBudget()
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm text-muted-foreground">Carregando...</span>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!budget) return null
+
+  return (
+    <Card>
+      <CardContent className="p-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+            <Coins className="h-5 w-5 text-violet-500" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold">Token Budget</h2>
+            <p className="text-xs text-muted-foreground">
+              Consumo de tokens da API Claude
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          {/* Daily usage */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Diario</span>
+                {getBudgetBadge(budget.dailyPercent)}
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {formatTokenCount(budget.dailyUsage)} / {formatTokenCount(budget.dailyLimit)}
+              </span>
+            </div>
+            <Progress
+              value={Math.min(budget.dailyPercent, 100)}
+              className={getProgressColor(budget.dailyPercent)}
+            />
+            <p className="text-[11px] text-muted-foreground text-right">
+              {budget.dailyPercent.toFixed(1)}% utilizado
+            </p>
+          </div>
+
+          {/* Monthly usage */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Mensal</span>
+                {getBudgetBadge(budget.monthlyPercent)}
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {formatTokenCount(budget.monthlyUsage)} / {formatTokenCount(budget.monthlyLimit)}
+              </span>
+            </div>
+            <Progress
+              value={Math.min(budget.monthlyPercent, 100)}
+              className={getProgressColor(budget.monthlyPercent)}
+            />
+            <p className="text-[11px] text-muted-foreground text-right">
+              {budget.monthlyPercent.toFixed(1)}% utilizado
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function SettingsPage() {
   const { user } = useAuthStore()
@@ -75,6 +187,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Token Budget */}
+      <TokenBudgetSection />
 
       {/* API Keys */}
       <ApiKeysSection />

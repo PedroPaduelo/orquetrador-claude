@@ -5,7 +5,11 @@ import { prisma } from '../../lib/prisma.js'
 import { taskOrchestrator } from './orchestrator/task-orchestrator.js'
 import { orchestratorEvents } from './orchestrator/events.js'
 import { messagesRepository } from './messages.repository.js'
-import { NotFoundError } from '../../http/errors/index.js'
+import { NotFoundError, BadRequestError } from '../../http/errors/index.js'
+import { validateProjectPath } from '../../lib/validation.js'
+import { projectPathLock } from './lock/project-path-lock.js'
+import { tokenBudgetService } from './budget/token-budget-service.js'
+import { isDAGWorkflow } from './orchestrator/dag-executor.js'
 
 const attachmentSchema = z.object({
   id: z.string(),
@@ -39,7 +43,7 @@ export async function executionRoutes(app: FastifyInstance) {
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      await request.getCurrentUserId()
+      const userId = await request.getCurrentUserId()
       const { id } = request.params as { id: string }
       const { content, stepIndex, attachments } = request.body as {
         content: string
@@ -61,6 +65,22 @@ export async function executionRoutes(app: FastifyInstance) {
 
       if (!conversation) {
         throw new NotFoundError('Conversation not found')
+      }
+
+      // Budget check
+      const budgetCheck = await tokenBudgetService.checkBudget(userId)
+      if (!budgetCheck.allowed) {
+        return reply.status(429).send({ message: budgetCheck.reason })
+      }
+
+      // Path validation
+      if (conversation.projectPath) {
+        validateProjectPath(conversation.projectPath)
+      }
+
+      // Lock check
+      if (conversation.projectPath && projectPathLock.isLocked(conversation.projectPath)) {
+        throw new BadRequestError('Another execution is already running on this project path')
       }
 
       // If a stale execution is running, force-cancel it before proceeding
@@ -135,6 +155,12 @@ export async function executionRoutes(app: FastifyInstance) {
         'execution:complete': (data: unknown) => {
           if (filterByConversation(data)) sendEvent('complete', data)
         },
+        'dag:batch_start': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('dag_batch_start', data)
+        },
+        'validation:failed': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('validation_failed', data)
+        },
       }
 
       // Register all event listeners
@@ -159,6 +185,7 @@ export async function executionRoutes(app: FastifyInstance) {
         }
       })
 
+      let releaseLock: (() => void) | null = null
       try {
         const projectPath = conversation.projectPath
         if (!projectPath) {
@@ -168,15 +195,21 @@ export async function executionRoutes(app: FastifyInstance) {
           return
         }
 
+        // Acquire lock for project path
+        releaseLock = await projectPathLock.acquire(projectPath)
+
         const context = {
           conversationId: id,
           workflowId: conversation.workflowId,
           steps: conversation.workflow.steps,
           projectPath,
           attachments,
+          userId,
         }
 
-        if (conversation.workflow.type === 'sequential') {
+        if (conversation.workflow.type === 'sequential' && isDAGWorkflow(conversation.workflow.steps)) {
+          await taskOrchestrator.executeDAG(context, content)
+        } else if (conversation.workflow.type === 'sequential') {
           await taskOrchestrator.executeSequential(context, content)
         } else {
           // step_by_step mode
@@ -192,6 +225,7 @@ export async function executionRoutes(app: FastifyInstance) {
           message: error instanceof Error ? error.message : 'Unknown error',
         })
       } finally {
+        if (releaseLock) releaseLock()
         cleanup()
         reply.raw.end()
       }

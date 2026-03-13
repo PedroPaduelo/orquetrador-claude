@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js'
+import { validateProjectPath } from '../../lib/validation.js'
 
 export const conversationsRepository = {
   async findAll(userId: string, workflowId?: string) {
@@ -104,6 +105,8 @@ export const conversationsRepository = {
   },
 
   async create(input: { workflowId: string; title?: string; projectPath: string }, userId: string) {
+    input.projectPath = validateProjectPath(input.projectPath)
+
     const workflow = await prisma.workflow.findUnique({
       where: { id: input.workflowId, userId },
       include: {

@@ -1,4 +1,4 @@
-import { Server, Wifi, WifiOff, Terminal, Globe, MoreVertical, Trash2, Pencil, Play } from 'lucide-react'
+import { Server, Wifi, WifiOff, Terminal, Globe, MoreVertical, Trash2, Pencil, Play, ShieldAlert } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -77,12 +77,13 @@ export function ServerCard({ server, onEdit, onDelete, onTest, onToggle }: Serve
         </div>
       </CardHeader>
       <CardContent className="py-3 space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant={typeBadgeVariants[server.type] || 'outline'}>
             <TypeIcon className="h-3 w-3 mr-1" />
             {server.type.toUpperCase()}
           </Badge>
           {server.isGlobal && <Badge variant="outline">Global</Badge>}
+          <CircuitBreakerBadge status={(server as unknown as Record<string, unknown>).circuitBreakerStatus as string | undefined} />
         </div>
         {server.description && (
           <p className="text-xs text-muted-foreground line-clamp-2">{server.description}</p>
@@ -93,4 +94,31 @@ export function ServerCard({ server, onEdit, onDelete, onTest, onToggle }: Serve
       </CardContent>
     </Card>
   )
+}
+
+function CircuitBreakerBadge({ status }: { status: string | undefined }) {
+  if (!status || status === 'closed') return null
+
+  if (status === 'open') {
+    return (
+      <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">
+        <ShieldAlert className="h-2.5 w-2.5 mr-1" />
+        Circuit Open
+      </Badge>
+    )
+  }
+
+  if (status === 'half-open') {
+    return (
+      <Badge
+        variant="outline"
+        className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/10 text-amber-600 border-amber-500/30"
+      >
+        <ShieldAlert className="h-2.5 w-2.5 mr-1" />
+        Half-Open
+      </Badge>
+    )
+  }
+
+  return null
 }

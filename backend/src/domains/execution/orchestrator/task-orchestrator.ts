@@ -7,6 +7,10 @@ import { orchestratorEvents } from './events.js'
 import { fileSyncService } from '../file-sync/file-sync-service.js'
 import { ExecutionMonitor } from '../monitoring/execution-monitor.js'
 import { buildSystemPrompt } from '../engine/base-system-prompt.js'
+import { DAGExecutor, isDAGWorkflow } from './dag-executor.js'
+import { runValidators } from '../validators/validator-runner.js'
+import type { ValidatorConfig } from '../validators/types.js'
+import { webhooksService } from '../../webhooks/webhooks.service.js'
 import type { WorkflowStep } from '@prisma/client'
 
 export interface MessageAttachment {
@@ -25,6 +29,7 @@ export interface ExecutionContext {
   steps: WorkflowStep[]
   projectPath: string
   attachments?: MessageAttachment[]
+  userId?: string
 }
 
 export class TaskOrchestrator {
@@ -41,13 +46,14 @@ export class TaskOrchestrator {
     return lower.includes('prompt is too long') || lower.includes('prompt_too_long')
   }
 
-  private async executeStep(
+  async executeStep(
     executionId: string,
     conversationId: string,
     step: WorkflowStep,
     input: string,
     projectPath: string,
     attachments?: MessageAttachment[],
+    userId?: string,
   ) {
     // Get session (resume token) for this step
     let resumeToken = await sessionManager.getSession(conversationId, step.id)
@@ -59,6 +65,7 @@ export class TaskOrchestrator {
 
     // Create monitor for this execution
     const monitor = new ExecutionMonitor(executionId, conversationId, step.id)
+    if (userId) monitor.setUserId(userId)
     monitor.setInputMetadata({
       messageLength: input.length,
       systemPrompt,
@@ -155,6 +162,7 @@ export class TaskOrchestrator {
 
       // Create a new monitor for the retry
       const retryMonitor = new ExecutionMonitor(executionId, conversationId, step.id)
+      if (userId) retryMonitor.setUserId(userId)
       retryMonitor.setInputMetadata({
         messageLength: input.length,
         systemPrompt,
@@ -228,7 +236,7 @@ export class TaskOrchestrator {
   }
 
   async executeSequential(context: ExecutionContext, userInput: string): Promise<void> {
-    const { conversationId, steps, projectPath, attachments } = context
+    const { conversationId, steps, projectPath, attachments, userId } = context
 
     if (this.activeExecutions.get(conversationId)) {
       throw new Error('Execution already in progress for this conversation')
@@ -315,6 +323,7 @@ export class TaskOrchestrator {
           currentInput,
           projectPath,
           i === 0 ? attachments : undefined,
+          userId,
         )
 
         if (result.cancelled || !this.activeExecutions.get(conversationId)) {
@@ -336,6 +345,35 @@ export class TaskOrchestrator {
           await executionStateManager.markFailed(executionId, result.error)
           this.activeExecutions.delete(conversationId)
           return
+        }
+
+        // Run validators if configured
+        let validatorConfigs: ValidatorConfig[] = []
+        try { validatorConfigs = JSON.parse(step.validators || '[]') } catch { validatorConfigs = [] }
+
+        if (validatorConfigs.length > 0) {
+          const validation = await runValidators(validatorConfigs, result.content, projectPath)
+          if (!validation.allPassed) {
+            const failedResult = validation.results.find(r => !r.valid)
+            const feedback = failedResult?.feedback || failedResult?.details || failedResult?.message || 'Validation failed'
+            orchestratorEvents.emitValidationFailed({
+              executionId,
+              conversationId,
+              stepId: step.id,
+              stepName: step.name,
+              validatorType: failedResult?.type || 'unknown',
+              feedback,
+            })
+            // Retry: re-run same step with feedback
+            const currentRetry = (retryCounts[`validator_${step.id}`] || 0) + 1
+            const maxRetries = step.maxRetries || 2
+            if (currentRetry < maxRetries) {
+              retryCounts[`validator_${step.id}`] = currentRetry
+              currentInput = `A validacao falhou: ${feedback}\n\nPor favor corrija e tente novamente. Output anterior:\n${result.content}`
+              continue
+            }
+            delete retryCounts[`validator_${step.id}`]
+          }
         }
 
         const assistantMessage = await prisma.message.create({
@@ -363,6 +401,9 @@ export class TaskOrchestrator {
           stepName: step.name,
           metadata: { sessionId: result.resumeToken, actions: result.actions },
         })
+
+        // Save checkpoint after each successful step
+        await executionStateManager.saveCheckpoint(executionId, i, result.content, result.content).catch(() => {})
 
         let conditionsData: unknown = step.conditions
         if (typeof step.conditions === 'string') {
@@ -497,9 +538,198 @@ export class TaskOrchestrator {
         conversationId,
         success: true,
       })
+
+      // Dispatch webhook
+      if (userId) {
+        webhooksService.dispatch('execution:complete', { executionId, conversationId, success: true }, userId).catch(() => {})
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       await executionStateManager.markFailed(executionId, errorMessage)
+      // Dispatch error webhook
+      if (userId) {
+        webhooksService.dispatch('step:error', { executionId, conversationId, error: errorMessage }, userId).catch(() => {})
+      }
+      throw error
+    } finally {
+      this.activeExecutions.delete(conversationId)
+    }
+  }
+
+  async executeDAG(context: ExecutionContext, userInput: string): Promise<void> {
+    const { conversationId, steps, projectPath, attachments, userId } = context
+
+    if (this.activeExecutions.get(conversationId)) {
+      throw new Error('Execution already in progress for this conversation')
+    }
+
+    this.activeExecutions.set(conversationId, true)
+
+    const executionState = await executionStateManager.create(conversationId, 0)
+    const executionId = executionState.id
+
+    const dag = new DAGExecutor(steps)
+    const validation = dag.validate()
+    if (!validation.valid) {
+      await executionStateManager.markFailed(executionId, validation.error || 'Invalid DAG')
+      this.activeExecutions.delete(conversationId)
+      throw new Error(validation.error || 'Invalid DAG')
+    }
+
+    // Save user message
+    const userMessage = await prisma.message.create({
+      data: {
+        conversationId,
+        stepId: steps[0]?.id,
+        role: 'user',
+        content: userInput,
+        ...(attachments && attachments.length > 0 ? {
+          attachments: {
+            create: attachments.map(att => ({
+              id: att.id,
+              filename: att.filename,
+              mimeType: att.mimeType,
+              size: att.size || 0,
+              path: att.path,
+              projectPath: att.projectPath,
+              url: att.url,
+            })),
+          },
+        } : {}),
+      },
+      include: { attachments: true },
+    })
+
+    orchestratorEvents.emitMessageSaved({
+      executionId,
+      conversationId,
+      messageId: userMessage.id,
+      role: 'user',
+      content: userInput,
+      stepId: steps[0]?.id,
+      stepName: steps[0]?.name,
+      attachments: userMessage.attachments,
+    })
+
+    try {
+      let batchIndex = 0
+      while (!dag.isComplete()) {
+        if (!this.activeExecutions.get(conversationId)) {
+          orchestratorEvents.emitExecutionCancelled({ executionId, conversationId })
+          await executionStateManager.markCancelled(executionId)
+          return
+        }
+
+        const readySteps = dag.getReadySteps()
+        if (readySteps.length === 0) break
+
+        orchestratorEvents.emitDagBatchStart({
+          executionId,
+          conversationId,
+          stepIds: readySteps.map(s => s.step.id),
+          batchIndex,
+        })
+
+        // Execute ready steps in parallel
+        const results = await Promise.all(
+          readySteps.map(async (dagStep) => {
+            const depContext = dag.getDependencyContext(dagStep.step.id)
+            const input = depContext ? `${userInput}\n\n${depContext}` : userInput
+
+            orchestratorEvents.emitStepStart({
+              executionId,
+              conversationId,
+              stepId: dagStep.step.id,
+              stepName: dagStep.step.name,
+              stepOrder: dagStep.index + 1,
+              totalSteps: dag.totalSteps,
+            })
+
+            const result = await this.executeStep(
+              executionId,
+              conversationId,
+              dagStep.step,
+              input,
+              projectPath,
+              dagStep.index === 0 ? attachments : undefined,
+              userId,
+            )
+
+            if (result.error) {
+              orchestratorEvents.emitStepError({
+                executionId,
+                conversationId,
+                stepId: dagStep.step.id,
+                stepName: dagStep.step.name,
+                error: result.error,
+              })
+            } else {
+              // Save assistant message
+              const msg = await prisma.message.create({
+                data: {
+                  conversationId,
+                  stepId: dagStep.step.id,
+                  role: 'assistant',
+                  content: result.content,
+                  metadata: JSON.stringify({
+                    actions: result.actions,
+                    sessionId: result.resumeToken,
+                    stepName: dagStep.step.name,
+                    stepOrder: dagStep.index + 1,
+                  }),
+                },
+              })
+              orchestratorEvents.emitMessageSaved({
+                executionId,
+                conversationId,
+                messageId: msg.id,
+                role: 'assistant',
+                content: result.content,
+                stepId: dagStep.step.id,
+                stepName: dagStep.step.name,
+              })
+
+              orchestratorEvents.emitStepComplete({
+                executionId,
+                conversationId,
+                stepId: dagStep.step.id,
+                stepName: dagStep.step.name,
+                stepOrder: dagStep.index + 1,
+                content: result.content,
+                sessionId: result.resumeToken || undefined,
+                finished: false,
+              })
+            }
+
+            return { dagStep, result }
+          })
+        )
+
+        // Mark completed and check for errors
+        for (const { dagStep, result } of results) {
+          if (result.error) {
+            await executionStateManager.markFailed(executionId, result.error)
+            this.activeExecutions.delete(conversationId)
+            return
+          }
+          dag.markCompleted(dagStep.step.id, result.content)
+        }
+
+        batchIndex++
+      }
+
+      await executionStateManager.markCompleted(executionId)
+      orchestratorEvents.emitExecutionComplete({ executionId, conversationId, success: true })
+
+      if (userId) {
+        webhooksService.dispatch('execution:complete', { executionId, conversationId, success: true }, userId).catch(() => {})
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      await executionStateManager.markFailed(executionId, errorMessage)
+      if (userId) {
+        webhooksService.dispatch('step:error', { executionId, conversationId, error: errorMessage }, userId).catch(() => {})
+      }
       throw error
     } finally {
       this.activeExecutions.delete(conversationId)
@@ -511,7 +741,7 @@ export class TaskOrchestrator {
     userInput: string,
     stepIndex: number
   ): Promise<void> {
-    const { conversationId, steps, projectPath, attachments } = context
+    const { conversationId, steps, projectPath, attachments, userId } = context
 
     if (stepIndex >= steps.length) {
       throw new Error('Step index out of bounds')
@@ -583,6 +813,7 @@ export class TaskOrchestrator {
         userInput,
         projectPath,
         attachments,
+        userId,
       )
 
       if (result.error) {

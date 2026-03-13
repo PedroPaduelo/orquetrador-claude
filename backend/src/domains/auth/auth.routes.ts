@@ -6,6 +6,8 @@ import { mkdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { prisma } from '../../lib/prisma.js'
 import { BadRequestError, UnauthorizedError } from '../../http/errors/index.js'
+import { authRateLimitConfig } from '../../middlewares/rate-limit.js'
+import { tokenBudgetService } from '../execution/budget/token-budget-service.js'
 
 const PROJECT_BASE_PATH = process.env.PROJECT_BASE_PATH || '/workspace/temp-orquestrador'
 
@@ -24,6 +26,7 @@ export async function authRoutes(app: FastifyInstance) {
   server.post(
     '/auth/register',
     {
+      ...authRateLimitConfig,
       schema: {
         tags: ['Auth'],
         summary: 'Register a new user',
@@ -39,6 +42,7 @@ export async function authRoutes(app: FastifyInstance) {
               id: z.string(),
               email: z.string(),
               name: z.string().nullable(),
+              role: z.string(),
               basePath: z.string(),
               hasGithub: z.boolean(),
             }),
@@ -65,7 +69,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       return reply.status(201).send({
         token,
-        user: { id: user.id, email: user.email, name: user.name, basePath, hasGithub: false },
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, basePath, hasGithub: false },
       })
     },
   )
@@ -74,6 +78,7 @@ export async function authRoutes(app: FastifyInstance) {
   server.post(
     '/auth/login',
     {
+      ...authRateLimitConfig,
       schema: {
         tags: ['Auth'],
         summary: 'Login with email and password',
@@ -88,6 +93,7 @@ export async function authRoutes(app: FastifyInstance) {
               id: z.string(),
               email: z.string(),
               name: z.string().nullable(),
+              role: z.string(),
               basePath: z.string(),
               hasGithub: z.boolean(),
             }),
@@ -113,7 +119,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       return {
         token,
-        user: { id: user.id, email: user.email, name: user.name, basePath, hasGithub: !!user.githubToken },
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, basePath, hasGithub: !!user.githubToken },
       }
     },
   )
@@ -130,6 +136,7 @@ export async function authRoutes(app: FastifyInstance) {
             id: z.string(),
             email: z.string(),
             name: z.string().nullable(),
+            role: z.string(),
             basePath: z.string(),
             hasGithub: z.boolean(),
             createdAt: z.string(),
@@ -151,10 +158,36 @@ export async function authRoutes(app: FastifyInstance) {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
         basePath,
         hasGithub: !!user.githubToken,
         createdAt: user.createdAt.toISOString(),
       }
+    },
+  )
+
+  // GET /auth/budget
+  server.get(
+    '/auth/budget',
+    {
+      schema: {
+        tags: ['Auth'],
+        summary: 'Get current user token budget summary',
+        response: {
+          200: z.object({
+            dailyUsage: z.number(),
+            dailyLimit: z.number(),
+            monthlyUsage: z.number(),
+            monthlyLimit: z.number(),
+            dailyPercent: z.number(),
+            monthlyPercent: z.number(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      return tokenBudgetService.getUsageSummary(userId)
     },
   )
 }

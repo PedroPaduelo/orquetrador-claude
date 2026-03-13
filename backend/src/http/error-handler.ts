@@ -7,6 +7,7 @@ import {
   UnauthorizedError,
   NotFoundError,
   ConflictError,
+  ForbiddenError,
 } from './errors/index.js'
 
 type FastifyErrorHandler = (
@@ -39,6 +40,10 @@ export const errorHandler: FastifyErrorHandler = (error, _request, reply) => {
 
   if (error instanceof UnauthorizedError) {
     return reply.status(401).send({ message: error.message })
+  }
+
+  if (error instanceof ForbiddenError) {
+    return reply.status(403).send({ message: error.message })
   }
 
   if (error instanceof NotFoundError) {

@@ -16,6 +16,7 @@ model User {
   passwordHash String   @map("password_hash")
   name         String?
   githubToken  String?  @map("github_token")
+  role         String   @default("developer") // admin | developer | viewer
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -28,6 +29,9 @@ model User {
   plugins       Plugin[]
   hooks         Hook[]
   apiKeys       ApiKey[]
+  tokenBudget   UserTokenBudget?
+  webhooks      Webhook[]
+  promptVersions PromptVersion[]
 
   @@map("users")
 }
@@ -87,6 +91,17 @@ model WorkflowStep {
   // Conditions
   conditions String @default("{}")
   maxRetries Int    @default(0) @map("max_retries")
+
+  // DAG dependencies (JSON array of step IDs)
+  dependsOn String @default("[]") @map("depends_on")
+
+  // Validators (JSON array of validator configs)
+  validators String @default("[]")
+
+  // Step Templates
+  templateId      String? @map("template_id")
+  outputVariables String  @default("[]") @map("output_variables")
+  inputVariables  String  @default("[]") @map("input_variables")
 
   // Multi-backend support
   backend String  @default("claude")
@@ -161,6 +176,7 @@ model Message {
   attachments    MessageAttachment[]
 
   @@index([conversationId])
+  @@index([conversationId, stepId])
   @@index([stepId])
   @@map("messages")
 }
@@ -222,6 +238,7 @@ model ExecutionState {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
+  @@index([state])
   @@map("execution_state")
 }
 
@@ -243,6 +260,7 @@ model ExecutionLog {
   step           WorkflowStep? @relation(fields: [stepId], references: [id], onDelete: SetNull)
 
   @@index([executionId])
+  @@index([executionId, eventType])
   @@index([conversationId])
   @@map("execution_logs")
 }
@@ -501,8 +519,11 @@ model ExecutionTrace {
 
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
+  promptVersionId String? @map("prompt_version_id")
+
   @@index([executionId])
   @@index([conversationId])
+  @@index([stepId])
   @@index([createdAt])
   @@map("execution_traces")
 }
@@ -538,6 +559,100 @@ model Hook {
   @@index([userId])
   @@index([eventType])
   @@map("hooks")
+}
+
+// ============================================
+// USER TOKEN BUDGET
+// ============================================
+model UserTokenBudget {
+  id                  String   @id @default(uuid())
+  dailyLimit          Int      @default(5000000) @map("daily_limit")
+  monthlyLimit        Int      @default(100000000) @map("monthly_limit")
+  currentDailyUsage   Int      @default(0) @map("current_daily_usage")
+  currentMonthlyUsage Int      @default(0) @map("current_monthly_usage")
+  lastDailyResetAt    DateTime @default(now()) @map("last_daily_reset_at")
+  lastMonthlyResetAt  DateTime @default(now()) @map("last_monthly_reset_at")
+
+  userId String @unique @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_token_budgets")
+}
+
+// ============================================
+// STEP TEMPLATES
+// ============================================
+model StepTemplate {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  baseUrl      String   @default("") @map("base_url")
+  systemPrompt String?  @map("system_prompt")
+  conditions   String   @default("{}")
+  resourceIds  String   @default("{}") @map("resource_ids") // JSON {mcpServerIds, skillIds, agentIds, ruleIds, hookIds}
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+
+  @@unique([name, userId])
+  @@index([userId])
+  @@map("step_templates")
+}
+
+// ============================================
+// PROMPT VERSIONS
+// ============================================
+model PromptVersion {
+  id        String   @id @default(uuid())
+  stepId    String   @map("step_id")
+  version   Int
+  content   String
+  diff      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  createdBy String @map("created_by")
+  creator   User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([stepId])
+  @@map("prompt_versions")
+}
+
+// ============================================
+// WEBHOOKS
+// ============================================
+model Webhook {
+  id        String   @id @default(uuid())
+  url       String
+  events    String   @default("[]") // JSON array of event names
+  secret    String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  userId     String            @map("user_id")
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([userId])
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id           String   @id @default(uuid())
+  payload      String
+  responseCode Int?     @map("response_code")
+  responseBody String?  @map("response_body")
+  attempts     Int      @default(0)
+  status       String   @default("pending") // pending | success | failed
+  createdAt    DateTime @default(now()) @map("created_at")
+  completedAt  DateTime? @map("completed_at")
+
+  webhookId String  @map("webhook_id")
+  webhook   Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@map("webhook_deliveries")
 }
 
 // ============================================

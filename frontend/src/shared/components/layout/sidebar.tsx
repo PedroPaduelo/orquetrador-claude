@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   PanelLeftClose,
+  Shield,
 } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { useAuthStore } from '@/features/auth/store'
@@ -68,9 +69,22 @@ const configItems = [
     label: 'Hooks',
   },
   {
+    to: '/webhooks',
+    icon: Webhook,
+    label: 'Webhooks',
+  },
+  {
     to: '/settings',
     icon: Settings,
     label: 'Configuracoes',
+  },
+]
+
+const adminItems = [
+  {
+    to: '/admin/users',
+    icon: Shield,
+    label: 'Usuarios',
   },
 ]
 
@@ -160,6 +174,33 @@ export function Sidebar({ onCollapse }: SidebarProps) {
             </NavLink>
           ))}
         </div>
+
+        {/* Admin section - only for admin role */}
+        {user?.role === 'admin' && (
+          <div className="space-y-0.5">
+            <div className="border-t border-border/50 mx-3 mb-2" />
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-3 mb-2">
+              Admin
+            </p>
+            {adminItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150',
+                    isActive
+                      ? 'bg-primary/10 text-primary shadow-sm shadow-primary/5'
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                  )
+                }
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
+        )}
       </nav>
 
       {/* Footer */}

@@ -10,6 +10,14 @@ export interface Workflow {
   updatedAt: string
 }
 
+export interface ValidatorConfig {
+  type: string
+  command?: string
+  schema?: Record<string, unknown>
+  criteria?: string
+  enabled?: boolean
+}
+
 export interface WorkflowStep {
   id?: string
   name: string
@@ -23,6 +31,12 @@ export interface WorkflowStep {
   agentIds: string[]
   ruleIds: string[]
   hookIds: string[]
+  dependsOn?: string[]
+  validators?: ValidatorConfig[]
+  templateId?: string
+  outputVariables?: string[]
+  inputVariables?: string[]
+  backend?: string
 }
 
 export interface StepConditions {

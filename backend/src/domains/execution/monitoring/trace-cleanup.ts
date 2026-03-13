@@ -1,4 +1,5 @@
 import { prisma } from '../../../lib/prisma.js'
+import { projectPathLock } from '../lock/project-path-lock.js'
 
 const RETENTION_DAYS = 7
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000 // 24h
@@ -15,6 +16,9 @@ async function cleanupOldTraces() {
   } catch (err) {
     console.error('[TraceCleanup] Error during cleanup:', err)
   }
+
+  // Cleanup stale locks
+  projectPathLock.cleanup()
 }
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null

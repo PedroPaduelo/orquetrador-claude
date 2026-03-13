@@ -101,6 +101,22 @@ export interface ExecutionCancelledEvent {
   conversationId: string
 }
 
+export interface DagBatchStartEvent {
+  executionId: string
+  conversationId: string
+  stepIds: string[]
+  batchIndex: number
+}
+
+export interface ValidationFailedEvent {
+  executionId: string
+  conversationId: string
+  stepId: string
+  stepName: string
+  validatorType: string
+  feedback: string
+}
+
 // Type-safe event emitter
 export class OrchestratorEvents extends EventEmitter {
   emitStepStart(data: StepStartEvent) {
@@ -141,6 +157,14 @@ export class OrchestratorEvents extends EventEmitter {
 
   emitExecutionCancelled(data: ExecutionCancelledEvent) {
     this.emit('execution:cancelled', data)
+  }
+
+  emitDagBatchStart(data: DagBatchStartEvent) {
+    this.emit('dag:batch_start', data)
+  }
+
+  emitValidationFailed(data: ValidationFailedEvent) {
+    this.emit('validation:failed', data)
   }
 }
 

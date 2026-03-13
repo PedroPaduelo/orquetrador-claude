@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js'
+import { validateMcpServerUrl } from '../../lib/validation.js'
 
 function fromDbList(record: {
   id: string
@@ -95,6 +96,10 @@ export const mcpServersRepository = {
     enabled?: boolean
     isGlobal?: boolean
   }, userId: string) {
+    if ((input.type === 'http' || input.type === 'sse') && input.uri) {
+      validateMcpServerUrl(input.uri)
+    }
+
     const server = await prisma.mcpServer.create({
       data: {
         name: input.name,
@@ -123,6 +128,10 @@ export const mcpServersRepository = {
     enabled?: boolean
     isGlobal?: boolean
   }) {
+    if ((input.type === 'http' || input.type === 'sse') && input.uri) {
+      validateMcpServerUrl(input.uri)
+    }
+
     const data: Record<string, unknown> = {}
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description

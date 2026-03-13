@@ -1,5 +1,6 @@
 import { prisma } from '../../../lib/prisma.js'
 import type { StreamEvent, Metadata } from '../engine/types.js'
+import { tokenBudgetService } from '../budget/token-budget-service.js'
 
 const MAX_RAW_SIZE = 50 * 1024 // 50KB per stdout/stderr
 
@@ -45,6 +46,7 @@ export class ExecutionMonitor {
   private cacheReadInputTokens = 0
   private webSearchRequests = 0
   private webFetchRequests = 0
+  private _userId: string | null = null
 
   // Accumulated metadata from stream-json events
   private metadata: Partial<Metadata> = {}
@@ -54,6 +56,10 @@ export class ExecutionMonitor {
     this.conversationId = conversationId
     this.stepId = stepId
     this.startedAt = new Date()
+  }
+
+  setUserId(userId: string) {
+    this._userId = userId
   }
 
   setInputMetadata(opts: {
@@ -203,5 +209,12 @@ export class ExecutionMonitor {
     }).catch((err) => {
       console.error('[ExecutionMonitor] Failed to persist trace:', err.message)
     })
+
+    // Record token usage for budget tracking
+    if (this._userId && (this.inputTokens > 0 || this.outputTokens > 0)) {
+      tokenBudgetService.recordUsage(this._userId, this.inputTokens, this.outputTokens).catch((err) => {
+        console.error('[ExecutionMonitor] Failed to record budget usage:', err.message)
+      })
+    }
   }
 }

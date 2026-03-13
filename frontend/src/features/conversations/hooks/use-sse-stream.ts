@@ -241,6 +241,22 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           resetStreamingContent()
           break
 
+        case 'dag_batch_start':
+          setStreamingPhase('ai_thinking')
+          resetStreamingContent()
+          break
+
+        case 'step_blocked':
+          setStepStatus(data.stepId as string, 'blocked' as 'pending')
+          break
+
+        case 'validation_failed':
+          addStreamingAction({
+            type: 'system',
+            content: `Validacao falhou: ${(data.error as string) || 'Erro de validacao no step'}`,
+          })
+          break
+
         case 'error':
           onError?.(data.message as string)
           break

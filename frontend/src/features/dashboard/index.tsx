@@ -15,11 +15,18 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { useConversations } from '@/features/conversations/hooks/use-conversations'
 import { useWorkflows } from '@/features/workflows/hooks/use-workflows'
 import { formatDate } from '@/shared/lib/utils'
+import { useDailyMetrics, useWorkflowMetrics, useMetricAlerts } from './hooks/use-metrics'
+import { DailyChart } from './components/daily-chart'
+import { WorkflowComparison } from './components/workflow-comparison'
+import { AlertsPanel } from './components/alerts-panel'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { data: conversations, isLoading: loadingConvs } = useConversations()
   const { data: workflows, isLoading: loadingWFs } = useWorkflows()
+  const { data: dailyMetrics, isLoading: loadingDaily } = useDailyMetrics()
+  const { data: workflowMetrics, isLoading: loadingWFMetrics } = useWorkflowMetrics()
+  const { data: alerts } = useMetricAlerts()
 
   const isLoading = loadingConvs || loadingWFs
 
@@ -38,6 +45,9 @@ export default function DashboardPage() {
           Orquestre workflows inteligentes com Claude
         </p>
       </div>
+
+      {/* Alerts */}
+      <AlertsPanel alerts={alerts} />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -69,6 +79,12 @@ export default function DashboardPage() {
           icon={Zap}
           loading={isLoading}
         />
+      </div>
+
+      {/* Charts */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <DailyChart data={dailyMetrics} isLoading={loadingDaily} />
+        <WorkflowComparison data={workflowMetrics} isLoading={loadingWFMetrics} />
       </div>
 
       {/* Quick Actions + Recent */}
