@@ -184,12 +184,17 @@ signals.forEach((signal) => {
   process.on(signal, async () => {
     console.log(`\n${signal} received, shutting down gracefully...`)
     projectPathLock.cleanup()
-    await stopExecutionWorker()
-    await closeExecutionQueue()
-    await app.close()
-    await closeAllRedis()
+    try { await stopExecutionWorker() } catch { /* ignore */ }
+    try { await closeExecutionQueue() } catch { /* ignore */ }
+    try { await app.close() } catch { /* ignore */ }
+    try { await closeAllRedis() } catch { /* ignore */ }
     process.exit(0)
   })
+})
+
+// Prevent unhandled rejections from crashing the process
+process.on('unhandledRejection', (err) => {
+  console.error('[UnhandledRejection]', err)
 })
 
 start()

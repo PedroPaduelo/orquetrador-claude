@@ -7,28 +7,36 @@ const CONCURRENCY = parseInt(process.env.EXECUTION_CONCURRENCY || '3', 10)
 
 let _worker: Worker<ExecutionJobData> | null = null
 
-export function startExecutionWorker(): Worker<ExecutionJobData> {
-  if (_worker) return _worker
+export function startExecutionWorker(): void {
+  if (_worker) return
 
-  _worker = new Worker<ExecutionJobData>(
-    'execution',
-    processExecutionJob,
-    {
-      connection: getRedis(),
-      concurrency: CONCURRENCY,
-    }
-  )
+  try {
+    _worker = new Worker<ExecutionJobData>(
+      'execution',
+      processExecutionJob,
+      {
+        connection: getRedis(),
+        concurrency: CONCURRENCY,
+      }
+    )
 
-  _worker.on('completed', (job) => {
-    console.log(`[ExecutionWorker] Job ${job.id} completed for conversation ${job.data.conversationId}`)
-  })
+    _worker.on('completed', (job) => {
+      console.log(`[ExecutionWorker] Job ${job.id} completed for conversation ${job.data.conversationId}`)
+    })
 
-  _worker.on('failed', (job, err) => {
-    console.error(`[ExecutionWorker] Job ${job?.id} failed:`, err.message)
-  })
+    _worker.on('failed', (job, err) => {
+      console.error(`[ExecutionWorker] Job ${job?.id} failed:`, err.message)
+    })
 
-  console.log(`[ExecutionWorker] Started with concurrency=${CONCURRENCY}`)
-  return _worker
+    _worker.on('error', (err) => {
+      console.error(`[ExecutionWorker] Error:`, err.message)
+    })
+
+    console.log(`[ExecutionWorker] Started with concurrency=${CONCURRENCY}`)
+  } catch (err) {
+    console.warn(`[ExecutionWorker] Failed to start (Redis unavailable), queue disabled:`, (err as Error).message)
+    _worker = null
+  }
 }
 
 export async function stopExecutionWorker(): Promise<void> {

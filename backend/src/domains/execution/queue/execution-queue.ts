@@ -22,23 +22,30 @@ export interface ExecutionJobData {
 
 let _queue: Queue<ExecutionJobData> | null = null
 
-export function getExecutionQueue(): Queue<ExecutionJobData> {
+export function getExecutionQueue(): Queue<ExecutionJobData> | null {
   if (!_queue) {
-    _queue = new Queue<ExecutionJobData>('execution', {
-      connection: getRedis(),
-      defaultJobOptions: {
-        removeOnComplete: { count: 100 },
-        removeOnFail: { count: 50 },
-        attempts: 1, // Execution should not auto-retry
-      },
-    })
+    try {
+      _queue = new Queue<ExecutionJobData>('execution', {
+        connection: getRedis(),
+        defaultJobOptions: {
+          removeOnComplete: { count: 100 },
+          removeOnFail: { count: 50 },
+          attempts: 1, // Execution should not auto-retry
+        },
+      })
+    } catch {
+      console.warn('[ExecutionQueue] Failed to create queue (Redis unavailable)')
+      return null
+    }
   }
   return _queue
 }
 
 export async function closeExecutionQueue(): Promise<void> {
   if (_queue) {
-    await _queue.close()
+    try {
+      await _queue.close()
+    } catch { /* ignore */ }
     _queue = null
   }
 }

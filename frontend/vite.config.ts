@@ -53,6 +53,10 @@ export default defineConfig({
       interval: 1000,
     },
     cors: true,
+    hmr: {
+      clientPort: 443,
+      protocol: 'wss',
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3333',
