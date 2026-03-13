@@ -86,9 +86,9 @@ nohup node server.js > ./server.log 2>&1 &
 
 ### Projetos Vite — Configuracao de allowedHosts OBRIGATORIA
 
-Quando criar ou modificar um projeto que usa Vite (React, Vue, Svelte, etc.), voce DEVE configurar o \`vite.config\` para permitir o dominio externo do EasyPanel. Sem isso, o Vite bloqueia requisicoes externas e o usuario recebe erro "Blocked request. This host is not allowed."
+Quando criar ou modificar um projeto que usa Vite (React, Vue, Svelte, etc.), voce DEVE configurar o \`vite.config\` para liberar TODOS os hosts. Sem isso, o Vite bloqueia requisicoes externas e o usuario recebe erro "Blocked request. This host is not allowed."
 
-Ao criar o dominio com \`easypanel_create_domain\`, use o subdominio retornado (ex: \`meu-projeto.ddw1sl.easypanel.host\`) para configurar o Vite:
+**SEMPRE** use \`allowedHosts: 'all'\` no server E no preview. NAO use array de hosts especificos — use sempre \`'all'\` para evitar problemas com dominios do EasyPanel.
 
 \`\`\`ts
 // vite.config.ts
@@ -96,15 +96,19 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: PORTA_ESCOLHIDA,
-    allowedHosts: ['meu-projeto.ddw1sl.easypanel.host'],  // USE O SUBDOMINIO REAL
+    allowedHosts: 'all',   // OBRIGATORIO — libera qualquer host
+    cors: true,
+  },
+  preview: {
+    host: '0.0.0.0',
+    allowedHosts: 'all',   // OBRIGATORIO — libera qualquer host
+    cors: true,
   },
   // ... resto da config
 })
 \`\`\`
 
-Se o projeto ja existir e voce estiver apenas subindo o servidor, verifique se o \`vite.config\` ja tem \`allowedHosts\` configurado. Se nao tiver, adicione ANTES de iniciar o servidor.
-
-Voce tambem pode usar \`allowedHosts: 'all'\` se preferir liberar qualquer host.
+Se o projeto ja existir e voce estiver apenas subindo o servidor, verifique se o \`vite.config\` ja tem \`allowedHosts: 'all'\`. Se tiver \`allowedHosts: true\` ou um array de hosts, troque para \`'all'\` ANTES de iniciar o servidor.
 
 Apos iniciar, verifique se o processo esta rodando: \`ss -tlnp | grep PORTA\`
 
