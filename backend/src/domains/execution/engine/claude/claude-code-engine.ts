@@ -144,6 +144,12 @@ export class ClaudeCodeEngine implements CliEngine {
       }
     }
 
+    // Inject GitHub token for git operations
+    if (options.githubToken) {
+      env.GITHUB_TOKEN = options.githubToken
+      env.GIT_ASKPASS = 'echo'
+    }
+
     if (!apiBaseUrl) {
       return {
         content: '',

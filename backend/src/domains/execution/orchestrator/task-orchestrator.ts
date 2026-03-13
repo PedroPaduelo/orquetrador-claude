@@ -11,6 +11,7 @@ import { DAGExecutor, isDAGWorkflow } from './dag-executor.js'
 import { runValidators } from '../validators/validator-runner.js'
 import type { ValidatorConfig } from '../validators/types.js'
 import { webhooksService } from '../../webhooks/webhooks.service.js'
+import { execSync } from 'child_process'
 import type { WorkflowStep } from '@prisma/client'
 import type { PausedExecutionInfo } from './execution-state.js'
 
@@ -85,6 +86,32 @@ export class TaskOrchestrator {
       }
     }
 
+    // Fetch GitHub token from user and configure git in workspace
+    let githubToken: string | undefined
+    if (userId) {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { githubToken: true, name: true, email: true },
+        })
+        githubToken = user?.githubToken ?? undefined
+
+        if (githubToken && projectPath) {
+          try {
+            const gitCheck = execSync('git rev-parse --is-inside-work-tree', { cwd: projectPath, encoding: 'utf-8', timeout: 5000 }).trim()
+            if (gitCheck === 'true') {
+              const userName = user?.name || 'Serendipd'
+              const userEmail = user?.email || 'serendipd@execut.ai'
+              execSync(`git config user.name "${userName.replace(/"/g, '\\"')}"`, { cwd: projectPath, timeout: 5000 })
+              execSync(`git config user.email "${userEmail.replace(/"/g, '\\"')}"`, { cwd: projectPath, timeout: 5000 })
+            }
+          } catch { /* not a git repo, ignore */ }
+        }
+      } catch (err) {
+        console.error(`[Orchestrator] Failed to fetch GitHub token for user ${userId}:`, err)
+      }
+    }
+
     const makeOnEvent = (mon: ExecutionMonitor) => (event: import('../engine/claude/stream-parser.js').StreamEvent) => {
       mon.onParsedEvent(event)
       if (event.type === 'content' && event.content) {
@@ -130,6 +157,7 @@ export class TaskOrchestrator {
       model: step.model || undefined,
       attachments,
       resumeToken,
+      githubToken,
       onEvent: makeOnEvent(monitor),
       onRawStdout: (chunk) => monitor.onStdout(chunk),
       onRawStderr: (chunk) => monitor.onStderr(chunk),
@@ -182,6 +210,7 @@ export class TaskOrchestrator {
         model: step.model || undefined,
         attachments,
         resumeToken: null,
+        githubToken,
         onEvent: makeOnEvent(retryMonitor),
         onRawStdout: (chunk) => retryMonitor.onStdout(chunk),
         onRawStderr: (chunk) => retryMonitor.onStderr(chunk),

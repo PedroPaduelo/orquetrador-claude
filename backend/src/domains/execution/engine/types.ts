@@ -20,6 +20,7 @@ export interface EngineExecuteOptions {
   model?: string
   attachments?: EngineAttachment[]
   resumeToken?: string | null
+  githubToken?: string
   onEvent?: (event: import('./claude/stream-parser.js').StreamEvent) => void
   onRawStdout?: (chunk: string) => void
   onRawStderr?: (chunk: string) => void
