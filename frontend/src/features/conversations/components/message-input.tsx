@@ -10,6 +10,7 @@ interface MessageInputProps {
   conversationId: string
   onSend: (content: string, attachments?: Attachment[]) => void
   onCancel: () => void
+  onInterrupt?: (message: string) => void
   isStreaming: boolean
   isPaused?: boolean
   disabled?: boolean
@@ -58,7 +59,7 @@ declare global {
   }
 }
 
-export function MessageInput({ conversationId, onSend, onCancel, isStreaming, isPaused, disabled }: MessageInputProps) {
+export function MessageInput({ conversationId, onSend, onCancel, onInterrupt, isStreaming, isPaused, disabled }: MessageInputProps) {
   const [content, setContent] = useState('')
   const [isListening, setIsListening] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -72,12 +73,20 @@ export function MessageInput({ conversationId, onSend, onCancel, isStreaming, is
     clearAttachments,
   } = useImageUpload({ conversationId })
 
-  // When paused, allow sending even though we'd normally block on isStreaming
-  const canSubmit = !disabled && !isUploading && (isPaused || !isStreaming)
+  // Allow sending: when idle, when paused, or when streaming (as interrupt)
+  const canSubmit = !disabled && !isUploading
 
   const handleSubmit = () => {
     const hasContent = content.trim() || attachments.length > 0
     if (!hasContent || !canSubmit) return
+
+    // If streaming and not paused, this is an interrupt
+    if (isStreaming && !isPaused && onInterrupt) {
+      onInterrupt(content.trim())
+      setContent('')
+      return
+    }
+
     onSend(content.trim(), attachments.length > 0 ? attachments : undefined)
     setContent('')
     clearAttachments()
@@ -192,7 +201,7 @@ export function MessageInput({ conversationId, onSend, onCancel, isStreaming, is
           isUploading={isUploading}
           onAddFiles={addFiles}
           onRemove={removeAttachment}
-          disabled={(isStreaming && !isPaused) || disabled}
+          disabled={disabled}
         />
 
         <div className="flex-1 relative">
@@ -208,12 +217,12 @@ export function MessageInput({ conversationId, onSend, onCancel, isStreaming, is
                 : isPaused
                 ? 'Responda a pergunta do Claude para continuar...'
                 : isStreaming
-                ? 'Claude está processando...'
+                ? 'Envie uma mensagem para intervir no fluxo...'
                 : attachments.length > 0
                 ? 'Adicione uma mensagem às imagens...'
                 : 'Escreva sua mensagem...'
             }
-            disabled={(isStreaming && !isPaused) || disabled}
+            disabled={disabled}
             className="min-h-[44px] max-h-[200px] resize-none pr-24 rounded-xl bg-muted/50 border-border/50 focus:border-primary/50"
             rows={1}
           />
@@ -231,20 +240,26 @@ export function MessageInput({ conversationId, onSend, onCancel, isStreaming, is
                 {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
             )}
-            {isStreaming && !isPaused ? (
-              <Button size="icon" variant="destructive" onClick={onCancel} className="h-8 w-8">
+            {isStreaming && !isPaused && (
+              <Button size="icon" variant="destructive" onClick={onCancel} className="h-8 w-8" title="Cancelar execução">
                 <Square className="h-3.5 w-3.5" />
               </Button>
-            ) : (
-              <Button
-                size="icon"
-                onClick={handleSubmit}
-                disabled={!canSend}
-                className={isPaused ? 'h-8 w-8 bg-amber-500 hover:bg-amber-600' : 'h-8 w-8'}
-              >
-                <Send className="h-3.5 w-3.5" />
-              </Button>
             )}
+            <Button
+              size="icon"
+              onClick={handleSubmit}
+              disabled={!canSend}
+              className={
+                isPaused
+                  ? 'h-8 w-8 bg-amber-500 hover:bg-amber-600'
+                  : isStreaming
+                  ? 'h-8 w-8 bg-blue-500 hover:bg-blue-600'
+                  : 'h-8 w-8'
+              }
+              title={isStreaming && !isPaused ? 'Enviar mensagem ao Claude (interrompe e incorpora)' : undefined}
+            >
+              <Send className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
       </div>

@@ -182,8 +182,8 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
               <span className="text-xs text-muted-foreground">
                 {streamingPhase === 'preparing' && 'Enviando...'}
                 {streamingPhase === 'connecting' && 'Conectando...'}
-                {streamingPhase === 'ai_thinking' && 'IA pensando...'}
-                {streamingPhase === 'streaming' && 'Gerando resposta...'}
+                {streamingPhase === 'ai_thinking' && 'Aguardando IA...'}
+                {streamingPhase === 'streaming' && 'IA trabalhando...'}
                 {(!streamingPhase || streamingPhase === 'idle') && ''}
               </span>
               <span className="thinking-dots flex gap-1">

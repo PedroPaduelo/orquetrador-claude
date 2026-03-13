@@ -147,122 +147,232 @@ export class TaskOrchestrator {
       }
     }
 
-    const result = await this.engine.execute({
-      conversationId,
-      stepId: step.id,
-      message: input,
-      systemPrompt,
-      apiBaseUrl: step.baseUrl,
-      projectPath,
-      model: step.model || undefined,
-      attachments,
-      resumeToken,
-      githubToken,
-      onEvent: makeOnEvent(monitor),
-      onRawStdout: (chunk) => monitor.onStdout(chunk),
-      onRawStderr: (chunk) => monitor.onStderr(chunk),
-    })
+    let currentMessage = input
+    let currentAttachments = attachments
+    let currentMonitor = monitor
 
-    // If "Prompt is too long" and we were resuming a session, retry with a fresh session
-    if (this.isPromptTooLongError(result.error) && resumeToken) {
-      // Flush the failed trace first
-      monitor.flush({
+    // Loop to handle user interrupts — when the user sends a message mid-execution,
+    // we kill the process and re-execute with --resume passing the user's message
+    while (true) {
+      const result = await this.engine.execute({
+        conversationId,
+        stepId: step.id,
+        message: currentMessage,
+        systemPrompt,
+        apiBaseUrl: step.baseUrl,
+        projectPath,
+        model: step.model || undefined,
+        attachments: currentAttachments,
+        resumeToken,
+        githubToken,
+        onEvent: makeOnEvent(currentMonitor),
+        onRawStdout: (chunk) => currentMonitor.onStdout(chunk),
+        onRawStderr: (chunk) => currentMonitor.onStderr(chunk),
+      })
+
+      // Handle user interrupt: kill → save → resume with user message
+      if (result.interrupted && result.interruptMessage) {
+        // Flush trace for the interrupted execution
+        currentMonitor.flush({
+          exitCode: result.exitCode,
+          signal: result.signal,
+          resultStatus: 'interrupted',
+          errorMessage: undefined,
+          contentLength: result.content.length,
+          actionsCount: result.actions.length,
+          resumeTokenOut: result.resumeToken,
+        })
+
+        // Save the partial assistant content if any
+        if (result.content) {
+          const partialMsg = await prisma.message.create({
+            data: {
+              conversationId,
+              stepId: step.id,
+              role: 'assistant',
+              content: result.content,
+              metadata: JSON.stringify({
+                actions: result.actions,
+                sessionId: result.resumeToken,
+                stepName: step.name,
+                interrupted: true,
+              }),
+            },
+          })
+          orchestratorEvents.emitMessageSaved({
+            executionId,
+            conversationId,
+            messageId: partialMsg.id,
+            role: 'assistant',
+            content: result.content,
+            stepId: step.id,
+            stepName: step.name,
+            metadata: { sessionId: result.resumeToken, interrupted: true, actions: result.actions },
+          })
+        }
+
+        // Save user interrupt message to DB
+        const userMsg = await prisma.message.create({
+          data: {
+            conversationId,
+            stepId: step.id,
+            role: 'user',
+            content: result.interruptMessage,
+          },
+        })
+        orchestratorEvents.emitMessageSaved({
+          executionId,
+          conversationId,
+          messageId: userMsg.id,
+          role: 'user',
+          content: result.interruptMessage,
+          stepId: step.id,
+          stepName: step.name,
+        })
+
+        orchestratorEvents.emitUserInterrupt({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          stepName: step.name,
+          userMessage: result.interruptMessage,
+        })
+
+        // Save session token for resume
+        if (result.resumeToken) {
+          await sessionManager.saveSession(conversationId, step.id, result.resumeToken)
+          resumeToken = result.resumeToken
+        }
+
+        // Prepare for re-execution with user's message
+        currentMessage = result.interruptMessage
+        currentAttachments = undefined // no attachments on interrupt
+        currentMonitor = new ExecutionMonitor(executionId, conversationId, step.id)
+        if (userId) currentMonitor.setUserId(userId)
+        currentMonitor.setInputMetadata({
+          messageLength: currentMessage.length,
+          systemPrompt,
+          resumeToken,
+          model: step.model || null,
+          projectPath,
+        })
+
+        // Reset streaming content on frontend
+        orchestratorEvents.emitStepStream({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          type: 'action',
+          action: {
+            type: 'system',
+            content: `Mensagem recebida, incorporando no fluxo...`,
+          },
+        })
+
+        continue // Re-execute with --resume + user message
+      }
+
+      // If "Prompt is too long" and we were resuming a session, retry with a fresh session
+      if (this.isPromptTooLongError(result.error) && resumeToken) {
+        // Flush the failed trace first
+        currentMonitor.flush({
+          exitCode: result.exitCode,
+          signal: result.signal,
+          resultStatus: 'error',
+          errorMessage: result.error,
+          contentLength: result.content.length,
+          actionsCount: result.actions.length,
+          resumeTokenOut: result.resumeToken,
+        })
+
+        // Notify the frontend that we are resetting the context
+        orchestratorEvents.emitContextReset({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          stepName: step.name,
+          reason: 'O contexto da sessao excedeu o limite. Abrindo uma sessao nova automaticamente.',
+        })
+
+        // Delete the old session so we start fresh
+        await sessionManager.deleteSession(conversationId, step.id)
+        resumeToken = null
+
+        // Create a new monitor for the retry
+        const retryMonitor = new ExecutionMonitor(executionId, conversationId, step.id)
+        if (userId) retryMonitor.setUserId(userId)
+        retryMonitor.setInputMetadata({
+          messageLength: currentMessage.length,
+          systemPrompt,
+          resumeToken: null,
+          model: step.model || null,
+          projectPath,
+        })
+
+        const retryResult = await this.engine.execute({
+          conversationId,
+          stepId: step.id,
+          message: currentMessage,
+          systemPrompt,
+          apiBaseUrl: step.baseUrl,
+          projectPath,
+          model: step.model || undefined,
+          attachments: currentAttachments,
+          resumeToken: null,
+          githubToken,
+          onEvent: makeOnEvent(retryMonitor),
+          onRawStdout: (chunk) => retryMonitor.onStdout(chunk),
+          onRawStderr: (chunk) => retryMonitor.onStderr(chunk),
+        })
+
+        if (retryResult.resumeToken) {
+          await sessionManager.saveSession(conversationId, step.id, retryResult.resumeToken)
+        }
+
+        let retryStatus = 'success'
+        if (retryResult.error) retryStatus = 'error'
+        else if (retryResult.timedOut) retryStatus = 'timeout'
+        else if (retryResult.cancelled) retryStatus = 'cancelled'
+        else if (retryResult.needsUserInput) retryStatus = 'needs_input'
+
+        retryMonitor.flush({
+          exitCode: retryResult.exitCode,
+          signal: retryResult.signal,
+          resultStatus: retryStatus,
+          errorMessage: retryResult.error,
+          contentLength: retryResult.content.length,
+          actionsCount: retryResult.actions.length,
+          resumeTokenOut: retryResult.resumeToken,
+        })
+
+        return retryResult
+      }
+
+      // Save session if we got a new one
+      if (result.resumeToken) {
+        await sessionManager.saveSession(conversationId, step.id, result.resumeToken)
+      }
+
+      // Determine status for monitoring
+      let resultStatus = 'success'
+      if (result.error) resultStatus = 'error'
+      else if (result.timedOut) resultStatus = 'timeout'
+      else if (result.cancelled) resultStatus = 'cancelled'
+      else if (result.needsUserInput) resultStatus = 'needs_input'
+
+      // Flush trace (fire-and-forget)
+      currentMonitor.flush({
         exitCode: result.exitCode,
         signal: result.signal,
-        resultStatus: 'error',
+        resultStatus,
         errorMessage: result.error,
         contentLength: result.content.length,
         actionsCount: result.actions.length,
         resumeTokenOut: result.resumeToken,
       })
 
-      // Notify the frontend that we are resetting the context
-      orchestratorEvents.emitContextReset({
-        executionId,
-        conversationId,
-        stepId: step.id,
-        stepName: step.name,
-        reason: 'O contexto da sessao excedeu o limite. Abrindo uma sessao nova automaticamente.',
-      })
-
-      // Delete the old session so we start fresh
-      await sessionManager.deleteSession(conversationId, step.id)
-      resumeToken = null
-
-      // Create a new monitor for the retry
-      const retryMonitor = new ExecutionMonitor(executionId, conversationId, step.id)
-      if (userId) retryMonitor.setUserId(userId)
-      retryMonitor.setInputMetadata({
-        messageLength: input.length,
-        systemPrompt,
-        resumeToken: null,
-        model: step.model || null,
-        projectPath,
-      })
-
-      const retryResult = await this.engine.execute({
-        conversationId,
-        stepId: step.id,
-        message: input,
-        systemPrompt,
-        apiBaseUrl: step.baseUrl,
-        projectPath,
-        model: step.model || undefined,
-        attachments,
-        resumeToken: null,
-        githubToken,
-        onEvent: makeOnEvent(retryMonitor),
-        onRawStdout: (chunk) => retryMonitor.onStdout(chunk),
-        onRawStderr: (chunk) => retryMonitor.onStderr(chunk),
-      })
-
-      if (retryResult.resumeToken) {
-        await sessionManager.saveSession(conversationId, step.id, retryResult.resumeToken)
-      }
-
-      let retryStatus = 'success'
-      if (retryResult.error) retryStatus = 'error'
-      else if (retryResult.timedOut) retryStatus = 'timeout'
-      else if (retryResult.cancelled) retryStatus = 'cancelled'
-      else if (retryResult.needsUserInput) retryStatus = 'needs_input'
-
-      retryMonitor.flush({
-        exitCode: retryResult.exitCode,
-        signal: retryResult.signal,
-        resultStatus: retryStatus,
-        errorMessage: retryResult.error,
-        contentLength: retryResult.content.length,
-        actionsCount: retryResult.actions.length,
-        resumeTokenOut: retryResult.resumeToken,
-      })
-
-      return retryResult
+      return result
     }
-
-    // Save session if we got a new one
-    if (result.resumeToken) {
-      await sessionManager.saveSession(conversationId, step.id, result.resumeToken)
-    }
-
-    // Determine status for monitoring
-    let resultStatus = 'success'
-    if (result.error) resultStatus = 'error'
-    else if (result.timedOut) resultStatus = 'timeout'
-    else if (result.cancelled) resultStatus = 'cancelled'
-    else if (result.needsUserInput) resultStatus = 'needs_input'
-
-    // Flush trace (fire-and-forget)
-    monitor.flush({
-      exitCode: result.exitCode,
-      signal: result.signal,
-      resultStatus,
-      errorMessage: result.error,
-      contentLength: result.content.length,
-      actionsCount: result.actions.length,
-      resumeTokenOut: result.resumeToken,
-    })
-
-    return result
   }
 
   async executeSequential(context: ExecutionContext, userInput: string): Promise<void> {
@@ -1505,6 +1615,11 @@ export class TaskOrchestrator {
     }).catch(() => {})
 
     return killed
+  }
+
+  interruptExecution(conversationId: string, userMessage: string): boolean {
+    if (!this.activeExecutions.get(conversationId)) return false
+    return this.engine.interrupt(conversationId, userMessage)
   }
 
   isExecuting(conversationId: string): boolean {

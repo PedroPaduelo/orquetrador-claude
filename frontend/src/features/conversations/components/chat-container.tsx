@@ -71,7 +71,7 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
   const messages = conversation.messages || []
   const currentStepIndex = conversation.currentStepIndex || 0
 
-  const { sendMessage, cancel, isStreaming, streamingPhase, streamingContent, streamingActions, isPaused, pausedInfo } =
+  const { sendMessage, cancel, interruptExecution, isStreaming, streamingPhase, streamingContent, streamingActions, isPaused, pausedInfo } =
     useSSEStream({
       conversationId: conversation.id,
       onComplete: () => {
@@ -271,6 +271,7 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
         conversationId={conversation.id}
         onSend={(content, attachments) => sendMessage(content, currentStepIndex, attachments)}
         onCancel={cancel}
+        onInterrupt={interruptExecution}
         isStreaming={isStreaming}
         isPaused={isPaused}
         disabled={isWorkflowFinished}

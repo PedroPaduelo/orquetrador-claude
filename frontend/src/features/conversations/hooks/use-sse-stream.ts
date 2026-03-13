@@ -32,6 +32,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     setPaused,
     setProgress,
     setStepStatus,
+    setInterrupting,
   } = useConversationsStore()
 
   const sendMessage = useCallback(
@@ -169,9 +170,13 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           } else if (data.type === 'action' && data.action) {
             const action = data.action as Action
             addStreamingAction(action)
-            // If we get a thinking action, we're in ai_thinking phase
-            if (action.type === 'thinking' && !firstContentReceivedRef.current) {
-              setStreamingPhase('ai_thinking')
+            // When meaningful actions arrive (tool_use, thinking, tool_result),
+            // transition to streaming so user sees the AI is actively working
+            if (!firstContentReceivedRef.current) {
+              if (action.type === 'tool_use' || action.type === 'thinking' || action.type === 'tool_result') {
+                firstContentReceivedRef.current = true
+                setStreamingPhase('streaming')
+              }
             }
           }
           break
@@ -282,6 +287,14 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           firstContentReceivedRef.current = false
           break
 
+        case 'user_interrupt':
+          // User sent a message mid-execution, Claude is incorporating it
+          setInterrupting(false)
+          resetStreamingContent()
+          setStreamingPhase('ai_thinking')
+          firstContentReceivedRef.current = false
+          break
+
         case 'error':
           onError?.(data.message as string)
           break
@@ -294,6 +307,27 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     },
     [conversationId, queryClient, setProgress, setStepStatus, setStreamingPhase, appendStreamingContent, addStreamingAction, resetStreamingContent, setPaused, onError, onComplete]
   )
+
+  const interruptExecution = useCallback(async (message: string) => {
+    if (!isStreaming) return
+
+    setInterrupting(true)
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
+      const token = localStorage.getItem('token')
+      await fetch(`${apiUrl}/conversations/${conversationId}/interrupt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ content: message }),
+      })
+    } catch {
+      setInterrupting(false)
+    }
+  }, [conversationId, isStreaming, setInterrupting])
 
   const cancel = useCallback(async () => {
     // 1. Mark as cancelled immediately so UI stops
@@ -332,6 +366,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
   return {
     sendMessage,
     cancel,
+    interruptExecution,
     isStreaming,
     streamingPhase,
     streamingContent,

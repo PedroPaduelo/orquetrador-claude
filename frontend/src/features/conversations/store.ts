@@ -43,6 +43,10 @@ interface ConversationsState {
   clearStreaming: () => void
   resetStreamingContent: () => void
 
+  // User interrupt state
+  isInterrupting: boolean
+  setInterrupting: (value: boolean) => void
+
   setPaused: (paused: boolean, info?: PausedInfo | null) => void
 
   setProgress: (stepIndex: number, totalSteps: number) => void
@@ -62,6 +66,7 @@ export const useConversationsStore = create<ConversationsState>((set, get) => ({
   totalSteps: 0,
   isPaused: false,
   pausedInfo: null,
+  isInterrupting: false,
   stepStatuses: new Map(),
   actionsCache: new Map(),
 
@@ -91,6 +96,8 @@ export const useConversationsStore = create<ConversationsState>((set, get) => ({
       streamingContent: '',
       streamingActions: [],
     }),
+
+  setInterrupting: (value) => set({ isInterrupting: value }),
 
   setPaused: (paused, info) =>
     set({

@@ -33,6 +33,8 @@ export interface EngineExecuteResult {
   timedOut: boolean
   cancelled: boolean
   needsUserInput: boolean
+  interrupted?: boolean
+  interruptMessage?: string
   exitCode?: number | null
   signal?: string | null
   error?: string
@@ -41,5 +43,6 @@ export interface EngineExecuteResult {
 export interface CliEngine {
   execute(options: EngineExecuteOptions): Promise<EngineExecuteResult>
   cancel(conversationId: string): boolean
+  interrupt(conversationId: string, userMessage: string): boolean
   hasActiveProcess(conversationId: string): boolean
 }

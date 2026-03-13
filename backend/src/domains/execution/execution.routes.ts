@@ -167,6 +167,9 @@ export async function executionRoutes(app: FastifyInstance) {
         'execution:resumed': (data: unknown) => {
           if (filterByConversation(data)) sendEvent('execution_resumed', data)
         },
+        'user:interrupt': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('user_interrupt', data)
+        },
       }
 
       // Register all event listeners
@@ -241,6 +244,38 @@ export async function executionRoutes(app: FastifyInstance) {
         cleanup()
         reply.raw.end()
       }
+    }
+  )
+
+  // POST /conversations/:id/interrupt - send user message mid-execution
+  server.post(
+    '/conversations/:id/interrupt',
+    {
+      schema: {
+        tags: ['Messages'],
+        summary: 'Interrupt running execution with user message',
+        params: z.object({
+          id: z.string(),
+        }),
+        body: z.object({
+          content: z.string().min(1),
+        }),
+        response: {
+          200: z.object({ interrupted: z.boolean() }),
+        },
+      },
+    },
+    async (request) => {
+      await request.getCurrentUserId()
+      const { id } = request.params as { id: string }
+      const { content } = request.body as { content: string }
+
+      if (!taskOrchestrator.isExecuting(id)) {
+        throw new BadRequestError('No active execution for this conversation')
+      }
+
+      const interrupted = taskOrchestrator.interruptExecution(id, content)
+      return { interrupted }
     }
   )
 

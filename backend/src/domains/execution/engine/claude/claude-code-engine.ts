@@ -26,6 +26,7 @@ const ENV_BLOCKLIST = new Set([
 export class ClaudeCodeEngine implements CliEngine {
   private activeProcesses = new Map<string, ChildProcess>()
   private cancelledProcesses = new Set<string>()
+  private interruptedProcesses = new Map<string, string>() // processId -> userMessage
   private cachedClaudeBin: string | null = null
 
   private resolveClaudeBin(): string {
@@ -328,6 +329,12 @@ export class ClaudeCodeEngine implements CliEngine {
           cancelled = true
         }
 
+        // Check if this was a user interrupt
+        const interruptMessage = this.interruptedProcesses.get(processId)
+        if (interruptMessage !== undefined) {
+          this.interruptedProcesses.delete(processId)
+        }
+
         // Determine error
         let finalError: string | undefined
         if (needsUserInput) {
@@ -368,11 +375,13 @@ export class ClaudeCodeEngine implements CliEngine {
           resumeToken: sessionId,
           actions,
           timedOut: false,
-          cancelled,
+          cancelled: interruptMessage !== undefined ? false : cancelled,
           needsUserInput,
           exitCode,
           signal: exitSignal,
-          error: finalError,
+          error: interruptMessage !== undefined ? undefined : finalError,
+          interrupted: interruptMessage !== undefined,
+          interruptMessage: interruptMessage,
         })
       })
 
@@ -430,6 +439,36 @@ export class ClaudeCodeEngine implements CliEngine {
     }
 
     return cancelled
+  }
+
+  interrupt(conversationId: string, userMessage: string): boolean {
+    let interrupted = false
+
+    for (const [processId, childProcess] of this.activeProcesses) {
+      if (processId.startsWith(conversationId)) {
+        const pid = childProcess.pid
+
+        // Mark as interrupted (not cancelled) with the user's message
+        this.interruptedProcesses.set(processId, userMessage)
+
+        if (pid) {
+          try { process.kill(-pid, 'SIGTERM') } catch { childProcess.kill('SIGTERM') }
+        } else {
+          childProcess.kill('SIGTERM')
+        }
+
+        setTimeout(() => {
+          if (pid) {
+            try { process.kill(-pid, 'SIGKILL') } catch { /* dead */ }
+          }
+          try { childProcess.kill('SIGKILL') } catch { /* dead */ }
+        }, 2000)
+
+        interrupted = true
+      }
+    }
+
+    return interrupted
   }
 
   hasActiveProcess(conversationId: string): boolean {

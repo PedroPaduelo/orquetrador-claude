@@ -138,6 +138,14 @@ export interface ExecutionResumedEvent {
   stepOrder: number
 }
 
+export interface UserInterruptEvent {
+  executionId: string
+  conversationId: string
+  stepId: string
+  stepName: string
+  userMessage: string
+}
+
 // Type-safe event emitter
 export class OrchestratorEvents extends EventEmitter {
   emitStepStart(data: StepStartEvent) {
@@ -194,6 +202,10 @@ export class OrchestratorEvents extends EventEmitter {
 
   emitExecutionResumed(data: ExecutionResumedEvent) {
     this.emit('execution:resumed', data)
+  }
+
+  emitUserInterrupt(data: UserInterruptEvent) {
+    this.emit('user:interrupt', data)
   }
 }
 
