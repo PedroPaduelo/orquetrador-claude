@@ -108,7 +108,7 @@ export async function importFromUrl(
           }
 
           const targetPath = join(targetDir, relativePath)
-          mkdirSync(dirname(targetPath), { recursive: true })
+          mkdirSync(dirname(targetPath), { recursive: true, mode: 0o775 })
           writeFileSync(targetPath, content, 'utf-8')
           filesWritten++
         } catch (err) {
@@ -317,7 +317,7 @@ export async function importSingleFile(
             )
             const relativePath = sf.path.substring(dir.length + 1)
             const targetPath = join(projectPath, '.claude', 'skills', skillName, relativePath)
-            mkdirSync(dirname(targetPath), { recursive: true })
+            mkdirSync(dirname(targetPath), { recursive: true, mode: 0o775 })
             writeFileSync(targetPath, sfContent, 'utf-8')
           } catch { /* skip */ }
         }
@@ -325,7 +325,7 @@ export async function importSingleFile(
       } catch {
         // Fallback: write just the SKILL.md
         const targetPath = join(projectPath, '.claude', 'skills', skillName, 'SKILL.md')
-        mkdirSync(dirname(targetPath), { recursive: true })
+        mkdirSync(dirname(targetPath), { recursive: true, mode: 0o775 })
         writeFileSync(targetPath, content, 'utf-8')
         imported.push({ type: 'skill', name: skillName, filesCount: 1 })
       }
@@ -403,7 +403,7 @@ export async function importSingleFile(
 
     if (projectPath) {
       const targetPath = join(projectPath, '.claude', 'agents', `${agentName}.md`)
-      mkdirSync(dirname(targetPath), { recursive: true })
+      mkdirSync(dirname(targetPath), { recursive: true, mode: 0o775 })
       writeFileSync(targetPath, content, 'utf-8')
       imported.push({ type: 'agent', name: agentName, filesCount: 1 })
     }

@@ -3,6 +3,18 @@ import type { Action, WorkflowStepSummary } from './types'
 
 export type StreamingPhase = 'idle' | 'preparing' | 'connecting' | 'ai_thinking' | 'streaming'
 
+export interface PausedInfo {
+  executionId: string
+  stepId: string
+  stepName: string
+  stepOrder: number
+  resumeToken: string | null
+  askUserQuestion?: {
+    question: string
+    options?: Array<{ label: string; description?: string }>
+  }
+}
+
 interface ConversationsState {
   // Streaming state
   isStreaming: boolean
@@ -12,8 +24,12 @@ interface ConversationsState {
   currentStepIndex: number
   totalSteps: number
 
+  // Paused state (waiting for user input)
+  isPaused: boolean
+  pausedInfo: PausedInfo | null
+
   // Step statuses
-  stepStatuses: Map<string, 'pending' | 'running' | 'active' | 'completed' | 'error' | 'retry' | 'cancelled'>
+  stepStatuses: Map<string, 'pending' | 'running' | 'active' | 'completed' | 'error' | 'retry' | 'cancelled' | 'paused'>
 
   // Actions cache (persisted per message)
   actionsCache: Map<string, Action[]>
@@ -27,8 +43,10 @@ interface ConversationsState {
   clearStreaming: () => void
   resetStreamingContent: () => void
 
+  setPaused: (paused: boolean, info?: PausedInfo | null) => void
+
   setProgress: (stepIndex: number, totalSteps: number) => void
-  setStepStatus: (stepId: string, status: 'pending' | 'running' | 'active' | 'completed' | 'error' | 'retry' | 'cancelled') => void
+  setStepStatus: (stepId: string, status: 'pending' | 'running' | 'active' | 'completed' | 'error' | 'retry' | 'cancelled' | 'paused') => void
   initStepStatuses: (steps: WorkflowStepSummary[]) => void
 
   cacheActions: (messageId: string, actions: Action[]) => void
@@ -42,6 +60,8 @@ export const useConversationsStore = create<ConversationsState>((set, get) => ({
   streamingActions: [],
   currentStepIndex: 0,
   totalSteps: 0,
+  isPaused: false,
+  pausedInfo: null,
   stepStatuses: new Map(),
   actionsCache: new Map(),
 
@@ -70,6 +90,12 @@ export const useConversationsStore = create<ConversationsState>((set, get) => ({
       streamingPhase: 'ai_thinking',
       streamingContent: '',
       streamingActions: [],
+    }),
+
+  setPaused: (paused, info) =>
+    set({
+      isPaused: paused,
+      pausedInfo: info ?? null,
     }),
 
   setProgress: (stepIndex, totalSteps) =>

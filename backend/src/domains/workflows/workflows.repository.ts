@@ -11,6 +11,10 @@ function parseStep(step: {
   maxRetries: number
   backend: string
   model: string | null
+  dependsOn: string
+  validators: string
+  outputVariables: string
+  inputVariables: string
   mcpServers: { serverId: string }[]
   skills: { skillId: string }[]
   agents: { agentId: string }[]
@@ -27,6 +31,10 @@ function parseStep(step: {
     maxRetries: step.maxRetries,
     backend: step.backend,
     model: step.model,
+    dependsOn: safeJsonParse<string[]>(step.dependsOn, []),
+    validators: safeJsonParse<unknown[]>(step.validators, []),
+    outputVariables: safeJsonParse<string[]>(step.outputVariables, []),
+    inputVariables: safeJsonParse<string[]>(step.inputVariables, []),
     mcpServerIds: step.mcpServers.map((s) => s.serverId),
     skillIds: step.skills.map((s) => s.skillId),
     agentIds: step.agents.map((s) => s.agentId),
@@ -122,6 +130,10 @@ export const workflowsRepository = {
       maxRetries?: number
       backend?: string
       model?: string | null
+      dependsOn?: string[]
+      validators?: unknown[]
+      outputVariables?: string[]
+      inputVariables?: string[]
       mcpServerIds?: string[]
       skillIds?: string[]
       agentIds?: string[]
@@ -146,6 +158,10 @@ export const workflowsRepository = {
                 maxRetries: step.maxRetries ?? 0,
                 backend: step.backend ?? 'claude',
                 model: step.model,
+                dependsOn: JSON.stringify(step.dependsOn ?? []),
+                validators: JSON.stringify(step.validators ?? []),
+                outputVariables: JSON.stringify(step.outputVariables ?? []),
+                inputVariables: JSON.stringify(step.inputVariables ?? []),
                 mcpServers: step.mcpServerIds?.length
                   ? { create: step.mcpServerIds.map((serverId) => ({ serverId })) }
                   : undefined,
@@ -191,6 +207,10 @@ export const workflowsRepository = {
         maxRetries?: number
         backend?: string
         model?: string | null
+        dependsOn?: string[]
+        validators?: unknown[]
+        outputVariables?: string[]
+        inputVariables?: string[]
         mcpServerIds?: string[]
         skillIds?: string[]
         agentIds?: string[]
@@ -232,6 +252,10 @@ export const workflowsRepository = {
           maxRetries: step.maxRetries ?? 0,
           backend: step.backend ?? 'claude',
           model: step.model,
+          dependsOn: JSON.stringify(step.dependsOn ?? []),
+          validators: JSON.stringify(step.validators ?? []),
+          outputVariables: JSON.stringify(step.outputVariables ?? []),
+          inputVariables: JSON.stringify(step.inputVariables ?? []),
           mcpServers: step.mcpServerIds?.length
             ? { create: step.mcpServerIds.map((serverId) => ({ serverId })) }
             : undefined,

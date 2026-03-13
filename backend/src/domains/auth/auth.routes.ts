@@ -14,7 +14,7 @@ const PROJECT_BASE_PATH = process.env.PROJECT_BASE_PATH || '/workspace/temp-orqu
 function ensureUserDir(userId: string): string {
   const userDir = join(PROJECT_BASE_PATH, 'users', userId, 'projetos')
   if (!existsSync(userDir)) {
-    mkdirSync(userDir, { recursive: true })
+    mkdirSync(userDir, { recursive: true, mode: 0o775 })
   }
   return userDir
 }

@@ -21,6 +21,7 @@ const HooksPage = lazy(() => import('@/features/hooks'))
 const SettingsPage = lazy(() => import('@/features/settings'))
 const AdminPage = lazy(() => import('@/features/admin'))
 const WebhooksPage = lazy(() => import('@/features/webhooks'))
+const StepTemplatesPage = lazy(() => import('@/features/step-templates'))
 
 // Page loader
 function PageLoader() {
@@ -182,6 +183,15 @@ export function AppRoutes() {
           element={
             <Lazy>
               <WebhooksPage />
+            </Lazy>
+          }
+        />
+
+        <Route
+          path="step-templates"
+          element={
+            <Lazy>
+              <StepTemplatesPage />
             </Lazy>
           }
         />

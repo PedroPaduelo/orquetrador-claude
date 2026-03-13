@@ -161,6 +161,12 @@ export async function executionRoutes(app: FastifyInstance) {
         'validation:failed': (data: unknown) => {
           if (filterByConversation(data)) sendEvent('validation_failed', data)
         },
+        'execution:paused': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('execution_paused', data)
+        },
+        'execution:resumed': (data: unknown) => {
+          if (filterByConversation(data)) sendEvent('execution_resumed', data)
+        },
       }
 
       // Register all event listeners
@@ -207,7 +213,13 @@ export async function executionRoutes(app: FastifyInstance) {
           userId,
         }
 
-        if (conversation.workflow.type === 'sequential' && isDAGWorkflow(conversation.workflow.steps)) {
+        // Check if there's a paused execution to resume
+        const pausedExecution = await taskOrchestrator.getPausedExecution(id)
+        if (pausedExecution) {
+          // User is responding to a paused execution — resume it
+          console.log(`[executionRoutes] Resuming paused execution ${pausedExecution.executionId} for conversation ${id} at step ${pausedExecution.stepIndex}`)
+          await taskOrchestrator.resumeExecution(context, content, pausedExecution)
+        } else if (conversation.workflow.type === 'sequential' && isDAGWorkflow(conversation.workflow.steps)) {
           await taskOrchestrator.executeDAG(context, content)
         } else if (conversation.workflow.type === 'sequential') {
           await taskOrchestrator.executeSequential(context, content)

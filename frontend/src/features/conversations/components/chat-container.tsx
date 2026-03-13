@@ -71,7 +71,7 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
   const messages = conversation.messages || []
   const currentStepIndex = conversation.currentStepIndex || 0
 
-  const { sendMessage, cancel, isStreaming, streamingPhase, streamingContent, streamingActions } =
+  const { sendMessage, cancel, isStreaming, streamingPhase, streamingContent, streamingActions, isPaused, pausedInfo } =
     useSSEStream({
       conversationId: conversation.id,
       onComplete: () => {
@@ -238,12 +238,41 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
         onCancel={cancel}
       />
 
+      {/* Paused indicator - Claude is waiting for user input */}
+      {isPaused && pausedInfo?.askUserQuestion && (
+        <div className="border-t border-amber-500/30 bg-amber-500/5 px-4 py-3">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-sm font-medium text-amber-500">
+                Aguardando resposta — Step {pausedInfo.stepOrder}: {pausedInfo.stepName}
+              </span>
+            </div>
+            <p className="text-sm text-foreground/80 mb-2">{pausedInfo.askUserQuestion.question}</p>
+            {pausedInfo.askUserQuestion.options && pausedInfo.askUserQuestion.options.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {pausedInfo.askUserQuestion.options.map((opt) => (
+                  <button
+                    key={opt.label}
+                    onClick={() => sendMessage(opt.label, currentStepIndex)}
+                    className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-sm text-foreground transition-colors"
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <MessageInput
         conversationId={conversation.id}
         onSend={(content, attachments) => sendMessage(content, currentStepIndex, attachments)}
         onCancel={cancel}
         isStreaming={isStreaming}
+        isPaused={isPaused}
         disabled={isWorkflowFinished}
       />
     </div>

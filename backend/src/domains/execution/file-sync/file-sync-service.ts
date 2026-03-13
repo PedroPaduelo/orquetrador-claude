@@ -75,7 +75,7 @@ export class FileSyncService {
         const currentContent = readFileSync(filePath, 'utf-8')
         if (currentContent === expectedContent) return false
       }
-      mkdirSync(dirname(filePath), { recursive: true, mode: 0o755 })
+      mkdirSync(dirname(filePath), { recursive: true, mode: 0o775 })
       writeFileSync(filePath, expectedContent, { encoding: 'utf-8', mode: 0o644 })
       return true
     } catch (err) {

@@ -36,7 +36,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
     async (request) => {
       const userId = await request.getCurrentUserId()
       const userProjectsDir = getUserProjectsDir(userId)
-      mkdirSync(userProjectsDir, { recursive: true })
+      mkdirSync(userProjectsDir, { recursive: true, mode: 0o775 })
 
       const entries = readdirSync(userProjectsDir)
       const dirs = entries.filter((entry) => {
@@ -399,6 +399,21 @@ export async function conversationsRoutes(app: FastifyInstance) {
           200: z.object({
             conversationId: z.string(),
             isExecuting: z.boolean(),
+            isPaused: z.boolean(),
+            pausedInfo: z.object({
+              executionId: z.string(),
+              stepId: z.string(),
+              stepIndex: z.number(),
+              resumeToken: z.string().nullable(),
+              pausedAt: z.string(),
+              askUserQuestion: z.object({
+                question: z.string(),
+                options: z.array(z.object({
+                  label: z.string(),
+                  description: z.string().optional(),
+                })).optional(),
+              }).optional().nullable(),
+            }).nullable(),
             lastExecution: z.object({
               id: z.string(),
               state: z.string(),

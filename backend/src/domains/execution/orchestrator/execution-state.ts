@@ -2,6 +2,19 @@ import { prisma } from '../../../lib/prisma.js'
 
 type ExecutionStatus = 'queued' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled'
 
+export interface PausedExecutionInfo {
+  executionId: string
+  conversationId: string
+  stepIndex: number
+  stepId: string
+  resumeToken: string | null
+  pausedAt: string
+  askUserQuestion?: {
+    question: string
+    options?: Array<{ label: string; description?: string }>
+  }
+}
+
 export interface ExecutionStateData {
   id: string
   conversationId: string
@@ -131,6 +144,52 @@ export class ExecutionStateManager {
   async markCancelled(executionId: string): Promise<void> {
     await this.updateStatus(executionId, 'cancelled', {
       cancelledAt: new Date().toISOString(),
+    })
+  }
+
+  async markPaused(
+    executionId: string,
+    stepIndex: number,
+    stepId: string,
+    resumeToken: string | null,
+    askUserQuestion?: PausedExecutionInfo['askUserQuestion'],
+  ): Promise<void> {
+    await this.updateStatus(executionId, 'paused', {
+      pausedAt: new Date().toISOString(),
+      pausedStepIndex: stepIndex,
+      pausedStepId: stepId,
+      pausedResumeToken: resumeToken,
+      askUserQuestion: askUserQuestion || null,
+    })
+  }
+
+  async getPausedExecution(conversationId: string): Promise<PausedExecutionInfo | null> {
+    const state = await prisma.executionState.findFirst({
+      where: {
+        conversationId,
+        state: 'paused',
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    if (!state) return null
+
+    const meta = typeof state.metadata === 'string' ? JSON.parse(state.metadata) : (state.metadata || {})
+
+    return {
+      executionId: state.id,
+      conversationId: state.conversationId,
+      stepIndex: meta.pausedStepIndex ?? state.currentStepIndex,
+      stepId: meta.pausedStepId ?? '',
+      resumeToken: meta.pausedResumeToken ?? null,
+      pausedAt: meta.pausedAt ?? '',
+      askUserQuestion: meta.askUserQuestion ?? undefined,
+    }
+  }
+
+  async resumeFromPaused(executionId: string): Promise<void> {
+    await this.updateStatus(executionId, 'running', {
+      resumedAt: new Date().toISOString(),
     })
   }
 

@@ -12,6 +12,7 @@ import { runValidators } from '../validators/validator-runner.js'
 import type { ValidatorConfig } from '../validators/types.js'
 import { webhooksService } from '../../webhooks/webhooks.service.js'
 import type { WorkflowStep } from '@prisma/client'
+import type { PausedExecutionInfo } from './execution-state.js'
 
 export interface MessageAttachment {
   id: string
@@ -329,6 +330,76 @@ export class TaskOrchestrator {
         if (result.cancelled || !this.activeExecutions.get(conversationId)) {
           orchestratorEvents.emitExecutionCancelled({ executionId, conversationId })
           await executionStateManager.markCancelled(executionId)
+          this.activeExecutions.delete(conversationId)
+          return
+        }
+
+        // PAUSE: when Claude needs user input, save state and stop
+        if (result.needsUserInput) {
+          // Extract AskUserQuestion details from actions
+          let askQuestion: PausedExecutionInfo['askUserQuestion'] | undefined
+          for (const action of result.actions) {
+            if (action.type === 'tool_use' && action.name === 'AskUserQuestion' && action.input) {
+              const input = action.input as Record<string, unknown>
+              const questions = input.questions as Array<Record<string, unknown>> | undefined
+              if (questions && questions.length > 0) {
+                const q = questions[0]
+                askQuestion = {
+                  question: q.question as string,
+                  options: (q.options as Array<{ label: string; description?: string }>) || undefined,
+                }
+              }
+            }
+          }
+
+          // Save assistant content so far
+          if (result.content) {
+            const assistantMessage = await prisma.message.create({
+              data: {
+                conversationId,
+                stepId: step.id,
+                role: 'assistant',
+                content: result.content,
+                metadata: JSON.stringify({
+                  actions: result.actions,
+                  sessionId: result.resumeToken,
+                  stepName: step.name,
+                  stepOrder: i + 1,
+                  needsUserInput: true,
+                }),
+              },
+            })
+
+            orchestratorEvents.emitMessageSaved({
+              executionId,
+              conversationId,
+              messageId: assistantMessage.id,
+              role: 'assistant',
+              content: result.content,
+              stepId: step.id,
+              stepName: step.name,
+              metadata: { sessionId: result.resumeToken, needsUserInput: true, actions: result.actions },
+            })
+          }
+
+          await executionStateManager.markPaused(
+            executionId,
+            i,
+            step.id,
+            result.resumeToken,
+            askQuestion,
+          )
+
+          orchestratorEvents.emitExecutionPaused({
+            executionId,
+            conversationId,
+            stepId: step.id,
+            stepName: step.name,
+            stepOrder: i + 1,
+            resumeToken: result.resumeToken,
+            askUserQuestion: askQuestion,
+          })
+
           this.activeExecutions.delete(conversationId)
           return
         }
@@ -836,6 +907,72 @@ export class TaskOrchestrator {
         return
       }
 
+      // PAUSE: when Claude needs user input, save state and stop
+      if (result.needsUserInput) {
+        let askQuestion: PausedExecutionInfo['askUserQuestion'] | undefined
+        for (const action of result.actions) {
+          if (action.type === 'tool_use' && action.name === 'AskUserQuestion' && action.input) {
+            const input = action.input as Record<string, unknown>
+            const questions = input.questions as Array<Record<string, unknown>> | undefined
+            if (questions && questions.length > 0) {
+              const q = questions[0]
+              askQuestion = {
+                question: q.question as string,
+                options: (q.options as Array<{ label: string; description?: string }>) || undefined,
+              }
+            }
+          }
+        }
+
+        if (result.content) {
+          const assistantMessage = await prisma.message.create({
+            data: {
+              conversationId,
+              stepId: step.id,
+              role: 'assistant',
+              content: result.content,
+              metadata: JSON.stringify({
+                actions: result.actions,
+                sessionId: result.resumeToken,
+                stepName: step.name,
+                stepOrder: stepIndex + 1,
+                needsUserInput: true,
+              }),
+            },
+          })
+
+          orchestratorEvents.emitMessageSaved({
+            executionId,
+            conversationId,
+            messageId: assistantMessage.id,
+            role: 'assistant',
+            content: result.content,
+            stepId: step.id,
+            stepName: step.name,
+            metadata: { sessionId: result.resumeToken, needsUserInput: true, actions: result.actions },
+          })
+        }
+
+        await executionStateManager.markPaused(
+          executionId,
+          stepIndex,
+          step.id,
+          result.resumeToken,
+          askQuestion,
+        )
+
+        orchestratorEvents.emitExecutionPaused({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          stepName: step.name,
+          stepOrder: stepIndex + 1,
+          resumeToken: result.resumeToken,
+          askUserQuestion: askQuestion,
+        })
+        return
+      }
+
       if (result.content) {
         const assistantMessage = await prisma.message.create({
           data: {
@@ -848,7 +985,6 @@ export class TaskOrchestrator {
               sessionId: result.resumeToken,
               stepName: step.name,
               stepOrder: stepIndex + 1,
-              needsUserInput: result.needsUserInput,
             }),
           },
         })
@@ -861,7 +997,7 @@ export class TaskOrchestrator {
           content: result.content,
           stepId: step.id,
           stepName: step.name,
-          metadata: { sessionId: result.resumeToken, needsUserInput: result.needsUserInput, actions: result.actions },
+          metadata: { sessionId: result.resumeToken, actions: result.actions },
         })
       }
 
@@ -873,7 +1009,6 @@ export class TaskOrchestrator {
           stepOrder: stepIndex + 1,
           contentLength: result.content.length,
           actionsCount: result.actions.length,
-          needsUserInput: result.needsUserInput,
         },
         step.id,
         step.name
@@ -888,7 +1023,6 @@ export class TaskOrchestrator {
         content: result.content,
         sessionId: result.resumeToken || undefined,
         finished: false,
-        needsUserInput: result.needsUserInput,
       })
 
       await executionStateManager.markCompleted(executionId)
@@ -904,11 +1038,442 @@ export class TaskOrchestrator {
     }
   }
 
+  /**
+   * Resume a paused execution — continues from the same step using --resume token.
+   * The user's answer is sent as the message, and Claude continues the existing session.
+   */
+  async resumeExecution(
+    context: ExecutionContext,
+    userAnswer: string,
+    pausedInfo: PausedExecutionInfo,
+  ): Promise<void> {
+    const { conversationId, steps, projectPath, attachments, userId } = context
+    const executionId = pausedInfo.executionId
+
+    if (this.activeExecutions.get(conversationId)) {
+      throw new Error('Execution already in progress for this conversation')
+    }
+
+    this.activeExecutions.set(conversationId, true)
+
+    // Mark execution as running again
+    await executionStateManager.resumeFromPaused(executionId)
+
+    const stepIndex = pausedInfo.stepIndex
+    const step = steps[stepIndex]
+    if (!step) {
+      await executionStateManager.markFailed(executionId, `Step index ${stepIndex} not found`)
+      this.activeExecutions.delete(conversationId)
+      return
+    }
+
+    // Save user's answer as a message
+    const userMessage = await prisma.message.create({
+      data: {
+        conversationId,
+        stepId: step.id,
+        role: 'user',
+        content: userAnswer,
+        ...(attachments && attachments.length > 0 ? {
+          attachments: {
+            create: attachments.map(att => ({
+              id: att.id,
+              filename: att.filename,
+              mimeType: att.mimeType,
+              size: att.size || 0,
+              path: att.path,
+              projectPath: att.projectPath,
+              url: att.url,
+            })),
+          },
+        } : {}),
+      },
+      include: { attachments: true },
+    })
+
+    orchestratorEvents.emitMessageSaved({
+      executionId,
+      conversationId,
+      messageId: userMessage.id,
+      role: 'user',
+      content: userAnswer,
+      stepId: step.id,
+      stepName: step.name,
+      attachments: userMessage.attachments,
+    })
+
+    orchestratorEvents.emitExecutionResumed({
+      executionId,
+      conversationId,
+      stepId: step.id,
+      stepName: step.name,
+      stepOrder: stepIndex + 1,
+    })
+
+    orchestratorEvents.emitStepStart({
+      executionId,
+      conversationId,
+      stepId: step.id,
+      stepName: step.name,
+      stepOrder: stepIndex + 1,
+      totalSteps: steps.length,
+    })
+
+    try {
+      // Execute the SAME step with --resume to continue the session
+      const result = await this.executeStep(
+        executionId,
+        conversationId,
+        step,
+        userAnswer,
+        projectPath,
+        attachments,
+        userId,
+      )
+
+      if (result.cancelled || !this.activeExecutions.get(conversationId)) {
+        orchestratorEvents.emitExecutionCancelled({ executionId, conversationId })
+        await executionStateManager.markCancelled(executionId)
+        this.activeExecutions.delete(conversationId)
+        return
+      }
+
+      // If it needs user input AGAIN, pause again
+      if (result.needsUserInput) {
+        let askQuestion: PausedExecutionInfo['askUserQuestion'] | undefined
+        for (const action of result.actions) {
+          if (action.type === 'tool_use' && action.name === 'AskUserQuestion' && action.input) {
+            const input = action.input as Record<string, unknown>
+            const questions = input.questions as Array<Record<string, unknown>> | undefined
+            if (questions && questions.length > 0) {
+              const q = questions[0]
+              askQuestion = {
+                question: q.question as string,
+                options: (q.options as Array<{ label: string; description?: string }>) || undefined,
+              }
+            }
+          }
+        }
+
+        if (result.content) {
+          const assistantMessage = await prisma.message.create({
+            data: {
+              conversationId,
+              stepId: step.id,
+              role: 'assistant',
+              content: result.content,
+              metadata: JSON.stringify({
+                actions: result.actions,
+                sessionId: result.resumeToken,
+                stepName: step.name,
+                stepOrder: stepIndex + 1,
+                needsUserInput: true,
+              }),
+            },
+          })
+          orchestratorEvents.emitMessageSaved({
+            executionId,
+            conversationId,
+            messageId: assistantMessage.id,
+            role: 'assistant',
+            content: result.content,
+            stepId: step.id,
+            stepName: step.name,
+            metadata: { sessionId: result.resumeToken, needsUserInput: true, actions: result.actions },
+          })
+        }
+
+        await executionStateManager.markPaused(executionId, stepIndex, step.id, result.resumeToken, askQuestion)
+        orchestratorEvents.emitExecutionPaused({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          stepName: step.name,
+          stepOrder: stepIndex + 1,
+          resumeToken: result.resumeToken,
+          askUserQuestion: askQuestion,
+        })
+        this.activeExecutions.delete(conversationId)
+        return
+      }
+
+      if (result.error) {
+        orchestratorEvents.emitStepError({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          stepName: step.name,
+          error: result.error,
+        })
+        await executionStateManager.markFailed(executionId, result.error)
+        this.activeExecutions.delete(conversationId)
+        return
+      }
+
+      // Save result
+      if (result.content) {
+        const assistantMessage = await prisma.message.create({
+          data: {
+            conversationId,
+            stepId: step.id,
+            role: 'assistant',
+            content: result.content,
+            metadata: JSON.stringify({
+              actions: result.actions,
+              sessionId: result.resumeToken,
+              stepName: step.name,
+              stepOrder: stepIndex + 1,
+            }),
+          },
+        })
+        orchestratorEvents.emitMessageSaved({
+          executionId,
+          conversationId,
+          messageId: assistantMessage.id,
+          role: 'assistant',
+          content: result.content,
+          stepId: step.id,
+          stepName: step.name,
+          metadata: { sessionId: result.resumeToken, actions: result.actions },
+        })
+      }
+
+      orchestratorEvents.emitStepComplete({
+        executionId,
+        conversationId,
+        stepId: step.id,
+        stepName: step.name,
+        stepOrder: stepIndex + 1,
+        content: result.content,
+        sessionId: result.resumeToken || undefined,
+        finished: false,
+      })
+
+      await executionStateManager.saveCheckpoint(executionId, stepIndex, result.content, result.content).catch(() => {})
+
+      // For sequential workflows: continue to next steps
+      const isSequentialWorkflow = steps.length > 1 && context.workflowId
+      if (isSequentialWorkflow) {
+        let currentInput = result.content
+        let retryCounts: Record<string, number> = {}
+
+        for (let i = stepIndex + 1; i < steps.length; i++) {
+          if (!this.activeExecutions.get(conversationId)) {
+            orchestratorEvents.emitExecutionCancelled({ executionId, conversationId })
+            await executionStateManager.markCancelled(executionId)
+            return
+          }
+
+          const nextStep = steps[i]
+          await executionStateManager.updateStepIndex(executionId, i)
+
+          orchestratorEvents.emitStepStart({
+            executionId,
+            conversationId,
+            stepId: nextStep.id,
+            stepName: nextStep.name,
+            stepOrder: i + 1,
+            totalSteps: steps.length,
+          })
+
+          const nextResult = await this.executeStep(
+            executionId,
+            conversationId,
+            nextStep,
+            currentInput,
+            projectPath,
+            undefined,
+            userId,
+          )
+
+          if (nextResult.cancelled || !this.activeExecutions.get(conversationId)) {
+            orchestratorEvents.emitExecutionCancelled({ executionId, conversationId })
+            await executionStateManager.markCancelled(executionId)
+            this.activeExecutions.delete(conversationId)
+            return
+          }
+
+          if (nextResult.needsUserInput) {
+            let askQ: PausedExecutionInfo['askUserQuestion'] | undefined
+            for (const action of nextResult.actions) {
+              if (action.type === 'tool_use' && action.name === 'AskUserQuestion' && action.input) {
+                const inp = action.input as Record<string, unknown>
+                const questions = inp.questions as Array<Record<string, unknown>> | undefined
+                if (questions && questions.length > 0) {
+                  const q = questions[0]
+                  askQ = {
+                    question: q.question as string,
+                    options: (q.options as Array<{ label: string; description?: string }>) || undefined,
+                  }
+                }
+              }
+            }
+
+            if (nextResult.content) {
+              const msg = await prisma.message.create({
+                data: {
+                  conversationId,
+                  stepId: nextStep.id,
+                  role: 'assistant',
+                  content: nextResult.content,
+                  metadata: JSON.stringify({
+                    actions: nextResult.actions,
+                    sessionId: nextResult.resumeToken,
+                    stepName: nextStep.name,
+                    stepOrder: i + 1,
+                    needsUserInput: true,
+                  }),
+                },
+              })
+              orchestratorEvents.emitMessageSaved({
+                executionId,
+                conversationId,
+                messageId: msg.id,
+                role: 'assistant',
+                content: nextResult.content,
+                stepId: nextStep.id,
+                stepName: nextStep.name,
+              })
+            }
+
+            await executionStateManager.markPaused(executionId, i, nextStep.id, nextResult.resumeToken, askQ)
+            orchestratorEvents.emitExecutionPaused({
+              executionId,
+              conversationId,
+              stepId: nextStep.id,
+              stepName: nextStep.name,
+              stepOrder: i + 1,
+              resumeToken: nextResult.resumeToken,
+              askUserQuestion: askQ,
+            })
+            this.activeExecutions.delete(conversationId)
+            return
+          }
+
+          if (nextResult.error) {
+            orchestratorEvents.emitStepError({
+              executionId,
+              conversationId,
+              stepId: nextStep.id,
+              stepName: nextStep.name,
+              error: nextResult.error,
+            })
+            await executionStateManager.markFailed(executionId, nextResult.error)
+            this.activeExecutions.delete(conversationId)
+            return
+          }
+
+          // Run validators
+          let validatorConfigs: ValidatorConfig[] = []
+          try { validatorConfigs = JSON.parse(nextStep.validators || '[]') } catch { validatorConfigs = [] }
+
+          if (validatorConfigs.length > 0) {
+            const validation = await runValidators(validatorConfigs, nextResult.content, projectPath)
+            if (!validation.allPassed) {
+              const failedResult = validation.results.find(r => !r.valid)
+              const feedback = failedResult?.feedback || failedResult?.details || failedResult?.message || 'Validation failed'
+              orchestratorEvents.emitValidationFailed({
+                executionId,
+                conversationId,
+                stepId: nextStep.id,
+                stepName: nextStep.name,
+                validatorType: failedResult?.type || 'unknown',
+                feedback,
+              })
+              const currentRetry = (retryCounts[`validator_${nextStep.id}`] || 0) + 1
+              const maxRetries = nextStep.maxRetries || 2
+              if (currentRetry < maxRetries) {
+                retryCounts[`validator_${nextStep.id}`] = currentRetry
+                currentInput = `A validacao falhou: ${feedback}\n\nPor favor corrija e tente novamente. Output anterior:\n${nextResult.content}`
+                i-- // retry same step
+                continue
+              }
+              delete retryCounts[`validator_${nextStep.id}`]
+            }
+          }
+
+          const msg = await prisma.message.create({
+            data: {
+              conversationId,
+              stepId: nextStep.id,
+              role: 'assistant',
+              content: nextResult.content,
+              metadata: JSON.stringify({
+                actions: nextResult.actions,
+                sessionId: nextResult.resumeToken,
+                stepName: nextStep.name,
+                stepOrder: i + 1,
+              }),
+            },
+          })
+          orchestratorEvents.emitMessageSaved({
+            executionId,
+            conversationId,
+            messageId: msg.id,
+            role: 'assistant',
+            content: nextResult.content,
+            stepId: nextStep.id,
+            stepName: nextStep.name,
+          })
+
+          orchestratorEvents.emitStepComplete({
+            executionId,
+            conversationId,
+            stepId: nextStep.id,
+            stepName: nextStep.name,
+            stepOrder: i + 1,
+            content: nextResult.content,
+            sessionId: nextResult.resumeToken || undefined,
+            finished: i >= steps.length - 1,
+          })
+
+          await executionStateManager.saveCheckpoint(executionId, i, nextResult.content, nextResult.content).catch(() => {})
+          currentInput = nextResult.content
+        }
+      }
+
+      await executionStateManager.markCompleted(executionId)
+      orchestratorEvents.emitExecutionComplete({
+        executionId,
+        conversationId,
+        success: true,
+      })
+
+      if (userId) {
+        webhooksService.dispatch('execution:complete', { executionId, conversationId, success: true }, userId).catch(() => {})
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      await executionStateManager.markFailed(executionId, errorMessage)
+      if (userId) {
+        webhooksService.dispatch('step:error', { executionId, conversationId, error: errorMessage }, userId).catch(() => {})
+      }
+      throw error
+    } finally {
+      this.activeExecutions.delete(conversationId)
+    }
+  }
+
+  /**
+   * Check if there's a paused execution for a conversation
+   */
+  async getPausedExecution(conversationId: string): Promise<PausedExecutionInfo | null> {
+    return executionStateManager.getPausedExecution(conversationId)
+  }
+
   cancel(conversationId: string): boolean {
     this.activeExecutions.delete(conversationId)
     const killed = this.engine.cancel(conversationId)
 
+    // Only delete sessions on explicit cancel, not on pause
     sessionManager.deleteAllSessions(conversationId).catch(() => {})
+
+    // Also cancel any paused executions
+    executionStateManager.getPausedExecution(conversationId).then(paused => {
+      if (paused) {
+        executionStateManager.markCancelled(paused.executionId).catch(() => {})
+      }
+    }).catch(() => {})
 
     return killed
   }

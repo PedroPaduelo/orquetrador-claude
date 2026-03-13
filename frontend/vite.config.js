@@ -46,12 +46,16 @@ export default defineConfig({
     server: {
         port: 5173,
         host: '0.0.0.0',
-        allowedHosts: true,
+        allowedHosts: 'all',
         watch: {
             usePolling: true,
             interval: 1000,
         },
         cors: true,
+        hmr: {
+            clientPort: 443,
+            protocol: 'wss',
+        },
         proxy: {
             '/api': {
                 target: 'http://localhost:3333',
@@ -62,7 +66,7 @@ export default defineConfig({
     },
     preview: {
         host: '0.0.0.0',
-        allowedHosts: true,
+        allowedHosts: 'all',
         cors: true,
     },
 });

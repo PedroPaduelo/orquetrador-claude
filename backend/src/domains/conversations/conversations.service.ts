@@ -125,13 +125,26 @@ export const conversationsService = {
         id: true,
         state: true,
         currentStepIndex: true,
+        metadata: true,
         createdAt: true,
       },
     })
 
+    // Check if paused
+    const pausedExecution = await taskOrchestrator.getPausedExecution(id)
+
     return {
       conversationId: id,
       isExecuting,
+      isPaused: !!pausedExecution,
+      pausedInfo: pausedExecution ? {
+        executionId: pausedExecution.executionId,
+        stepId: pausedExecution.stepId,
+        stepIndex: pausedExecution.stepIndex,
+        resumeToken: pausedExecution.resumeToken,
+        pausedAt: pausedExecution.pausedAt,
+        askUserQuestion: pausedExecution.askUserQuestion,
+      } : null,
       lastExecution: lastExecution
         ? {
             id: lastExecution.id,

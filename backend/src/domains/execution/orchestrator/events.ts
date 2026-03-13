@@ -117,6 +117,27 @@ export interface ValidationFailedEvent {
   feedback: string
 }
 
+export interface ExecutionPausedEvent {
+  executionId: string
+  conversationId: string
+  stepId: string
+  stepName: string
+  stepOrder: number
+  resumeToken: string | null
+  askUserQuestion?: {
+    question: string
+    options?: Array<{ label: string; description?: string }>
+  }
+}
+
+export interface ExecutionResumedEvent {
+  executionId: string
+  conversationId: string
+  stepId: string
+  stepName: string
+  stepOrder: number
+}
+
 // Type-safe event emitter
 export class OrchestratorEvents extends EventEmitter {
   emitStepStart(data: StepStartEvent) {
@@ -165,6 +186,14 @@ export class OrchestratorEvents extends EventEmitter {
 
   emitValidationFailed(data: ValidationFailedEvent) {
     this.emit('validation:failed', data)
+  }
+
+  emitExecutionPaused(data: ExecutionPausedEvent) {
+    this.emit('execution:paused', data)
+  }
+
+  emitExecutionResumed(data: ExecutionResumedEvent) {
+    this.emit('execution:resumed', data)
   }
 }
 

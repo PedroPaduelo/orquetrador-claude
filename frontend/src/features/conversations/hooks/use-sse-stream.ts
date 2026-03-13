@@ -21,12 +21,15 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     streamingPhase,
     streamingContent,
     streamingActions,
+    isPaused,
+    pausedInfo,
     setStreaming,
     setStreamingPhase,
     appendStreamingContent,
     addStreamingAction,
     clearStreaming,
     resetStreamingContent,
+    setPaused,
     setProgress,
     setStepStatus,
   } = useConversationsStore()
@@ -37,6 +40,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
 
       cancelledRef.current = false
       firstContentReceivedRef.current = false
+      setPaused(false) // Clear paused state when sending new message
       clearStreaming()
       setStreaming(true)
       // Phase: preparing (sending to backend)
@@ -128,7 +132,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
         }
       }
     },
-    [conversationId, isStreaming, queryClient, onComplete, onError]
+    [conversationId, isStreaming, queryClient, onComplete, onError, setPaused]
   )
 
   const handleEvent = useCallback(
@@ -257,16 +261,38 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           })
           break
 
+        case 'execution_paused':
+          // Execution is waiting for user input — show input and question
+          setStepStatus(data.stepId as string, 'paused')
+          setPaused(true, {
+            executionId: data.executionId as string,
+            stepId: data.stepId as string,
+            stepName: data.stepName as string,
+            stepOrder: data.stepOrder as number,
+            resumeToken: data.resumeToken as string | null,
+            askUserQuestion: data.askUserQuestion as { question: string; options?: Array<{ label: string; description?: string }> } | undefined,
+          })
+          break
+
+        case 'execution_resumed':
+          // Execution resumed from paused state
+          setPaused(false)
+          setStepStatus(data.stepId as string, 'running')
+          setStreamingPhase('ai_thinking')
+          firstContentReceivedRef.current = false
+          break
+
         case 'error':
           onError?.(data.message as string)
           break
 
         case 'complete':
+          setPaused(false)
           onComplete?.()
           break
       }
     },
-    [conversationId, queryClient, setProgress, setStepStatus, setStreamingPhase, appendStreamingContent, addStreamingAction, resetStreamingContent, onError, onComplete]
+    [conversationId, queryClient, setProgress, setStepStatus, setStreamingPhase, appendStreamingContent, addStreamingAction, resetStreamingContent, setPaused, onError, onComplete]
   )
 
   const cancel = useCallback(async () => {
@@ -310,5 +336,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     streamingPhase,
     streamingContent,
     streamingActions,
+    isPaused,
+    pausedInfo,
   }
 }

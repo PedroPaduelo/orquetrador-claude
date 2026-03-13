@@ -243,7 +243,7 @@ export async function gitRoutes(app: FastifyInstance) {
       const { repoUrl, folderName, branch } = request.body
 
       const userDir = getUserProjectsDir(userId)
-      mkdirSync(userDir, { recursive: true })
+      mkdirSync(userDir, { recursive: true, mode: 0o775 })
 
       // Derive folder name from repo URL if not provided
       const repoName = folderName || repoUrl.split('/').pop()?.replace(/\.git$/, '') || 'repo'

@@ -48,7 +48,7 @@ export class UploadService {
     try {
       await access(UPLOAD_DIR)
     } catch {
-      await mkdir(UPLOAD_DIR, { recursive: true })
+      await mkdir(UPLOAD_DIR, { recursive: true, mode: 0o775 })
     }
   }
 
@@ -75,7 +75,7 @@ export class UploadService {
 
     // 1) Save to uploads dir (for serving via static)
     const conversationDir = join(UPLOAD_DIR, conversationId)
-    await mkdir(conversationDir, { recursive: true })
+    await mkdir(conversationDir, { recursive: true, mode: 0o775 })
     const uploadsFilePath = join(conversationDir, safeFilename)
     await writeFile(uploadsFilePath, file.data)
 
@@ -84,7 +84,7 @@ export class UploadService {
     if (projectPath) {
       const projectImagesDir = join(projectPath, '.claude-images')
       try {
-        await mkdir(projectImagesDir, { recursive: true })
+        await mkdir(projectImagesDir, { recursive: true, mode: 0o775 })
         const projectFilePath = join(projectImagesDir, safeFilename)
         await copyFile(uploadsFilePath, projectFilePath)
         finalProjectPath = projectFilePath

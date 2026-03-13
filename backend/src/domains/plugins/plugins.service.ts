@@ -67,7 +67,7 @@ function parseGitHubRepoUrl(url: string): { owner: string; repo: string; branch:
 }
 
 function writeFileSafe(filePath: string, content: string) {
-  mkdirSync(dirname(filePath), { recursive: true })
+  mkdirSync(dirname(filePath), { recursive: true, mode: 0o775 })
   writeFileSync(filePath, content, 'utf-8')
 }
 

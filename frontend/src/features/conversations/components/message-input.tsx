@@ -11,6 +11,7 @@ interface MessageInputProps {
   onSend: (content: string, attachments?: Attachment[]) => void
   onCancel: () => void
   isStreaming: boolean
+  isPaused?: boolean
   disabled?: boolean
 }
 
@@ -57,7 +58,7 @@ declare global {
   }
 }
 
-export function MessageInput({ conversationId, onSend, onCancel, isStreaming, disabled }: MessageInputProps) {
+export function MessageInput({ conversationId, onSend, onCancel, isStreaming, isPaused, disabled }: MessageInputProps) {
   const [content, setContent] = useState('')
   const [isListening, setIsListening] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -71,9 +72,12 @@ export function MessageInput({ conversationId, onSend, onCancel, isStreaming, di
     clearAttachments,
   } = useImageUpload({ conversationId })
 
+  // When paused, allow sending even though we'd normally block on isStreaming
+  const canSubmit = !disabled && !isUploading && (isPaused || !isStreaming)
+
   const handleSubmit = () => {
     const hasContent = content.trim() || attachments.length > 0
-    if (!hasContent || isStreaming || disabled || isUploading) return
+    if (!hasContent || !canSubmit) return
     onSend(content.trim(), attachments.length > 0 ? attachments : undefined)
     setContent('')
     clearAttachments()
@@ -177,7 +181,7 @@ export function MessageInput({ conversationId, onSend, onCancel, isStreaming, di
   const hasSpeechRecognition = typeof window !== 'undefined' &&
     (window.SpeechRecognition || window.webkitSpeechRecognition)
 
-  const canSend = (content.trim() || attachments.length > 0) && !disabled && !isUploading
+  const canSend = (content.trim() || attachments.length > 0) && canSubmit
 
   return (
     <div className="border-t bg-background/95 backdrop-blur-sm p-4">
@@ -188,7 +192,7 @@ export function MessageInput({ conversationId, onSend, onCancel, isStreaming, di
           isUploading={isUploading}
           onAddFiles={addFiles}
           onRemove={removeAttachment}
-          disabled={isStreaming || disabled}
+          disabled={(isStreaming && !isPaused) || disabled}
         />
 
         <div className="flex-1 relative">
@@ -201,13 +205,15 @@ export function MessageInput({ conversationId, onSend, onCancel, isStreaming, di
             placeholder={
               disabled
                 ? 'Workflow concluído. Inicie uma nova conversa.'
+                : isPaused
+                ? 'Responda a pergunta do Claude para continuar...'
                 : isStreaming
                 ? 'Claude está processando...'
                 : attachments.length > 0
                 ? 'Adicione uma mensagem às imagens...'
                 : 'Escreva sua mensagem...'
             }
-            disabled={isStreaming || disabled}
+            disabled={(isStreaming && !isPaused) || disabled}
             className="min-h-[44px] max-h-[200px] resize-none pr-24 rounded-xl bg-muted/50 border-border/50 focus:border-primary/50"
             rows={1}
           />
@@ -225,7 +231,7 @@ export function MessageInput({ conversationId, onSend, onCancel, isStreaming, di
                 {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
             )}
-            {isStreaming ? (
+            {isStreaming && !isPaused ? (
               <Button size="icon" variant="destructive" onClick={onCancel} className="h-8 w-8">
                 <Square className="h-3.5 w-3.5" />
               </Button>
@@ -234,7 +240,7 @@ export function MessageInput({ conversationId, onSend, onCancel, isStreaming, di
                 size="icon"
                 onClick={handleSubmit}
                 disabled={!canSend}
-                className="h-8 w-8"
+                className={isPaused ? 'h-8 w-8 bg-amber-500 hover:bg-amber-600' : 'h-8 w-8'}
               >
                 <Send className="h-3.5 w-3.5" />
               </Button>

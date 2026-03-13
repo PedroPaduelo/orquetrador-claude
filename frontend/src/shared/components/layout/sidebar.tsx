@@ -14,6 +14,7 @@ import {
   LogOut,
   PanelLeftClose,
   Shield,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { useAuthStore } from '@/features/auth/store'
@@ -72,6 +73,11 @@ const configItems = [
     to: '/webhooks',
     icon: Webhook,
     label: 'Webhooks',
+  },
+  {
+    to: '/step-templates',
+    icon: FileText,
+    label: 'Templates',
   },
   {
     to: '/settings',

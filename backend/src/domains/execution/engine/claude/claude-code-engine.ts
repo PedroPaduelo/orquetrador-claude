@@ -1,5 +1,5 @@
 import { spawn, execSync, ChildProcess } from 'child_process'
-import { existsSync } from 'fs'
+import { existsSync, mkdirSync, chmodSync, statSync } from 'fs'
 import { join } from 'path'
 import { StreamParser, type Action } from './stream-parser.js'
 import type { CliEngine, EngineExecuteOptions, EngineExecuteResult } from '../types.js'
@@ -172,17 +172,17 @@ export class ClaudeCodeEngine implements CliEngine {
         error: 'projectPath nao foi fornecido. A conversa precisa ter um projectPath configurado.',
       }
     }
+    // Ensure project directory exists with correct permissions (group-writable for claude-sandbox)
     if (!existsSync(projectPath)) {
-      return {
-        content: '',
-        resumeToken: null,
-        actions: [],
-        timedOut: false,
-        cancelled: false,
-        needsUserInput: false,
-        error: `O diretorio do projeto nao existe: ${projectPath}. Verifique o projectPath da conversa.`,
-      }
+      mkdirSync(projectPath, { recursive: true, mode: 0o775 })
     }
+    try {
+      const st = statSync(projectPath)
+      // Ensure group-writable (check if mode has group write bit)
+      if ((st.mode & 0o020) === 0) {
+        chmodSync(projectPath, 0o775)
+      }
+    } catch { /* ignore permission check errors */ }
     const resolvedCwd = projectPath
 
     const claudeBin = process.env.CLAUDE_BIN || this.resolveClaudeBin()
