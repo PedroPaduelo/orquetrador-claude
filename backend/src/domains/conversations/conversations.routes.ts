@@ -7,6 +7,7 @@ import { conversationsRepository } from './conversations.repository.js'
 import { conversationsService } from './conversations.service.js'
 import { prisma } from '../../lib/prisma.js'
 import { NotFoundError } from '../../http/errors/index.js'
+import Anthropic from '@anthropic-ai/sdk'
 
 const PROJECT_BASE_PATH = process.env.PROJECT_BASE_PATH || '/workspace/temp-orquestrador'
 
@@ -239,6 +240,29 @@ export async function conversationsRoutes(app: FastifyInstance) {
       const cloned = await conversationsRepository.clone(request.params.id, userId)
       if (!cloned) throw new NotFoundError('Conversation not found')
       return reply.status(201).send(cloned)
+    }
+  )
+
+  // DELETE /conversations/batch - delete multiple conversations
+  server.delete(
+    '/conversations/batch',
+    {
+      schema: {
+        tags: ['Conversations'],
+        summary: 'Delete multiple conversations',
+        body: z.object({ ids: z.array(z.string()).min(1).max(100) }),
+        response: {
+          200: z.object({ deleted: z.number() }),
+        },
+      },
+    },
+    async (request, reply) => {
+      await request.getCurrentUserId()
+      const { ids } = request.body
+      const result = await prisma.conversation.deleteMany({
+        where: { id: { in: ids } },
+      })
+      return reply.send({ deleted: result.count })
     }
   )
 
@@ -530,6 +554,140 @@ export async function conversationsRoutes(app: FastifyInstance) {
       if (!existing) throw new NotFoundError('Conversation not found')
 
       return conversationsService.getExecutionStats(request.params.id)
+    }
+  )
+
+  // GET /conversations/:id/suggestions — AI-powered next step suggestions
+  server.get(
+    '/conversations/:id/suggestions',
+    {
+      schema: {
+        tags: ['Conversations'],
+        summary: 'Get AI-suggested next steps based on conversation history',
+        params: z.object({
+          id: z.string(),
+        }),
+        response: {
+          200: z.object({
+            suggestions: z.array(z.object({
+              text: z.string(),
+              description: z.string(),
+            })),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      await request.getCurrentUserId()
+      const { id } = request.params
+
+      const conversation = await prisma.conversation.findUnique({
+        where: { id },
+        include: {
+          workflow: {
+            include: { steps: { orderBy: { stepOrder: 'asc' }, select: { id: true, name: true, systemPrompt: true, stepOrder: true } } },
+          },
+          messages: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+            select: { role: true, content: true, stepId: true, metadata: true, createdAt: true },
+          },
+        },
+      })
+
+      if (!conversation) throw new NotFoundError('Conversation not found')
+
+      const recentMessages = conversation.messages.reverse()
+
+      // Build rich step context
+      const stepsContext = conversation.workflow?.steps.map((s, i) => {
+        const prompt = s.systemPrompt ? s.systemPrompt.slice(0, 300) : 'sem prompt'
+        return `Step ${i + 1}: "${s.name}" — ${prompt}`
+      }).join('\n') || 'Nenhum step definido'
+
+      // Get last assistant messages with more content
+      const assistantMessages = recentMessages.filter(m => m.role === 'assistant')
+      const lastAssistant = assistantMessages[assistantMessages.length - 1]
+      const lastContent = lastAssistant?.content?.slice(0, 4000) || ''
+
+      // Extract actions/tools used from metadata
+      const lastMetadata = lastAssistant?.metadata as Record<string, unknown> | null
+      const lastActions = (lastMetadata?.actions as Array<{ type: string; name?: string }> || [])
+        .filter(a => a.type === 'tool_use')
+        .map(a => a.name)
+        .filter(Boolean)
+
+      // Build conversation summary
+      const conversationSummary = recentMessages.map(m => {
+        const role = m.role === 'user' ? 'USUARIO' : 'CLAUDE'
+        const content = m.content.slice(0, 500)
+        return `[${role}]: ${content}`
+      }).join('\n\n')
+
+      // Detect what was done (files created, commands run, etc.)
+      const userMessages = recentMessages.filter(m => m.role === 'user')
+      const firstUserMsg = userMessages[0]?.content?.slice(0, 500) || ''
+      const lastUserMsg = userMessages[userMessages.length - 1]?.content?.slice(0, 500) || ''
+
+      try {
+        const client = new Anthropic({
+          baseURL: 'https://loadbalance-back.ddw1sl.easypanel.host/teste',
+          apiKey: process.env.ANTHROPIC_API_KEY || 'sk-placeholder',
+        })
+        const response = await client.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 5000,
+          system: `Voce é um arquiteto de software senior que guia desenvolvedores nos proximos passos de construção de aplicações. Voce analisa o que ja foi feito e sugere o proximo passo LOGICO e ESPECIFICO que o usuario deve pedir ao Claude Code.
+
+REGRAS:
+- Suas sugestoes devem ser COMANDOS DIRETOS que o usuario cola no chat e envia ao Claude
+- Cada sugestao deve ser especifica ao projeto, nao generica
+- Analise o que ja foi feito e sugira o PROXIMO passo natural da construção
+- Se o Claude criou arquivos, sugira o proximo arquivo/feature que faz sentido
+- Se houve erro, sugira como corrigir
+- Pense como um tech lead guiando um junior: qual o proximo passo que faz o app avançar?
+- Sugestoes devem ser em portugues
+- O "text" é o que o usuario vai enviar como mensagem ao Claude, entao deve ser uma instrucao clara e completa`,
+          messages: [{
+            role: 'user',
+            content: `CONTEXTO DO PROJETO:
+
+Workflow configurado:
+${stepsContext}
+
+Primeira mensagem do usuario (objetivo original):
+${firstUserMsg}
+
+Ultima mensagem do usuario:
+${lastUserMsg}
+
+Tools/ações que o Claude usou na ultima execução:
+${lastActions.length > 0 ? lastActions.join(', ') : 'nenhuma detectada'}
+
+Ultima resposta completa do Claude:
+${lastContent}
+
+Historico completo recente (${recentMessages.length} mensagens):
+${conversationSummary}
+
+---
+
+Com base em TUDO acima, sugira exatamente 4 proximos passos. Cada sugestao deve ser uma instrucao COMPLETA e ESPECIFICA que o usuario pode enviar diretamente ao Claude Code.
+
+Responda SOMENTE com JSON valido, sem markdown, sem explicação extra:
+[{"text":"instrucao completa e especifica para o Claude","description":"por que esse passo é importante agora (1 frase)"}]`,
+          }],
+        })
+
+        const text = response.content[0].type === 'text' ? response.content[0].text : '[]'
+        const jsonMatch = text.match(/\[[\s\S]*?\]/)
+        const suggestions = jsonMatch ? JSON.parse(jsonMatch[0]) : []
+
+        return { suggestions: suggestions.slice(0, 4) }
+      } catch (err) {
+        console.error('[Suggestions] Anthropic API error:', err)
+        return { suggestions: [] }
+      }
     }
   )
 }

@@ -1,6 +1,7 @@
 import { prisma } from '../../../lib/prisma.js'
 import { defaultEngine, type CliEngine } from '../engine/index.js'
 import { sessionManager } from '../session/session-manager.js'
+import { memoryManager } from '../memory/memory-manager.js'
 import { conditionsEvaluator, type StepConditions } from './conditions-evaluator.js'
 import { executionStateManager } from './execution-state.js'
 import { orchestratorEvents } from './events.js'
@@ -60,9 +61,13 @@ export class TaskOrchestrator {
     // Get session (resume token) for this step
     let resumeToken = await sessionManager.getSession(conversationId, step.id)
 
+    // Load memory for this step (accumulated context from previous compactions)
+    const stepMemory = await memoryManager.getMemory(conversationId, step.id)
+
     const systemPrompt = buildSystemPrompt({
       stepSystemPrompt: step.systemPrompt,
       projectPath,
+      memory: stepMemory,
     })
 
     // Create monitor for this execution
@@ -285,25 +290,51 @@ export class TaskOrchestrator {
           resumeTokenOut: result.resumeToken,
         })
 
+        // MEMÓRIA: Resumir a conversa antes de compactar
+        orchestratorEvents.emitStepStream({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          type: 'action',
+          action: {
+            type: 'system',
+            content: 'Salvando memória do contexto antes de compactar...',
+          },
+        })
+
+        try {
+          await memoryManager.summarizeAndSave(conversationId, step.id)
+        } catch (memErr) {
+          console.error(`[Orchestrator] Erro ao salvar memória do step ${step.id}:`, memErr)
+        }
+
         // Notify the frontend that we are resetting the context
         orchestratorEvents.emitContextReset({
           executionId,
           conversationId,
           stepId: step.id,
           stepName: step.name,
-          reason: 'O contexto da sessao excedeu o limite. Abrindo uma sessao nova automaticamente.',
+          reason: 'O contexto da sessao excedeu o limite. Memória salva. Abrindo uma sessao nova automaticamente.',
         })
 
         // Delete the old session so we start fresh
         await sessionManager.deleteSession(conversationId, step.id)
         resumeToken = null
 
+        // Load the freshly saved memory to inject into the new session
+        const freshMemory = await memoryManager.getMemory(conversationId, step.id)
+        const retrySystemPrompt = buildSystemPrompt({
+          stepSystemPrompt: step.systemPrompt,
+          projectPath,
+          memory: freshMemory,
+        })
+
         // Create a new monitor for the retry
         const retryMonitor = new ExecutionMonitor(executionId, conversationId, step.id)
         if (userId) retryMonitor.setUserId(userId)
         retryMonitor.setInputMetadata({
           messageLength: currentMessage.length,
-          systemPrompt,
+          systemPrompt: retrySystemPrompt,
           resumeToken: null,
           model: step.model || null,
           projectPath,
@@ -313,7 +344,7 @@ export class TaskOrchestrator {
           conversationId,
           stepId: step.id,
           message: currentMessage,
-          systemPrompt,
+          systemPrompt: retrySystemPrompt,
           apiBaseUrl: step.baseUrl,
           projectPath,
           model: step.model || undefined,

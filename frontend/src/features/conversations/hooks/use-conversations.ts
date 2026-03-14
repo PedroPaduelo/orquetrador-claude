@@ -60,6 +60,22 @@ export function useDeleteConversation() {
   })
 }
 
+export function useDeleteManyConversations() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (ids: string[]) => conversationsApi.deleteMany(ids),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['folders'] })
+      toast.success(`${data.deleted} conversa${data.deleted > 1 ? 's' : ''} excluida${data.deleted > 1 ? 's' : ''}!`)
+    },
+    onError: () => {
+      toast.error('Erro ao excluir conversas')
+    },
+  })
+}
+
 export function useCloneConversation() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()

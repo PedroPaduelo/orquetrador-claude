@@ -31,6 +31,8 @@ interface SearchPaginationResult<T> {
   setSearch: (s: string) => void
   page: number
   setPage: (p: number) => void
+  pageSize: number
+  setPageSize: (size: number) => void
   totalPages: number
   total: number
   activeFilters: Record<string, string>
@@ -42,11 +44,15 @@ interface SearchPaginationResult<T> {
 export function useSearchPagination<T>({
   data,
   searchFields,
-  pageSize = 12,
+  pageSize: initialPageSize = 12,
   filters: filterDefs = [],
 }: UseSearchPaginationOptions<T>): SearchPaginationResult<T> {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSizeState] = useState(() => {
+    const saved = localStorage.getItem('page-size')
+    return saved ? Number(saved) : initialPageSize
+  })
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({})
 
   const setFilter = useCallback((key: string, value: string) => {
@@ -63,6 +69,12 @@ export function useSearchPagination<T>({
 
   const clearFilters = useCallback(() => {
     setActiveFilters({})
+    setPage(1)
+  }, [])
+
+  const setPageSize = useCallback((size: number) => {
+    setPageSizeState(size)
+    localStorage.setItem('page-size', String(size))
     setPage(1)
   }, [])
 
@@ -105,6 +117,8 @@ export function useSearchPagination<T>({
     setSearch: (s: string) => { setSearch(s); setPage(1) },
     page: safePage,
     setPage,
+    pageSize,
+    setPageSize,
     totalPages,
     total: filtered.length,
     activeFilters,
@@ -175,54 +189,82 @@ export function FilterBar<T>({ filters, activeFilters, onFilterChange, onClear, 
   )
 }
 
+const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50, 100]
+
 interface PaginationProps {
   page: number
   totalPages: number
   onPageChange: (page: number) => void
+  pageSize?: number
+  onPageSizeChange?: (size: number) => void
+  total?: number
 }
 
-export function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
-  if (totalPages <= 1) return null
-
+export function Pagination({ page, totalPages, onPageChange, pageSize, onPageSizeChange, total }: PaginationProps) {
   const pages = getPageNumbers(page, totalPages)
 
   return (
-    <div className="flex items-center justify-center gap-1 pt-4">
-      <Button
-        variant="outline"
-        size="icon"
-        className="h-8 w-8"
-        onClick={() => onPageChange(page - 1)}
-        disabled={page <= 1}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
+    <div className="flex items-center justify-between pt-4">
+      {/* Page size selector */}
+      {onPageSizeChange && pageSize ? (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Linhas:</span>
+          <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
+            <SelectTrigger className="h-8 w-[70px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {total !== undefined && (
+            <span className="text-xs text-muted-foreground">de {total}</span>
+          )}
+        </div>
+      ) : <div />}
 
-      {pages.map((p, i) =>
-        p === '...' ? (
-          <span key={`dots-${i}`} className="px-1 text-muted-foreground text-sm">...</span>
-        ) : (
+      {/* Page navigation */}
+      {totalPages > 1 && (
+        <div className="flex items-center gap-1">
           <Button
-            key={p}
-            variant={p === page ? 'default' : 'outline'}
+            variant="outline"
             size="icon"
-            className="h-8 w-8 text-xs"
-            onClick={() => onPageChange(p as number)}
+            className="h-8 w-8"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page <= 1}
           >
-            {p}
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-        )
-      )}
 
-      <Button
-        variant="outline"
-        size="icon"
-        className="h-8 w-8"
-        onClick={() => onPageChange(page + 1)}
-        disabled={page >= totalPages}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
+          {pages.map((p, i) =>
+            p === '...' ? (
+              <span key={`dots-${i}`} className="px-1 text-muted-foreground text-sm">...</span>
+            ) : (
+              <Button
+                key={p}
+                variant={p === page ? 'default' : 'outline'}
+                size="icon"
+                className="h-8 w-8 text-xs"
+                onClick={() => onPageChange(p as number)}
+              >
+                {p}
+              </Button>
+            )
+          )}
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

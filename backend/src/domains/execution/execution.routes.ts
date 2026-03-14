@@ -10,6 +10,7 @@ import { validateProjectPath } from '../../lib/validation.js'
 import { projectPathLock } from './lock/project-path-lock.js'
 import { tokenBudgetService } from './budget/token-budget-service.js'
 import { isDAGWorkflow } from './orchestrator/dag-executor.js'
+import { executionStateManager } from './orchestrator/execution-state.js'
 
 const attachmentSchema = z.object({
   id: z.string(),
@@ -78,10 +79,7 @@ export async function executionRoutes(app: FastifyInstance) {
         validateProjectPath(conversation.projectPath)
       }
 
-      // Lock check
-      if (conversation.projectPath && projectPathLock.isLocked(conversation.projectPath)) {
-        throw new BadRequestError('Another execution is already running on this project path')
-      }
+      // Lock check removed — allow multiple chats on the same project path
 
       // If a stale execution is running, force-cancel it before proceeding
       if (taskOrchestrator.isExecuting(id)) {
@@ -276,6 +274,149 @@ export async function executionRoutes(app: FastifyInstance) {
 
       const interrupted = taskOrchestrator.interruptExecution(id, content)
       return { interrupted }
+    }
+  )
+
+  // GET /conversations/:id/execution-status - check if there's an active execution
+  server.get(
+    '/conversations/:id/execution-status',
+    {
+      schema: {
+        tags: ['Messages'],
+        summary: 'Get current execution status for a conversation',
+        params: z.object({ id: z.string() }),
+        response: {
+          200: z.object({
+            active: z.boolean(),
+            state: z.string().nullable(),
+            stepIndex: z.number().nullable(),
+            paused: z.boolean(),
+            pausedInfo: z.unknown().nullable(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      await request.getCurrentUserId()
+      const { id } = request.params as { id: string }
+
+      // Check in-memory first (most reliable for "is running right now")
+      const isRunning = taskOrchestrator.isExecuting(id)
+
+      if (isRunning) {
+        const dbState = await executionStateManager.getByConversation(id)
+        return {
+          active: true,
+          state: 'running',
+          stepIndex: dbState?.currentStepIndex ?? null,
+          paused: false,
+          pausedInfo: null,
+        }
+      }
+
+      // Check for paused execution
+      const paused = await taskOrchestrator.getPausedExecution(id)
+      if (paused) {
+        return {
+          active: true,
+          state: 'paused',
+          stepIndex: paused.stepIndex,
+          paused: true,
+          pausedInfo: {
+            executionId: paused.executionId,
+            stepId: paused.stepId,
+            resumeToken: paused.resumeToken,
+            askUserQuestion: paused.askUserQuestion,
+          },
+        }
+      }
+
+      return { active: false, state: null, stepIndex: null, paused: false, pausedInfo: null }
+    }
+  )
+
+  // GET /conversations/:id/watch - SSE stream to observe an active execution without starting one
+  server.get(
+    '/conversations/:id/watch',
+    {
+      schema: {
+        tags: ['Messages'],
+        summary: 'Watch an active execution via SSE (read-only)',
+        params: z.object({ id: z.string() }),
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      await request.getCurrentUserId()
+      const { id } = request.params as { id: string }
+
+      // Set SSE headers
+      reply.raw.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*',
+        'X-Accel-Buffering': 'no',
+      })
+
+      const sendEvent = (event: string, data: unknown) => {
+        try {
+          reply.raw.write(`event: ${event}\n`)
+          reply.raw.write(`data: ${JSON.stringify(data)}\n\n`)
+        } catch { /* closed */ }
+      }
+
+      const heartbeat = setInterval(() => {
+        try { reply.raw.write(`:heartbeat\n\n`) } catch { clearInterval(heartbeat) }
+      }, 15_000)
+
+      const filterByConversation = (data: unknown): boolean => {
+        const d = data as { conversationId?: string }
+        return d.conversationId === id
+      }
+
+      const handlers: Record<string, (...args: unknown[]) => void> = {
+        'step:start': (data: unknown) => { if (filterByConversation(data)) sendEvent('step_start', data) },
+        'step:stream': (data: unknown) => { if (filterByConversation(data)) sendEvent('stream', data) },
+        'step:complete': (data: unknown) => { if (filterByConversation(data)) sendEvent('step_complete', data) },
+        'step:error': (data: unknown) => { if (filterByConversation(data)) sendEvent('step_error', data) },
+        'message:saved': (data: unknown) => { if (filterByConversation(data)) sendEvent('message_saved', data) },
+        'condition:retry': (data: unknown) => { if (filterByConversation(data)) sendEvent('condition_retry', data) },
+        'condition:jump': (data: unknown) => { if (filterByConversation(data)) sendEvent('condition_jump', data) },
+        'context:reset': (data: unknown) => { if (filterByConversation(data)) sendEvent('context_reset', data) },
+        'execution:cancelled': (data: unknown) => { if (filterByConversation(data)) sendEvent('cancelled', data) },
+        'execution:complete': (data: unknown) => {
+          if (filterByConversation(data)) {
+            sendEvent('complete', data)
+            cleanup()
+            reply.raw.end()
+          }
+        },
+        'dag:batch_start': (data: unknown) => { if (filterByConversation(data)) sendEvent('dag_batch_start', data) },
+        'validation:failed': (data: unknown) => { if (filterByConversation(data)) sendEvent('validation_failed', data) },
+        'execution:paused': (data: unknown) => { if (filterByConversation(data)) sendEvent('execution_paused', data) },
+        'execution:resumed': (data: unknown) => { if (filterByConversation(data)) sendEvent('execution_resumed', data) },
+        'user:interrupt': (data: unknown) => { if (filterByConversation(data)) sendEvent('user_interrupt', data) },
+      }
+
+      Object.entries(handlers).forEach(([event, handler]) => {
+        orchestratorEvents.on(event, handler)
+      })
+
+      const cleanup = () => {
+        clearInterval(heartbeat)
+        Object.entries(handlers).forEach(([event, handler]) => {
+          orchestratorEvents.off(event, handler)
+        })
+      }
+
+      request.raw.on('close', () => { cleanup() })
+
+      // If no execution is active, close immediately
+      if (!taskOrchestrator.isExecuting(id)) {
+        sendEvent('no_active_execution', { conversationId: id })
+        cleanup()
+        reply.raw.end()
+      }
     }
   )
 

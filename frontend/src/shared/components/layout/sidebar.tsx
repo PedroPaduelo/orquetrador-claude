@@ -3,6 +3,7 @@ import {
   MessageSquare,
   Workflow,
   LayoutDashboard,
+  Activity,
   Zap,
   Server,
   Sparkles,
@@ -35,6 +36,11 @@ const navItems = [
     to: '/workflows',
     icon: Workflow,
     label: 'Workflows',
+  },
+  {
+    to: '/executions',
+    icon: Activity,
+    label: 'Execucoes',
   },
 ]
 

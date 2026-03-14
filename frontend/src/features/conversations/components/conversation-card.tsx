@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/shared/components/ui/card'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
+import { Checkbox } from '@/shared/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,18 +12,27 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
 import { formatDate, truncate } from '@/shared/lib/utils'
+import { cn } from '@/shared/lib/utils'
 import type { Conversation } from '../types'
 
 interface ConversationCardProps {
   conversation: Conversation
   onDelete: () => void
   onClone: () => void
+  selectionMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (id: string) => void
 }
 
-export function ConversationCard({ conversation, onDelete, onClone }: ConversationCardProps) {
+export function ConversationCard({ conversation, onDelete, onClone, selectionMode, selected, onToggleSelect }: ConversationCardProps) {
   const navigate = useNavigate()
 
   const handleClick = (e: React.MouseEvent) => {
+    if (selectionMode) {
+      e.preventDefault()
+      onToggleSelect?.(conversation.id)
+      return
+    }
     if (e.ctrlKey || e.metaKey) {
       window.open(`/conversations/${conversation.id}`, '_blank')
     } else {
@@ -32,12 +42,23 @@ export function ConversationCard({ conversation, onDelete, onClone }: Conversati
 
   return (
     <Card
-      className="group hover:border-primary/30 transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 cursor-pointer overflow-hidden"
+      className={cn(
+        'group hover:border-primary/30 transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 cursor-pointer overflow-hidden',
+        selected && 'border-primary bg-primary/5 shadow-primary/10',
+      )}
       onClick={handleClick}
     >
       <CardContent className="p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-2 mb-3">
+          {selectionMode && (
+            <Checkbox
+              checked={selected}
+              onCheckedChange={() => onToggleSelect?.(conversation.id)}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-1 shrink-0"
+            />
+          )}
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-base truncate group-hover:text-primary transition-colors">
               {conversation.title || 'Sem título'}
@@ -46,34 +67,36 @@ export function ConversationCard({ conversation, onDelete, onClone }: Conversati
               {conversation.workflowName}
             </p>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onClone()
-                }}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Clonar
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete()
-                }}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!selectionMode && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onClone()
+                  }}
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Clonar
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete()
+                  }}
+                  className="text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Status indicators */}

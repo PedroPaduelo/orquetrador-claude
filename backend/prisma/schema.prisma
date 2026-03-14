@@ -113,6 +113,7 @@ model WorkflowStep {
   workflow             Workflow              @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   messages             Message[]
   conversationSessions ConversationSession[]
+  stepMemories         StepMemory[]
   currentConversations Conversation[]        @relation("CurrentStep")
   executionLogs        ExecutionLog[]
 
@@ -148,6 +149,7 @@ model Conversation {
   // Reverse relations
   messages        Message[]
   sessions        ConversationSession[]
+  stepMemories    StepMemory[]
   executionStates ExecutionState[]
   executionLogs   ExecutionLog[]
   executionTraces ExecutionTrace[]
@@ -219,6 +221,26 @@ model ConversationSession {
   @@unique([conversationId, stepId])
   @@index([conversationId, stepId])
   @@map("conversation_sessions")
+}
+
+// ============================================
+// STEP MEMORY (Context persistence across compactions)
+// ============================================
+model StepMemory {
+  id        String   @id @default(uuid())
+  content   String   // Resumo acumulado da conversa para este step
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relations
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  stepId         String       @map("step_id")
+  step           WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, stepId])
+  @@index([conversationId, stepId])
+  @@map("step_memories")
 }
 
 // ============================================

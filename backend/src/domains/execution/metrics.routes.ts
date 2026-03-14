@@ -118,4 +118,93 @@ export async function metricsRoutes(app: FastifyInstance) {
 
     return alerts
   })
+
+  // GET /executions - list all executions with status
+  server.get('/executions', {
+    schema: {
+      tags: ['Metrics'],
+      summary: 'List all executions with status and conversation info',
+      querystring: z.object({
+        state: z.string().optional(),
+        limit: z.coerce.number().min(1).max(200).default(50),
+      }),
+    },
+  }, async (request) => {
+    const userId = await request.getCurrentUserId()
+    const { state, limit } = request.query
+
+    const where: Record<string, unknown> = {
+      conversation: { userId },
+    }
+    if (state) where.state = state
+
+    const executions = await prisma.executionState.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      include: {
+        conversation: {
+          select: {
+            id: true,
+            title: true,
+            projectPath: true,
+            workflow: { select: { id: true, name: true, type: true } },
+          },
+        },
+      },
+    })
+
+    return executions.map(e => {
+      const metadata = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : (e.metadata || {})
+      return {
+        id: e.id,
+        state: e.state,
+        currentStepIndex: e.currentStepIndex,
+        conversationId: e.conversationId,
+        conversationTitle: e.conversation.title,
+        projectPath: e.conversation.projectPath,
+        workflowName: e.conversation.workflow.name,
+        workflowType: e.conversation.workflow.type,
+        startedAt: metadata.startedAt || e.createdAt.toISOString(),
+        completedAt: metadata.completedAt || null,
+        failedAt: metadata.failedAt || null,
+        cancelledAt: metadata.cancelledAt || null,
+        pausedAt: metadata.pausedAt || null,
+        error: metadata.error || null,
+        createdAt: e.createdAt.toISOString(),
+        updatedAt: e.updatedAt.toISOString(),
+      }
+    })
+  })
+
+  // GET /executions/summary - quick summary of execution states
+  server.get('/executions/summary', {
+    schema: {
+      tags: ['Metrics'],
+      summary: 'Get summary counts of executions by state',
+    },
+  }, async (request) => {
+    const userId = await request.getCurrentUserId()
+
+    const counts = await prisma.executionState.groupBy({
+      by: ['state'],
+      where: { conversation: { userId } },
+      _count: { id: true },
+    })
+
+    const summary: Record<string, number> = {
+      running: 0,
+      paused: 0,
+      queued: 0,
+      completed: 0,
+      failed: 0,
+      cancelled: 0,
+    }
+
+    for (const c of counts) {
+      summary[c.state] = c._count.id
+    }
+
+    return summary
+  })
 }

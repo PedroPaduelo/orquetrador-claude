@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, MessageSquare, LayoutGrid, Table2, FolderOpen, FolderPlus, Check } from 'lucide-react'
+import { Plus, MessageSquare, LayoutGrid, Table2, FolderOpen, FolderPlus, Check, CheckSquare, X, Trash2 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Input } from '@/shared/components/ui/input'
 import { Label } from '@/shared/components/ui/label'
@@ -23,6 +23,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/components/ui/tabs'
 import { EmptyState } from '@/shared/components/common/empty-state'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
+import { ConfirmDialog } from '@/shared/components/common/confirm-dialog'
 import {
   useSearchPagination,
   SearchBar,
@@ -32,7 +33,7 @@ import {
 } from '@/shared/components/common/search-pagination'
 import { ConversationCard } from './components/conversation-card'
 import { ConversationTable } from './components/conversation-table'
-import { useConversations, useCreateConversation, useDeleteConversation, useCloneConversation, useFolders } from './hooks/use-conversations'
+import { useConversations, useCreateConversation, useDeleteConversation, useCloneConversation, useDeleteManyConversations, useFolders } from './hooks/use-conversations'
 import { useWorkflows } from '../workflows/hooks/use-workflows'
 import { useAuthStore } from '../auth/store'
 import type { Conversation } from './types'
@@ -51,6 +52,7 @@ export default function ConversationsPage() {
   const createMutation = useCreateConversation()
   const deleteMutation = useDeleteConversation()
   const cloneMutation = useCloneConversation()
+  const deleteManyMutation = useDeleteManyConversations()
 
   const filters = useMemo<FilterDefinition<Conversation>[]>(() => {
     const workflowOptions = (workflows ?? []).map((wf) => ({
@@ -83,6 +85,8 @@ export default function ConversationsPage() {
     setSearch,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     totalPages,
     total,
     activeFilters,
@@ -94,6 +98,54 @@ export default function ConversationsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
     return (localStorage.getItem('conversations-view') as 'grid' | 'table') || 'grid'
   })
+
+  // Selection state
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
+
+  const toggleAllOnPage = useCallback(() => {
+    setSelectedIds((prev) => {
+      const allPageIds = paged.map((c) => c.id)
+      const allSelected = allPageIds.every((id) => prev.has(id))
+      const next = new Set(prev)
+      if (allSelected) {
+        allPageIds.forEach((id) => next.delete(id))
+      } else {
+        allPageIds.forEach((id) => next.add(id))
+      }
+      return next
+    })
+  }, [paged])
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false)
+    setSelectedIds(new Set())
+  }, [])
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedIds.size === 0) return
+    setShowDeleteConfirm(true)
+  }, [selectedIds])
+
+  const confirmDeleteSelected = useCallback(async () => {
+    const ids = Array.from(selectedIds)
+    await deleteManyMutation.mutateAsync(ids)
+    exitSelectionMode()
+    setShowDeleteConfirm(false)
+  }, [selectedIds, deleteManyMutation, exitSelectionMode])
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedWorkflowId, setSelectedWorkflowId] = useState('')
@@ -142,134 +194,186 @@ export default function ConversationsPage() {
           </p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Conversa
+        <div className="flex items-center gap-2">
+          {conversations && conversations.length > 0 && (
+            <Button
+              variant={selectionMode ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => selectionMode ? exitSelectionMode() : setSelectionMode(true)}
+            >
+              {selectionMode ? (
+                <>
+                  <X className="mr-1.5 h-3.5 w-3.5" />
+                  Cancelar
+                </>
+              ) : (
+                <>
+                  <CheckSquare className="mr-1.5 h-3.5 w-3.5" />
+                  Selecionar
+                </>
+              )}
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nova Conversa</DialogTitle>
-              <DialogDescription>
-                Selecione um workflow para iniciar uma nova conversa
-              </DialogDescription>
-            </DialogHeader>
+          )}
 
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Workflow</Label>
-                <Select
-                  value={selectedWorkflowId}
-                  onValueChange={setSelectedWorkflowId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um workflow" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workflows?.map((wf) => (
-                      <SelectItem key={wf.id} value={wf.id}>
-                        {wf.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Conversa
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Nova Conversa</DialogTitle>
+                <DialogDescription>
+                  Selecione um workflow para iniciar uma nova conversa
+                </DialogDescription>
+              </DialogHeader>
 
-              <div className="space-y-2">
-                <Label>Titulo (opcional)</Label>
-                <Input
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Ex: Analise do projeto X"
-                />
-              </div>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Workflow</Label>
+                  <Select
+                    value={selectedWorkflowId}
+                    onValueChange={setSelectedWorkflowId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um workflow" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workflows?.map((wf) => (
+                        <SelectItem key={wf.id} value={wf.id}>
+                          {wf.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label>Pasta do Projeto</Label>
-                <Tabs value={folderMode} onValueChange={(v) => setFolderMode(v as 'select' | 'create')}>
-                  <TabsList className="w-full">
-                    <TabsTrigger value="create" className="flex-1 gap-1.5">
-                      <FolderPlus className="h-3.5 w-3.5" />
-                      Criar nova
-                    </TabsTrigger>
-                    <TabsTrigger value="select" className="flex-1 gap-1.5">
-                      <FolderOpen className="h-3.5 w-3.5" />
-                      Selecionar existente
-                    </TabsTrigger>
-                  </TabsList>
+                <div className="space-y-2">
+                  <Label>Titulo (opcional)</Label>
+                  <Input
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Ex: Analise do projeto X"
+                  />
+                </div>
 
-                  <TabsContent value="create" className="space-y-2">
-                    <Input
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      placeholder="nome-do-projeto"
-                    />
-                    {folderNameError && (
-                      <p className="text-xs text-destructive">{folderNameError}</p>
-                    )}
-                    {newFolderName && !folderNameError && (
-                      <p className="text-xs text-muted-foreground">
-                        {basePath}/{newFolderName}
-                      </p>
-                    )}
-                  </TabsContent>
+                <div className="space-y-2">
+                  <Label>Pasta do Projeto</Label>
+                  <Tabs value={folderMode} onValueChange={(v) => setFolderMode(v as 'select' | 'create')}>
+                    <TabsList className="w-full">
+                      <TabsTrigger value="create" className="flex-1 gap-1.5">
+                        <FolderPlus className="h-3.5 w-3.5" />
+                        Criar nova
+                      </TabsTrigger>
+                      <TabsTrigger value="select" className="flex-1 gap-1.5">
+                        <FolderOpen className="h-3.5 w-3.5" />
+                        Selecionar existente
+                      </TabsTrigger>
+                    </TabsList>
 
-                  <TabsContent value="select">
-                    {folders && folders.length > 0 ? (
-                      <div className="max-h-[200px] overflow-y-auto border rounded-lg divide-y">
-                        {folders.map((folder) => (
-                          <button
-                            key={folder.path}
-                            type="button"
-                            className={`w-full flex items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors ${
-                              selectedFolder === folder.name
-                                ? 'bg-primary/5 border-l-2 border-l-primary'
-                                : ''
-                            }`}
-                            onClick={() => setSelectedFolder(folder.name)}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              {selectedFolder === folder.name ? (
-                                <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                              ) : (
-                                <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <TabsContent value="create" className="space-y-2">
+                      <Input
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        placeholder="nome-do-projeto"
+                      />
+                      {folderNameError && (
+                        <p className="text-xs text-destructive">{folderNameError}</p>
+                      )}
+                      {newFolderName && !folderNameError && (
+                        <p className="text-xs text-muted-foreground">
+                          {basePath}/{newFolderName}
+                        </p>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="select">
+                      {folders && folders.length > 0 ? (
+                        <div className="max-h-[200px] overflow-y-auto border rounded-lg divide-y">
+                          {folders.map((folder) => (
+                            <button
+                              key={folder.path}
+                              type="button"
+                              className={`w-full flex items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-muted/50 transition-colors ${
+                                selectedFolder === folder.name
+                                  ? 'bg-primary/5 border-l-2 border-l-primary'
+                                  : ''
+                              }`}
+                              onClick={() => setSelectedFolder(folder.name)}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                {selectedFolder === folder.name ? (
+                                  <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                ) : (
+                                  <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                )}
+                                <span className="truncate">{folder.name}</span>
+                              </div>
+                              {folder.conversationsCount > 0 && (
+                                <Badge variant="secondary" className="text-[10px] ml-2 shrink-0">
+                                  {folder.conversationsCount}
+                                </Badge>
                               )}
-                              <span className="truncate">{folder.name}</span>
-                            </div>
-                            {folder.conversationsCount > 0 && (
-                              <Badge variant="secondary" className="text-[10px] ml-2 shrink-0">
-                                {folder.conversationsCount}
-                              </Badge>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Nenhuma pasta existente. Crie uma nova.
-                      </p>
-                    )}
-                  </TabsContent>
-                </Tabs>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Nenhuma pasta existente. Crie uma nova.
+                        </p>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </div>
               </div>
-            </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={!canCreate || createMutation.isPending}
-              >
-                {createMutation.isPending ? 'Criando...' : 'Criar'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleCreate}
+                  disabled={!canCreate || createMutation.isPending}
+                >
+                  {createMutation.isPending ? 'Criando...' : 'Criar'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      {/* Bulk action bar */}
+      {selectionMode && selectedIds.size > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg animate-fade-in-up">
+          <div className="flex items-center gap-3">
+            <Badge variant="secondary" className="text-sm">
+              {selectedIds.size} selecionada{selectedIds.size > 1 ? 's' : ''}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleAllOnPage}
+              className="text-xs"
+            >
+              {paged.every((c) => selectedIds.has(c.id))
+                ? 'Desmarcar pagina'
+                : 'Selecionar toda a pagina'}
+            </Button>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDeleteSelected}
+            disabled={deleteManyMutation.isPending}
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+            {deleteManyMutation.isPending ? 'Excluindo...' : `Excluir (${selectedIds.size})`}
+          </Button>
+        </div>
+      )}
 
       {/* Content */}
       {isLoading ? (
@@ -328,6 +432,9 @@ export default function ConversationsPage() {
                     conversation={conversation}
                     onDelete={() => deleteMutation.mutate(conversation.id)}
                     onClone={() => cloneMutation.mutate(conversation.id)}
+                    selectionMode={selectionMode}
+                    selected={selectedIds.has(conversation.id)}
+                    onToggleSelect={toggleSelect}
                   />
                 </div>
               ))}
@@ -337,11 +444,22 @@ export default function ConversationsPage() {
               conversations={paged}
               onDelete={(conv) => deleteMutation.mutate(conv.id)}
               onClone={(conv) => cloneMutation.mutate(conv.id)}
+              selectionMode={selectionMode}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onToggleAll={toggleAllOnPage}
             />
           )}
 
           {/* Pagination */}
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
+            total={total}
+          />
         </>
       ) : (
         <EmptyState
@@ -356,6 +474,17 @@ export default function ConversationsPage() {
           }
         />
       )}
+
+      {/* Confirm bulk delete dialog */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Excluir conversas"
+        description={`Tem certeza que deseja excluir ${selectedIds.size} conversa${selectedIds.size > 1 ? 's' : ''}? Esta acao nao pode ser desfeita.`}
+        confirmLabel="Excluir"
+        onConfirm={confirmDeleteSelected}
+        variant="destructive"
+      />
     </div>
   )
 }

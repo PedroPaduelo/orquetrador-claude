@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useConversationsStore } from '../store'
 import type { Action, Attachment, Conversation } from '../types'
@@ -329,6 +329,123 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     }
   }, [conversationId, isStreaming, setInterrupting])
 
+  // Watch an active execution (reconnect after F5 or new tab)
+  const watchRef = useRef<AbortController | null>(null)
+  const isWatchingRef = useRef(false)
+
+  const watchExecution = useCallback(async () => {
+    if (isWatchingRef.current) return
+    isWatchingRef.current = true
+
+    clearStreaming()
+    setStreaming(true)
+    setStreamingPhase('streaming')
+    firstContentReceivedRef.current = true
+
+    watchRef.current = new AbortController()
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
+      const token = localStorage.getItem('token')
+      const response = await fetch(
+        `${apiUrl}/conversations/${conversationId}/watch`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: watchRef.current.signal,
+        }
+      )
+
+      if (!response.ok) {
+        setStreaming(false)
+        isWatchingRef.current = false
+        return
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      if (!reader) { setStreaming(false); isWatchingRef.current = false; return }
+
+      let buffer = ''
+      let currentEvent = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            currentEvent = line.slice(6).trim()
+          } else if (line.startsWith('data:')) {
+            try {
+              const data = JSON.parse(line.slice(5).trim())
+              if (currentEvent === 'no_active_execution') {
+                // No execution running, stop watching
+                setStreaming(false)
+                isWatchingRef.current = false
+                return
+              }
+              handleEvent(currentEvent, data)
+            } catch { /* ignore */ }
+          }
+        }
+      }
+
+      onComplete?.()
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        // Silently fail — watch is optional
+      }
+    } finally {
+      try {
+        await queryClient.invalidateQueries({ queryKey: ['conversations', conversationId, 'detail'] })
+      } catch { /* ignore */ }
+      setStreaming(false)
+      isWatchingRef.current = false
+    }
+  }, [conversationId, queryClient, onComplete, handleEvent, clearStreaming, setStreaming, setStreamingPhase])
+
+  // Auto-reconnect: check for active execution on mount
+  useEffect(() => {
+    const checkAndReconnect = async () => {
+      const { isStreaming: alreadyStreaming } = useConversationsStore.getState()
+      if (alreadyStreaming) return
+
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333'
+        const token = localStorage.getItem('token')
+        const res = await fetch(`${apiUrl}/conversations/${conversationId}/execution-status`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+
+        if (!res.ok) return
+        const status = await res.json()
+
+        if (status.active && status.state === 'running') {
+          watchExecution()
+        } else if (status.active && status.state === 'paused' && status.pausedInfo) {
+          setPaused(true, {
+            executionId: status.pausedInfo.executionId,
+            stepId: status.pausedInfo.stepId,
+            stepName: '',
+            stepOrder: (status.stepIndex ?? 0) + 1,
+            resumeToken: status.pausedInfo.resumeToken,
+            askUserQuestion: status.pausedInfo.askUserQuestion,
+          })
+        }
+      } catch { /* ignore */ }
+    }
+
+    checkAndReconnect()
+
+    return () => {
+      watchRef.current?.abort()
+    }
+  }, [conversationId, watchExecution, setPaused])
+
   const cancel = useCallback(async () => {
     // 1. Mark as cancelled immediately so UI stops
     cancelledRef.current = true
@@ -337,6 +454,8 @@ export function useSSEStream(options: UseSSEStreamOptions) {
     // 2. Abort the HTTP connection — this also triggers the backend's
     //    'close' handler which will kill the process
     abortControllerRef.current?.abort()
+    watchRef.current?.abort()
+    isWatchingRef.current = false
 
     // 3. Update step statuses in UI
     const { stepStatuses, setStepStatus: updateStepStatus } = useConversationsStore.getState()

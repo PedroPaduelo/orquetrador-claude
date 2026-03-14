@@ -47,6 +47,7 @@ import { Button } from '@/shared/components/ui/button'
 import { MessageBubble } from './message-bubble'
 import { MessageInput } from './message-input'
 import { StreamingStatus } from './streaming-status'
+import { SuggestedNextSteps } from './suggested-next-steps'
 import { useSSEStream } from '../hooks/use-sse-stream'
 import { useConversationsStore } from '../store'
 import type { Conversation, Action } from '../types'
@@ -66,6 +67,7 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
   const chatRef = useRef<HTMLDivElement>(null)
   const { initStepStatuses } = useConversationsStore()
   const [showScrollBtn, setShowScrollBtn] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(true)
 
   const steps = conversation.workflow?.steps || []
   const messages = conversation.messages || []
@@ -76,6 +78,7 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
       conversationId: conversation.id,
       onComplete: () => {
         playCompletionSound()
+        setShowSuggestions(true) // Show suggestions after execution completes
         if (conversation.workflow?.type === 'step_by_step') {
           // Don't show "execution complete" for step_by_step - the chat continues
         } else {
@@ -266,10 +269,25 @@ export function ChatContainer({ conversation }: ChatContainerProps) {
         </div>
       )}
 
+      {/* AI Suggestions */}
+      {showSuggestions && !isStreaming && !isWorkflowFinished && messages.length > 0 && (
+        <SuggestedNextSteps
+          key={`suggestions-${messages.length}`}
+          conversationId={conversation.id}
+          onSelect={(text) => {
+            setShowSuggestions(false)
+            sendMessage(text, currentStepIndex)
+          }}
+        />
+      )}
+
       {/* Input */}
       <MessageInput
         conversationId={conversation.id}
-        onSend={(content, attachments) => sendMessage(content, currentStepIndex, attachments)}
+        onSend={(content, attachments) => {
+          setShowSuggestions(false)
+          sendMessage(content, currentStepIndex, attachments)
+        }}
         onCancel={cancel}
         onInterrupt={interruptExecution}
         isStreaming={isStreaming}

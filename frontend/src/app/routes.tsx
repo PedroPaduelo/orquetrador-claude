@@ -22,6 +22,7 @@ const SettingsPage = lazy(() => import('@/features/settings'))
 const AdminPage = lazy(() => import('@/features/admin'))
 const WebhooksPage = lazy(() => import('@/features/webhooks'))
 const StepTemplatesPage = lazy(() => import('@/features/step-templates'))
+const ExecutionsPage = lazy(() => import('@/features/executions'))
 
 // Page loader
 function PageLoader() {
@@ -105,6 +106,14 @@ export function AppRoutes() {
           }
         />
 
+        <Route
+          path="executions"
+          element={
+            <Lazy>
+              <ExecutionsPage />
+            </Lazy>
+          }
+        />
 
         <Route
           path="mcp-servers"

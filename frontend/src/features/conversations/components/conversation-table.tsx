@@ -2,12 +2,14 @@ import { MoreVertical, Trash2, Copy, ArrowRight, MessageSquare, Circle, External
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
+import { Checkbox } from '@/shared/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu'
+import { cn } from '@/shared/lib/utils'
 import { formatDate, truncate } from '@/shared/lib/utils'
 import type { Conversation } from '../types'
 
@@ -15,16 +17,29 @@ interface ConversationTableProps {
   conversations: Conversation[]
   onDelete: (conversation: Conversation) => void
   onClone: (conversation: Conversation) => void
+  selectionMode?: boolean
+  selectedIds?: Set<string>
+  onToggleSelect?: (id: string) => void
+  onToggleAll?: () => void
 }
 
-export function ConversationTable({ conversations, onDelete, onClone }: ConversationTableProps) {
+export function ConversationTable({ conversations, onDelete, onClone, selectionMode, selectedIds, onToggleSelect, onToggleAll }: ConversationTableProps) {
   const navigate = useNavigate()
+  const allSelected = selectionMode && conversations.length > 0 && conversations.every(c => selectedIds?.has(c.id))
 
   return (
     <div className="border rounded-lg overflow-hidden">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
+            {selectionMode && (
+              <th className="px-4 py-2.5 w-10">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={onToggleAll}
+                />
+              </th>
+            )}
             <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Título</th>
             <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Workflow</th>
             <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Tipo</th>
@@ -37,12 +52,20 @@ export function ConversationTable({ conversations, onDelete, onClone }: Conversa
         <tbody>
           {conversations.map((conv, index) => {
             const status = 'status' in conv ? (conv as any).status : undefined
+            const isSelected = selectedIds?.has(conv.id)
             return (
               <tr
                 key={conv.id}
-                className="border-b last:border-b-0 hover:bg-muted/30 transition-colors animate-fade-in-up cursor-pointer"
+                className={cn(
+                  'border-b last:border-b-0 hover:bg-muted/30 transition-colors animate-fade-in-up cursor-pointer',
+                  isSelected && 'bg-primary/5',
+                )}
                 style={{ animationDelay: `${index * 30}ms` }}
                 onClick={(e) => {
+                  if (selectionMode) {
+                    onToggleSelect?.(conv.id)
+                    return
+                  }
                   if (e.ctrlKey || e.metaKey) {
                     window.open(`/conversations/${conv.id}`, '_blank')
                   } else {
@@ -50,6 +73,15 @@ export function ConversationTable({ conversations, onDelete, onClone }: Conversa
                   }
                 }}
               >
+                {selectionMode && (
+                  <td className="px-4 py-3">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleSelect?.(conv.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     {status === 'running' && <Circle className="h-2 w-2 fill-amber-500 text-amber-500 shrink-0" />}
