@@ -38,11 +38,14 @@ import {
   useGitTokenStatus,
   useSaveGitToken,
   useRemoveGitToken,
-  useGitRepos,
   useGitClone,
+  useGitAccounts,
+  useCreateGitAccount,
+  useDeleteGitAccount,
 } from './hooks/use-git'
 import { useApiKeys, useCreateApiKey, useRevokeApiKey } from './hooks/use-api-keys'
 import { useBudget } from './hooks/use-budget'
+import { gitApi } from './api'
 import type { GitRepo } from './api'
 import { toast } from 'sonner'
 
@@ -403,31 +406,75 @@ function ApiKeysSection() {
 }
 
 function GitHubSection() {
-  const { data: tokenStatus, isLoading } = useGitTokenStatus()
-  const saveMutation = useSaveGitToken()
-  const removeMutation = useRemoveGitToken()
-  const { data: repos, refetch: fetchRepos, isFetching: isLoadingRepos } = useGitRepos()
+  // Legacy token (backward compat)
+  const { data: tokenStatus } = useGitTokenStatus()
+  const saveLegacyMutation = useSaveGitToken()
+  const removeLegacyMutation = useRemoveGitToken()
+
+  // Multi-account
+  const { data: accounts, isLoading } = useGitAccounts()
+  const createAccountMutation = useCreateGitAccount()
+  const deleteAccountMutation = useDeleteGitAccount()
   const cloneMutation = useGitClone()
 
-  const [tokenInput, setTokenInput] = useState('')
-  const [showToken, setShowToken] = useState(false)
+  // State
+  const [showAddAccount, setShowAddAccount] = useState(false)
+  const [accountLabel, setAccountLabel] = useState('')
+  const [accountToken, setAccountToken] = useState('')
+  const [showAccountToken, setShowAccountToken] = useState(false)
+
+  // Browse repos per account
+  const [browsingAccountId, setBrowsingAccountId] = useState<string | null>(null)
+  const [accountRepos, setAccountRepos] = useState<GitRepo[]>([])
+  const [isLoadingRepos, setIsLoadingRepos] = useState(false)
+  const [repoSearch, setRepoSearch] = useState('')
+
+  // Clone dialog
   const [showCloneDialog, setShowCloneDialog] = useState(false)
   const [selectedRepo, setSelectedRepo] = useState<GitRepo | null>(null)
+  const [cloneAccountId, setCloneAccountId] = useState<string | null>(null)
   const [cloneFolderName, setCloneFolderName] = useState('')
-  const [showRepos, setShowRepos] = useState(false)
-  const [repoSearch, setRepoSearch] = useState('')
-  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
 
-  const handleSaveToken = async () => {
-    if (!tokenInput.trim()) return
-    await saveMutation.mutateAsync(tokenInput.trim())
-    setTokenInput('')
-    setShowToken(false)
+  // Legacy token input (for users who want to keep using the old way)
+  const [showLegacyToken, setShowLegacyToken] = useState(false)
+  const [legacyTokenInput, setLegacyTokenInput] = useState('')
+  const [showLegacyTokenValue, setShowLegacyTokenValue] = useState(false)
+
+  // Delete confirm
+  const [deleteAccountId, setDeleteAccountId] = useState<string | null>(null)
+  const [showRemoveLegacy, setShowRemoveLegacy] = useState(false)
+
+  const handleAddAccount = async () => {
+    if (!accountLabel.trim() || !accountToken.trim()) return
+    await createAccountMutation.mutateAsync({
+      label: accountLabel.trim(),
+      token: accountToken.trim(),
+    })
+    setAccountLabel('')
+    setAccountToken('')
+    setShowAddAccount(false)
+    setShowAccountToken(false)
   }
 
-  const handleShowRepos = () => {
-    setShowRepos(true)
-    fetchRepos()
+  const handleBrowseRepos = async (accountId: string) => {
+    if (browsingAccountId === accountId) {
+      setBrowsingAccountId(null)
+      setAccountRepos([])
+      setRepoSearch('')
+      return
+    }
+    setBrowsingAccountId(accountId)
+    setIsLoadingRepos(true)
+    setRepoSearch('')
+    try {
+      const repos = await gitApi.listAccountRepos(accountId, 1, 50)
+      setAccountRepos(repos)
+    } catch {
+      toast.error('Erro ao carregar repositorios')
+      setAccountRepos([])
+    } finally {
+      setIsLoadingRepos(false)
+    }
   }
 
   const handleClone = async () => {
@@ -436,13 +483,23 @@ function GitHubSection() {
       repoUrl: selectedRepo.cloneUrl,
       folderName: cloneFolderName || undefined,
       branch: selectedRepo.defaultBranch,
+      gitAccountId: cloneAccountId || undefined,
     })
     setShowCloneDialog(false)
     setSelectedRepo(null)
     setCloneFolderName('')
+    setCloneAccountId(null)
   }
 
-  const filteredRepos = repos?.filter((r) =>
+  const handleSaveLegacyToken = async () => {
+    if (!legacyTokenInput.trim()) return
+    await saveLegacyMutation.mutateAsync(legacyTokenInput.trim())
+    setLegacyTokenInput('')
+    setShowLegacyToken(false)
+    setShowLegacyTokenValue(false)
+  }
+
+  const filteredRepos = accountRepos.filter((r) =>
     r.fullName.toLowerCase().includes(repoSearch.toLowerCase()) ||
     (r.description || '').toLowerCase().includes(repoSearch.toLowerCase())
   )
@@ -460,196 +517,314 @@ function GitHubSection() {
     )
   }
 
+  const hasAccounts = accounts && accounts.length > 0
+
   return (
     <>
       <Card>
         <CardContent className="p-6 space-y-6">
+          {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-zinc-900 flex items-center justify-center">
                 <Github className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-base font-semibold">GitHub</h2>
+                <h2 className="text-base font-semibold">Contas GitHub</h2>
                 <p className="text-xs text-muted-foreground">
-                  Vincule seu token para clonar repos, fazer push e pull
+                  Conecte multiplas contas para clonar, push e pull com credenciais separadas
                 </p>
               </div>
             </div>
-            {tokenStatus?.hasToken && (
-              <Badge variant="outline" className="border-emerald-500/30 text-emerald-500 bg-emerald-500/5 gap-1.5">
-                <Check className="h-3 w-3" />
-                Conectado
-                {tokenStatus.username && ` (@${tokenStatus.username})`}
-              </Badge>
-            )}
+            <Button size="sm" onClick={() => setShowAddAccount(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Nova Conta
+            </Button>
           </div>
 
-          {tokenStatus?.hasToken ? (
-            // Connected state
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <Check className="h-4 w-4 text-emerald-500" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Token configurado</p>
+          {/* Accounts List */}
+          {hasAccounts ? (
+            <div className="space-y-3">
+              {accounts.map((account) => (
+                <div key={account.id} className="rounded-lg border">
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+                        <Github className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate">{account.label}</p>
+                          {account.username && (
+                            <Badge variant="outline" className="border-emerald-500/30 text-emerald-500 bg-emerald-500/5 text-[10px] px-1.5 py-0 gap-1">
+                              <Check className="h-2.5 w-2.5" />
+                              @{account.username}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Adicionada em {new Date(account.createdAt).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleBrowseRepos(account.id)}
+                        disabled={isLoadingRepos && browsingAccountId === account.id}
+                      >
+                        {isLoadingRepos && browsingAccountId === account.id ? (
+                          <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                        ) : (
+                          <GitBranch className="h-3.5 w-3.5 mr-1" />
+                        )}
+                        Repos
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteAccountId(account.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Repos for this account */}
+                  {browsingAccountId === account.id && (
+                    <div className="border-t px-4 py-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            value={repoSearch}
+                            onChange={(e) => setRepoSearch(e.target.value)}
+                            placeholder="Buscar repositorios..."
+                            className="pl-8 h-8 text-sm"
+                          />
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => { setBrowsingAccountId(null); setAccountRepos([]); setRepoSearch('') }}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+
+                      <div className="max-h-[300px] overflow-y-auto divide-y rounded-lg border">
+                        {isLoadingRepos ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : filteredRepos.length > 0 ? (
+                          filteredRepos.map((repo) => (
+                            <div
+                              key={repo.id}
+                              className="flex items-center justify-between px-3 py-2.5 hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="flex-1 min-w-0 mr-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium truncate">{repo.fullName}</span>
+                                  {repo.private ? (
+                                    <Lock className="h-3 w-3 text-amber-500 shrink-0" />
+                                  ) : (
+                                    <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  )}
+                                </div>
+                                {repo.description && (
+                                  <p className="text-xs text-muted-foreground truncate mt-0.5">{repo.description}</p>
+                                )}
+                                <div className="flex items-center gap-2 mt-1">
+                                  {repo.language && (
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                      {repo.language}
+                                    </Badge>
+                                  )}
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {new Date(repo.updatedAt).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedRepo(repo)
+                                  setCloneAccountId(account.id)
+                                  setCloneFolderName(repo.name)
+                                  setShowCloneDialog(true)
+                                }}
+                              >
+                                <Download className="h-3.5 w-3.5 mr-1" />
+                                Clonar
+                              </Button>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            Nenhum repositorio encontrado
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed p-6 text-center">
+              <Github className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Nenhuma conta GitHub conectada
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Adicione contas para clonar repos e fazer push/pull
+              </p>
+            </div>
+          )}
+
+          {/* Legacy token section (collapsible) */}
+          {tokenStatus?.hasToken && (
+            <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">Legado</Badge>
                   <p className="text-xs text-muted-foreground">
-                    {tokenStatus.username
-                      ? `Autenticado como @${tokenStatus.username}`
-                      : 'Token valido'}
+                    Token padrao {tokenStatus.username ? `(@${tokenStatus.username})` : ''} — usado como fallback
                   </p>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => setShowRemoveConfirm(true)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 text-xs"
+                  onClick={() => setShowRemoveLegacy(true)}
                 >
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />
                   Remover
                 </Button>
               </div>
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleShowRepos} disabled={isLoadingRepos}>
-                  {isLoadingRepos ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <GitBranch className="h-3.5 w-3.5 mr-1.5" />}
-                  Meus Repositorios
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                    Gerenciar Tokens
-                  </a>
-                </Button>
-              </div>
-
-              {/* Repos List */}
-              {showRepos && (
-                <div className="space-y-3 border rounded-lg p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        value={repoSearch}
-                        onChange={(e) => setRepoSearch(e.target.value)}
-                        placeholder="Buscar repositorios..."
-                        className="pl-8 h-8 text-sm"
-                      />
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => setShowRepos(false)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-
-                  <div className="max-h-[400px] overflow-y-auto divide-y rounded-lg border">
-                    {filteredRepos && filteredRepos.length > 0 ? (
-                      filteredRepos.map((repo) => (
-                        <div
-                          key={repo.id}
-                          className="flex items-center justify-between px-3 py-2.5 hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex-1 min-w-0 mr-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium truncate">{repo.fullName}</span>
-                              {repo.private ? (
-                                <Lock className="h-3 w-3 text-amber-500 shrink-0" />
-                              ) : (
-                                <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
-                              )}
-                            </div>
-                            {repo.description && (
-                              <p className="text-xs text-muted-foreground truncate mt-0.5">{repo.description}</p>
-                            )}
-                            <div className="flex items-center gap-2 mt-1">
-                              {repo.language && (
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                  {repo.language}
-                                </Badge>
-                              )}
-                              <span className="text-[10px] text-muted-foreground">
-                                {new Date(repo.updatedAt).toLocaleDateString('pt-BR')}
-                              </span>
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedRepo(repo)
-                              setCloneFolderName(repo.name)
-                              setShowCloneDialog(true)
-                            }}
-                          >
-                            <Download className="h-3.5 w-3.5 mr-1" />
-                            Clonar
-                          </Button>
-                        </div>
-                      ))
-                    ) : isLoadingRepos ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-8">
-                        Nenhum repositorio encontrado
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
-          ) : (
-            // Not connected state
-            <div className="space-y-4">
-              <div className="rounded-lg border border-dashed p-4 space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Cole seu Personal Access Token (classic) do GitHub. Ele precisa de permissao <code className="bg-muted px-1 py-0.5 rounded text-[11px]">repo</code> para acessar repositorios privados.
-                </p>
+          )}
+
+          {/* Add legacy token if no accounts and no legacy */}
+          {!tokenStatus?.hasToken && !hasAccounts && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                className="text-[11px] text-muted-foreground hover:text-foreground underline"
+                onClick={() => setShowLegacyToken(!showLegacyToken)}
+              >
+                Ou use um token padrao (legado)
+              </button>
+              {showLegacyToken && (
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
-                      type={showToken ? 'text' : 'password'}
-                      value={tokenInput}
-                      onChange={(e) => setTokenInput(e.target.value)}
+                      type={showLegacyTokenValue ? 'text' : 'password'}
+                      value={legacyTokenInput}
+                      onChange={(e) => setLegacyTokenInput(e.target.value)}
                       placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                      className="pr-10"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSaveToken()}
+                      className="pr-10 h-8 text-sm"
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveLegacyToken()}
                     />
                     <button
                       type="button"
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowToken(!showToken)}
+                      onClick={() => setShowLegacyTokenValue(!showLegacyTokenValue)}
                     >
-                      {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showLegacyTokenValue ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
                   </div>
-                  <Button
-                    onClick={handleSaveToken}
-                    disabled={!tokenInput.trim() || saveMutation.isPending}
-                  >
-                    {saveMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      'Salvar'
-                    )}
+                  <Button size="sm" onClick={handleSaveLegacyToken} disabled={!legacyTokenInput.trim() || saveLegacyMutation.isPending}>
+                    {saveLegacyMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Salvar'}
                   </Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  <a
-                    href="https://github.com/settings/tokens/new?scopes=repo&description=Execut+Orchestrator"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline inline-flex items-center gap-1"
-                  >
-                    Criar token no GitHub
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </p>
-              </div>
+              )}
             </div>
           )}
+
+          <div className="rounded-lg bg-muted/50 p-3">
+            <p className="text-xs text-muted-foreground">
+              Cada projeto clonado fica vinculado a conta usada no clone. Push e pull usam automaticamente as credenciais corretas.{' '}
+              <a
+                href="https://github.com/settings/tokens/new?scopes=repo&description=Execut+Orchestrator"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Criar token no GitHub
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </p>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Add Account Dialog */}
+      <Dialog open={showAddAccount} onOpenChange={(open) => { if (!open) { setShowAddAccount(false); setAccountLabel(''); setAccountToken(''); setShowAccountToken(false) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Conta GitHub</DialogTitle>
+            <DialogDescription>
+              Conecte uma conta GitHub com um Personal Access Token (classic) com permissao <code className="bg-muted px-1 py-0.5 rounded text-[11px]">repo</code>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Nome da conta</Label>
+              <Input
+                value={accountLabel}
+                onChange={(e) => setAccountLabel(e.target.value)}
+                placeholder="Ex: Pessoal, Trabalho, Cliente X"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Token</Label>
+              <div className="relative">
+                <Input
+                  type={showAccountToken ? 'text' : 'password'}
+                  value={accountToken}
+                  onChange={(e) => setAccountToken(e.target.value)}
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  className="pr-10"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddAccount()}
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowAccountToken(!showAccountToken)}
+                >
+                  {showAccountToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                <a
+                  href="https://github.com/settings/tokens/new?scopes=repo&description=Execut+Orchestrator"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Criar token no GitHub
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setShowAddAccount(false); setAccountLabel(''); setAccountToken(''); setShowAccountToken(false) }}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleAddAccount}
+                disabled={!accountLabel.trim() || !accountToken.trim() || createAccountMutation.isPending}
+              >
+                {createAccountMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Conectar'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Clone Dialog */}
       <Dialog open={showCloneDialog} onOpenChange={setShowCloneDialog}>
@@ -672,6 +847,11 @@ function GitHubSection() {
                 Sera criada dentro da sua pasta de projetos
               </p>
             </div>
+            {cloneAccountId && accounts && (
+              <p className="text-xs text-muted-foreground">
+                Conta: <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{accounts.find(a => a.id === cloneAccountId)?.label}</Badge>
+              </p>
+            )}
             {selectedRepo?.defaultBranch && (
               <p className="text-xs text-muted-foreground">
                 Branch: <code className="bg-muted px-1 py-0.5 rounded">{selectedRepo.defaultBranch}</code>
@@ -702,14 +882,28 @@ function GitHubSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Remove Confirm */}
+      {/* Delete Account Confirm */}
       <ConfirmDialog
-        open={showRemoveConfirm}
-        onOpenChange={setShowRemoveConfirm}
-        title="Remover token GitHub?"
-        description="Voce nao podera mais clonar repos privados ou fazer push/pull ate configurar um novo token."
+        open={!!deleteAccountId}
+        onOpenChange={(open) => { if (!open) setDeleteAccountId(null) }}
+        title="Remover conta GitHub?"
+        description="Os projetos clonados com esta conta perderao o vinculo. Voce podera reconectar depois."
         confirmLabel="Remover"
-        onConfirm={() => removeMutation.mutate()}
+        onConfirm={() => {
+          if (deleteAccountId) deleteAccountMutation.mutate(deleteAccountId)
+          setDeleteAccountId(null)
+        }}
+        variant="destructive"
+      />
+
+      {/* Remove Legacy Confirm */}
+      <ConfirmDialog
+        open={showRemoveLegacy}
+        onOpenChange={setShowRemoveLegacy}
+        title="Remover token legado?"
+        description="Projetos sem conta vinculada nao poderao mais fazer push/pull."
+        confirmLabel="Remover"
+        onConfirm={() => removeLegacyMutation.mutate()}
         variant="destructive"
       />
     </>

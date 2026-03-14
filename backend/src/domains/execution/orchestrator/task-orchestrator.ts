@@ -92,6 +92,7 @@ export class TaskOrchestrator {
     }
 
     // Fetch GitHub token from user and configure git in workspace
+    // Priority: ProjectGitMapping (per-project account) > user.githubToken (legacy)
     let githubToken: string | undefined
     if (userId) {
       try {
@@ -99,7 +100,21 @@ export class TaskOrchestrator {
           where: { id: userId },
           select: { githubToken: true, name: true, email: true },
         })
-        githubToken = user?.githubToken ?? undefined
+
+        // Check if this project has a specific git account mapped
+        if (projectPath) {
+          const mapping = await prisma.projectGitMapping.findUnique({
+            where: { projectPath },
+            include: { gitAccount: { select: { token: true, userId: true } } },
+          })
+          if (mapping && mapping.gitAccount.userId === userId) {
+            githubToken = mapping.gitAccount.token
+          } else {
+            githubToken = user?.githubToken ?? undefined
+          }
+        } else {
+          githubToken = user?.githubToken ?? undefined
+        }
 
         if (githubToken && projectPath) {
           try {

@@ -17,6 +17,13 @@ export interface GitRepo {
   updatedAt: string
 }
 
+export interface GitAccount {
+  id: string
+  label: string
+  username: string | null
+  createdAt: string
+}
+
 export interface GitStatus {
   isRepo: boolean
   branch: string | null
@@ -51,8 +58,8 @@ export const gitApi = {
     return data
   },
 
-  clone: async (repoUrl: string, folderName?: string, branch?: string) => {
-    const { data } = await apiClient.post('/git/clone', { repoUrl, folderName, branch })
+  clone: async (repoUrl: string, folderName?: string, branch?: string, gitAccountId?: string) => {
+    const { data } = await apiClient.post('/git/clone', { repoUrl, folderName, branch, gitAccountId })
     return data as { success: boolean; path: string; message: string }
   },
 
@@ -69,6 +76,37 @@ export const gitApi = {
   push: async (projectPath: string) => {
     const { data } = await apiClient.post('/git/push', { projectPath })
     return data as { success: boolean; message: string }
+  },
+
+  // Git Accounts (multi-account)
+  listAccounts: async (): Promise<GitAccount[]> => {
+    const { data } = await apiClient.get('/git/accounts')
+    return data
+  },
+
+  createAccount: async (label: string, token: string): Promise<GitAccount> => {
+    const { data } = await apiClient.post('/git/accounts', { label, token })
+    return data
+  },
+
+  updateAccount: async (id: string, updates: { label?: string; token?: string }): Promise<GitAccount> => {
+    const { data } = await apiClient.put(`/git/accounts/${id}`, updates)
+    return data
+  },
+
+  deleteAccount: async (id: string) => {
+    const { data } = await apiClient.delete(`/git/accounts/${id}`)
+    return data as { success: boolean; message: string }
+  },
+
+  listAccountRepos: async (accountId: string, page = 1, perPage = 30, sort = 'updated'): Promise<GitRepo[]> => {
+    const { data } = await apiClient.get(`/git/accounts/${accountId}/repos`, { params: { page, perPage, sort } })
+    return data
+  },
+
+  getProjectAccount: async (projectPath: string): Promise<GitAccount | null> => {
+    const { data } = await apiClient.get('/git/project-account', { params: { projectPath } })
+    return data
   },
 
   init: async (projectPath: string, remoteUrl?: string) => {

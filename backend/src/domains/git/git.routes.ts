@@ -18,6 +18,37 @@ async function getUserGithubToken(userId: string): Promise<string | null> {
   return user?.githubToken ?? null
 }
 
+async function getTokenForProject(userId: string, projectPath: string): Promise<string | null> {
+  // 1. Check if there's a project-specific git account mapping
+  const mapping = await prisma.projectGitMapping.findUnique({
+    where: { projectPath },
+    include: { gitAccount: true },
+  })
+
+  if (mapping && mapping.gitAccount.userId === userId) {
+    return mapping.gitAccount.token
+  }
+
+  // 2. Fall back to legacy user.githubToken
+  return getUserGithubToken(userId)
+}
+
+async function validateGithubToken(token: string): Promise<{ valid: boolean; username: string | null }> {
+  try {
+    const res = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': 'Execut-Orchestrator',
+      },
+    })
+    if (!res.ok) return { valid: false, username: null }
+    const data = await res.json() as { login: string }
+    return { valid: true, username: data.login }
+  } catch {
+    return { valid: false, username: null }
+  }
+}
+
 function runGit(args: string[], cwd: string, env?: Record<string, string>): { stdout: string; stderr: string; exitCode: number } {
   const result = spawnSync('git', args, {
     cwd,
@@ -54,7 +85,7 @@ export async function gitRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>()
 
   // ==========================================
-  // GitHub Token Management
+  // GitHub Token Management (Legacy)
   // ==========================================
 
   // PUT /git/token — Save GitHub token
@@ -125,23 +156,12 @@ export async function gitRoutes(app: FastifyInstance) {
       if (!token) return { hasToken: false, username: null }
 
       // Validate token by fetching user info
-      try {
-        const res = await fetch('https://api.github.com/user', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'User-Agent': 'Execut-Orchestrator',
-          },
-        })
-        if (!res.ok) return { hasToken: true, username: null }
-        const data = await res.json() as { login: string }
-        return { hasToken: true, username: data.login }
-      } catch {
-        return { hasToken: true, username: null }
-      }
+      const { username } = await validateGithubToken(token)
+      return { hasToken: true, username }
     }
   )
 
-  // GET /git/repos — List user's GitHub repos
+  // GET /git/repos — List user's GitHub repos (legacy, uses user.githubToken)
   server.get(
     '/git/repos',
     {
@@ -174,41 +194,301 @@ export async function gitRoutes(app: FastifyInstance) {
       if (!token) throw new BadRequestError('GitHub token nao configurado')
 
       const { page, perPage, sort } = request.query
-      const res = await fetch(
-        `https://api.github.com/user/repos?page=${page}&per_page=${perPage}&sort=${sort}&affiliation=owner,collaborator,organization_member`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github+json',
-            'User-Agent': 'Execut-Orchestrator',
-          },
-        }
+      const repos = await fetchGithubRepos(token, page, perPage, sort)
+      return repos
+    }
+  )
+
+  // ==========================================
+  // Git Accounts (Multi-account support)
+  // ==========================================
+
+  // GET /git/accounts — List all git accounts for the user
+  server.get(
+    '/git/accounts',
+    {
+      schema: {
+        tags: ['Git'],
+        summary: 'List all git accounts for the user',
+        response: {
+          200: z.array(z.object({
+            id: z.string(),
+            label: z.string(),
+            username: z.string().nullable(),
+            createdAt: z.string(),
+          })),
+        },
+      },
+    },
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      const accounts = await prisma.gitAccount.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      const results = await Promise.all(
+        accounts.map(async (account) => {
+          // Use cached username if available, otherwise validate
+          let username = account.username
+          if (!username) {
+            const validation = await validateGithubToken(account.token)
+            username = validation.username
+            // Cache the username if we got one
+            if (username) {
+              await prisma.gitAccount.update({
+                where: { id: account.id },
+                data: { username },
+              })
+            }
+          }
+
+          return {
+            id: account.id,
+            label: account.label,
+            username,
+            createdAt: account.createdAt.toISOString(),
+          }
+        })
       )
-      if (!res.ok) throw new BadRequestError(`GitHub API error: ${res.status}`)
 
-      const repos = await res.json() as Array<{
-        id: number
-        name: string
-        full_name: string
-        description: string | null
-        private: boolean
-        clone_url: string
-        default_branch: string
-        language: string | null
-        updated_at: string
-      }>
+      return results
+    }
+  )
 
-      return repos.map(r => ({
-        id: r.id,
-        name: r.name,
-        fullName: r.full_name,
-        description: r.description,
-        private: r.private,
-        cloneUrl: r.clone_url,
-        defaultBranch: r.default_branch,
-        language: r.language,
-        updatedAt: r.updated_at,
-      }))
+  // POST /git/accounts — Create a new git account
+  server.post(
+    '/git/accounts',
+    {
+      schema: {
+        tags: ['Git'],
+        summary: 'Create a new git account',
+        body: z.object({
+          label: z.string().min(1),
+          token: z.string().min(1),
+        }),
+        response: {
+          200: z.object({
+            id: z.string(),
+            label: z.string(),
+            username: z.string().nullable(),
+            createdAt: z.string(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      const { label, token } = request.body
+
+      // Validate the token against GitHub API
+      const { valid, username } = await validateGithubToken(token)
+      if (!valid) {
+        throw new BadRequestError('Token GitHub invalido ou expirado')
+      }
+
+      const account = await prisma.gitAccount.create({
+        data: {
+          label,
+          token,
+          username,
+          userId,
+        },
+      })
+
+      return {
+        id: account.id,
+        label: account.label,
+        username: account.username,
+        createdAt: account.createdAt.toISOString(),
+      }
+    }
+  )
+
+  // PUT /git/accounts/:id — Update a git account
+  server.put(
+    '/git/accounts/:id',
+    {
+      schema: {
+        tags: ['Git'],
+        summary: 'Update a git account',
+        params: z.object({
+          id: z.string().uuid(),
+        }),
+        body: z.object({
+          label: z.string().min(1).optional(),
+          token: z.string().min(1).optional(),
+        }),
+        response: {
+          200: z.object({
+            id: z.string(),
+            label: z.string(),
+            username: z.string().nullable(),
+            createdAt: z.string(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      const { id } = request.params
+      const { label, token } = request.body
+
+      // Check ownership
+      const existing = await prisma.gitAccount.findUnique({ where: { id } })
+      if (!existing || existing.userId !== userId) {
+        throw new NotFoundError('Conta git nao encontrada')
+      }
+
+      const updateData: { label?: string; token?: string; username?: string | null } = {}
+      if (label !== undefined) updateData.label = label
+
+      if (token !== undefined) {
+        // Re-validate the new token
+        const { valid, username } = await validateGithubToken(token)
+        if (!valid) {
+          throw new BadRequestError('Token GitHub invalido ou expirado')
+        }
+        updateData.token = token
+        updateData.username = username
+      }
+
+      const account = await prisma.gitAccount.update({
+        where: { id },
+        data: updateData,
+      })
+
+      return {
+        id: account.id,
+        label: account.label,
+        username: account.username,
+        createdAt: account.createdAt.toISOString(),
+      }
+    }
+  )
+
+  // DELETE /git/accounts/:id — Delete a git account (cascades to project mappings)
+  server.delete(
+    '/git/accounts/:id',
+    {
+      schema: {
+        tags: ['Git'],
+        summary: 'Delete a git account',
+        params: z.object({
+          id: z.string().uuid(),
+        }),
+        response: {
+          200: z.object({ success: z.boolean(), message: z.string() }),
+        },
+      },
+    },
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      const { id } = request.params
+
+      // Check ownership
+      const existing = await prisma.gitAccount.findUnique({ where: { id } })
+      if (!existing || existing.userId !== userId) {
+        throw new NotFoundError('Conta git nao encontrada')
+      }
+
+      await prisma.gitAccount.delete({ where: { id } })
+
+      return { success: true, message: 'Conta git removida' }
+    }
+  )
+
+  // GET /git/accounts/:id/repos — List repos for a specific git account
+  server.get(
+    '/git/accounts/:id/repos',
+    {
+      schema: {
+        tags: ['Git'],
+        summary: 'List GitHub repositories for a specific git account',
+        params: z.object({
+          id: z.string().uuid(),
+        }),
+        querystring: z.object({
+          page: z.coerce.number().default(1),
+          perPage: z.coerce.number().default(30),
+          sort: z.enum(['updated', 'created', 'pushed', 'full_name']).default('updated'),
+        }),
+        response: {
+          200: z.array(z.object({
+            id: z.number(),
+            name: z.string(),
+            fullName: z.string(),
+            description: z.string().nullable(),
+            private: z.boolean(),
+            cloneUrl: z.string(),
+            defaultBranch: z.string(),
+            language: z.string().nullable(),
+            updatedAt: z.string(),
+          })),
+        },
+      },
+    },
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      const { id } = request.params
+
+      // Check ownership
+      const account = await prisma.gitAccount.findUnique({ where: { id } })
+      if (!account || account.userId !== userId) {
+        throw new NotFoundError('Conta git nao encontrada')
+      }
+
+      const { page, perPage, sort } = request.query
+      const repos = await fetchGithubRepos(account.token, page, perPage, sort)
+      return repos
+    }
+  )
+
+  // ==========================================
+  // Project-Account Mapping
+  // ==========================================
+
+  // GET /git/project-account — Get the git account associated with a project
+  server.get(
+    '/git/project-account',
+    {
+      schema: {
+        tags: ['Git'],
+        summary: 'Get the git account associated with a project path',
+        querystring: z.object({
+          projectPath: z.string().min(1),
+        }),
+        response: {
+          200: z.object({
+            account: z.object({
+              id: z.string(),
+              label: z.string(),
+              username: z.string().nullable(),
+            }).nullable(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const userId = await request.getCurrentUserId()
+      const { projectPath } = request.query
+
+      const mapping = await prisma.projectGitMapping.findUnique({
+        where: { projectPath },
+        include: { gitAccount: true },
+      })
+
+      if (!mapping || mapping.gitAccount.userId !== userId) {
+        return { account: null }
+      }
+
+      return {
+        account: {
+          id: mapping.gitAccount.id,
+          label: mapping.gitAccount.label,
+          username: mapping.gitAccount.username,
+        },
+      }
     }
   )
 
@@ -227,6 +507,7 @@ export async function gitRoutes(app: FastifyInstance) {
           repoUrl: z.string().url(),
           folderName: z.string().regex(/^[a-zA-Z0-9._-]+$/).optional(),
           branch: z.string().optional(),
+          gitAccountId: z.string().uuid().optional(),
         }),
         response: {
           200: z.object({
@@ -239,8 +520,19 @@ export async function gitRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const userId = await request.getCurrentUserId()
-      const token = await getUserGithubToken(userId)
-      const { repoUrl, folderName, branch } = request.body
+      const { repoUrl, folderName, branch, gitAccountId } = request.body
+
+      // Determine which token to use
+      let token: string | null = null
+      if (gitAccountId) {
+        const account = await prisma.gitAccount.findUnique({ where: { id: gitAccountId } })
+        if (!account || account.userId !== userId) {
+          throw new NotFoundError('Conta git nao encontrada')
+        }
+        token = account.token
+      } else {
+        token = await getUserGithubToken(userId)
+      }
 
       const userDir = getUserProjectsDir(userId)
       mkdirSync(userDir, { recursive: true, mode: 0o775 })
@@ -270,6 +562,20 @@ export async function gitRoutes(app: FastifyInstance) {
 
       // Unshallow so push/pull work properly
       runGit(['fetch', '--unshallow'], targetDir, token ? { GIT_ASKPASS: 'echo', GIT_TOKEN: token } : undefined)
+
+      // Create project-git account mapping if a specific account was used
+      if (gitAccountId) {
+        await prisma.projectGitMapping.upsert({
+          where: { projectPath: targetDir },
+          create: {
+            projectPath: targetDir,
+            gitAccountId,
+          },
+          update: {
+            gitAccountId,
+          },
+        })
+      }
 
       return {
         success: true,
@@ -306,7 +612,7 @@ export async function gitRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
+      const userId = await request.getCurrentUserId()
       const { projectPath } = request.body
 
       if (!existsSync(projectPath)) {
@@ -338,10 +644,24 @@ export async function gitRoutes(app: FastifyInstance) {
       const hasRemote = remoteResult.exitCode === 0
       const remoteUrl = hasRemote ? sanitizeOutput(remoteResult.stdout) : null
 
-      // Fetch to check ahead/behind
+      // Fetch to check ahead/behind (use project-specific token for authenticated fetch)
       let ahead = 0, behind = 0
       if (hasRemote) {
+        const token = await getTokenForProject(userId, projectPath)
+        if (token) {
+          // Temporarily set authenticated remote for fetch
+          const authUrl = buildCloneUrl(remoteResult.stdout, token)
+          runGit(['remote', 'set-url', 'origin', authUrl], projectPath)
+        }
+
         runGit(['fetch', 'origin', '--quiet'], projectPath)
+
+        if (token) {
+          // Restore clean remote URL
+          const cleanUrl = remoteResult.stdout.replace(/x-access-token:[^@]+@/, '')
+          runGit(['remote', 'set-url', 'origin', cleanUrl], projectPath)
+        }
+
         const ab = runGit(['rev-list', '--left-right', '--count', `HEAD...origin/${branch || 'main'}`], projectPath)
         if (ab.exitCode === 0) {
           const parts = ab.stdout.split(/\s+/)
@@ -380,7 +700,7 @@ export async function gitRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const userId = await request.getCurrentUserId()
-      const token = await getUserGithubToken(userId)
+      const token = await getTokenForProject(userId, request.body.projectPath)
       const { projectPath } = request.body
 
       if (!existsSync(projectPath)) {
@@ -435,7 +755,7 @@ export async function gitRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const userId = await request.getCurrentUserId()
-      const token = await getUserGithubToken(userId)
+      const token = await getTokenForProject(userId, request.body.projectPath)
       const { projectPath } = request.body
 
       if (!existsSync(projectPath)) {
@@ -508,4 +828,50 @@ export async function gitRoutes(app: FastifyInstance) {
       return { success: true, message: 'Repositorio git inicializado' }
     }
   )
+}
+
+// ==========================================
+// Shared helper: fetch repos from GitHub API
+// ==========================================
+async function fetchGithubRepos(
+  token: string,
+  page: number,
+  perPage: number,
+  sort: string,
+) {
+  const res = await fetch(
+    `https://api.github.com/user/repos?page=${page}&per_page=${perPage}&sort=${sort}&affiliation=owner,collaborator,organization_member`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'Execut-Orchestrator',
+      },
+    }
+  )
+  if (!res.ok) throw new BadRequestError(`GitHub API error: ${res.status}`)
+
+  const repos = await res.json() as Array<{
+    id: number
+    name: string
+    full_name: string
+    description: string | null
+    private: boolean
+    clone_url: string
+    default_branch: string
+    language: string | null
+    updated_at: string
+  }>
+
+  return repos.map(r => ({
+    id: r.id,
+    name: r.name,
+    fullName: r.full_name,
+    description: r.description,
+    private: r.private,
+    cloneUrl: r.clone_url,
+    defaultBranch: r.default_branch,
+    language: r.language,
+    updatedAt: r.updated_at,
+  }))
 }

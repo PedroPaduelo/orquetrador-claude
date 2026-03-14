@@ -32,6 +32,7 @@ model User {
   tokenBudget   UserTokenBudget?
   webhooks      Webhook[]
   promptVersions PromptVersion[]
+  gitAccounts   GitAccount[]
 
   @@map("users")
 }
@@ -733,4 +734,40 @@ model WorkflowStepHook {
 
   @@unique([stepId, hookId])
   @@map("workflow_step_hooks")
+}
+
+// ============================================
+// GIT ACCOUNTS (Multiple GitHub accounts per user)
+// ============================================
+model GitAccount {
+  id        String   @id @default(uuid())
+  label     String   // e.g. "Pessoal", "Trabalho"
+  token     String
+  username  String?  // cached GitHub username
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectMappings ProjectGitMapping[]
+
+  @@unique([label, userId])
+  @@index([userId])
+  @@map("git_accounts")
+}
+
+// ============================================
+// PROJECT GIT MAPPING (project path -> git account)
+// ============================================
+model ProjectGitMapping {
+  id           String     @id @default(uuid())
+  projectPath  String     @unique @map("project_path")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  gitAccountId String     @map("git_account_id")
+  gitAccount   GitAccount @relation(fields: [gitAccountId], references: [id], onDelete: Cascade)
+
+  @@index([gitAccountId])
+  @@map("project_git_mappings")
 }
