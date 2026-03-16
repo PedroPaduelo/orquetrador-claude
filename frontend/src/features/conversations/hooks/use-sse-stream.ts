@@ -203,7 +203,7 @@ export function useSSEStream(options: UseSSEStreamOptions) {
           // Emit a visible action so the user knows what happened
           addStreamingAction({
             type: 'system',
-            content: data.reason as string || 'Contexto excedeu o limite. Reiniciando com sessao nova...',
+            content: data.reason as string || '🔄 O contexto ficou muito longo e foi compactado. A sessão será reiniciada automaticamente.',
           })
           break
 

@@ -64,8 +64,8 @@ async function registerPlugins() {
     secret: env.JWT_SECRET,
   })
 
-  // Rate limiting
-  await registerRateLimit(app)
+  // Rate limiting — disabled (livre)
+  // await registerRateLimit(app)
 
   // Auth middleware (adds getCurrentUserId to every request)
   await app.register(auth)
@@ -157,8 +157,10 @@ async function start() {
     // Recover stale executions from previous server crash
     await recoverStaleExecutions()
 
-    // Start BullMQ execution worker
-    startExecutionWorker()
+    // Start BullMQ execution worker (non-blocking — server works without Redis)
+    try { startExecutionWorker() } catch (err) {
+      console.warn('[Server] Execution worker failed to start:', (err as Error).message)
+    }
 
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗
@@ -192,9 +194,18 @@ signals.forEach((signal) => {
   })
 })
 
-// Prevent unhandled rejections from crashing the process
+// Prevent unhandled rejections and exceptions from crashing the process
 process.on('unhandledRejection', (err) => {
-  console.error('[UnhandledRejection]', err)
+  console.error('[UnhandledRejection]', err instanceof Error ? err.message : err)
+})
+
+process.on('uncaughtException', (err) => {
+  console.error('[UncaughtException]', err.message)
+  console.error(err.stack)
+  // Don't exit — keep server running unless it's truly fatal
+  if (err.message?.includes('ENOMEM') || err.message?.includes('Cannot allocate')) {
+    process.exit(1)
+  }
 })
 
 start()

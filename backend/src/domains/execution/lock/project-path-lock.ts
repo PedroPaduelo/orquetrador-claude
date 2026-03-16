@@ -16,8 +16,17 @@ export class ProjectPathLockManager {
 
   async acquire(path: string): Promise<() => void> {
     const mutex = this.getMutex(path)
-    const release = await mutex.acquire()
-    return release
+    try {
+      const release = await mutex.acquire()
+      return release
+    } catch (err) {
+      // Timeout acquiring lock — force cleanup and retry once
+      console.warn(`[Lock] Timeout acquiring lock for ${path}, forcing release`)
+      this.locks.delete(path)
+      const freshMutex = this.getMutex(path)
+      const release = await freshMutex.acquire()
+      return release
+    }
   }
 
   isLocked(path: string): boolean {

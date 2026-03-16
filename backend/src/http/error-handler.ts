@@ -54,8 +54,38 @@ export const errorHandler: FastifyErrorHandler = (error, _request, reply) => {
     return reply.status(409).send({ message: error.message })
   }
 
+  // Rate limit errors (from @fastify/rate-limit or manual 429)
+  if (error.statusCode === 429) {
+    return reply.status(429).send({
+      message: error.message || 'Rate limit exceeded',
+    })
+  }
+
+  // Prisma errors — database connectivity / constraint issues
+  if (error.message?.includes('prisma') || error.message?.includes('ECONNREFUSED') || (error as any).code === 'P2002' || (error as any).code === 'P2025') {
+    console.error('Database error:', error.message)
+    const status = (error as any).code === 'P2025' ? 404 : 503
+    return reply.status(status).send({
+      message: status === 404 ? 'Resource not found' : 'Database temporarily unavailable',
+    })
+  }
+
+  // Redis errors
+  if (error.message?.includes('Redis') || error.message?.includes('ECONNREFUSED') || error.message?.includes('MaxRetriesPerRequestError')) {
+    console.error('Redis error:', error.message)
+    return reply.status(503).send({
+      message: 'Service temporarily unavailable',
+    })
+  }
+
+  // Reply already sent (SSE streams, etc.)
+  if (reply.sent) {
+    console.error('Error after reply sent:', error.message)
+    return
+  }
+
   // Unhandled errors
-  console.error('Unhandled error:', error)
+  console.error('Unhandled error:', error.message || error)
   if (error.stack) {
     console.error('Stack:', error.stack)
   }

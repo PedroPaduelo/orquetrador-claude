@@ -313,23 +313,29 @@ export class TaskOrchestrator {
           type: 'action',
           action: {
             type: 'system',
-            content: 'Salvando memória do contexto antes de compactar...',
+            content: '💾 Salvando memória do contexto...',
           },
         })
 
+        let memorySaved = false
         try {
           await memoryManager.summarizeAndSave(conversationId, step.id)
+          memorySaved = true
         } catch (memErr) {
           console.error(`[Orchestrator] Erro ao salvar memória do step ${step.id}:`, memErr)
         }
 
         // Notify the frontend that we are resetting the context
+        const resetReason = memorySaved
+          ? '🔄 O contexto ficou muito longo e foi compactado. A memória do que foi feito foi salva automaticamente — a IA vai continuar de onde parou, sem perder o progresso.'
+          : '🔄 O contexto ficou muito longo e foi compactado. A sessão será reiniciada. Pode ser necessário re-contextualizar o que estava sendo feito.'
+
         orchestratorEvents.emitContextReset({
           executionId,
           conversationId,
           stepId: step.id,
           stepName: step.name,
-          reason: 'O contexto da sessao excedeu o limite. Memória salva. Abrindo uma sessao nova automaticamente.',
+          reason: resetReason,
         })
 
         // Delete the old session so we start fresh

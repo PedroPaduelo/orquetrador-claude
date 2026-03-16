@@ -240,7 +240,7 @@ export async function executionRoutes(app: FastifyInstance) {
       } finally {
         if (releaseLock) releaseLock()
         cleanup()
-        reply.raw.end()
+        try { if (!reply.raw.destroyed) reply.raw.end() } catch { /* already closed */ }
       }
     }
   )
@@ -388,7 +388,7 @@ export async function executionRoutes(app: FastifyInstance) {
           if (filterByConversation(data)) {
             sendEvent('complete', data)
             cleanup()
-            reply.raw.end()
+            try { if (!reply.raw.destroyed) reply.raw.end() } catch { /* closed */ }
           }
         },
         'dag:batch_start': (data: unknown) => { if (filterByConversation(data)) sendEvent('dag_batch_start', data) },
@@ -415,7 +415,7 @@ export async function executionRoutes(app: FastifyInstance) {
       if (!taskOrchestrator.isExecuting(id)) {
         sendEvent('no_active_execution', { conversationId: id })
         cleanup()
-        reply.raw.end()
+        try { if (!reply.raw.destroyed) reply.raw.end() } catch { /* closed */ }
       }
     }
   )
