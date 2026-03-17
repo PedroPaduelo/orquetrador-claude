@@ -47,7 +47,7 @@ export const stepTemplatesRepository = {
     return { ...t, resourceIds: JSON.parse(t.resourceIds), createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString() }
   },
 
-  async update(id: string, userId: string, input: {
+  async update(id: string, _userId: string, input: {
     name?: string
     description?: string | null
     baseUrl?: string

@@ -7,6 +7,7 @@ function parseStep(step: {
   baseUrl: string
   stepOrder: number
   systemPrompt: string | null
+  useBasePrompt: boolean
   conditions: string
   maxRetries: number
   backend: string
@@ -27,6 +28,7 @@ function parseStep(step: {
     baseUrl: step.baseUrl,
     stepOrder: step.stepOrder,
     systemPrompt: step.systemPrompt,
+    useBasePrompt: step.useBasePrompt,
     conditions: safeJsonParse<unknown>(step.conditions, { rules: [], default: 'next' }),
     maxRetries: step.maxRetries,
     backend: step.backend,
@@ -126,6 +128,7 @@ export const workflowsRepository = {
       name: string
       baseUrl?: string
       systemPrompt?: string | null
+      useBasePrompt?: boolean
       conditions?: unknown
       maxRetries?: number
       backend?: string
@@ -154,6 +157,7 @@ export const workflowsRepository = {
                 baseUrl: step.baseUrl ?? '',
                 stepOrder: index,
                 systemPrompt: step.systemPrompt,
+                useBasePrompt: step.useBasePrompt ?? true,
                 conditions: JSON.stringify(step.conditions ?? { rules: [], default: 'next' }),
                 maxRetries: step.maxRetries ?? 0,
                 backend: step.backend ?? 'claude',
@@ -203,6 +207,7 @@ export const workflowsRepository = {
         name: string
         baseUrl?: string
         systemPrompt?: string | null
+        useBasePrompt?: boolean
         conditions?: unknown
         maxRetries?: number
         backend?: string
@@ -248,6 +253,7 @@ export const workflowsRepository = {
           baseUrl: step.baseUrl ?? '',
           stepOrder: index,
           systemPrompt: step.systemPrompt,
+          useBasePrompt: step.useBasePrompt ?? true,
           conditions: JSON.stringify(step.conditions ?? { rules: [], default: 'next' }),
           maxRetries: step.maxRetries ?? 0,
           backend: step.backend ?? 'claude',

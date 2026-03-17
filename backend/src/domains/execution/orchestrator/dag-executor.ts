@@ -1,5 +1,4 @@
 import type { WorkflowStep } from '@prisma/client'
-import { orchestratorEvents } from './events.js'
 
 interface DagStep {
   step: WorkflowStep
@@ -23,7 +22,7 @@ export class DAGExecutor {
 
   validate(): { valid: boolean; error?: string } {
     // Check all dependency refs exist
-    for (const [id, node] of this.graph) {
+    for (const [_id, node] of this.graph) {
       for (const dep of node.dependsOn) {
         if (!this.graph.has(dep)) {
           return { valid: false, error: `Step "${node.step.name}" depends on unknown step ID "${dep}"` }

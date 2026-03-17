@@ -26,7 +26,7 @@ export function getExecutionQueue(): Queue<ExecutionJobData> | null {
   if (!_queue) {
     try {
       _queue = new Queue<ExecutionJobData>('execution', {
-        connection: getRedis(),
+        connection: getRedis() as any,
         defaultJobOptions: {
           removeOnComplete: { count: 100 },
           removeOnFail: { count: 50 },

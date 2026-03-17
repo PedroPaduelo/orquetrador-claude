@@ -24,6 +24,7 @@ export interface WorkflowStep {
   baseUrl: string
   stepOrder?: number
   systemPrompt?: string
+  useBasePrompt?: boolean
   conditions: StepConditions
   maxRetries: number
   mcpServerIds: string[]

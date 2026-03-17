@@ -8,7 +8,7 @@ import { orchestratorEvents } from './events.js'
 import { fileSyncService } from '../file-sync/file-sync-service.js'
 import { ExecutionMonitor } from '../monitoring/execution-monitor.js'
 import { buildSystemPrompt } from '../engine/base-system-prompt.js'
-import { DAGExecutor, isDAGWorkflow } from './dag-executor.js'
+import { DAGExecutor } from './dag-executor.js'
 import { runValidators } from '../validators/validator-runner.js'
 import type { ValidatorConfig } from '../validators/types.js'
 import { webhooksService } from '../../webhooks/webhooks.service.js'
@@ -49,6 +49,12 @@ export class TaskOrchestrator {
     return lower.includes('prompt is too long') || lower.includes('prompt_too_long')
   }
 
+  private isSessionNotFoundError(error: string | undefined): boolean {
+    if (!error) return false
+    const lower = error.toLowerCase()
+    return lower.includes('no conversation found with session id') || lower.includes('session not found') || lower.includes('session_not_found')
+  }
+
   async executeStep(
     executionId: string,
     conversationId: string,
@@ -68,6 +74,7 @@ export class TaskOrchestrator {
       stepSystemPrompt: step.systemPrompt,
       projectPath,
       memory: stepMemory,
+      useBasePrompt: step.useBasePrompt !== false,
     })
 
     // Create monitor for this execution
@@ -292,6 +299,37 @@ export class TaskOrchestrator {
         continue // Re-execute with --resume + user message
       }
 
+      // If session expired/not found on Claude CLI side, clear it and retry without --resume
+      if (this.isSessionNotFoundError(result.error) && resumeToken) {
+        console.warn(`[Orchestrator] Session ${resumeToken} expired/not found. Clearing and retrying without resume.`)
+
+        currentMonitor.flush({
+          exitCode: result.exitCode,
+          signal: result.signal,
+          resultStatus: 'session_expired',
+          errorMessage: result.error,
+          contentLength: result.content.length,
+          actionsCount: result.actions.length,
+          resumeTokenOut: null,
+        })
+
+        await sessionManager.deleteSession(conversationId, step.id)
+        resumeToken = null
+
+        orchestratorEvents.emitStepStream({
+          executionId,
+          conversationId,
+          stepId: step.id,
+          type: 'action',
+          action: {
+            type: 'system',
+            content: '🔄 Sessão anterior expirou. Reiniciando com nova sessão...',
+          },
+        })
+
+        continue // Re-execute without --resume
+      }
+
       // If "Prompt is too long" and we were resuming a session, retry with a fresh session
       if (this.isPromptTooLongError(result.error) && resumeToken) {
         // Flush the failed trace first
@@ -348,6 +386,7 @@ export class TaskOrchestrator {
           stepSystemPrompt: step.systemPrompt,
           projectPath,
           memory: freshMemory,
+          useBasePrompt: step.useBasePrompt !== false,
         })
 
         // Create a new monitor for the retry

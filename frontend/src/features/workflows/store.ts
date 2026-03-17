@@ -47,6 +47,7 @@ interface WorkflowsState {
 const defaultStep: WorkflowStep = {
   name: '',
   baseUrl: '',
+  useBasePrompt: true,
   conditions: { rules: [], default: 'next' },
   maxRetries: 0,
   mcpServerIds: [],

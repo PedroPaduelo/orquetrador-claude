@@ -155,7 +155,19 @@ export class StreamParser {
           obj.subtype === 'error_max_turns' ||
           obj.subtype === 'error_max_budget_usd' ||
           obj.is_error === true) {
-        const errorMsg = (obj.error as string) || (obj.result as string) || `Error: ${obj.subtype}`
+        const extractMsg = (val: unknown): string => {
+          if (!val) return ''
+          if (typeof val === 'string') return val
+          if (Array.isArray(val)) return val.join('; ')
+          if (typeof val === 'object') {
+            const o = val as Record<string, unknown>
+            if (typeof o.message === 'string') return o.message
+            if (typeof o.error === 'string') return o.error
+            try { return JSON.stringify(val) } catch { return String(val) }
+          }
+          return String(val)
+        }
+        const errorMsg = extractMsg(obj.errors) || extractMsg(obj.error) || extractMsg(obj.result) || extractMsg(obj.message) || `Error: ${obj.subtype}`
         events.push({
           type: 'error',
           error: errorMsg,

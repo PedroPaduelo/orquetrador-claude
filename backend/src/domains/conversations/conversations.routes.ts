@@ -589,7 +589,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
           },
           messages: {
             orderBy: { createdAt: 'desc' },
-            take: 10,
+            take: 20,
             select: { role: true, content: true, stepId: true, metadata: true, createdAt: true },
           },
         },
@@ -599,11 +599,18 @@ export async function conversationsRoutes(app: FastifyInstance) {
 
       const recentMessages = conversation.messages.reverse()
 
-      // Build rich step context
+      // Build rich step context with FULL system prompts
       const stepsContext = conversation.workflow?.steps.map((s, i) => {
-        const prompt = s.systemPrompt ? s.systemPrompt.slice(0, 300) : 'sem prompt'
-        return `Step ${i + 1}: "${s.name}" — ${prompt}`
-      }).join('\n') || 'Nenhum step definido'
+        const prompt = s.systemPrompt || 'sem prompt'
+        return `Step ${i + 1}: "${s.name}"\nSystem Prompt:\n${prompt}`
+      }).join('\n\n---\n\n') || 'Nenhum step definido'
+
+      // Get current step system prompt
+      const currentStep = conversation.currentStepId
+        ? conversation.workflow?.steps.find(s => s.id === conversation.currentStepId)
+        : conversation.workflow?.steps[0]
+      const currentStepPrompt = currentStep?.systemPrompt || ''
+      const currentStepName = currentStep?.name || 'desconhecido'
 
       // Get last assistant messages with more content
       const assistantMessages = recentMessages.filter(m => m.role === 'assistant')
@@ -617,10 +624,10 @@ export async function conversationsRoutes(app: FastifyInstance) {
         .map(a => a.name)
         .filter(Boolean)
 
-      // Build conversation summary
+      // Build FULL conversation summary (all messages with more content)
       const conversationSummary = recentMessages.map(m => {
         const role = m.role === 'user' ? 'USUARIO' : 'CLAUDE'
-        const content = m.content.slice(0, 500)
+        const content = m.content.slice(0, 1500)
         return `[${role}]: ${content}`
       }).join('\n\n')
 
@@ -631,7 +638,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
 
       try {
         const client = new Anthropic({
-          baseURL: 'https://loadbalance-back.ddw1sl.easypanel.host/teste',
+          baseURL: process.env.ANTHROPIC_BASE_URL || 'https://loadbalance-back.ddw1sl.easypanel.host/serende',
           apiKey: process.env.ANTHROPIC_API_KEY || 'sk-placeholder',
         })
         const response = await client.messages.create({
@@ -650,11 +657,17 @@ REGRAS:
 - O "text" é o que o usuario vai enviar como mensagem ao Claude, entao deve ser uma instrucao clara e completa`,
           messages: [{
             role: 'user',
-            content: `CONTEXTO DO PROJETO:
+            content: `CONTEXTO COMPLETO DO PROJETO:
 
-Workflow configurado:
+=== STEP ATUAL ===
+Nome: "${currentStepName}"
+System Prompt completo do step atual:
+${currentStepPrompt || 'Nenhum system prompt definido para este step'}
+
+=== WORKFLOW COMPLETO (todos os steps e seus system prompts) ===
 ${stepsContext}
 
+=== CONVERSA ===
 Primeira mensagem do usuario (objetivo original):
 ${firstUserMsg}
 
@@ -671,6 +684,8 @@ Historico completo recente (${recentMessages.length} mensagens):
 ${conversationSummary}
 
 ---
+
+IMPORTANTE: Use o system prompt do step atual e o contexto geral do workflow para entender EXATAMENTE o que o projeto faz e qual o objetivo. Suas sugestoes devem ser coerentes com o escopo definido nos system prompts.
 
 Com base em TUDO acima, sugira exatamente 4 proximos passos. Cada sugestao deve ser uma instrucao COMPLETA e ESPECIFICA que o usuario pode enviar diretamente ao Claude Code.
 

@@ -1,7 +1,10 @@
 import { prisma } from '../../../lib/prisma.js'
 import Anthropic from '@anthropic-ai/sdk'
 
-const anthropic = new Anthropic()
+const anthropic = new Anthropic({
+  baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
+  apiKey: process.env.ANTHROPIC_API_KEY || 'sk-placeholder',
+})
 
 export class MemoryManager {
   /**

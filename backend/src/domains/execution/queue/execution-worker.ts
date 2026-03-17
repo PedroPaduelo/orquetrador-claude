@@ -15,7 +15,7 @@ export function startExecutionWorker(): void {
       'execution',
       processExecutionJob,
       {
-        connection: getRedis(),
+        connection: getRedis() as any,
         concurrency: CONCURRENCY,
       }
     )

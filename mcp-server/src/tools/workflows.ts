@@ -6,6 +6,7 @@ const stepSchema = z.object({
   name: z.string().describe('Nome do step'),
   baseUrl: z.string().optional().describe('URL base do step (se diferente do workflow)'),
   systemPrompt: z.string().optional().describe('System prompt customizado para este step'),
+  useBasePrompt: z.boolean().optional().describe('Se true (padrao), inclui o prompt base do sistema. Se false, usa apenas o systemPrompt do step'),
   maxRetries: z.number().optional().describe('Maximo de retries em caso de falha'),
   backend: z.enum(['claude', 'api']).optional().describe('Backend: claude (CLI) ou api (Anthropic API)'),
   model: z.string().optional().describe('Modelo a usar (ex: claude-sonnet-4-20250514)'),

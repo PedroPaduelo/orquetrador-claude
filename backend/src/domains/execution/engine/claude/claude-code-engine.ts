@@ -342,7 +342,19 @@ export class ClaudeCodeEngine implements CliEngine {
         } else if (cancelled) {
           finalError = undefined
         } else if (code !== null && code !== 0) {
-          finalError = error || `Processo saiu com codigo ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
+          // If the parsed error is too generic, enrich with stderr context
+          if (error && rawStderr && (error.startsWith('Error: error_') || error.length < 50)) {
+            finalError = `${error}\n\nDetalhes (stderr): ${rawStderr.substring(0, 1000)}`
+          } else {
+            finalError = error || `Processo saiu com codigo ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
+          }
+        } else if (error) {
+          // Process exited with code 0 but parser detected an error (e.g. error_during_execution)
+          if (rawStderr && (error.startsWith('Error: error_') || error.length < 50)) {
+            finalError = `${error}\n\nDetalhes (stderr): ${rawStderr.substring(0, 1000)}`
+          } else {
+            finalError = error
+          }
         } else if (content.length === 0 && rawStdout.length === 0) {
           finalError = `Processo completou mas nao produziu output. Exit code: ${code}. stderr: ${rawStderr.substring(0, 500) || 'vazio'}`
         } else if (content.length === 0 && actions.length === 0 && rawStdout.length > 0) {

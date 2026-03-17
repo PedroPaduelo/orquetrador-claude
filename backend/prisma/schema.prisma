@@ -87,7 +87,8 @@ model WorkflowStep {
   stepOrder  Int    @map("step_order")
 
   // Prompts
-  systemPrompt       String? @map("system_prompt")
+  systemPrompt       String?  @map("system_prompt")
+  useBasePrompt      Boolean  @default(true) @map("use_base_prompt")
 
   // Conditions
   conditions String @default("{}")

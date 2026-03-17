@@ -6,6 +6,7 @@ import { Label } from '@/shared/components/ui/label'
 import { Separator } from '@/shared/components/ui/separator'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
+import { Switch } from '@/shared/components/ui/switch'
 import { StepResourceTabs } from './step-resource-tabs'
 import { ValidatorConfigPanel } from './validator-config-panel'
 import { VariableConfigPanel } from './variable-config-panel'
@@ -91,12 +92,36 @@ export function StepDetailEditor() {
                 </Button>
               )}
             </div>
+            <div className="flex items-center gap-2 mb-2">
+              <Switch
+                id={`use-base-prompt-${selectedStepIndex}`}
+                checked={step.useBasePrompt !== false}
+                onCheckedChange={(checked) =>
+                  updateStep(selectedStepIndex, { useBasePrompt: checked })
+                }
+              />
+              <Label
+                htmlFor={`use-base-prompt-${selectedStepIndex}`}
+                className="text-xs text-muted-foreground cursor-pointer"
+              >
+                Incluir prompt base do sistema
+              </Label>
+            </div>
             <Textarea
               value={step.systemPrompt || ''}
               onChange={(e) => updateStep(selectedStepIndex, { systemPrompt: e.target.value })}
-              placeholder="Instrucoes para este step..."
+              placeholder={
+                step.useBasePrompt !== false
+                  ? 'Instrucoes adicionais para este step (sera combinado com o prompt base)...'
+                  : 'Instrucoes completas para este step (sem prompt base)...'
+              }
               rows={3}
             />
+            {step.useBasePrompt === false && (
+              <p className="text-[11px] text-amber-500 mt-1">
+                Prompt base desativado — apenas o system prompt acima sera usado.
+              </p>
+            )}
           </div>
 
           <div className="w-32">

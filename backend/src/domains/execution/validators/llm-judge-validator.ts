@@ -1,7 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { ValidationResult } from './types.js'
 
-const client = new Anthropic()
+const client = new Anthropic({
+  baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
+  apiKey: process.env.ANTHROPIC_API_KEY || 'sk-placeholder',
+})
 
 export async function runLlmJudge(output: string, criteria: string): Promise<ValidationResult> {
   try {

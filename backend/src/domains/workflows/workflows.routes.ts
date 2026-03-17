@@ -34,6 +34,7 @@ const stepSchema = z.object({
   name: z.string().min(1),
   baseUrl: z.string().default(''),
   systemPrompt: z.string().nullable().optional(),
+  useBasePrompt: z.boolean().default(true),
   conditions: conditionsSchema
     .nullable()
     .default({ rules: [], default: 'next' })
@@ -58,6 +59,7 @@ const stepResponseSchema = z.object({
   baseUrl: z.string(),
   stepOrder: z.number(),
   systemPrompt: z.string().nullable(),
+  useBasePrompt: z.boolean(),
   conditions: z.unknown(),
   maxRetries: z.number(),
   backend: z.string(),
