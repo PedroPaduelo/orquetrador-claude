@@ -20,6 +20,7 @@ import { stepTemplatesRoutes } from './step-templates/step-templates.routes.js'
 import { promptVersionsRoutes } from './workflows/prompt-versions.routes.js'
 import { webhooksRoutes } from './webhooks/webhooks.routes.js'
 import { metricsRoutes } from './execution/metrics.routes.js'
+import { workflowApiRoutes } from './workflows/workflow-api.routes.js'
 
 export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   authRoutes,
@@ -42,4 +43,5 @@ export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   promptVersionsRoutes,
   webhooksRoutes,
   metricsRoutes,
+  workflowApiRoutes,
 ]

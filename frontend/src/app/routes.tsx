@@ -23,6 +23,7 @@ const AdminPage = lazy(() => import('@/features/admin'))
 const WebhooksPage = lazy(() => import('@/features/webhooks'))
 const StepTemplatesPage = lazy(() => import('@/features/step-templates'))
 const ExecutionsPage = lazy(() => import('@/features/executions'))
+const WorkflowChatPage = lazy(() => import('@/features/workflow-chat'))
 
 // Page loader
 function PageLoader() {
@@ -111,6 +112,15 @@ export function AppRoutes() {
           element={
             <Lazy>
               <ExecutionsPage />
+            </Lazy>
+          }
+        />
+
+        <Route
+          path="workflow-chat"
+          element={
+            <Lazy>
+              <WorkflowChatPage />
             </Lazy>
           }
         />

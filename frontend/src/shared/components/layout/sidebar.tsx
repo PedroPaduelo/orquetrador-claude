@@ -42,6 +42,11 @@ const navItems = [
     icon: Activity,
     label: 'Execucoes',
   },
+  {
+    to: '/workflow-chat',
+    icon: Bot,
+    label: 'Workflow Agent',
+  },
 ]
 
 const configItems = [
