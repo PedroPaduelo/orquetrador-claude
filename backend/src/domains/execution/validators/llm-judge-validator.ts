@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { safeTruncate } from '../../../lib/safe-json.js'
 import type { ValidationResult } from './types.js'
 
 const client = new Anthropic({
@@ -13,7 +14,7 @@ export async function runLlmJudge(output: string, criteria: string): Promise<Val
       max_tokens: 200,
       messages: [{
         role: 'user',
-        content: `Evaluate the following output against the criteria. Reply with ONLY "PASS" or "FAIL" on the first line, then a brief explanation.\n\nCriteria: ${criteria}\n\nOutput:\n${output.slice(0, 5000)}`,
+        content: `Evaluate the following output against the criteria. Reply with ONLY "PASS" or "FAIL" on the first line, then a brief explanation.\n\nCriteria: ${criteria}\n\nOutput:\n${safeTruncate(output, 5000)}`,
       }],
     })
     const text = response.content[0].type === 'text' ? response.content[0].text : ''
@@ -22,7 +23,7 @@ export async function runLlmJudge(output: string, criteria: string): Promise<Val
       valid: passed,
       validatorType: 'llm_judge',
       message: passed ? 'LLM judge: passed' : 'LLM judge: failed',
-      details: text.slice(0, 500),
+      details: safeTruncate(text, 500),
     }
   } catch (err) {
     return {

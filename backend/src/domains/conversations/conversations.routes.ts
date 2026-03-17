@@ -7,6 +7,7 @@ import { conversationsRepository } from './conversations.repository.js'
 import { conversationsService } from './conversations.service.js'
 import { prisma } from '../../lib/prisma.js'
 import { NotFoundError } from '../../http/errors/index.js'
+import { safeTruncate } from '../../lib/safe-json.js'
 import Anthropic from '@anthropic-ai/sdk'
 
 const PROJECT_BASE_PATH = process.env.PROJECT_BASE_PATH || '/workspace/temp-orquestrador'
@@ -615,7 +616,7 @@ export async function conversationsRoutes(app: FastifyInstance) {
       // Get last assistant messages with more content
       const assistantMessages = recentMessages.filter(m => m.role === 'assistant')
       const lastAssistant = assistantMessages[assistantMessages.length - 1]
-      const lastContent = lastAssistant?.content?.slice(0, 4000) || ''
+      const lastContent = safeTruncate(lastAssistant?.content || '', 4000)
 
       // Extract actions/tools used from metadata
       const lastMetadata = lastAssistant?.metadata as Record<string, unknown> | null
@@ -627,14 +628,14 @@ export async function conversationsRoutes(app: FastifyInstance) {
       // Build FULL conversation summary (all messages with more content)
       const conversationSummary = recentMessages.map(m => {
         const role = m.role === 'user' ? 'USUARIO' : 'CLAUDE'
-        const content = m.content.slice(0, 1500)
+        const content = safeTruncate(m.content, 1500)
         return `[${role}]: ${content}`
       }).join('\n\n')
 
       // Detect what was done (files created, commands run, etc.)
       const userMessages = recentMessages.filter(m => m.role === 'user')
-      const firstUserMsg = userMessages[0]?.content?.slice(0, 500) || ''
-      const lastUserMsg = userMessages[userMessages.length - 1]?.content?.slice(0, 500) || ''
+      const firstUserMsg = safeTruncate(userMessages[0]?.content || '', 500)
+      const lastUserMsg = safeTruncate(userMessages[userMessages.length - 1]?.content || '', 500)
 
       try {
         const client = new Anthropic({

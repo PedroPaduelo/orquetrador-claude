@@ -1,4 +1,5 @@
 import { prisma } from '../../../lib/prisma.js'
+import { safeTruncate } from '../../../lib/safe-json.js'
 import Anthropic from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({
@@ -84,7 +85,7 @@ export class MemoryManager {
 
     // Montar o conteúdo para resumir
     const conversationText = messages
-      .map(m => `[${m.role.toUpperCase()}]: ${m.content.slice(0, 3000)}`)
+      .map(m => `[${m.role.toUpperCase()}]: ${safeTruncate(m.content, 3000)}`)
       .join('\n\n')
 
     const promptParts: string[] = []

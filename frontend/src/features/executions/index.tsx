@@ -11,6 +11,7 @@ import {
   ExternalLink,
   RefreshCw,
   Timer,
+  Square,
 } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Badge } from '@/shared/components/ui/badge'
@@ -18,6 +19,7 @@ import { cn, formatRelativeTime } from '@/shared/lib/utils'
 import { ListSkeleton } from '@/shared/components/common/loading-skeleton'
 import { EmptyState } from '@/shared/components/common/empty-state'
 import { useExecutions, useExecutionSummary } from './hooks/use-executions'
+import { useCancelExecution } from '@/features/conversations/hooks/use-conversations'
 import type { Execution } from './api'
 
 const STATE_CONFIG: Record<string, {
@@ -86,6 +88,25 @@ function formatDuration(startedAt: string, endedAt?: string | null): string {
 
 function getEndTime(exec: Execution): string | null {
   return exec.completedAt || exec.failedAt || exec.cancelledAt || null
+}
+
+function StopButton({ conversationId }: { conversationId: string }) {
+  const cancel = useCancelExecution(conversationId)
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+      title="Parar execucao"
+      disabled={cancel.isPending}
+      onClick={(e) => {
+        e.stopPropagation()
+        cancel.mutate()
+      }}
+    >
+      <Square className={cn('h-3.5 w-3.5 fill-current', cancel.isPending && 'animate-pulse')} />
+    </Button>
+  )
 }
 
 export default function ExecutionsPage() {
@@ -243,17 +264,22 @@ export default function ExecutionsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(`/conversations/${exec.conversationId}`)
-                        }}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        {(exec.state === 'running' || exec.state === 'paused') && (
+                          <StopButton conversationId={exec.conversationId} />
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(`/conversations/${exec.conversationId}`)
+                          }}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 )

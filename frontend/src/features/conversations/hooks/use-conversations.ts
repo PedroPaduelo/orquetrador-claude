@@ -95,10 +95,13 @@ export function useCloneConversation() {
 }
 
 export function useCancelExecution(conversationId: string) {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: () => conversationsApi.cancel(conversationId),
     onSuccess: () => {
       toast.info('Execucao cancelada')
+      queryClient.invalidateQueries({ queryKey: ['executions'] })
+      queryClient.invalidateQueries({ queryKey: ['executions-summary'] })
     },
     onError: () => {
       toast.error('Erro ao cancelar execucao')
