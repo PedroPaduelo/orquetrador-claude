@@ -22,7 +22,10 @@ import { domainRoutes } from './domains/index.js'
 import { startTraceCleanup } from './domains/execution/monitoring/trace-cleanup.js'
 import { projectPathLock } from './domains/execution/lock/project-path-lock.js'
 import { startExecutionWorker, stopExecutionWorker } from './domains/execution/queue/execution-worker.js'
-import { closeExecutionQueue } from './domains/execution/queue/execution-queue.js'
+import { closeExecutionQueue, getExecutionQueue } from './domains/execution/queue/execution-queue.js'
+import { createBullBoard } from '@bull-board/api'
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
+import { FastifyAdapter } from '@bull-board/fastify'
 import { closeAllRedis } from './lib/redis.js'
 import { recoverStaleExecutions } from './domains/execution/orchestrator/recovery.js'
 
@@ -125,6 +128,23 @@ async function registerPlugins() {
   await app.register(fastifySwaggerUI, {
     routePrefix: '/docs',
   })
+
+  // Bull Board dashboard at /admin/queues
+  try {
+    const executionQueue = getExecutionQueue()
+    if (executionQueue) {
+      const serverAdapter = new FastifyAdapter()
+      serverAdapter.setBasePath('/admin/queues')
+      createBullBoard({
+        queues: [new BullMQAdapter(executionQueue)],
+        serverAdapter,
+      })
+      await app.register(serverAdapter.registerPlugin(), { prefix: '/admin/queues' })
+      console.log(`  📊 Bull Board at: http://${env.HOST}:${env.PORT}/admin/queues`)
+    }
+  } catch (err) {
+    console.warn('[Server] Bull Board failed to start:', (err as Error).message)
+  }
 }
 
 // Register all domain routes
