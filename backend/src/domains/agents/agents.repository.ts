@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma.js'
 import { logAudit } from '../../lib/audit-log.js'
+import { paginate, buildPaginatedResult, type PaginationParams } from '../../lib/pagination.js'
 import type { JsonValue } from '@prisma/client/runtime/library'
 
 function toStringArray(val: JsonValue | null | undefined): string[] {
@@ -59,8 +60,18 @@ function fromDb(record: {
 
 export const agentsRepository = {
   async findAll(userId: string) {
-    const agents = await prisma.agent.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, include: { agentSkills: { include: { skill: { select: { name: true } } }, orderBy: { order: 'asc' } } } })
+    const agents = await prisma.agent.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, include: { agentSkills: { include: { skill: { select: { name: true } } }, orderBy: { order: 'asc' } } }, take: 100 })
     return agents.map(fromDb)
+  },
+
+  async findAllPaginated(userId: string, pagination: PaginationParams) {
+    const where = { userId }
+    const include = { agentSkills: { include: { skill: { select: { name: true as const } } }, orderBy: { order: 'asc' as const } } }
+    const [agents, total] = await Promise.all([
+      prisma.agent.findMany({ where, orderBy: { createdAt: 'desc' }, include, ...paginate(pagination) }),
+      prisma.agent.count({ where }),
+    ])
+    return buildPaginatedResult(agents.map(fromDb), total, pagination)
   },
 
   async findById(id: string, userId: string) {

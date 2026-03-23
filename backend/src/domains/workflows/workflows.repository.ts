@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma.js'
 import { logAudit } from '../../lib/audit-log.js'
+import { paginate, buildPaginatedResult, type PaginationParams } from '../../lib/pagination.js'
 import { workflowVersioningService } from './workflow-versioning.service.js'
 import { syncWorkflowDependencies, deleteWorkflowDependencies } from './resource-dependency.service.js'
 
@@ -55,16 +56,9 @@ export const workflowsRepository = {
     const workflows = await prisma.workflow.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
-      include: {
-        _count: {
-          select: {
-            steps: true,
-            conversations: true,
-          },
-        },
-      },
+      include: { _count: { select: { steps: true, conversations: true } } },
+      take: 100,
     })
-
     return workflows.map((w) => ({
       id: w.id,
       name: w.name,
@@ -75,6 +69,30 @@ export const workflowsRepository = {
       createdAt: w.createdAt.toISOString(),
       updatedAt: w.updatedAt.toISOString(),
     }))
+  },
+
+  async findAllPaginated(userId: string, pagination: PaginationParams) {
+    const where = { userId }
+    const [workflows, total] = await Promise.all([
+      prisma.workflow.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        include: { _count: { select: { steps: true, conversations: true } } },
+        ...paginate(pagination),
+      }),
+      prisma.workflow.count({ where }),
+    ])
+    const mapped = workflows.map((w) => ({
+      id: w.id,
+      name: w.name,
+      description: w.description,
+      type: w.type,
+      stepsCount: w._count.steps,
+      conversationsCount: w._count.conversations,
+      createdAt: w.createdAt.toISOString(),
+      updatedAt: w.updatedAt.toISOString(),
+    }))
+    return buildPaginatedResult(mapped, total, pagination)
   },
 
   async findById(id: string) {

@@ -1,17 +1,30 @@
 import { prisma } from '../../lib/prisma.js'
+import { paginate, buildPaginatedResult, type PaginationParams } from '../../lib/pagination.js'
 
 export const stepTemplatesRepository = {
   async findAll(userId: string) {
-    const templates = await prisma.stepTemplate.findMany({
-      where: { userId },
-      orderBy: { updatedAt: 'desc' },
-    })
+    const templates = await prisma.stepTemplate.findMany({ where: { userId }, orderBy: { updatedAt: 'desc' }, take: 100 })
     return templates.map(t => ({
       ...t,
       resourceIds: t.resourceIds ?? {},
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
     }))
+  },
+
+  async findAllPaginated(userId: string, pagination: PaginationParams) {
+    const where = { userId }
+    const [templates, total] = await Promise.all([
+      prisma.stepTemplate.findMany({ where, orderBy: { updatedAt: 'desc' }, ...paginate(pagination) }),
+      prisma.stepTemplate.count({ where }),
+    ])
+    const mapped = templates.map(t => ({
+      ...t,
+      resourceIds: t.resourceIds ?? {},
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+    }))
+    return buildPaginatedResult(mapped, total, pagination)
   },
 
   async findById(id: string, userId: string) {

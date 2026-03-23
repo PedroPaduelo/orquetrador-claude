@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma.js'
 import { logAudit } from '../../lib/audit-log.js'
+import { paginate, buildPaginatedResult, type PaginationParams } from '../../lib/pagination.js'
 
 function fromDb(record: {
   id: string
@@ -49,8 +50,18 @@ export const rulesRepository = {
       where: { userId },
       orderBy: { createdAt: 'desc' },
       include: { skill: { select: { name: true } } },
+      take: 100,
     })
     return rules.map(fromDb)
+  },
+
+  async findAllPaginated(userId: string, pagination: PaginationParams) {
+    const where = { userId }
+    const [rules, total] = await Promise.all([
+      prisma.rule.findMany({ where, orderBy: { createdAt: 'desc' }, include: { skill: { select: { name: true } } }, ...paginate(pagination) }),
+      prisma.rule.count({ where }),
+    ])
+    return buildPaginatedResult(rules.map(fromDb), total, pagination)
   },
 
   async findById(id: string, userId: string) {

@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma.js'
 import { validateProjectPath } from '../../lib/validation.js'
+import { paginate, buildPaginatedResult, type PaginationParams } from '../../lib/pagination.js'
 
 export const conversationsRepository = {
   async findAll(userId: string, workflowId?: string) {
@@ -7,18 +8,12 @@ export const conversationsRepository = {
       where: { userId, ...(workflowId ? { workflowId } : {}) },
       orderBy: { createdAt: 'desc' },
       include: {
-        workflow: {
-          select: { name: true, type: true },
-        },
-        currentStep: {
-          select: { name: true },
-        },
-        _count: {
-          select: { messages: true },
-        },
+        workflow: { select: { name: true, type: true } },
+        currentStep: { select: { name: true } },
+        _count: { select: { messages: true } },
       },
+      take: 100,
     })
-
     return conversations.map((c) => ({
       id: c.id,
       title: c.title,
@@ -32,6 +27,37 @@ export const conversationsRepository = {
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
     }))
+  },
+
+  async findAllPaginated(userId: string, pagination: PaginationParams, workflowId?: string) {
+    const where = { userId, ...(workflowId ? { workflowId } : {}) }
+    const [conversations, total] = await Promise.all([
+      prisma.conversation.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          workflow: { select: { name: true, type: true } },
+          currentStep: { select: { name: true } },
+          _count: { select: { messages: true } },
+        },
+        ...paginate(pagination),
+      }),
+      prisma.conversation.count({ where }),
+    ])
+    const mapped = conversations.map((c) => ({
+      id: c.id,
+      title: c.title,
+      projectPath: c.projectPath ?? null,
+      workflowId: c.workflowId,
+      workflowName: c.workflow.name,
+      workflowType: c.workflow.type,
+      currentStepId: c.currentStepId,
+      currentStepName: c.currentStep?.name ?? null,
+      messagesCount: c._count.messages,
+      createdAt: c.createdAt.toISOString(),
+      updatedAt: c.updatedAt.toISOString(),
+    }))
+    return buildPaginatedResult(mapped, total, pagination)
   },
 
   async findById(id: string) {
@@ -103,38 +129,40 @@ export const conversationsRepository = {
   async create(input: { workflowId: string; title?: string; projectPath: string }, userId: string) {
     input.projectPath = validateProjectPath(input.projectPath)
 
-    const workflow = await prisma.workflow.findUnique({
-      where: { id: input.workflowId, userId },
-      include: {
-        steps: {
-          orderBy: { stepOrder: 'asc' },
-          take: 1,
+    return prisma.$transaction(async (tx) => {
+      const workflow = await tx.workflow.findUnique({
+        where: { id: input.workflowId, userId },
+        include: {
+          steps: {
+            orderBy: { stepOrder: 'asc' },
+            take: 1,
+          },
         },
-      },
+      })
+
+      if (!workflow) return null
+
+      const firstStep = workflow.steps[0] ?? null
+
+      const conversation = await tx.conversation.create({
+        data: {
+          workflowId: input.workflowId,
+          title: input.title ?? null,
+          projectPath: input.projectPath,
+          currentStepId: firstStep?.id ?? null,
+          userId,
+        },
+      })
+
+      return {
+        id: conversation.id,
+        workflowId: conversation.workflowId,
+        title: conversation.title,
+        projectPath: conversation.projectPath,
+        currentStepId: conversation.currentStepId,
+        createdAt: conversation.createdAt.toISOString(),
+      }
     })
-
-    if (!workflow) return null
-
-    const firstStep = workflow.steps[0] ?? null
-
-    const conversation = await prisma.conversation.create({
-      data: {
-        workflowId: input.workflowId,
-        title: input.title ?? null,
-        projectPath: input.projectPath,
-        currentStepId: firstStep?.id ?? null,
-        userId,
-      },
-    })
-
-    return {
-      id: conversation.id,
-      workflowId: conversation.workflowId,
-      title: conversation.title,
-      projectPath: conversation.projectPath,
-      currentStepId: conversation.currentStepId,
-      createdAt: conversation.createdAt.toISOString(),
-    }
   },
 
   async delete(id: string) {
@@ -160,41 +188,43 @@ export const conversationsRepository = {
   },
 
   async clone(sourceId: string, userId: string) {
-    const source = await prisma.conversation.findUnique({
-      where: { id: sourceId },
-      include: {
-        workflow: {
-          include: {
-            steps: {
-              orderBy: { stepOrder: 'asc' as const },
-              take: 1,
+    return prisma.$transaction(async (tx) => {
+      const source = await tx.conversation.findUnique({
+        where: { id: sourceId },
+        include: {
+          workflow: {
+            include: {
+              steps: {
+                orderBy: { stepOrder: 'asc' as const },
+                take: 1,
+              },
             },
           },
         },
-      },
+      })
+
+      if (!source) return null
+
+      const firstStep = source.workflow.steps[0] ?? null
+
+      const conversation = await tx.conversation.create({
+        data: {
+          workflowId: source.workflowId,
+          title: source.title ? `${source.title} (cópia)` : null,
+          projectPath: source.projectPath,
+          currentStepId: firstStep?.id ?? null,
+          userId,
+        },
+      })
+
+      return {
+        id: conversation.id,
+        workflowId: conversation.workflowId,
+        title: conversation.title,
+        projectPath: conversation.projectPath,
+        currentStepId: conversation.currentStepId,
+        createdAt: conversation.createdAt.toISOString(),
+      }
     })
-
-    if (!source) return null
-
-    const firstStep = source.workflow.steps[0] ?? null
-
-    const conversation = await prisma.conversation.create({
-      data: {
-        workflowId: source.workflowId,
-        title: source.title ? `${source.title} (cópia)` : null,
-        projectPath: source.projectPath,
-        currentStepId: firstStep?.id ?? null,
-        userId,
-      },
-    })
-
-    return {
-      id: conversation.id,
-      workflowId: conversation.workflowId,
-      title: conversation.title,
-      projectPath: conversation.projectPath,
-      currentStepId: conversation.currentStepId,
-      createdAt: conversation.createdAt.toISOString(),
-    }
   },
 }

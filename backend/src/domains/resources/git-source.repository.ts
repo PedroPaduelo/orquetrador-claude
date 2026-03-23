@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js'
+import { paginate, buildPaginatedResult, type PaginationParams } from '../../lib/pagination.js'
 import type { ResourceType } from '@prisma/client'
 
 function fromDb(record: {
@@ -60,10 +61,16 @@ export const gitSourceRepository = {
   },
 
   async listByType(resourceType: ResourceType) {
-    const records = await prisma.gitSource.findMany({
-      where: { resourceType },
-      orderBy: { createdAt: 'desc' },
-    })
+    const records = await prisma.gitSource.findMany({ where: { resourceType }, orderBy: { createdAt: 'desc' }, take: 100 })
     return records.map(fromDb)
+  },
+
+  async listByTypePaginated(resourceType: ResourceType, pagination: PaginationParams) {
+    const where = { resourceType }
+    const [records, total] = await Promise.all([
+      prisma.gitSource.findMany({ where, orderBy: { createdAt: 'desc' }, ...paginate(pagination) }),
+      prisma.gitSource.count({ where }),
+    ])
+    return buildPaginatedResult(records.map(fromDb), total, pagination)
   },
 }

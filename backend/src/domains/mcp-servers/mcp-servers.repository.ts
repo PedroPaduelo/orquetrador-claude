@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma.js'
 import { logAudit } from '../../lib/audit-log.js'
 import { validateMcpServerUrl } from '../../lib/validation.js'
+import { paginate, buildPaginatedResult, type PaginationParams } from '../../lib/pagination.js'
 
 function fromDbList(record: {
   id: string
@@ -72,8 +73,17 @@ function fromDbFull(record: {
 
 export const mcpServersRepository = {
   async findAll(userId: string) {
-    const servers = await prisma.mcpServer.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } })
+    const servers = await prisma.mcpServer.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 100 })
     return servers.map(fromDbList)
+  },
+
+  async findAllPaginated(userId: string, pagination: PaginationParams) {
+    const where = { userId }
+    const [servers, total] = await Promise.all([
+      prisma.mcpServer.findMany({ where, orderBy: { createdAt: 'desc' }, ...paginate(pagination) }),
+      prisma.mcpServer.count({ where }),
+    ])
+    return buildPaginatedResult(servers.map(fromDbList), total, pagination)
   },
 
   async findById(id: string, userId: string) {

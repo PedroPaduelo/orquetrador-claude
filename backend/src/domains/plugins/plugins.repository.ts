@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma.js'
 import { logAudit } from '../../lib/audit-log.js'
+import { paginate, buildPaginatedResult, type PaginationParams } from '../../lib/pagination.js'
 
 // ---- fromDb helper ----
 
@@ -38,11 +39,8 @@ export const pluginsRepository = {
     const plugins = await prisma.plugin.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      include: {
-        _count: {
-          select: { mcpServers: true, skills: true, agents: true },
-        },
-      },
+      include: { _count: { select: { mcpServers: true, skills: true, agents: true } } },
+      take: 100,
     })
     return plugins.map((p) => ({
       id: p.id,
@@ -58,6 +56,34 @@ export const pluginsRepository = {
       agentsCount: p._count.agents,
       createdAt: p.createdAt.toISOString(),
     }))
+  },
+
+  async findAllPaginated(userId: string, pagination: PaginationParams) {
+    const where = { userId }
+    const [plugins, total] = await Promise.all([
+      prisma.plugin.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: { _count: { select: { mcpServers: true, skills: true, agents: true } } },
+        ...paginate(pagination),
+      }),
+      prisma.plugin.count({ where }),
+    ])
+    const mapped = plugins.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      version: p.version,
+      author: p.author,
+      enabled: p.enabled,
+      source: p.source,
+      repoUrl: p.repoUrl,
+      mcpServersCount: p._count.mcpServers,
+      skillsCount: p._count.skills,
+      agentsCount: p._count.agents,
+      createdAt: p.createdAt.toISOString(),
+    }))
+    return buildPaginatedResult(mapped, total, pagination)
   },
 
   async findById(id: string, userId: string) {

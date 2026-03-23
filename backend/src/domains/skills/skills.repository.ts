@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma.js'
 import { logAudit } from '../../lib/audit-log.js'
+import { paginate, buildPaginatedResult, type PaginationParams } from '../../lib/pagination.js'
 import type { JsonValue, InputJsonValue } from '@prisma/client/runtime/library'
 
 function toStringArray(val: JsonValue | null | undefined): string[] {
@@ -51,8 +52,17 @@ function fromDb(record: {
 
 export const skillsRepository = {
   async findAll(userId: string) {
-    const skills = await prisma.skill.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } })
+    const skills = await prisma.skill.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 100 })
     return skills.map(fromDb)
+  },
+
+  async findAllPaginated(userId: string, pagination: PaginationParams) {
+    const where = { userId }
+    const [skills, total] = await Promise.all([
+      prisma.skill.findMany({ where, orderBy: { createdAt: 'desc' }, ...paginate(pagination) }),
+      prisma.skill.count({ where }),
+    ])
+    return buildPaginatedResult(skills.map(fromDb), total, pagination)
   },
 
   async findById(id: string, userId: string) {
