@@ -35,7 +35,8 @@ interface AgentData {
   model?: string | null
   permissionMode: string
   maxTurns?: number | null
-  skills: unknown
+  skills?: unknown
+  agentSkills?: Array<{ skill: { name: string } }>
 }
 
 interface RuleData {
@@ -93,7 +94,7 @@ export class FileSyncService {
         workflow: { select: { userId: true } },
         mcpServers: { include: { server: true } },
         skills: { include: { skill: true } },
-        agents: { include: { agent: true } },
+        agents: { include: { agent: { include: { agentSkills: { include: { skill: { select: { name: true } } }, orderBy: { order: 'asc' } } } } } },
         rules: { include: { rule: { include: { skill: { select: { name: true } } } } } },
         hooks: { include: { hook: true } },
       },
@@ -108,7 +109,7 @@ export class FileSyncService {
     const [globalServers, globalSkills, globalAgents, globalRules, globalHooks] = await Promise.all([
       prisma.mcpServer.findMany({ where: { enabled: true, isGlobal: true, userId } }),
       prisma.skill.findMany({ where: { enabled: true, isGlobal: true, userId } }),
-      prisma.agent.findMany({ where: { enabled: true, isGlobal: true, userId } }),
+      prisma.agent.findMany({ where: { enabled: true, isGlobal: true, userId }, include: { agentSkills: { include: { skill: { select: { name: true } } }, orderBy: { order: 'asc' } } } }),
       prisma.rule.findMany({ where: { enabled: true, isGlobal: true, userId }, include: { skill: { select: { name: true } } } }),
       prisma.hook.findMany({ where: { enabled: true, isGlobal: true, userId } }),
     ])
@@ -433,7 +434,10 @@ exit 0
   syncAgentFile(projectPath: string, agent: AgentData): void {
     const tools = asType<string[]>(agent.tools, [])
     const disallowedTools = asType<string[]>(agent.disallowedTools, [])
-    const skills = asType<string[]>(agent.skills, [])
+    // Prefer AgentSkill join table over legacy skills Json field
+    const skills = agent.agentSkills && agent.agentSkills.length > 0
+      ? agent.agentSkills.map(as => as.skill.name)
+      : asType<string[]>(agent.skills, [])
 
     const frontmatterLines: string[] = ['---']
     frontmatterLines.push(`name: ${agent.name}`)

@@ -453,7 +453,7 @@ export async function importSingleFile(
             maxTurns: frontmatter.maxTurns
               ? parseInt(String(frontmatter.maxTurns), 10) || null
               : null,
-            skills: toJsonArray(frontmatter.skills),
+            // skills now managed via AgentSkill join table
             enabled: true,
             isGlobal: false,
             source: 'imported',
@@ -586,7 +586,6 @@ export async function saveItemToDb(
           maxTurns: frontmatter.maxTurns
             ? parseInt(String(frontmatter.maxTurns), 10) || null
             : null,
-          skills: toJsonArray(frontmatter.skills),
           source: 'imported',
           repoUrl,
           projectPath: projPath,
@@ -609,7 +608,6 @@ export async function saveItemToDb(
           maxTurns: frontmatter.maxTurns
             ? parseInt(String(frontmatter.maxTurns), 10) || null
             : null,
-          skills: toJsonArray(frontmatter.skills),
           enabled: true,
           isGlobal: false,
           source: 'imported',

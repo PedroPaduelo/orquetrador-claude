@@ -17,7 +17,7 @@ function fromDb(record: {
   model: string | null
   permissionMode: string
   maxTurns: number | null
-  skills: JsonValue
+  agentSkills?: Array<{ skill: { name: string } }>
   enabled: boolean
   isGlobal: boolean
   pluginId: string | null
@@ -41,7 +41,7 @@ function fromDb(record: {
     model: record.model,
     permissionMode: record.permissionMode,
     maxTurns: record.maxTurns,
-    skills: toStringArray(record.skills),
+    skills: record.agentSkills ? record.agentSkills.map(as => as.skill.name) : [],
     enabled: record.enabled,
     isGlobal: record.isGlobal,
     pluginId: record.pluginId,
@@ -59,17 +59,17 @@ function fromDb(record: {
 
 export const agentsRepository = {
   async findAll(userId: string) {
-    const agents = await prisma.agent.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } })
+    const agents = await prisma.agent.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, include: { agentSkills: { include: { skill: { select: { name: true } } }, orderBy: { order: 'asc' } } } })
     return agents.map(fromDb)
   },
 
   async findById(id: string, userId: string) {
-    const agent = await prisma.agent.findFirst({ where: { id, userId } })
+    const agent = await prisma.agent.findFirst({ where: { id, userId }, include: { agentSkills: { include: { skill: { select: { name: true } } }, orderBy: { order: 'asc' } } } })
     return agent ? fromDb(agent) : null
   },
 
   async findByName(name: string, userId: string) {
-    const agent = await prisma.agent.findFirst({ where: { name, userId } })
+    const agent = await prisma.agent.findFirst({ where: { name, userId }, include: { agentSkills: { include: { skill: { select: { name: true } } }, orderBy: { order: 'asc' } } } })
     return agent ? fromDb(agent) : null
   },
 
@@ -82,7 +82,6 @@ export const agentsRepository = {
     model?: string | null
     permissionMode?: string
     maxTurns?: number | null
-    skills?: string[]
     enabled?: boolean
     isGlobal?: boolean
     source?: string
@@ -95,6 +94,7 @@ export const agentsRepository = {
     lastSyncedAt?: Date | null
   }, userId: string) {
     const agent = await prisma.agent.create({
+      include: { agentSkills: { include: { skill: { select: { name: true } } }, orderBy: { order: 'asc' } } },
       data: {
         name: input.name,
         userId,
@@ -105,7 +105,6 @@ export const agentsRepository = {
         model: input.model,
         permissionMode: input.permissionMode ?? 'default',
         maxTurns: input.maxTurns,
-        skills: input.skills ?? [],
         enabled: input.enabled ?? true,
         isGlobal: input.isGlobal ?? true,
         source: input.source,
@@ -140,7 +139,6 @@ export const agentsRepository = {
     model?: string | null
     permissionMode?: string
     maxTurns?: number | null
-    skills?: string[]
     enabled?: boolean
     isGlobal?: boolean
     lastSyncedAt?: Date | null
@@ -155,13 +153,13 @@ export const agentsRepository = {
     if (input.model !== undefined) data.model = input.model
     if (input.permissionMode !== undefined) data.permissionMode = input.permissionMode
     if (input.maxTurns !== undefined) data.maxTurns = input.maxTurns
-    if (input.skills !== undefined) data.skills = input.skills
     if (input.enabled !== undefined) data.enabled = input.enabled
     if (input.isGlobal !== undefined) data.isGlobal = input.isGlobal
     if (input.lastSyncedAt !== undefined) data.lastSyncedAt = input.lastSyncedAt
 
     const agent = await prisma.agent.update({
       where: { id },
+      include: { agentSkills: { include: { skill: { select: { name: true } } }, orderBy: { order: 'asc' } } },
       data: data as Parameters<typeof prisma.agent.update>[0]['data'],
     })
 

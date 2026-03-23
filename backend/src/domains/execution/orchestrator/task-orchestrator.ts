@@ -132,7 +132,7 @@ export class TaskOrchestrator {
       try {
         const user = await prisma.user.findUnique({
           where: { id: userId },
-          select: { githubToken: true, name: true, email: true },
+          select: { name: true, email: true },
         })
 
         // Check if this project has a specific git account mapped
@@ -143,11 +143,17 @@ export class TaskOrchestrator {
           })
           if (mapping && mapping.gitAccount.userId === userId) {
             githubToken = mapping.gitAccount.token
-          } else {
-            githubToken = user?.githubToken ?? undefined
           }
-        } else {
-          githubToken = user?.githubToken ?? undefined
+        }
+
+        // Fallback: use the user's first GitAccount if no project mapping
+        if (!githubToken) {
+          const defaultAccount = await prisma.gitAccount.findFirst({
+            where: { userId },
+            orderBy: { createdAt: 'asc' },
+            select: { token: true },
+          })
+          githubToken = defaultAccount?.token ?? undefined
         }
 
         if (githubToken && projectPath) {

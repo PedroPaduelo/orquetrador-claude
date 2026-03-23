@@ -26,8 +26,6 @@ export const agentsService = {
     const maxTurns = frontmatter['max-turns'] || frontmatter.maxTurns
     const tools = frontmatter.tools || []
     const disallowedTools = frontmatter['disallowed-tools'] || frontmatter.disallowedTools || []
-    const skills = frontmatter.skills || []
-
     const existing = await agentsRepository.findByName(name, userId!)
     if (existing) {
       throw new Error(`Agent com nome "${name}" ja existe`)
@@ -42,7 +40,6 @@ export const agentsService = {
       model: typeof model === 'string' ? model : null,
       permissionMode,
       maxTurns: maxTurns ? parseInt(String(maxTurns), 10) || null : null,
-      skills: Array.isArray(skills) ? skills : [],
       enabled: true,
       isGlobal,
     }, userId!)
@@ -71,7 +68,6 @@ export const agentsService = {
       model: (frontmatter.model as string) || null,
       permissionMode: (frontmatter.permissionMode as string) || (frontmatter['permission-mode'] as string) || 'default',
       maxTurns: frontmatter.maxTurns ? parseInt(String(frontmatter.maxTurns), 10) || null : null,
-      skills: toArray(frontmatter.skills),
       lastSyncedAt: now,
     })
 

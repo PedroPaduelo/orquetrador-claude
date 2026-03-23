@@ -11,6 +11,11 @@ import { tokenBudgetService } from '../execution/budget/token-budget-service.js'
 
 const PROJECT_BASE_PATH = process.env.PROJECT_BASE_PATH || '/workspace/temp-orquestrador'
 
+async function hasGitAccount(userId: string): Promise<boolean> {
+  const count = await prisma.gitAccount.count({ where: { userId } })
+  return count > 0
+}
+
 function ensureUserDir(userId: string): string {
   const userDir = join(PROJECT_BASE_PATH, 'users', userId, 'projetos')
   if (!existsSync(userDir)) {
@@ -119,7 +124,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       return {
         token,
-        user: { id: user.id, email: user.email, name: user.name, role: user.role, basePath, hasGithub: !!user.githubToken },
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, basePath, hasGithub: await hasGitAccount(user.id) },
       }
     },
   )
@@ -160,7 +165,7 @@ export async function authRoutes(app: FastifyInstance) {
         name: user.name,
         role: user.role,
         basePath,
-        hasGithub: !!user.githubToken,
+        hasGithub: await hasGitAccount(user.id),
         createdAt: user.createdAt.toISOString(),
       }
     },

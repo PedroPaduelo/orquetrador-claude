@@ -84,7 +84,6 @@ model User {
   email                   String     @unique
   passwordHash            String     @map("password_hash")
   name                    String?
-  githubToken             String?    @map("github_token")
   status                  UserStatus @default(active)
   role                    UserRole   @default(developer)
   preferences             Json       @default("{}")
@@ -521,7 +520,6 @@ model Agent {
   model           String?
   permissionMode  String  @default("default") @map("permission_mode")
   maxTurns        Int?    @map("max_turns")
-  skills          Json    @default("[]")
   enabled         Boolean @default(true)
   isGlobal        Boolean @default(false) @map("is_global")
   source          String  @default("manual") // manual | imported

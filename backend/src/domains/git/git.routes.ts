@@ -14,8 +14,13 @@ function getUserProjectsDir(userId: string): string {
 }
 
 async function getUserGithubToken(userId: string): Promise<string | null> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { githubToken: true } })
-  return user?.githubToken ?? null
+  // Use the user's first GitAccount as default token
+  const account = await prisma.gitAccount.findFirst({
+    where: { userId },
+    orderBy: { createdAt: 'asc' },
+    select: { token: true },
+  })
+  return account?.token ?? null
 }
 
 async function getTokenForProject(userId: string, projectPath: string): Promise<string | null> {
@@ -105,10 +110,21 @@ export async function gitRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const userId = await request.getCurrentUserId()
-      await prisma.user.update({
-        where: { id: userId },
-        data: { githubToken: request.body.token },
+      // Upsert into GitAccount (legacy compatibility — creates a "Default" account)
+      const existing = await prisma.gitAccount.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
       })
+      if (existing) {
+        await prisma.gitAccount.update({
+          where: { id: existing.id },
+          data: { token: request.body.token },
+        })
+      } else {
+        await prisma.gitAccount.create({
+          data: { label: 'Default', token: request.body.token, userId },
+        })
+      }
       return { success: true, message: 'Token salvo com sucesso' }
     }
   )
@@ -127,10 +143,14 @@ export async function gitRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const userId = await request.getCurrentUserId()
-      await prisma.user.update({
-        where: { id: userId },
-        data: { githubToken: null },
+      // Remove the oldest (default) GitAccount
+      const existing = await prisma.gitAccount.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
       })
+      if (existing) {
+        await prisma.gitAccount.delete({ where: { id: existing.id } })
+      }
       return { success: true, message: 'Token removido' }
     }
   )
