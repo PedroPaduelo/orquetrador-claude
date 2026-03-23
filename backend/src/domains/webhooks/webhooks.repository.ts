@@ -45,21 +45,25 @@ export const webhooksRepository = {
   },
 
   async update(id: string, userId: string, input: { url?: string; events?: string[]; enabled?: boolean }) {
-    const existing = await prisma.webhook.findFirst({ where: { id, userId } })
-    if (!existing) return null
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.webhook.findFirst({ where: { id, userId } })
+      if (!existing) return null
 
-    const data: Record<string, unknown> = {}
-    if (input.url !== undefined) data.url = input.url
-    if (input.events !== undefined) data.events = input.events
-    if (input.enabled !== undefined) data.enabled = input.enabled
-    const w = await prisma.webhook.update({ where: { id }, data: data as any })
-    return { id: w.id, url: w.url, events: w.events, enabled: w.enabled }
+      const data: Record<string, unknown> = {}
+      if (input.url !== undefined) data.url = input.url
+      if (input.events !== undefined) data.events = input.events
+      if (input.enabled !== undefined) data.enabled = input.enabled
+      const w = await tx.webhook.update({ where: { id }, data: data as any })
+      return { id: w.id, url: w.url, events: w.events, enabled: w.enabled }
+    })
   },
 
   async delete(id: string, userId: string) {
-    const existing = await prisma.webhook.findFirst({ where: { id, userId } })
-    if (!existing) return
-    await prisma.webhook.delete({ where: { id } })
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.webhook.findFirst({ where: { id, userId } })
+      if (!existing) return
+      await tx.webhook.delete({ where: { id } })
+    })
   },
 
   async findByEvent(event: string, userId: string) {

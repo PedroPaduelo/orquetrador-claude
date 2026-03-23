@@ -61,7 +61,9 @@ async function registerPlugins() {
 
   // CORS
   await app.register(fastifyCors, {
-    origin: true,
+    origin: env.CORS_ORIGINS
+      ? env.CORS_ORIGINS.split(',').map(o => o.trim())
+      : true,
     credentials: true,
   })
 
@@ -212,8 +214,24 @@ const signals = ['SIGINT', 'SIGTERM']
 signals.forEach((signal) => {
   process.on(signal, async () => {
     console.log(`\n${signal} received, shutting down gracefully...`)
+
+    // 1. Stop accepting new executions
     projectPathLock.cleanup()
     try { stopMetricsAggregation() } catch { /* ignore */ }
+
+    // 2. Wait for active executions to drain (max 30s)
+    const { taskOrchestrator } = await import('./domains/execution/orchestrator/task-orchestrator.js')
+    const drainStart = Date.now()
+    const MAX_DRAIN_MS = 30_000
+    while (taskOrchestrator.getActiveCount() > 0 && Date.now() - drainStart < MAX_DRAIN_MS) {
+      console.log(`[Shutdown] Waiting for ${taskOrchestrator.getActiveCount()} active executions to finish...`)
+      await new Promise(r => setTimeout(r, 2000))
+    }
+    if (taskOrchestrator.getActiveCount() > 0) {
+      console.warn(`[Shutdown] ${taskOrchestrator.getActiveCount()} executions still running after ${MAX_DRAIN_MS / 1000}s, forcing shutdown`)
+    }
+
+    // 3. Shutdown infrastructure
     try { await stopExecutionWorker() } catch { /* ignore */ }
     try { await closeExecutionQueue() } catch { /* ignore */ }
     try { await app.close() } catch { /* ignore */ }

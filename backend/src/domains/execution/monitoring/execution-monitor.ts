@@ -1,4 +1,4 @@
-import { Prisma, ErrorCategory } from '@prisma/client'
+import { Prisma, ErrorCategory, TraceResultStatus } from '@prisma/client'
 import { prisma } from '../../../lib/prisma.js'
 import type { StreamEvent, Metadata } from '../engine/types.js'
 import { tokenBudgetService } from '../budget/token-budget-service.js'
@@ -14,7 +14,7 @@ interface CompactEvent {
 interface FlushOptions {
   exitCode?: number | null
   signal?: string | null
-  resultStatus: string
+  resultStatus: TraceResultStatus | string
   errorMessage?: string
   errorCategory?: ErrorCategory | null
   contentLength: number
@@ -175,64 +175,77 @@ export class ExecutionMonitor {
     const durationMs = completedAt.getTime() - this.startedAt.getTime()
 
     // Fire-and-forget: don't await in the hot path
-    prisma.executionTrace.create({
-      data: {
-        executionId: this.executionId,
-        conversationId: this.conversationId,
-        stepId: this.stepId,
-        commandLine: this.commandLine,
-        envSnapshot: this.envSnapshot as Prisma.InputJsonValue,
-        messageLength: this.messageLength,
-        systemPrompt: this.systemPrompt,
-        resumeToken: this.resumeToken,
-        model: this.model,
-        projectPath: this.projectPath,
-        pid: this.pid,
-        stdoutRaw: this.stdoutChunks.join(''),
-        stderrRaw: this.stderrChunks.join(''),
-        parsedEvents: this.events as unknown as Prisma.InputJsonValue,
-        startedAt: this.startedAt,
-        firstByteAt: this.firstByteAt,
-        firstContentAt: this.firstContentAt,
-        completedAt,
-        durationMs,
-        exitCode: opts.exitCode ?? null,
-        signal: opts.signal ?? null,
-        resultStatus: opts.resultStatus,
-        errorMessage: opts.errorMessage ?? null,
-        errorCategory: opts.errorCategory ?? classifyError(opts.resultStatus, opts.exitCode, opts.errorMessage, this.metadata.stop_reason),
-        contentLength: opts.contentLength,
-        actionsCount: opts.actionsCount,
-        resumeTokenOut: opts.resumeTokenOut ?? null,
-        // Token usage
-        inputTokens: this.inputTokens,
-        outputTokens: this.outputTokens,
-        cacheCreationInputTokens: this.cacheCreationInputTokens,
-        cacheReadInputTokens: this.cacheReadInputTokens,
-        // Server tool usage
-        webSearchRequests: this.webSearchRequests,
-        webFetchRequests: this.webFetchRequests,
-        // Cost and performance (from accumulated metadata)
-        totalCostUsd: this.metadata.total_cost_usd,
-        durationApiMs: this.metadata.duration_api_ms,
-        numTurns: this.metadata.num_turns ?? 0,
-        stopReason: this.metadata.stop_reason,
-        // Claude Code metadata (from accumulated metadata)
-        claudeCodeVersion: this.metadata.claude_code_version,
-        outputStyle: this.metadata.output_style,
-        fastModeState: this.metadata.fast_mode_state,
-        permissionMode: this.metadata.permission_mode,
-        sessionId: this.metadata.session_id,
-        // Additional metadata (JSON fields)
-        serviceTier: this.metadata.service_tier,
-        inferenceGeo: this.metadata.inference_geo,
-        iterations: (this.metadata.iterations as Prisma.InputJsonValue) ?? undefined,
-        modelUsage: (this.metadata.model_usage as Prisma.InputJsonValue) ?? undefined,
-        permissionDenials: (this.metadata.permission_denials as Prisma.InputJsonValue) ?? undefined,
-        cacheCreation: (this.metadata.cache_creation as Prisma.InputJsonValue) ?? undefined,
-      },
-    }).catch((err) => {
-      console.error('[ExecutionMonitor] Failed to persist trace:', err.message)
+    const traceData = {
+      executionId: this.executionId,
+      conversationId: this.conversationId,
+      stepId: this.stepId,
+      commandLine: this.commandLine,
+      envSnapshot: this.envSnapshot as Prisma.InputJsonValue,
+      messageLength: this.messageLength,
+      systemPrompt: this.systemPrompt,
+      resumeToken: this.resumeToken,
+      model: this.model,
+      projectPath: this.projectPath,
+      pid: this.pid,
+      stdoutRaw: this.stdoutChunks.join(''),
+      stderrRaw: this.stderrChunks.join(''),
+      parsedEvents: this.events as unknown as Prisma.InputJsonValue,
+      startedAt: this.startedAt,
+      firstByteAt: this.firstByteAt,
+      firstContentAt: this.firstContentAt,
+      completedAt,
+      durationMs,
+      exitCode: opts.exitCode ?? null,
+      signal: opts.signal ?? null,
+      resultStatus: opts.resultStatus as TraceResultStatus,
+      errorMessage: opts.errorMessage ?? null,
+      errorCategory: opts.errorCategory ?? classifyError(opts.resultStatus, opts.exitCode, opts.errorMessage, this.metadata.stop_reason),
+      contentLength: opts.contentLength,
+      actionsCount: opts.actionsCount,
+      resumeTokenOut: opts.resumeTokenOut ?? null,
+      // Token usage
+      inputTokens: this.inputTokens,
+      outputTokens: this.outputTokens,
+      cacheCreationInputTokens: this.cacheCreationInputTokens,
+      cacheReadInputTokens: this.cacheReadInputTokens,
+      // Server tool usage
+      webSearchRequests: this.webSearchRequests,
+      webFetchRequests: this.webFetchRequests,
+      // Cost and performance (from accumulated metadata)
+      totalCostUsd: this.metadata.total_cost_usd,
+      durationApiMs: this.metadata.duration_api_ms,
+      numTurns: this.metadata.num_turns ?? 0,
+      stopReason: this.metadata.stop_reason,
+      // Claude Code metadata (from accumulated metadata)
+      claudeCodeVersion: this.metadata.claude_code_version,
+      outputStyle: this.metadata.output_style,
+      fastModeState: this.metadata.fast_mode_state,
+      permissionMode: this.metadata.permission_mode,
+      sessionId: this.metadata.session_id,
+      // Additional metadata (JSON fields)
+      serviceTier: this.metadata.service_tier,
+      inferenceGeo: this.metadata.inference_geo,
+      iterations: (this.metadata.iterations as Prisma.InputJsonValue) ?? undefined,
+      modelUsage: (this.metadata.model_usage as Prisma.InputJsonValue) ?? undefined,
+      permissionDenials: (this.metadata.permission_denials as Prisma.InputJsonValue) ?? undefined,
+      cacheCreation: (this.metadata.cache_creation as Prisma.InputJsonValue) ?? undefined,
+    }
+
+    prisma.executionTrace.create({ data: traceData }).catch(async (err) => {
+      console.error('[ExecutionMonitor] Trace persist failed, retrying...', err.message)
+      // Retry with backoff (3 attempts)
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await new Promise(r => setTimeout(r, attempt * attempt * 1000)) // 1s, 4s, 9s
+        try {
+          await prisma.executionTrace.create({ data: traceData })
+          console.log(`[ExecutionMonitor] Trace persisted on retry ${attempt}`)
+          return
+        } catch (retryErr) {
+          if (attempt === 3) {
+            console.error('[ExecutionMonitor] Failed to persist trace after 3 retries:', (retryErr as Error).message)
+          }
+        }
+      }
     })
 
     // Record token usage for budget tracking

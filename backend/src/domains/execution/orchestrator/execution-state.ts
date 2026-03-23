@@ -1,7 +1,7 @@
-import { Prisma } from '@prisma/client'
+import { Prisma, ExecutionStateStatus, ExecutionLogEventType } from '@prisma/client'
 import { prisma } from '../../../lib/prisma.js'
 
-type ExecutionStatus = 'queued' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled'
+type ExecutionStatus = `${ExecutionStateStatus}`
 
 export interface PausedExecutionInfo {
   executionId: string
@@ -119,12 +119,12 @@ export class ExecutionStateManager {
 
       await prisma.executionState.update({
         where: { id: executionId },
-        data: { state, metadata: mergedMetadata as Prisma.InputJsonValue },
+        data: { state: state as ExecutionStateStatus, metadata: mergedMetadata as Prisma.InputJsonValue },
       })
     } else {
       await prisma.executionState.update({
         where: { id: executionId },
-        data: { state },
+        data: { state: state as ExecutionStateStatus },
       })
     }
   }
@@ -231,7 +231,7 @@ export class ExecutionStateManager {
       data: {
         executionId,
         conversationId,
-        eventType,
+        eventType: eventType as ExecutionLogEventType,
         stepId,
         stepName,
         data: data as Prisma.InputJsonValue,

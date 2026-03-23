@@ -6,97 +6,142 @@ import { BadRequestError, NotFoundError } from '../../http/errors/index.js'
 
 export const conversationsService = {
   async advanceStep(id: string) {
-    const conversation = await conversationsRepository.findById(id)
-    if (!conversation) throw new NotFoundError('Conversation not found')
+    return prisma.$transaction(async (tx) => {
+      const conversation = await tx.conversation.findUnique({
+        where: { id },
+        include: {
+          workflow: {
+            include: {
+              steps: {
+                select: { id: true, name: true, stepOrder: true },
+                orderBy: { stepOrder: 'asc' },
+              },
+            },
+          },
+        },
+      })
+      if (!conversation) throw new NotFoundError('Conversation not found')
 
-    if (conversation.workflow.type !== 'step_by_step') {
-      throw new BadRequestError('advance-step is only available for step_by_step workflows')
-    }
+      if (conversation.workflow.type !== 'step_by_step') {
+        throw new BadRequestError('advance-step is only available for step_by_step workflows')
+      }
 
-    const steps = conversation.workflow.steps
-    if (steps.length === 0) {
-      throw new BadRequestError('Workflow has no steps')
-    }
+      const steps = conversation.workflow.steps
+      if (steps.length === 0) {
+        throw new BadRequestError('Workflow has no steps')
+      }
 
-    const currentIndex = conversation.currentStepIndex
+      const currentIndex = conversation.currentStepId
+        ? steps.findIndex((s) => s.id === conversation.currentStepId)
+        : -1
 
-    // currentStepId null (conversa recem-criada) -> avanca para o primeiro step
-    if (currentIndex < 0) {
-      const firstStep = steps[0]
-      await conversationsRepository.updateCurrentStep(id, firstStep.id)
+      if (currentIndex < 0) {
+        const firstStep = steps[0]
+        await tx.conversation.update({ where: { id }, data: { currentStepId: firstStep.id } })
+        return {
+          id,
+          currentStepId: firstStep.id,
+          currentStepIndex: 0,
+          message: `Advanced to step: ${firstStep.name}`,
+        }
+      }
+
+      if (currentIndex >= steps.length - 1) {
+        throw new BadRequestError('Already at the last step')
+      }
+
+      const nextStep = steps[currentIndex + 1]
+      await tx.conversation.update({ where: { id }, data: { currentStepId: nextStep.id } })
+
       return {
         id,
-        currentStepId: firstStep.id,
-        currentStepIndex: 0,
-        message: `Advanced to step: ${firstStep.name}`,
+        currentStepId: nextStep.id,
+        currentStepIndex: currentIndex + 1,
+        message: `Advanced to step: ${nextStep.name}`,
       }
-    }
-
-    if (currentIndex >= steps.length - 1) {
-      throw new BadRequestError('Already at the last step')
-    }
-
-    const nextStep = steps[currentIndex + 1]
-    await conversationsRepository.updateCurrentStep(id, nextStep.id)
-
-    return {
-      id,
-      currentStepId: nextStep.id,
-      currentStepIndex: currentIndex + 1,
-      message: `Advanced to step: ${nextStep.name}`,
-    }
+    }, { isolationLevel: 'Serializable' })
   },
 
   async goBack(id: string) {
-    const conversation = await conversationsRepository.findById(id)
-    if (!conversation) throw new NotFoundError('Conversation not found')
+    return prisma.$transaction(async (tx) => {
+      const conversation = await tx.conversation.findUnique({
+        where: { id },
+        include: {
+          workflow: {
+            include: {
+              steps: {
+                select: { id: true, name: true, stepOrder: true },
+                orderBy: { stepOrder: 'asc' },
+              },
+            },
+          },
+        },
+      })
+      if (!conversation) throw new NotFoundError('Conversation not found')
 
-    if (conversation.workflow.type !== 'step_by_step') {
-      throw new BadRequestError('go-back-step is only available for step_by_step workflows')
-    }
+      if (conversation.workflow.type !== 'step_by_step') {
+        throw new BadRequestError('go-back-step is only available for step_by_step workflows')
+      }
 
-    const steps = conversation.workflow.steps
-    const currentIndex = conversation.currentStepIndex
+      const steps = conversation.workflow.steps
+      const currentIndex = conversation.currentStepId
+        ? steps.findIndex((s) => s.id === conversation.currentStepId)
+        : -1
 
-    if (currentIndex <= 0) {
-      throw new BadRequestError('Already at the first step')
-    }
+      if (currentIndex <= 0) {
+        throw new BadRequestError('Already at the first step')
+      }
 
-    const prevStep = steps[currentIndex - 1]
-    await conversationsRepository.updateCurrentStep(id, prevStep.id)
+      const prevStep = steps[currentIndex - 1]
+      await tx.conversation.update({ where: { id }, data: { currentStepId: prevStep.id } })
 
-    return {
-      id,
-      currentStepId: prevStep.id,
-      currentStepIndex: currentIndex - 1,
-      message: `Went back to step: ${prevStep.name}`,
-    }
+      return {
+        id,
+        currentStepId: prevStep.id,
+        currentStepIndex: currentIndex - 1,
+        message: `Went back to step: ${prevStep.name}`,
+      }
+    }, { isolationLevel: 'Serializable' })
   },
 
   async jumpToStep(id: string, stepId: string) {
-    const conversation = await conversationsRepository.findById(id)
-    if (!conversation) throw new NotFoundError('Conversation not found')
+    return prisma.$transaction(async (tx) => {
+      const conversation = await tx.conversation.findUnique({
+        where: { id },
+        include: {
+          workflow: {
+            include: {
+              steps: {
+                select: { id: true, name: true, stepOrder: true },
+                orderBy: { stepOrder: 'asc' },
+              },
+            },
+          },
+        },
+      })
+      if (!conversation) throw new NotFoundError('Conversation not found')
 
-    if (conversation.workflow.type !== 'step_by_step') {
-      throw new BadRequestError('jump-to-step is only available for step_by_step workflows')
-    }
+      if (conversation.workflow.type !== 'step_by_step') {
+        throw new BadRequestError('jump-to-step is only available for step_by_step workflows')
+      }
 
-    const steps = conversation.workflow.steps
-    const targetIndex = steps.findIndex((s) => s.id === stepId)
+      const steps = conversation.workflow.steps
+      const targetIndex = steps.findIndex((s) => s.id === stepId)
 
-    if (targetIndex < 0) {
-      throw new BadRequestError('Step not found in this workflow')
-    }
+      if (targetIndex < 0) {
+        throw new BadRequestError('Step not found in this workflow')
+      }
 
-    const targetStep = steps[targetIndex]
-    await conversationsRepository.updateCurrentStep(id, targetStep.id)
+      const targetStep = steps[targetIndex]
+      await tx.conversation.update({ where: { id }, data: { currentStepId: targetStep.id } })
 
-    return {
-      id,
-      currentStepId: targetStep.id,
-      currentStepIndex: targetIndex,
-      message: `Jumped to step: ${targetStep.name}`,
-    }
+      return {
+        id,
+        currentStepId: targetStep.id,
+        currentStepIndex: targetIndex,
+        message: `Jumped to step: ${targetStep.name}`,
+      }
+    }, { isolationLevel: 'Serializable' })
   },
 
   async resetStepSession(conversationId: string, stepId: string) {

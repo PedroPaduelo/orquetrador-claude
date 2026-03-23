@@ -8,6 +8,8 @@ const envSchema = z.object({
   JWT_SECRET: z.string().default('development-secret-change-in-production'),
   DATABASE_URL: z.string(),
   MAX_FILE_SIZE: z.coerce.number().default(26214400), // 25MB
+  ENCRYPTION_KEY: z.string().optional(),
+  CORS_ORIGINS: z.string().optional(),
 })
 
 const _env = envSchema.safeParse(process.env)

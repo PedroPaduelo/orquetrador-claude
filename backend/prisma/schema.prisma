@@ -76,6 +76,59 @@ enum ResourceType {
   workflow
 }
 
+enum ExecutionStateStatus {
+  queued
+  running
+  completed
+  failed
+  paused
+  cancelled
+}
+
+enum ExecutionAggregateStatus {
+  running
+  completed
+  failed
+}
+
+enum ScheduledExecutionStatus {
+  pending
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum ExecutionLogEventType {
+  step_start
+  step_complete
+  step_fail
+  step_error
+  step_skip
+  workflow_start
+  workflow_complete
+  workflow_fail
+  retry
+  pause
+  resume
+  cancel
+}
+
+enum DeliveryStatus {
+  pending
+  success
+  failed
+}
+
+enum TraceResultStatus {
+  success
+  error
+  timeout
+  cancelled
+  needs_input
+  interrupted
+}
+
 // ============================================
 // USERS
 // ============================================
@@ -158,12 +211,15 @@ model Workflow {
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  steps         WorkflowStep[]
-  conversations Conversation[]
-  versions      WorkflowVersion[]
-  triggers      WorkflowTrigger[]
+  steps             WorkflowStep[]
+  subWorkflowSteps  WorkflowStep[] @relation("SubWorkflow")
+  conversations     Conversation[]
+  versions          WorkflowVersion[]
+  triggers          WorkflowTrigger[]
 
   @@index([userId])
+  @@index([status])
+  @@index([type])
   @@map("workflows")
 }
 
@@ -189,8 +245,9 @@ model WorkflowStep {
   validators Json @default("[]")
 
   // Step Templates
-  templateId      String? @map("template_id")
-  outputVariables Json    @default("[]") @map("output_variables")
+  templateId      String?       @map("template_id")
+  template        StepTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  outputVariables Json          @default("[]") @map("output_variables")
   inputVariables  Json    @default("[]") @map("input_variables")
 
   // Multi-backend support
@@ -202,6 +259,7 @@ model WorkflowStep {
   errorHandler  StepErrorHandler @default(fail) @map("error_handler")
   skipCondition String?          @map("skip_condition") // expression to evaluate
   subWorkflowId String?          @map("sub_workflow_id") // for sub-workflow steps
+  subWorkflow   Workflow?        @relation("SubWorkflow", fields: [subWorkflowId], references: [id], onDelete: SetNull)
   outputSchema  Json?            @map("output_schema") // expected output JSON schema
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -224,6 +282,7 @@ model WorkflowStep {
   hooks      WorkflowStepHook[]
 
   @@index([workflowId])
+  @@index([workflowId, stepOrder])
   @@map("workflow_steps")
 }
 
@@ -260,6 +319,8 @@ model Conversation {
   isArchived      Boolean            @default(false) @map("is_archived")
   tags            Json               @default("[]")
   parentId        String?            @map("parent_id") // fork support
+  parent          Conversation?      @relation("ConversationParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children        Conversation[]     @relation("ConversationParent")
   createdAt       DateTime           @default(now()) @map("created_at")
   updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at")
 
@@ -283,6 +344,10 @@ model Conversation {
   @@index([userId])
   @@index([workflowId])
   @@index([status])
+  @@index([createdAt])
+  @@index([lastMessageAt])
+  @@index([parentId])
+  @@index([isArchived])
   @@map("conversations")
 }
 
@@ -310,6 +375,7 @@ model Message {
   @@index([conversationId])
   @@index([conversationId, stepId])
   @@index([stepId])
+  @@index([createdAt])
   @@map("messages")
 }
 
@@ -397,7 +463,7 @@ model StepMemory {
 // ============================================
 model ExecutionState {
   id               String   @id
-  state            String   @default("queued")
+  state            ExecutionStateStatus @default(queued)
   currentStepIndex Int      @default(0) @map("current_step_index")
   retryCounts      Json     @default("{}") @map("retry_counts")
   metadata         Json     @default("{}")
@@ -419,7 +485,7 @@ model ExecutionState {
 model ExecutionLog {
   id          String   @id @default(uuid())
   executionId String   @map("execution_id")
-  eventType   String   @map("event_type")
+  eventType   ExecutionLogEventType @map("event_type")
   stepId      String?  @map("step_id")
   stepName    String?  @map("step_name")
   data        Json     @default("{}")
@@ -463,6 +529,8 @@ model McpServer {
   plugin      Plugin?                 @relation(fields: [pluginId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([enabled])
+  @@index([pluginId])
   @@map("mcp_servers")
 }
 
@@ -504,6 +572,8 @@ model Skill {
 
   @@unique([name, userId])
   @@index([userId])
+  @@index([enabled])
+  @@index([pluginId])
   @@map("skills")
 }
 
@@ -545,6 +615,8 @@ model Agent {
 
   @@unique([name, userId])
   @@index([userId])
+  @@index([enabled])
+  @@index([pluginId])
   @@map("agents")
 }
 
@@ -581,6 +653,7 @@ model Rule {
 
   @@unique([name, userId])
   @@index([userId])
+  @@index([enabled])
   @@map("rules")
 }
 
@@ -649,7 +722,7 @@ model ExecutionTrace {
   // Result
   exitCode       Int?           @map("exit_code")
   signal         String?
-  resultStatus   String         @map("result_status")
+  resultStatus   TraceResultStatus @map("result_status")
   errorMessage   String?        @map("error_message")
   errorCategory  ErrorCategory? @map("error_category")
   errorCode      String?        @map("error_code")
@@ -701,6 +774,8 @@ model ExecutionTrace {
   @@index([conversationId])
   @@index([stepId])
   @@index([createdAt])
+  @@index([resultStatus])
+  @@index([model])
   @@map("execution_traces")
 }
 
@@ -743,7 +818,7 @@ model ExecutionAggregate {
   totalDurationMs   Int?      @map("total_duration_ms")
   startedAt         DateTime  @map("started_at")
   completedAt       DateTime? @map("completed_at")
-  finalStatus       String    @default("running") @map("final_status")
+  finalStatus       ExecutionAggregateStatus @default(running) @map("final_status")
   createdAt         DateTime  @default(now()) @map("created_at")
 
   @@index([conversationId])
@@ -809,6 +884,7 @@ model Hook {
 
   @@index([userId])
   @@index([eventType])
+  @@index([enabled])
   @@map("hooks")
 }
 
@@ -850,6 +926,7 @@ model TokenUsageHistory {
 
   @@index([userId])
   @@index([createdAt])
+  @@index([executionId])
   @@map("token_usage_history")
 }
 
@@ -869,6 +946,8 @@ model StepTemplate {
 
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  steps WorkflowStep[]
 
   @@unique([name, userId])
   @@index([userId])
@@ -920,7 +999,7 @@ model WebhookDelivery {
   responseCode Int?      @map("response_code")
   responseBody String?   @map("response_body")
   attempts     Int       @default(0)
-  status       String    @default("pending") // pending | success | failed
+  status       DeliveryStatus @default(pending)
   createdAt    DateTime  @default(now()) @map("created_at")
   completedAt  DateTime? @map("completed_at")
 
@@ -928,6 +1007,8 @@ model WebhookDelivery {
   webhook   Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
   @@index([webhookId])
+  @@index([status])
+  @@index([createdAt])
   @@map("webhook_deliveries")
 }
 
@@ -965,7 +1046,7 @@ model ScheduledExecution {
   id           String    @id @default(uuid())
   scheduledAt  DateTime  @map("scheduled_at")
   executedAt   DateTime? @map("executed_at")
-  status       String    @default("pending") // pending | running | completed | failed | cancelled
+  status       ScheduledExecutionStatus @default(pending)
   result       Json?
   errorMessage String?   @map("error_message")
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -1071,6 +1152,7 @@ model WorkflowStepMcpServer {
   server    McpServer    @relation(fields: [serverId], references: [id], onDelete: Cascade)
 
   @@unique([stepId, serverId])
+  @@index([serverId])
   @@map("workflow_step_mcp_servers")
 }
 
@@ -1085,6 +1167,7 @@ model WorkflowStepSkill {
   skill     Skill        @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@unique([stepId, skillId])
+  @@index([skillId])
   @@map("workflow_step_skills")
 }
 
@@ -1099,6 +1182,7 @@ model WorkflowStepAgent {
   agent     Agent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@unique([stepId, agentId])
+  @@index([agentId])
   @@map("workflow_step_agents")
 }
 
@@ -1112,6 +1196,7 @@ model WorkflowStepRule {
   rule      Rule         @relation(fields: [ruleId], references: [id], onDelete: Cascade)
 
   @@unique([stepId, ruleId])
+  @@index([ruleId])
   @@map("workflow_step_rules")
 }
 
@@ -1125,6 +1210,7 @@ model WorkflowStepHook {
   hook      Hook         @relation(fields: [hookId], references: [id], onDelete: Cascade)
 
   @@unique([stepId, hookId])
+  @@index([hookId])
   @@map("workflow_step_hooks")
 }
 
@@ -1180,6 +1266,7 @@ model HourlyTokenUsage {
 
   @@unique([hour, userId, model])
   @@index([userId])
+  @@index([hour])
   @@map("hourly_token_usage")
 }
 
@@ -1222,6 +1309,7 @@ model ExecutionRating {
 
   @@unique([executionId, stepId, userId])
   @@index([executionId])
+  @@index([userId])
   @@map("execution_ratings")
 }
 
@@ -1260,5 +1348,7 @@ model AgentSkill {
   skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@unique([agentId, skillId])
+  @@index([agentId])
+  @@index([skillId])
   @@map("agent_skills")
 }

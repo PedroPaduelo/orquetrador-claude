@@ -1930,6 +1930,10 @@ export class TaskOrchestrator {
     return this.activeExecutions.get(conversationId) === true
   }
 
+  getActiveCount(): number {
+    return this.activeExecutions.size
+  }
+
   on(event: string, handler: (...args: unknown[]) => void) {
     orchestratorEvents.on(event, handler)
   }

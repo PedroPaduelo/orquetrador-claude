@@ -50,7 +50,8 @@ export async function createOrUpdateAggregate(
       case 'timeout':
         failedSteps++
         break
-      case 'skipped':
+      case 'cancelled':
+      case 'interrupted':
         skippedSteps++
         break
       default:
@@ -72,7 +73,11 @@ export async function createOrUpdateAggregate(
     select: { state: true },
   })
 
-  const finalStatus = execution?.state ?? (failedSteps > 0 ? 'failed' : 'completed')
+  const stateStr = execution?.state ?? (failedSteps > 0 ? 'failed' : 'completed')
+  // Map ExecutionStateStatus to ExecutionAggregateStatus (running, completed, failed)
+  const finalStatus = stateStr === 'running' ? 'running' as const
+    : stateStr === 'failed' || stateStr === 'cancelled' ? 'failed' as const
+    : 'completed' as const
 
   await prisma.executionAggregate.upsert({
     where: { executionId },

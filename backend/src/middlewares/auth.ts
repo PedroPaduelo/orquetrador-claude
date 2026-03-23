@@ -72,8 +72,36 @@ export const auth = fastifyPlugin(async (app: FastifyInstance) => {
       // JWT auth
       try {
         const { sub } = await request.jwtVerify<{ sub: string }>()
+
+        // Validate user still exists (cached in Redis for 5min)
+        const cacheKey = `jwt:user:${sub}`
+        let exists: boolean
+        try {
+          const { getRedis } = await import('../lib/redis.js')
+          const redis = getRedis()
+          const cached = await redis.get(cacheKey)
+          if (cached === '1') {
+            exists = true
+          } else if (cached === '0') {
+            exists = false
+          } else {
+            const user = await prisma.user.findUnique({ where: { id: sub }, select: { id: true, status: true } })
+            exists = !!user && user.status !== 'suspended'
+            await redis.set(cacheKey, exists ? '1' : '0', 'EX', 300).catch(() => {})
+          }
+        } catch {
+          // Redis unavailable, fallback to DB
+          const user = await prisma.user.findUnique({ where: { id: sub }, select: { id: true, status: true } })
+          exists = !!user && user.status !== 'suspended'
+        }
+
+        if (!exists) {
+          throw new UnauthorizedError('User no longer exists or is suspended')
+        }
+
         return sub
-      } catch {
+      } catch (err) {
+        if (err instanceof UnauthorizedError) throw err
         throw new UnauthorizedError('Invalid or expired token')
       }
     }
