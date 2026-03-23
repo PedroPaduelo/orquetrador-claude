@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orquetrador Claude — 04 API Endpoints</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            surface: { DEFAULT: '#0f172a', card: '#1e293b', hover: '#334155' },
+            accent: { blue: '#3b82f6', purple: '#a855f7', emerald: '#10b981', orange: '#f59e0b', red: '#ef4444', pink: '#ec4899', cyan: '#06b6d4', indigo: '#6366f1' }
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; overflow-x: hidden; }
+    code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    .glass { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(71, 85, 105, 0.3); }
+    .glass-strong { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(71, 85, 105, 0.4); }
+
+    .glow-blue { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15), 0 0 60px rgba(59, 130, 246, 0.05); }
+    .glow-purple { box-shadow: 0 0 20px rgba(168, 85, 247, 0.15), 0 0 60px rgba(168, 85, 247, 0.05); }
+    .glow-emerald { box-shadow: 0 0 20px rgba(16, 185, 129, 0.15), 0 0 60px rgba(16, 185, 129, 0.05); }
+    .glow-orange { box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), 0 0 60px rgba(245, 158, 11, 0.05); }
+
+    .gradient-border { position: relative; }
+    .gradient-border::before {
+      content: ''; position: absolute; inset: -1px; border-radius: inherit;
+      background: linear-gradient(135deg, #3b82f6, #a855f7, #10b981, #f59e0b);
+      z-index: -1; opacity: 0.4; transition: opacity 0.4s;
+    }
+    .gradient-border:hover::before { opacity: 0.8; }
+
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+
+    .method-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 72px; padding: 2px 10px; border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .method-GET { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .method-POST { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .method-PUT { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .method-DELETE { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .method-PATCH { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+    .domain-group { transition: all 0.3s ease; }
+    .domain-group .domain-body { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    .domain-group.open .domain-body { max-height: 5000px; }
+    .domain-group .chevron { transition: transform 0.3s ease; }
+    .domain-group.open .chevron { transform: rotate(180deg); }
+
+    .filter-btn { transition: all 0.2s ease; }
+    .filter-btn.active { transform: scale(1.05); }
+
+    tr.endpoint-row { transition: background 0.15s ease; }
+    tr.endpoint-row:hover { background: rgba(51, 65, 85, 0.4); }
+
+    .pulse-dot { animation: pulse-dot 2s infinite; }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .float-in { animation: float-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    @keyframes float-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .nav-link { position: relative; }
+    .nav-link::after {
+      content: ''; position: absolute; bottom: -2px; left: 0; width: 0; height: 2px;
+      background: linear-gradient(90deg, #3b82f6, #a855f7);
+      transition: width 0.3s ease;
+    }
+    .nav-link:hover::after { width: 100%; }
+    .nav-link.active::after { width: 100%; }
+
+    .stat-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .stat-card:hover { transform: translateY(-4px); }
+
+    .auth-yes { color: #34d399; }
+    .auth-no { color: #94a3b8; }
+
+    @media (max-width: 768px) {
+      .method-badge { min-width: 56px; font-size: 10px; padding: 2px 6px; }
+      .path-cell { font-size: 12px; word-break: break-all; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top Navigation -->
+<nav class="fixed top-0 left-0 right-0 z-50 glass-strong">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <span class="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          System Map
+        </span>
+        <span class="text-slate-500 text-sm hidden sm:inline">/ API Endpoints</span>
+      </div>
+      <div class="hidden md:flex items-center gap-1 text-sm overflow-x-auto">
+        <a href="index.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">Home</a>
+        <a href="01-visao-geral.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">01 Visao Geral</a>
+        <a href="02-fluxo-de-dados.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">02 Fluxo</a>
+        <a href="03-banco-de-dados.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">03 Banco</a>
+        <a href="04-api-endpoints.html" class="nav-link active px-3 py-2 text-blue-400 rounded-lg transition-colors whitespace-nowrap font-medium">04 API</a>
+        <a href="05-execucao.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">05 Execucao</a>
+        <a href="06-frontend.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">06 Frontend</a>
+        <a href="07-mcp-server.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">07 MCP</a>
+        <a href="08-seguranca.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">08 Seguranca</a>
+        <a href="09-deploy.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">09 Deploy</a>
+        <a href="10-troubleshooting.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">10 Troubleshoot</a>
+      </div>
+      <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="md:hidden p-2 text-slate-400 hover:text-white">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+    </div>
+    <div id="mobileMenu" class="hidden md:hidden pb-4 grid grid-cols-2 gap-1 text-sm">
+      <a href="index.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">Home</a>
+      <a href="01-visao-geral.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">01 Visao Geral</a>
+      <a href="02-fluxo-de-dados.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">02 Fluxo</a>
+      <a href="03-banco-de-dados.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">03 Banco</a>
+      <a href="04-api-endpoints.html" class="px-3 py-2 text-blue-400 font-medium rounded-lg">04 API</a>
+      <a href="05-execucao.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">05 Execucao</a>
+      <a href="06-frontend.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">06 Frontend</a>
+      <a href="07-mcp-server.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">07 MCP</a>
+      <a href="08-seguranca.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">08 Seguranca</a>
+      <a href="09-deploy.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">09 Deploy</a>
+      <a href="10-troubleshooting.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">10 Troubleshoot</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="pt-24 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+  <div class="text-center mb-10 float-in">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-sm text-blue-400 mb-4">
+      <span class="w-2 h-2 rounded-full bg-blue-400 pulse-dot"></span>
+      Pagina 04 de 10
+    </div>
+    <h1 class="text-4xl sm:text-5xl font-black mb-4">
+      <span class="bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400 bg-clip-text text-transparent">API Endpoints</span>
+    </h1>
+    <p class="text-lg text-slate-400 max-w-2xl mx-auto">
+      Referencia completa de todos os endpoints da API REST do Orquetrador Claude.
+      Filtros interativos, busca em tempo real e agrupamento por dominio.
+    </p>
+    <p class="text-xs text-slate-600 mt-2">Ctrl+K para buscar &middot; Esc para limpar</p>
+  </div>
+</section>
+
+<!-- Summary Cards -->
+<section class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto mb-10 reveal">
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3" id="summaryCards"></div>
+</section>
+
+<!-- Search + Filters -->
+<section class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto mb-6 reveal">
+  <div class="glass rounded-2xl p-4 sm:p-6">
+    <div class="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+      <div class="relative flex-1">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Buscar por path, descricao ou dominio..." class="w-full pl-10 pr-20 py-3 rounded-xl bg-surface border border-slate-700 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all text-sm">
+        <div id="searchCount" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500"></div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="toggleMethodFilter('ALL')" class="filter-btn active px-4 py-2 rounded-xl bg-surface-card border border-slate-600 text-slate-300 text-sm font-medium hover:border-slate-400 transition-all" data-method="ALL">Todos</button>
+        <button onclick="toggleMethodFilter('GET')" class="filter-btn px-4 py-2 rounded-xl border text-sm font-medium transition-all method-GET opacity-70 hover:opacity-100" data-method="GET">GET</button>
+        <button onclick="toggleMethodFilter('POST')" class="filter-btn px-4 py-2 rounded-xl border text-sm font-medium transition-all method-POST opacity-70 hover:opacity-100" data-method="POST">POST</button>
+        <button onclick="toggleMethodFilter('PUT')" class="filter-btn px-4 py-2 rounded-xl border text-sm font-medium transition-all method-PUT opacity-70 hover:opacity-100" data-method="PUT">PUT</button>
+        <button onclick="toggleMethodFilter('DELETE')" class="filter-btn px-4 py-2 rounded-xl border text-sm font-medium transition-all method-DELETE opacity-70 hover:opacity-100" data-method="DELETE">DELETE</button>
+        <button onclick="toggleMethodFilter('PATCH')" class="filter-btn px-4 py-2 rounded-xl border text-sm font-medium transition-all method-PATCH opacity-70 hover:opacity-100" data-method="PATCH">PATCH</button>
+      </div>
+    </div>
+    <div class="mt-4 flex flex-wrap gap-2" id="domainChips"></div>
+  </div>
+</section>
+
+<!-- Endpoints Grouped by Domain -->
+<section class="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto pb-20" id="endpointsContainer"></section>
+
+<!-- Back to top -->
+<button onclick="window.scrollTo({top:0,behavior:'smooth'})" class="fixed bottom-6 right-6 w-12 h-12 rounded-full glass-strong flex items-center justify-center text-slate-400 hover:text-white transition-all hover:scale-110 z-40" title="Voltar ao topo">
+  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+  </svg>
+</button>
+
+<script>
+// ─── ENDPOINT DATA (extracted from source code) ─────────────────────
+const endpoints = [
+  // Auth
+  { method: 'POST', path: '/auth/register', domain: 'Auth', auth: false, desc: 'Registrar novo usuario' },
+  { method: 'POST', path: '/auth/login', domain: 'Auth', auth: false, desc: 'Login com email e senha' },
+  { method: 'GET', path: '/auth/me', domain: 'Auth', auth: true, desc: 'Obter perfil do usuario autenticado' },
+  { method: 'GET', path: '/auth/budget', domain: 'Auth', auth: true, desc: 'Resumo do budget de tokens do usuario' },
+
+  // Health
+  { method: 'GET', path: '/health', domain: 'Health', auth: false, desc: 'Health check do servidor e banco de dados' },
+
+  // Workflows
+  { method: 'GET', path: '/workflows', domain: 'Workflows', auth: true, desc: 'Listar todos os workflows' },
+  { method: 'POST', path: '/workflows', domain: 'Workflows', auth: true, desc: 'Criar novo workflow com steps' },
+  { method: 'GET', path: '/workflows/:id', domain: 'Workflows', auth: true, desc: 'Obter workflow por ID com steps' },
+  { method: 'PUT', path: '/workflows/:id', domain: 'Workflows', auth: true, desc: 'Atualizar workflow e seus steps' },
+  { method: 'DELETE', path: '/workflows/:id', domain: 'Workflows', auth: true, desc: 'Deletar workflow e dependencias' },
+  { method: 'POST', path: '/workflows/:id/duplicate', domain: 'Workflows', auth: true, desc: 'Duplicar workflow completo' },
+
+  // Conversations
+  { method: 'GET', path: '/folders', domain: 'Conversations', auth: true, desc: 'Listar pastas de projetos do usuario' },
+  { method: 'GET', path: '/conversations', domain: 'Conversations', auth: true, desc: 'Listar todas as conversas (filtro por workflowId)' },
+  { method: 'POST', path: '/conversations', domain: 'Conversations', auth: true, desc: 'Criar nova conversa vinculada a workflow' },
+  { method: 'GET', path: '/conversations/:id', domain: 'Conversations', auth: true, desc: 'Obter conversa completa com mensagens' },
+  { method: 'PATCH', path: '/conversations/:id', domain: 'Conversations', auth: true, desc: 'Atualizar titulo da conversa' },
+  { method: 'DELETE', path: '/conversations/:id', domain: 'Conversations', auth: true, desc: 'Deletar conversa' },
+  { method: 'DELETE', path: '/conversations/batch', domain: 'Conversations', auth: true, desc: 'Deletar multiplas conversas de uma vez' },
+  { method: 'POST', path: '/conversations/:id/clone', domain: 'Conversations', auth: true, desc: 'Clonar conversa (mesmo workflow e pasta)' },
+  { method: 'POST', path: '/conversations/:id/advance-step', domain: 'Conversations', auth: true, desc: 'Avancar para proximo step (step_by_step)' },
+  { method: 'POST', path: '/conversations/:id/go-back-step', domain: 'Conversations', auth: true, desc: 'Voltar para step anterior (step_by_step)' },
+  { method: 'POST', path: '/conversations/:id/jump-to-step', domain: 'Conversations', auth: true, desc: 'Pular diretamente para qualquer step' },
+  { method: 'DELETE', path: '/conversations/:id/sessions/:stepId', domain: 'Conversations', auth: true, desc: 'Resetar sessao de um step especifico' },
+  { method: 'POST', path: '/conversations/:id/cancel', domain: 'Conversations', auth: true, desc: 'Cancelar execucao ativa da conversa' },
+  { method: 'GET', path: '/conversations/:id/status', domain: 'Conversations', auth: true, desc: 'Status detalhado de execucao (paused, running)' },
+  { method: 'GET', path: '/conversations/:id/token-usage', domain: 'Conversations', auth: true, desc: 'Uso de tokens por step da conversa' },
+  { method: 'GET', path: '/conversations/:id/execution-stats', domain: 'Conversations', auth: true, desc: 'Estatisticas completas: tokens, custo, performance, tools' },
+  { method: 'GET', path: '/conversations/:id/suggestions', domain: 'Conversations', auth: true, desc: 'Sugestoes AI de proximos passos' },
+
+  // Execution (Messages / SSE)
+  { method: 'POST', path: '/conversations/:id/messages/stream', domain: 'Execution', auth: true, desc: 'Enviar mensagem e receber stream SSE em tempo real' },
+  { method: 'POST', path: '/conversations/:id/interrupt', domain: 'Execution', auth: true, desc: 'Interromper execucao ativa com mensagem do usuario' },
+  { method: 'GET', path: '/conversations/:id/execution-status', domain: 'Execution', auth: true, desc: 'Checar se ha execucao ativa ou pausada' },
+  { method: 'GET', path: '/conversations/:id/watch', domain: 'Execution', auth: true, desc: 'Observar execucao ativa via SSE (read-only)' },
+  { method: 'GET', path: '/conversations/:id/messages', domain: 'Execution', auth: true, desc: 'Listar mensagens com filtro por stepId' },
+
+  // Attachments
+  { method: 'POST', path: '/conversations/:id/attachments', domain: 'Attachments', auth: true, desc: 'Upload de imagens para conversa (multipart)' },
+
+  // Workflow API (External)
+  { method: 'POST', path: '/api/v1/workflows/:id/execute', domain: 'Workflow API', auth: true, desc: 'Executar workflow sincrono — aguarda resultado completo' },
+  { method: 'POST', path: '/api/v1/workflows/:id/execute/stream', domain: 'Workflow API', auth: true, desc: 'Executar workflow com SSE streaming externo' },
+
+  // Prompt Versions
+  { method: 'GET', path: '/steps/:stepId/prompt-versions', domain: 'Prompt Versions', auth: true, desc: 'Listar historico de versoes de prompt' },
+  { method: 'POST', path: '/steps/:stepId/prompt-versions/rollback', domain: 'Prompt Versions', auth: true, desc: 'Reverter prompt para versao anterior' },
+
+  // Step Templates
+  { method: 'GET', path: '/step-templates', domain: 'Step Templates', auth: true, desc: 'Listar templates de step reutilizaveis' },
+  { method: 'GET', path: '/step-templates/:id', domain: 'Step Templates', auth: true, desc: 'Obter template por ID' },
+  { method: 'POST', path: '/step-templates', domain: 'Step Templates', auth: true, desc: 'Criar template de step' },
+  { method: 'PUT', path: '/step-templates/:id', domain: 'Step Templates', auth: true, desc: 'Atualizar template de step' },
+  { method: 'DELETE', path: '/step-templates/:id', domain: 'Step Templates', auth: true, desc: 'Deletar template de step' },
+
+  // Skills
+  { method: 'GET', path: '/skills', domain: 'Skills', auth: true, desc: 'Listar todas as skills do usuario' },
+  { method: 'POST', path: '/skills', domain: 'Skills', auth: true, desc: 'Criar nova skill com body e tools' },
+  { method: 'GET', path: '/skills/:id', domain: 'Skills', auth: true, desc: 'Obter skill completa por ID' },
+  { method: 'PUT', path: '/skills/:id', domain: 'Skills', auth: true, desc: 'Atualizar skill' },
+  { method: 'DELETE', path: '/skills/:id', domain: 'Skills', auth: true, desc: 'Deletar skill' },
+  { method: 'PATCH', path: '/skills/:id/toggle', domain: 'Skills', auth: true, desc: 'Alternar estado enabled da skill' },
+  { method: 'POST', path: '/skills/import', domain: 'Skills', auth: true, desc: 'Importar skill via URL ou markdown colado' },
+  { method: 'POST', path: '/skills/:id/resync', domain: 'Skills', auth: true, desc: 'Re-sincronizar skill do repositorio GitHub' },
+
+  // Agents
+  { method: 'GET', path: '/agents', domain: 'Agents', auth: true, desc: 'Listar todos os agentes do usuario' },
+  { method: 'POST', path: '/agents', domain: 'Agents', auth: true, desc: 'Criar novo agente com system prompt e tools' },
+  { method: 'GET', path: '/agents/:id', domain: 'Agents', auth: true, desc: 'Obter agente completo por ID' },
+  { method: 'PUT', path: '/agents/:id', domain: 'Agents', auth: true, desc: 'Atualizar agente' },
+  { method: 'DELETE', path: '/agents/:id', domain: 'Agents', auth: true, desc: 'Deletar agente' },
+  { method: 'PATCH', path: '/agents/:id/toggle', domain: 'Agents', auth: true, desc: 'Alternar estado enabled do agente' },
+  { method: 'POST', path: '/agents/import', domain: 'Agents', auth: true, desc: 'Importar agente via URL ou markdown colado' },
+  { method: 'POST', path: '/agents/:id/resync', domain: 'Agents', auth: true, desc: 'Re-sincronizar agente do repositorio GitHub' },
+
+  // Rules
+  { method: 'GET', path: '/rules', domain: 'Rules', auth: true, desc: 'Listar todas as regras do usuario' },
+  { method: 'POST', path: '/rules', domain: 'Rules', auth: true, desc: 'Criar nova regra' },
+  { method: 'GET', path: '/rules/:id', domain: 'Rules', auth: true, desc: 'Obter regra completa por ID' },
+  { method: 'PUT', path: '/rules/:id', domain: 'Rules', auth: true, desc: 'Atualizar regra' },
+  { method: 'DELETE', path: '/rules/:id', domain: 'Rules', auth: true, desc: 'Deletar regra' },
+  { method: 'PATCH', path: '/rules/:id/toggle', domain: 'Rules', auth: true, desc: 'Alternar estado enabled da regra' },
+  { method: 'POST', path: '/rules/import', domain: 'Rules', auth: true, desc: 'Importar regra via URL ou markdown colado' },
+  { method: 'POST', path: '/rules/:id/resync', domain: 'Rules', auth: true, desc: 'Re-sincronizar regra do repositorio GitHub' },
+
+  // Plugins
+  { method: 'GET', path: '/plugins', domain: 'Plugins', auth: true, desc: 'Listar todos os plugins instalados' },
+  { method: 'POST', path: '/plugins', domain: 'Plugins', auth: true, desc: 'Instalar plugin a partir de manifesto JSON' },
+  { method: 'POST', path: '/plugins/import-url', domain: 'Plugins', auth: true, desc: 'Importar plugin de URL do GitHub ou manifesto' },
+  { method: 'GET', path: '/plugins/:id', domain: 'Plugins', auth: true, desc: 'Obter plugin por ID com MCP servers, skills, agents' },
+  { method: 'PUT', path: '/plugins/:id', domain: 'Plugins', auth: true, desc: 'Atualizar metadados do plugin' },
+  { method: 'DELETE', path: '/plugins/:id', domain: 'Plugins', auth: true, desc: 'Desinstalar plugin (cascade delete filhos)' },
+  { method: 'PATCH', path: '/plugins/:id/toggle', domain: 'Plugins', auth: true, desc: 'Alternar enabled do plugin e filhos (cascade)' },
+  { method: 'POST', path: '/plugins/:id/resync', domain: 'Plugins', auth: true, desc: 'Re-sincronizar plugin do repositorio GitHub' },
+
+  // Hooks
+  { method: 'GET', path: '/hooks', domain: 'Hooks', auth: true, desc: 'Listar todos os hooks configurados' },
+  { method: 'POST', path: '/hooks', domain: 'Hooks', auth: true, desc: 'Criar novo hook (command, prompt ou agent)' },
+  { method: 'GET', path: '/hooks/templates', domain: 'Hooks', auth: true, desc: 'Listar templates de hook disponiveis' },
+  { method: 'GET', path: '/hooks/events', domain: 'Hooks', auth: true, desc: 'Listar tipos de evento com metadados e categorias' },
+  { method: 'POST', path: '/hooks/from-template', domain: 'Hooks', auth: true, desc: 'Criar hook a partir de template predefinido' },
+  { method: 'POST', path: '/hooks/preview', domain: 'Hooks', auth: true, desc: 'Preview do JSON para .claude/settings.json' },
+  { method: 'GET', path: '/hooks/:id', domain: 'Hooks', auth: true, desc: 'Obter hook por ID' },
+  { method: 'PUT', path: '/hooks/:id', domain: 'Hooks', auth: true, desc: 'Atualizar hook' },
+  { method: 'DELETE', path: '/hooks/:id', domain: 'Hooks', auth: true, desc: 'Deletar hook' },
+  { method: 'PATCH', path: '/hooks/:id/toggle', domain: 'Hooks', auth: true, desc: 'Alternar estado enabled do hook' },
+
+  // MCP Servers
+  { method: 'GET', path: '/mcp-servers', domain: 'MCP Servers', auth: true, desc: 'Listar todos os MCP servers' },
+  { method: 'POST', path: '/mcp-servers', domain: 'MCP Servers', auth: true, desc: 'Criar novo MCP server (http, sse, stdio)' },
+  { method: 'GET', path: '/mcp-servers/:id', domain: 'MCP Servers', auth: true, desc: 'Obter MCP server completo por ID' },
+  { method: 'PUT', path: '/mcp-servers/:id', domain: 'MCP Servers', auth: true, desc: 'Atualizar MCP server' },
+  { method: 'DELETE', path: '/mcp-servers/:id', domain: 'MCP Servers', auth: true, desc: 'Deletar MCP server' },
+  { method: 'PATCH', path: '/mcp-servers/:id/toggle', domain: 'MCP Servers', auth: true, desc: 'Alternar estado enabled do MCP server' },
+  { method: 'POST', path: '/mcp-servers/:id/test', domain: 'MCP Servers', auth: true, desc: 'Testar conexao e buscar tools disponiveis' },
+  { method: 'POST', path: '/mcp-servers/quick-install', domain: 'MCP Servers', auth: true, desc: 'Quick install via string de comando (npx, etc.)' },
+
+  // Webhooks
+  { method: 'GET', path: '/webhooks', domain: 'Webhooks', auth: true, desc: 'Listar webhooks configurados' },
+  { method: 'POST', path: '/webhooks', domain: 'Webhooks', auth: true, desc: 'Criar webhook com URL, eventos e secret' },
+  { method: 'GET', path: '/webhooks/:id', domain: 'Webhooks', auth: true, desc: 'Obter webhook por ID' },
+  { method: 'PUT', path: '/webhooks/:id', domain: 'Webhooks', auth: true, desc: 'Atualizar webhook' },
+  { method: 'DELETE', path: '/webhooks/:id', domain: 'Webhooks', auth: true, desc: 'Deletar webhook' },
+  { method: 'GET', path: '/webhooks/:id/deliveries', domain: 'Webhooks', auth: true, desc: 'Listar historico de entregas do webhook' },
+  { method: 'POST', path: '/webhooks/:id/test', domain: 'Webhooks', auth: true, desc: 'Enviar evento de teste para o webhook' },
+
+  // API Keys
+  { method: 'GET', path: '/api-keys', domain: 'API Keys', auth: true, desc: 'Listar API keys ativas do usuario' },
+  { method: 'POST', path: '/api-keys', domain: 'API Keys', auth: true, desc: 'Gerar nova API key (exk_...)' },
+  { method: 'DELETE', path: '/api-keys/:id', domain: 'API Keys', auth: true, desc: 'Revogar API key' },
+
+  // Metrics
+  { method: 'GET', path: '/metrics/daily', domain: 'Metrics', auth: true, desc: 'Metricas diarias de execucao (30 dias)' },
+  { method: 'GET', path: '/metrics/by-workflow', domain: 'Metrics', auth: true, desc: 'Metricas agregadas por workflow (custo, sucesso, duracao)' },
+  { method: 'GET', path: '/metrics/alerts', domain: 'Metrics', auth: true, desc: 'Alertas ativos: error rate e custo diario' },
+  { method: 'GET', path: '/executions', domain: 'Metrics', auth: true, desc: 'Listar execucoes com estado, workflow e projeto' },
+
+  // Git
+  { method: 'PUT', path: '/git/token', domain: 'Git', auth: true, desc: 'Salvar token GitHub pessoal (legacy)' },
+  { method: 'DELETE', path: '/git/token', domain: 'Git', auth: true, desc: 'Remover token GitHub (legacy)' },
+  { method: 'GET', path: '/git/token/status', domain: 'Git', auth: true, desc: 'Verificar se token GitHub esta configurado' },
+  { method: 'GET', path: '/git/repos', domain: 'Git', auth: true, desc: 'Listar repos GitHub do usuario (legacy token)' },
+  { method: 'GET', path: '/git/accounts', domain: 'Git', auth: true, desc: 'Listar contas git do usuario (multi-account)' },
+  { method: 'POST', path: '/git/accounts', domain: 'Git', auth: true, desc: 'Criar nova conta git com validacao de token' },
+  { method: 'PUT', path: '/git/accounts/:id', domain: 'Git', auth: true, desc: 'Atualizar conta git (label e/ou token)' },
+  { method: 'DELETE', path: '/git/accounts/:id', domain: 'Git', auth: true, desc: 'Deletar conta git (cascade para project mappings)' },
+  { method: 'GET', path: '/git/accounts/:id/repos', domain: 'Git', auth: true, desc: 'Listar repos de uma conta git especifica' },
+  { method: 'GET', path: '/git/project-account', domain: 'Git', auth: true, desc: 'Obter conta git vinculada a um project path' },
+  { method: 'POST', path: '/git/clone', domain: 'Git', auth: true, desc: 'Clonar repositorio GitHub para pasta do usuario' },
+  { method: 'POST', path: '/git/status', domain: 'Git', auth: true, desc: 'Status git de um projeto (branch, ahead, behind)' },
+  { method: 'POST', path: '/git/pull', domain: 'Git', auth: true, desc: 'Pull latest changes com rebase' },
+  { method: 'POST', path: '/git/push', domain: 'Git', auth: true, desc: 'Push commits para remote (requer token)' },
+
+  // Admin
+  { method: 'GET', path: '/admin/users', domain: 'Admin', auth: true, desc: 'Listar todos os usuarios (admin only)' },
+  { method: 'PUT', path: '/admin/users/:id/role', domain: 'Admin', auth: true, desc: 'Alterar role do usuario (admin only)' },
+  { method: 'DELETE', path: '/admin/users/:id', domain: 'Admin', auth: true, desc: 'Deletar usuario (admin only, nao pode deletar a si mesmo)' },
+
+  // Import
+  { method: 'POST', path: '/import-repo', domain: 'Import', auth: true, desc: 'Scan GitHub repo e bulk-import skills, agents, rules' },
+];
+
+// Domain visual config
+const domainConfig = {
+  'Auth':             { icon: '\u{1F512}', color: 'from-blue-500 to-cyan-500' },
+  'Health':           { icon: '\u{1F49A}', color: 'from-emerald-500 to-green-500' },
+  'Workflows':        { icon: '\u{1F504}', color: 'from-purple-500 to-pink-500' },
+  'Conversations':    { icon: '\u{1F4AC}', color: 'from-blue-500 to-indigo-500' },
+  'Execution':        { icon: '\u{26A1}',  color: 'from-orange-500 to-red-500' },
+  'Attachments':      { icon: '\u{1F4CE}', color: 'from-slate-400 to-slate-500' },
+  'Workflow API':     { icon: '\u{1F680}', color: 'from-cyan-500 to-blue-500' },
+  'Prompt Versions':  { icon: '\u{1F4DC}', color: 'from-amber-500 to-orange-500' },
+  'Step Templates':   { icon: '\u{1F9E9}', color: 'from-teal-500 to-emerald-500' },
+  'Skills':           { icon: '\u{2B50}',  color: 'from-yellow-500 to-amber-500' },
+  'Agents':           { icon: '\u{1F916}', color: 'from-violet-500 to-purple-500' },
+  'Rules':            { icon: '\u{1F4CB}', color: 'from-rose-500 to-pink-500' },
+  'Plugins':          { icon: '\u{1F50C}', color: 'from-fuchsia-500 to-purple-500' },
+  'Hooks':            { icon: '\u{1FA9D}', color: 'from-lime-500 to-green-500' },
+  'MCP Servers':      { icon: '\u{1F5A5}', color: 'from-indigo-500 to-blue-500' },
+  'Webhooks':         { icon: '\u{1F514}', color: 'from-sky-500 to-cyan-500' },
+  'API Keys':         { icon: '\u{1F511}', color: 'from-amber-500 to-yellow-500' },
+  'Metrics':          { icon: '\u{1F4CA}', color: 'from-emerald-500 to-teal-500' },
+  'Git':              { icon: '\u{1F33F}', color: 'from-orange-500 to-amber-500' },
+  'Admin':            { icon: '\u{1F6E1}', color: 'from-red-500 to-rose-500' },
+  'Import':           { icon: '\u{1F4E5}', color: 'from-cyan-500 to-teal-500' },
+};
+
+// State
+let activeMethodFilter = 'ALL';
+let activeDomainFilter = 'ALL';
+let searchQuery = '';
+
+// Stats
+function getStats() {
+  const total = endpoints.length;
+  const methods = {};
+  const domains = new Set();
+  endpoints.forEach(e => {
+    methods[e.method] = (methods[e.method] || 0) + 1;
+    domains.add(e.domain);
+  });
+  return { total, methods, domainsCount: domains.size };
+}
+
+// Render summary cards
+function renderSummary() {
+  const stats = getStats();
+  const container = document.getElementById('summaryCards');
+  const cards = [
+    { label: 'Total', value: stats.total, gradient: 'from-blue-500 to-purple-500', glow: 'glow-blue' },
+    { label: 'GET', value: stats.methods.GET || 0, gradient: 'from-emerald-500 to-green-500', glow: 'glow-emerald' },
+    { label: 'POST', value: stats.methods.POST || 0, gradient: 'from-blue-500 to-cyan-500', glow: 'glow-blue' },
+    { label: 'PUT', value: stats.methods.PUT || 0, gradient: 'from-yellow-500 to-amber-500', glow: 'glow-orange' },
+    { label: 'DELETE', value: stats.methods.DELETE || 0, gradient: 'from-red-500 to-rose-500', glow: '' },
+    { label: 'PATCH', value: stats.methods.PATCH || 0, gradient: 'from-purple-500 to-violet-500', glow: 'glow-purple' },
+    { label: 'Dominios', value: stats.domainsCount, gradient: 'from-pink-500 to-fuchsia-500', glow: '' },
+  ];
+  container.innerHTML = cards.map(c => `
+    <div class="stat-card glass rounded-xl p-4 text-center ${c.glow}">
+      <div class="text-2xl sm:text-3xl font-black bg-gradient-to-r ${c.gradient} bg-clip-text text-transparent">${c.value}</div>
+      <div class="text-xs text-slate-400 mt-1 font-medium uppercase tracking-wider">${c.label}</div>
+    </div>
+  `).join('');
+}
+
+// Render domain filter chips
+function renderDomainChips() {
+  const domains = [...new Set(endpoints.map(e => e.domain))];
+  const container = document.getElementById('domainChips');
+  let html = `<button onclick="setDomainFilter('ALL')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${activeDomainFilter === 'ALL' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' : 'bg-surface-card text-slate-400 border border-slate-700 hover:border-slate-500'}">Todos</button>`;
+  domains.forEach(d => {
+    const count = endpoints.filter(e => e.domain === d).length;
+    const isActive = activeDomainFilter === d;
+    html += `<button onclick="setDomainFilter('${d}')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${isActive ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' : 'bg-surface-card text-slate-400 border border-slate-700 hover:border-slate-500'}">${d} <span class="opacity-50">${count}</span></button>`;
+  });
+  container.innerHTML = html;
+}
+
+// Filter logic
+function getFilteredEndpoints() {
+  return endpoints.filter(e => {
+    if (activeMethodFilter !== 'ALL' && e.method !== activeMethodFilter) return false;
+    if (activeDomainFilter !== 'ALL' && e.domain !== activeDomainFilter) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return e.path.toLowerCase().includes(q) ||
+             e.desc.toLowerCase().includes(q) ||
+             e.domain.toLowerCase().includes(q) ||
+             e.method.toLowerCase().includes(q);
+    }
+    return true;
+  });
+}
+
+// Highlight :param in paths
+function highlightPath(path) {
+  return path.replace(/:([a-zA-Z]+)/g, '<span class="text-amber-400">:$1</span>');
+}
+
+// Render endpoints grouped by domain
+function renderEndpoints() {
+  const filtered = getFilteredEndpoints();
+  const container = document.getElementById('endpointsContainer');
+  const countEl = document.getElementById('searchCount');
+
+  if (searchQuery || activeMethodFilter !== 'ALL' || activeDomainFilter !== 'ALL') {
+    countEl.textContent = `${filtered.length} / ${endpoints.length}`;
+  } else {
+    countEl.textContent = '';
+  }
+
+  // Group by domain preserving order
+  const groups = {};
+  const domainOrder = [];
+  endpoints.forEach(e => {
+    if (!domainOrder.includes(e.domain)) domainOrder.push(e.domain);
+  });
+  filtered.forEach(e => {
+    if (!groups[e.domain]) groups[e.domain] = [];
+    groups[e.domain].push(e);
+  });
+
+  let html = '';
+  domainOrder.forEach(domain => {
+    const items = groups[domain];
+    if (!items || items.length === 0) return;
+    const cfg = domainConfig[domain] || { icon: '\u{1F4E6}', color: 'from-slate-500 to-slate-600' };
+
+    html += `
+    <div class="domain-group open mb-4">
+      <button onclick="toggleDomainGroup(this)" class="w-full flex items-center justify-between p-4 glass rounded-t-xl hover:bg-surface-hover/30 transition-colors cursor-pointer">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br ${cfg.color} flex items-center justify-center text-sm">${cfg.icon}</div>
+          <h3 class="text-lg font-bold text-slate-200">${domain}</h3>
+          <span class="px-2 py-0.5 rounded-full bg-surface text-xs text-slate-400 font-medium">${items.length}</span>
+        </div>
+        <svg class="chevron w-5 h-5 text-slate-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+      <div class="domain-body">
+        <div class="overflow-x-auto glass rounded-b-xl border-t border-slate-700/50">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs uppercase tracking-wider text-slate-500 border-b border-slate-700/50">
+                <th class="px-4 py-3 w-24">Method</th>
+                <th class="px-4 py-3">Path</th>
+                <th class="px-4 py-3 hidden lg:table-cell">Descricao</th>
+                <th class="px-4 py-3 w-16 text-center">Auth</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(e => `
+              <tr class="endpoint-row border-b border-slate-800/50 last:border-0">
+                <td class="px-4 py-3">
+                  <span class="method-badge method-${e.method}">${e.method}</span>
+                </td>
+                <td class="px-4 py-3 path-cell">
+                  <code class="text-slate-300 text-xs sm:text-sm">${highlightPath(e.path)}</code>
+                  <div class="lg:hidden text-xs text-slate-500 mt-1">${e.desc}</div>
+                </td>
+                <td class="px-4 py-3 text-slate-400 text-xs hidden lg:table-cell">${e.desc}</td>
+                <td class="px-4 py-3 text-center">
+                  ${e.auth
+                    ? '<span class="auth-yes text-xs font-semibold" title="Requer JWT">JWT</span>'
+                    : '<span class="auth-no text-xs" title="Publico">--</span>'}
+                </td>
+              </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  if (filtered.length === 0) {
+    html = `
+    <div class="text-center py-20">
+      <div class="text-6xl mb-4 opacity-30">\u{1F50D}</div>
+      <h3 class="text-xl font-bold text-slate-400 mb-2">Nenhum endpoint encontrado</h3>
+      <p class="text-slate-500">Tente ajustar os filtros ou o termo de busca.</p>
+    </div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+// Toggle method filter
+function toggleMethodFilter(method) {
+  activeMethodFilter = method;
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    const m = btn.dataset.method;
+    if (m === method) {
+      btn.classList.add('active');
+      btn.style.opacity = '1';
+    } else {
+      btn.classList.remove('active');
+      btn.style.opacity = '0.7';
+    }
+  });
+  renderEndpoints();
+}
+
+// Set domain filter
+function setDomainFilter(domain) {
+  activeDomainFilter = domain;
+  renderDomainChips();
+  renderEndpoints();
+}
+
+// Toggle domain collapsible
+function toggleDomainGroup(btn) {
+  btn.closest('.domain-group').classList.toggle('open');
+}
+
+// Search input
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  searchQuery = e.target.value;
+  renderEndpoints();
+});
+
+// Scroll reveal observer
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.1 });
+
+function observeRevealElements() {
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+  if (e.key === 'Escape') {
+    const input = document.getElementById('searchInput');
+    if (document.activeElement === input) {
+      input.value = '';
+      searchQuery = '';
+      renderEndpoints();
+      input.blur();
+    }
+  }
+});
+
+// Init
+renderSummary();
+renderDomainChips();
+renderEndpoints();
+setTimeout(observeRevealElements, 100);
+</script>
+
+</body>
+</html>

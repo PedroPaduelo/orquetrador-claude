@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frontend — Arquitetura | Orquetrador Claude</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            surface: { 50: '#f8fafc', 100: '#f1f5f9', 700: '#1e293b', 800: '#0f172a', 900: '#020617' },
+            accent: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
+            cyan: { 400: '#22d3ee', 500: '#06b6d4' },
+            emerald: { 400: '#34d399', 500: '#10b981' },
+            amber: { 400: '#fbbf24', 500: '#f59e0b' },
+            rose: { 400: '#fb7185', 500: '#f43f5e' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    code, .mono { font-family: 'JetBrains Mono', monospace; }
+    * { scrollbar-width: thin; scrollbar-color: #334155 #0f172a; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    .glow-indigo { box-shadow: 0 0 20px rgba(99, 102, 241, 0.15), 0 0 60px rgba(99, 102, 241, 0.05); }
+    .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.15), 0 0 60px rgba(6, 182, 212, 0.05); }
+    .glow-emerald { box-shadow: 0 0 20px rgba(16, 185, 129, 0.15), 0 0 60px rgba(16, 185, 129, 0.05); }
+    .glow-amber { box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), 0 0 60px rgba(245, 158, 11, 0.05); }
+    .glow-rose { box-shadow: 0 0 20px rgba(244, 63, 94, 0.15), 0 0 60px rgba(244, 63, 94, 0.05); }
+
+    .section-card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.6) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.1);
+      transition: all 0.3s ease;
+    }
+    .section-card:hover { border-color: rgba(99, 102, 241, 0.25); }
+
+    .tree-line { position: relative; }
+    .tree-line::before {
+      content: '';
+      position: absolute;
+      left: -20px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(to bottom, rgba(99,102,241,0.4), rgba(99,102,241,0.1));
+    }
+    .tree-line::after {
+      content: '';
+      position: absolute;
+      left: -20px;
+      top: 14px;
+      width: 16px;
+      height: 1px;
+      background: rgba(99,102,241,0.4);
+    }
+
+    .route-node {
+      transition: all 0.2s ease;
+      cursor: default;
+    }
+    .route-node:hover {
+      transform: translateX(4px);
+      filter: brightness(1.2);
+    }
+
+    .flow-arrow {
+      display: inline-flex;
+      align-items: center;
+      color: #64748b;
+      margin: 0 4px;
+    }
+    .flow-arrow::after {
+      content: '\2192';
+      font-size: 1.1em;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    .collapsible-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+    .collapsible-content.open {
+      max-height: 5000px;
+    }
+
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid #475569;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .nav-dot.active {
+      border-color: #6366f1;
+      background: #6366f1;
+      box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+    }
+
+    .store-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(99,102,241,0.15);
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.3s;
+    }
+    .store-card:hover {
+      border-color: rgba(99,102,241,0.35);
+      transform: translateY(-2px);
+    }
+
+    .ascii-box {
+      background: rgba(2, 6, 23, 0.8);
+      border: 1px solid rgba(99,102,241,0.2);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      letter-spacing: 0.02em;
+      color: #94a3b8;
+      white-space: pre;
+      overflow-x: auto;
+      padding: 24px;
+      border-radius: 12px;
+    }
+
+    .flow-step {
+      position: relative;
+      padding: 10px 16px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      transition: all 0.2s;
+    }
+    .flow-step:hover { border-color: rgba(99,102,241,0.5); }
+
+    .connector-h {
+      width: 32px;
+      height: 2px;
+      background: linear-gradient(to right, rgba(99,102,241,0.5), rgba(99,102,241,0.2));
+      position: relative;
+      flex-shrink: 0;
+    }
+    .connector-h::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: -3px;
+      border: solid rgba(99,102,241,0.5);
+      border-width: 0 2px 2px 0;
+      padding: 3px;
+      transform: rotate(-45deg);
+    }
+
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+    }
+
+    .hero-gradient {
+      background: radial-gradient(ellipse at 30% 0%, rgba(99,102,241,0.12) 0%, transparent 60%),
+                  radial-gradient(ellipse at 70% 100%, rgba(6,182,212,0.08) 0%, transparent 50%);
+    }
+  </style>
+</head>
+<body class="bg-surface-900 text-slate-300 min-h-screen grid-bg">
+
+  <!-- Navigation Side Dots -->
+  <nav class="fixed right-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-3" id="sideNav">
+    <div class="nav-dot active" data-section="header" title="Topo"></div>
+    <div class="nav-dot" data-section="routes" title="Route Map"></div>
+    <div class="nav-dot" data-section="hierarchy" title="Component Hierarchy"></div>
+    <div class="nav-dot" data-section="stores" title="State Management"></div>
+    <div class="nav-dot" data-section="dataflow" title="Data Flow"></div>
+    <div class="nav-dot" data-section="userflows" title="User Flows"></div>
+    <div class="nav-dot" data-section="components" title="UI Components"></div>
+    <div class="nav-dot" data-section="layout" title="Conversation Layout"></div>
+  </nav>
+
+  <!-- ======================= HEADER ======================= -->
+  <header id="header" class="hero-gradient border-b border-slate-800/60">
+    <div class="max-w-7xl mx-auto px-6 py-16">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg">F</div>
+        <span class="text-xs font-medium tracking-widest uppercase text-indigo-400">06 / System Map</span>
+      </div>
+      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3 tracking-tight">
+        Frontend <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">&mdash; Arquitetura</span>
+      </h1>
+      <p class="text-lg text-slate-400 max-w-2xl">
+        React 18 + Vite 6 + Tailwind CSS + shadcn/ui &mdash; Single-page app com SSE streaming, 8 Zustand stores e 17+ rotas protegidas.
+      </p>
+      <div class="flex flex-wrap gap-3 mt-6">
+        <span class="tag bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">React 18</span>
+        <span class="tag bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Vite 6</span>
+        <span class="tag bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Tailwind CSS</span>
+        <span class="tag bg-amber-500/20 text-amber-300 border border-amber-500/30">Zustand 5</span>
+        <span class="tag bg-rose-500/20 text-rose-300 border border-rose-500/30">TanStack Query</span>
+        <span class="tag bg-purple-500/20 text-purple-300 border border-purple-500/30">React Router 7</span>
+        <span class="tag bg-sky-500/20 text-sky-300 border border-sky-500/30">shadcn/ui</span>
+        <span class="tag bg-orange-500/20 text-orange-300 border border-orange-500/30">SSE Streaming</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-12 space-y-16">
+
+    <!-- ======================= 1. ROUTE MAP ======================= -->
+    <section id="routes">
+      <div class="section-card rounded-2xl p-8 glow-indigo">
+        <button onclick="toggleSection('routes-content')" class="w-full text-left flex items-center justify-between group">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-sm font-bold">1</div>
+            <h2 class="text-2xl font-bold text-white group-hover:text-indigo-300 transition-colors">Route Map</h2>
+            <span class="tag bg-slate-700/50 text-slate-400">17 rotas</span>
+          </div>
+          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-routes-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+
+        <div class="collapsible-content open mt-8" id="routes-content">
+          <!-- Public Routes -->
+          <div class="mb-8">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="pulse-dot bg-rose-400"></div>
+              <h3 class="text-sm font-semibold uppercase tracking-wider text-rose-400">Public Routes</h3>
+              <div class="flex-1 h-px bg-gradient-to-r from-rose-500/30 to-transparent"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 ml-6">
+              <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-rose-500/5 border border-rose-500/15">
+                <div class="w-2 h-2 rounded-full bg-rose-400"></div>
+                <code class="text-rose-300 text-sm font-medium">/login</code>
+                <span class="text-slate-500 text-xs ml-auto">Login Page</span>
+              </div>
+              <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-rose-500/5 border border-rose-500/15">
+                <div class="w-2 h-2 rounded-full bg-rose-400"></div>
+                <code class="text-rose-300 text-sm font-medium">/register</code>
+                <span class="text-slate-500 text-xs ml-auto">Register Page</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Protected Routes -->
+          <div>
+            <div class="flex items-center gap-2 mb-4">
+              <div class="pulse-dot bg-emerald-400"></div>
+              <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400">Protected Routes</h3>
+              <span class="tag bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ml-2">AppLayout + Sidebar</span>
+              <div class="flex-1 h-px bg-gradient-to-r from-emerald-500/30 to-transparent"></div>
+            </div>
+
+            <!-- Route Tree -->
+            <div class="ml-6 space-y-1.5">
+              <!-- Dashboard -->
+              <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/15">
+                <div class="w-2 h-2 rounded-full bg-indigo-400"></div>
+                <code class="text-indigo-300 text-sm font-medium">/</code>
+                <span class="text-slate-400 text-xs">Dashboard</span>
+                <div class="ml-auto flex gap-1.5">
+                  <span class="tag bg-slate-700/60 text-slate-400">stats</span>
+                  <span class="tag bg-slate-700/60 text-slate-400">charts</span>
+                  <span class="tag bg-slate-700/60 text-slate-400">alerts</span>
+                  <span class="tag bg-slate-700/60 text-slate-400">recent</span>
+                </div>
+              </div>
+
+              <!-- Conversations group -->
+              <div class="pl-4 border-l-2 border-cyan-500/20 ml-2 space-y-1.5 mt-2">
+                <div class="text-xs text-cyan-400/60 uppercase tracking-wider font-semibold mb-2 -ml-2">Conversations</div>
+                <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/15">
+                  <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
+                  <code class="text-cyan-300 text-sm font-medium">/conversations</code>
+                  <span class="text-slate-400 text-xs">List</span>
+                  <div class="ml-auto flex gap-1.5">
+                    <span class="tag bg-slate-700/60 text-slate-400">grid/table</span>
+                    <span class="tag bg-slate-700/60 text-slate-400">search</span>
+                    <span class="tag bg-slate-700/60 text-slate-400">filter</span>
+                    <span class="tag bg-slate-700/60 text-slate-400">pagination</span>
+                  </div>
+                </div>
+                <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/15">
+                  <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
+                  <code class="text-cyan-300 text-sm font-medium">/conversations/:id</code>
+                  <span class="text-slate-400 text-xs">Chat Interface</span>
+                  <div class="ml-auto flex gap-1.5">
+                    <span class="tag bg-orange-500/20 text-orange-300 border border-orange-500/20">SSE</span>
+                    <span class="tag bg-slate-700/60 text-slate-400">steps</span>
+                    <span class="tag bg-slate-700/60 text-slate-400">attachments</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Workflows group -->
+              <div class="pl-4 border-l-2 border-amber-500/20 ml-2 space-y-1.5 mt-3">
+                <div class="text-xs text-amber-400/60 uppercase tracking-wider font-semibold mb-2 -ml-2">Workflows</div>
+                <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/15">
+                  <div class="w-2 h-2 rounded-full bg-amber-400"></div>
+                  <code class="text-amber-300 text-sm font-medium">/workflows</code>
+                  <span class="text-slate-400 text-xs">List</span>
+                </div>
+                <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/15">
+                  <div class="w-2 h-2 rounded-full bg-amber-400"></div>
+                  <code class="text-amber-300 text-sm font-medium">/workflows/new</code>
+                  <span class="text-slate-400 text-xs">Wizard</span>
+                  <span class="tag bg-amber-500/20 text-amber-300 border border-amber-500/20 ml-auto">3 phases</span>
+                </div>
+                <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/15">
+                  <div class="w-2 h-2 rounded-full bg-amber-400"></div>
+                  <code class="text-amber-300 text-sm font-medium">/workflows/:id/edit</code>
+                  <span class="text-slate-400 text-xs">Edit Workflow</span>
+                </div>
+              </div>
+
+              <!-- Executions -->
+              <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-purple-500/5 border border-purple-500/15 mt-3">
+                <div class="w-2 h-2 rounded-full bg-purple-400"></div>
+                <code class="text-purple-300 text-sm font-medium">/executions</code>
+                <span class="text-slate-400 text-xs">Monitor</span>
+                <span class="tag bg-purple-500/20 text-purple-300 border border-purple-500/20 ml-auto">tabs by state</span>
+              </div>
+
+              <!-- Agent Chat -->
+              <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-purple-500/5 border border-purple-500/15">
+                <div class="w-2 h-2 rounded-full bg-purple-400"></div>
+                <code class="text-purple-300 text-sm font-medium">/workflow-chat</code>
+                <span class="text-slate-400 text-xs">Agent Chat</span>
+              </div>
+
+              <!-- Config group -->
+              <div class="pl-4 border-l-2 border-emerald-500/20 ml-2 space-y-1.5 mt-3">
+                <div class="text-xs text-emerald-400/60 uppercase tracking-wider font-semibold mb-2 -ml-2">Configuration</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                    <code class="text-emerald-300 text-xs">/mcp-servers</code>
+                  </div>
+                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                    <code class="text-emerald-300 text-xs">/skills</code>
+                  </div>
+                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                    <code class="text-emerald-300 text-xs">/agents</code>
+                  </div>
+                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                    <code class="text-emerald-300 text-xs">/rules</code>
+                  </div>
+                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                    <code class="text-emerald-300 text-xs">/plugins</code>
+                  </div>
+                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                    <code class="text-emerald-300 text-xs">/hooks</code>
+                  </div>
+                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                    <code class="text-emerald-300 text-xs">/webhooks</code>
+                  </div>
+                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                    <code class="text-emerald-300 text-xs">/step-templates</code>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Settings & Admin -->
+              <div class="flex gap-1.5 mt-3">
+                <div class="route-node flex-1 flex items-center gap-3 p-3 rounded-lg bg-slate-500/5 border border-slate-500/15">
+                  <div class="w-2 h-2 rounded-full bg-slate-400"></div>
+                  <code class="text-slate-300 text-sm font-medium">/settings</code>
+                  <span class="text-slate-500 text-xs">Git, API Keys, Budget</span>
+                </div>
+                <div class="route-node flex-1 flex items-center gap-3 p-3 rounded-lg bg-rose-500/5 border border-rose-500/15">
+                  <div class="w-2 h-2 rounded-full bg-rose-400"></div>
+                  <code class="text-rose-300 text-sm font-medium">/admin/users</code>
+                  <span class="text-slate-500 text-xs">Admin Panel</span>
+                  <span class="tag bg-rose-500/20 text-rose-300 border border-rose-500/20 ml-auto">admin</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 2. COMPONENT HIERARCHY ======================= -->
+    <section id="hierarchy">
+      <div class="section-card rounded-2xl p-8 glow-cyan">
+        <button onclick="toggleSection('hierarchy-content')" class="w-full text-left flex items-center justify-between group">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-sm font-bold">2</div>
+            <h2 class="text-2xl font-bold text-white group-hover:text-cyan-300 transition-colors">Component Hierarchy</h2>
+          </div>
+          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-hierarchy-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+
+        <div class="collapsible-content open mt-8" id="hierarchy-content">
+          <!-- Visual Tree -->
+          <div class="relative overflow-x-auto pb-4">
+            <div class="min-w-[700px]">
+              <!-- Level 0: App -->
+              <div class="flex justify-center mb-6">
+                <div class="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/20">
+                  &lt;App /&gt;
+                </div>
+              </div>
+              <div class="flex justify-center mb-6">
+                <div class="w-px h-6 bg-gradient-to-b from-indigo-500/50 to-cyan-500/50"></div>
+              </div>
+
+              <!-- Level 1: AppRoutes -->
+              <div class="flex justify-center mb-6">
+                <div class="px-5 py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-semibold text-sm">
+                  &lt;AppRoutes /&gt;
+                  <span class="text-cyan-500/60 text-xs ml-2">React Router</span>
+                </div>
+              </div>
+              <div class="flex justify-center mb-6">
+                <div class="flex items-end gap-16">
+                  <div class="w-px h-6 bg-rose-500/30"></div>
+                  <div class="w-px h-6 bg-emerald-500/30"></div>
+                </div>
+              </div>
+
+              <!-- Level 2: Split -->
+              <div class="flex justify-center gap-12 mb-6">
+                <!-- Public branch -->
+                <div class="text-center">
+                  <div class="px-4 py-2 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-300 text-sm font-medium mb-3">
+                    Public Routes
+                  </div>
+                  <div class="flex gap-2">
+                    <div class="px-3 py-1.5 rounded-md bg-rose-500/5 border border-rose-500/15 text-rose-400/80 text-xs mono">LoginPage</div>
+                    <div class="px-3 py-1.5 rounded-md bg-rose-500/5 border border-rose-500/15 text-rose-400/80 text-xs mono">RegisterPage</div>
+                  </div>
+                </div>
+
+                <!-- Protected branch -->
+                <div class="text-center">
+                  <div class="px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-sm font-medium mb-3">
+                    &lt;AppLayout /&gt;
+                    <span class="text-emerald-500/60 text-xs ml-1">Protected</span>
+                  </div>
+                  <div class="flex justify-center gap-8">
+                    <!-- Sidebar -->
+                    <div class="text-center">
+                      <div class="px-3 py-1.5 rounded-md bg-slate-700/50 border border-slate-600/30 text-slate-300 text-xs mono mb-2">&lt;Sidebar /&gt;</div>
+                      <div class="text-[10px] text-slate-500">collapsible</div>
+                    </div>
+                    <!-- Outlet / Pages -->
+                    <div class="text-center">
+                      <div class="px-3 py-1.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs mono mb-2">&lt;Outlet /&gt;</div>
+                      <div class="flex flex-wrap gap-1 max-w-[300px] justify-center">
+                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">Dashboard</div>
+                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">ConversationsList</div>
+                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">ChatInterface</div>
+                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">WorkflowsList</div>
+                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">WorkflowWizard</div>
+                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">Executions</div>
+                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">Settings</div>
+                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">+ 10 more</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div class="mt-6 pt-4 border-t border-slate-800/60 flex flex-wrap gap-4 text-xs text-slate-500">
+            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-indigo-500/30 border border-indigo-500/40"></div> Core / Root</div>
+            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-cyan-500/30 border border-cyan-500/40"></div> Router</div>
+            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-rose-500/30 border border-rose-500/40"></div> Public</div>
+            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/40"></div> Protected Layout</div>
+            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-slate-700/60 border border-slate-600/40"></div> Pages</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 3. STATE MANAGEMENT ======================= -->
+    <section id="stores">
+      <div class="section-card rounded-2xl p-8 glow-amber">
+        <button onclick="toggleSection('stores-content')" class="w-full text-left flex items-center justify-between group">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 text-sm font-bold">3</div>
+            <h2 class="text-2xl font-bold text-white group-hover:text-amber-300 transition-colors">State Management</h2>
+            <span class="tag bg-amber-500/10 text-amber-400 border border-amber-500/20">8 Zustand Stores</span>
+          </div>
+          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-stores-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+
+        <div class="collapsible-content open mt-8" id="stores-content">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <!-- useAuthStore -->
+            <div class="store-card glow-indigo">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-6 h-6 rounded-md bg-indigo-500/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </div>
+                <h4 class="font-bold text-indigo-300 text-sm">useAuthStore</h4>
+                <span class="tag bg-indigo-500/10 text-indigo-400 ml-auto">core</span>
+              </div>
+              <div class="space-y-1">
+                <div class="flex items-start gap-2">
+                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">state</span>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">user</code>
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">token</code>
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">isAuthenticated</code>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2">
+                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">actions</span>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">login()</code>
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">logout()</code>
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">checkAuth()</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- useConversationsStore -->
+            <div class="store-card glow-cyan">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-6 h-6 rounded-md bg-cyan-500/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                </div>
+                <h4 class="font-bold text-cyan-300 text-sm">useConversationsStore</h4>
+                <span class="tag bg-orange-500/10 text-orange-400 ml-auto">SSE</span>
+              </div>
+              <div class="space-y-1">
+                <div class="flex items-start gap-2">
+                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">state</span>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">streaming</code>
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">stepStatuses</code>
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">pausedInfo</code>
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">actionsCache</code>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2">
+                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">actions</span>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">setStreaming()</code>
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">updateStep()</code>
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">setPaused()</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- useWorkflowsStore -->
+            <div class="store-card glow-amber">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-6 h-6 rounded-md bg-amber-500/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+                </div>
+                <h4 class="font-bold text-amber-300 text-sm">useWorkflowsStore</h4>
+                <span class="tag bg-amber-500/10 text-amber-400 ml-auto">wizard</span>
+              </div>
+              <div class="space-y-1">
+                <div class="flex items-start gap-2">
+                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">state</span>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">wizardPhase</code>
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">formSteps</code>
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">basicInfo</code>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2">
+                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">actions</span>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">setPhase()</code>
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">addStep()</code>
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">reset()</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- useMcpServersStore -->
+            <div class="store-card glow-emerald">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
+                </div>
+                <h4 class="font-bold text-emerald-300 text-sm">useMcpServersStore</h4>
+              </div>
+              <div class="space-y-1">
+                <div class="flex items-start gap-2">
+                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">state</span>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">modalOpen</code>
+                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">editingItem</code>
+                  </div>
+                </div>
+                <div class="flex items-start gap-2">
+                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">actions</span>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">openModal()</code>
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">closeModal()</code>
+                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">setEditing()</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CRUD Stores group -->
+            <div class="md:col-span-2 store-card" style="border-color: rgba(148, 163, 184, 0.12);">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-6 h-6 rounded-md bg-slate-600/30 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                </div>
+                <h4 class="font-bold text-slate-300 text-sm">CRUD Stores</h4>
+                <span class="text-xs text-slate-500">Same modal + editing pattern</span>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <code class="text-xs text-purple-300 bg-purple-500/10 px-2 py-1 rounded border border-purple-500/15">useSkillsStore</code>
+                <code class="text-xs text-sky-300 bg-sky-500/10 px-2 py-1 rounded border border-sky-500/15">useAgentsStore</code>
+                <code class="text-xs text-pink-300 bg-pink-500/10 px-2 py-1 rounded border border-pink-500/15">useRulesStore</code>
+                <code class="text-xs text-orange-300 bg-orange-500/10 px-2 py-1 rounded border border-orange-500/15">usePluginsStore</code>
+                <code class="text-xs text-teal-300 bg-teal-500/10 px-2 py-1 rounded border border-teal-500/15">useHooksStore</code>
+              </div>
+              <div class="mt-3 pt-3 border-t border-slate-800/50 flex items-start gap-2">
+                <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-14">pattern</span>
+                <div class="flex flex-wrap gap-1">
+                  <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">modalOpen: boolean</code>
+                  <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">editingItem: T | null</code>
+                  <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">openModal()</code>
+                  <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">closeModal()</code>
+                  <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">setEditing(item)</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 4. DATA FLOW ======================= -->
+    <section id="dataflow">
+      <div class="section-card rounded-2xl p-8 glow-emerald">
+        <button onclick="toggleSection('dataflow-content')" class="w-full text-left flex items-center justify-between group">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm font-bold">4</div>
+            <h2 class="text-2xl font-bold text-white group-hover:text-emerald-300 transition-colors">Data Flow Pattern</h2>
+          </div>
+          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-dataflow-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+
+        <div class="collapsible-content open mt-8" id="dataflow-content">
+          <!-- Standard Flow -->
+          <div class="mb-8">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="pulse-dot bg-emerald-400"></div>
+              <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400">Standard Request Flow</h3>
+            </div>
+            <div class="overflow-x-auto pb-2">
+              <div class="flex items-center gap-0 min-w-[700px]">
+                <div class="flow-step border-indigo-500/30 bg-indigo-500/5">
+                  <div class="text-[10px] text-indigo-400 mb-0.5">trigger</div>
+                  <div class="font-medium text-indigo-300">User Action</div>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step border-cyan-500/30 bg-cyan-500/5">
+                  <div class="text-[10px] text-cyan-400 mb-0.5">hook</div>
+                  <div class="font-medium text-cyan-300">React Query / Zustand</div>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step border-amber-500/30 bg-amber-500/5">
+                  <div class="text-[10px] text-amber-400 mb-0.5">network</div>
+                  <div class="font-medium text-amber-300">API Call (Axios)</div>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step border-emerald-500/30 bg-emerald-500/5">
+                  <div class="text-[10px] text-emerald-400 mb-0.5">response</div>
+                  <div class="font-medium text-emerald-300">Backend Response</div>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step border-purple-500/30 bg-purple-500/5">
+                  <div class="text-[10px] text-purple-400 mb-0.5">update</div>
+                  <div class="font-medium text-purple-300">Store / Cache</div>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step border-rose-500/30 bg-rose-500/5">
+                  <div class="text-[10px] text-rose-400 mb-0.5">render</div>
+                  <div class="font-medium text-rose-300">Component Re-render</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SSE Flow -->
+          <div>
+            <div class="flex items-center gap-2 mb-4">
+              <div class="pulse-dot bg-orange-400"></div>
+              <h3 class="text-sm font-semibold uppercase tracking-wider text-orange-400">Real-time SSE Flow</h3>
+              <span class="tag bg-orange-500/10 text-orange-400 border border-orange-500/20 ml-2">Server-Sent Events</span>
+            </div>
+            <div class="overflow-x-auto pb-2">
+              <div class="flex items-center gap-0 min-w-[500px]">
+                <div class="flow-step border-orange-500/30 bg-orange-500/5">
+                  <div class="text-[10px] text-orange-400 mb-0.5">server</div>
+                  <div class="font-medium text-orange-300">SSE Events</div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">EventSource stream</div>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step border-cyan-500/30 bg-cyan-500/5">
+                  <div class="text-[10px] text-cyan-400 mb-0.5">handler</div>
+                  <div class="font-medium text-cyan-300">handleEvent()</div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">parse + dispatch</div>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step border-purple-500/30 bg-purple-500/5">
+                  <div class="text-[10px] text-purple-400 mb-0.5">state</div>
+                  <div class="font-medium text-purple-300">Store Updates</div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">Zustand setState</div>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step border-emerald-500/30 bg-emerald-500/5 relative">
+                  <div class="text-[10px] text-emerald-400 mb-0.5">ui</div>
+                  <div class="font-medium text-emerald-300">Live UI</div>
+                  <div class="text-[10px] text-slate-500 mt-0.5">streaming text, steps</div>
+                  <div class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tech Stack Legend -->
+          <div class="mt-8 p-4 rounded-xl bg-slate-800/30 border border-slate-700/30">
+            <div class="text-xs text-slate-500 mb-2 font-medium">Key Libraries</div>
+            <div class="flex flex-wrap gap-3 text-xs">
+              <div class="flex items-center gap-1.5">
+                <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
+                <span class="text-slate-400"><strong class="text-cyan-300">TanStack Query</strong> &mdash; server state, caching, pagination</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <div class="w-2 h-2 rounded-full bg-amber-400"></div>
+                <span class="text-slate-400"><strong class="text-amber-300">Zustand</strong> &mdash; client state, UI state</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                <span class="text-slate-400"><strong class="text-emerald-300">Axios</strong> &mdash; HTTP client, interceptors</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <div class="w-2 h-2 rounded-full bg-orange-400"></div>
+                <span class="text-slate-400"><strong class="text-orange-300">SSE Client</strong> &mdash; custom EventSource wrapper</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 5. KEY USER FLOWS ======================= -->
+    <section id="userflows">
+      <div class="section-card rounded-2xl p-8 glow-rose">
+        <button onclick="toggleSection('userflows-content')" class="w-full text-left flex items-center justify-between group">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center text-rose-400 text-sm font-bold">5</div>
+            <h2 class="text-2xl font-bold text-white group-hover:text-rose-300 transition-colors">Key User Flows</h2>
+            <span class="tag bg-slate-700/50 text-slate-400">5 flows</span>
+          </div>
+          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-userflows-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+
+        <div class="collapsible-content open mt-8 space-y-6" id="userflows-content">
+
+          <!-- Login Flow -->
+          <div class="p-5 rounded-xl bg-indigo-500/5 border border-indigo-500/15">
+            <div class="flex items-center gap-2 mb-4">
+              <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+              <h4 class="font-bold text-indigo-300 text-sm">Login Flow</h4>
+            </div>
+            <div class="overflow-x-auto">
+              <div class="flex items-center gap-0 min-w-[600px]">
+                <div class="flow-step text-xs border-indigo-500/25">Form Submit</div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-indigo-500/25 mono">POST /auth/login</div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-indigo-500/25">Store Token<br><span class="text-[10px] text-slate-500">useAuthStore</span></div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-indigo-500/25">Set Axios Header</div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-emerald-500/25 bg-emerald-500/5 text-emerald-300">Redirect /</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Create Workflow -->
+          <div class="p-5 rounded-xl bg-amber-500/5 border border-amber-500/15">
+            <div class="flex items-center gap-2 mb-4">
+              <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+              <h4 class="font-bold text-amber-300 text-sm">Create Workflow</h4>
+            </div>
+            <div class="overflow-x-auto">
+              <div class="flex items-center gap-0 min-w-[700px]">
+                <div class="flow-step text-xs border-amber-500/25">
+                  Phase 1<br><span class="text-[10px] text-slate-500">Basic Info</span>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-amber-500/25">
+                  Phase 2<br><span class="text-[10px] text-slate-500">Define Steps</span>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-amber-500/25">
+                  Phase 3<br><span class="text-[10px] text-slate-500">Review + Confirm</span>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-amber-500/25 mono">POST /workflows</div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-emerald-500/25 bg-emerald-500/5 text-emerald-300">Redirect /workflows</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Start Conversation -->
+          <div class="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/15">
+            <div class="flex items-center gap-2 mb-4">
+              <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+              <h4 class="font-bold text-cyan-300 text-sm">Start Conversation</h4>
+            </div>
+            <div class="overflow-x-auto">
+              <div class="flex items-center gap-0 min-w-[700px]">
+                <div class="flow-step text-xs border-cyan-500/25">Open Dialog</div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-cyan-500/25">Select Workflow<br><span class="text-[10px] text-slate-500">+ project folder</span></div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-cyan-500/25 mono">POST /conversations</div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-emerald-500/25 bg-emerald-500/5 text-emerald-300">Navigate to Chat<br><span class="text-[10px] text-slate-500">/conversations/:id</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Send Message (SSE) -->
+          <div class="p-5 rounded-xl bg-orange-500/5 border border-orange-500/15">
+            <div class="flex items-center gap-2 mb-4">
+              <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <h4 class="font-bold text-orange-300 text-sm">Send Message (SSE Streaming)</h4>
+              <span class="tag bg-orange-500/10 text-orange-400 border border-orange-500/20">real-time</span>
+            </div>
+            <div class="overflow-x-auto">
+              <div class="flex items-center gap-0 min-w-[800px]">
+                <div class="flow-step text-xs border-orange-500/25">Type Message</div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-orange-500/25">Open SSE Stream<br><span class="text-[10px] text-slate-500">EventSource</span></div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-orange-500/25 relative">
+                  Live Updates<br><span class="text-[10px] text-slate-500">token by token</span>
+                  <div class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-orange-400 animate-ping"></div>
+                </div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-orange-500/25">Step Status Updates<br><span class="text-[10px] text-slate-500">panel refresh</span></div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-emerald-500/25 bg-emerald-500/5 text-emerald-300">Message Saved<br><span class="text-[10px] text-slate-500">stream complete</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interrupt Flow -->
+          <div class="p-5 rounded-xl bg-rose-500/5 border border-rose-500/15">
+            <div class="flex items-center gap-2 mb-4">
+              <svg class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <h4 class="font-bold text-rose-300 text-sm">Interrupt Execution</h4>
+              <span class="tag bg-rose-500/10 text-rose-400 border border-rose-500/20">destructive</span>
+            </div>
+            <div class="overflow-x-auto">
+              <div class="flex items-center gap-0 min-w-[600px]">
+                <div class="flow-step text-xs border-rose-500/25">Click Interrupt</div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-rose-500/25 mono">POST /interrupt</div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-rose-500/25">Kill Process<br><span class="text-[10px] text-slate-500">backend SIGTERM</span></div>
+                <div class="connector-h"></div>
+                <div class="flow-step text-xs border-amber-500/25 bg-amber-500/5 text-amber-300">Resume Option<br><span class="text-[10px] text-slate-500">or start new</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 6. UI COMPONENT LIBRARY ======================= -->
+    <section id="components">
+      <div class="section-card rounded-2xl p-8" style="box-shadow: 0 0 20px rgba(168, 85, 247, 0.12);">
+        <button onclick="toggleSection('components-content')" class="w-full text-left flex items-center justify-between group">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 text-sm font-bold">6</div>
+            <h2 class="text-2xl font-bold text-white group-hover:text-purple-300 transition-colors">UI Component Library</h2>
+          </div>
+          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-components-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+
+        <div class="collapsible-content open mt-8" id="components-content">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <!-- shadcn/ui -->
+            <div class="p-5 rounded-xl bg-slate-800/30 border border-slate-700/30">
+              <div class="flex items-center gap-2 mb-4">
+                <div class="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">ui</div>
+                <h4 class="font-bold text-white text-sm">shadcn/ui + Radix</h4>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Button</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Input</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Card</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Dialog</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Select</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Tabs</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Badge</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Textarea</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Tooltip</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">DropdownMenu</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">ScrollArea</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Switch</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Separator</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Skeleton</span>
+                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Label</span>
+                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-slate-700/30">
+                <span class="text-[10px] text-slate-500">src/shared/components/ui/</span>
+              </div>
+            </div>
+
+            <!-- Custom Components -->
+            <div class="p-5 rounded-xl bg-slate-800/30 border border-slate-700/30">
+              <div class="flex items-center gap-2 mb-4">
+                <div class="w-5 h-5 rounded bg-cyan-500/20 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
+                </div>
+                <h4 class="font-bold text-white text-sm">Custom Components</h4>
+              </div>
+              <div class="space-y-2">
+                <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
+                  <code class="text-xs text-cyan-300">SearchBar</code>
+                  <span class="text-[10px] text-slate-500 ml-auto">debounced input</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
+                  <code class="text-xs text-cyan-300">FilterBar</code>
+                  <span class="text-[10px] text-slate-500 ml-auto">multi-select filters</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
+                  <code class="text-xs text-cyan-300">Pagination</code>
+                  <span class="text-[10px] text-slate-500 ml-auto">useSearchPagination</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
+                  <code class="text-xs text-cyan-300">ConfirmDialog</code>
+                  <span class="text-[10px] text-slate-500 ml-auto">destructive actions</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
+                  <code class="text-xs text-cyan-300">EmptyState</code>
+                  <span class="text-[10px] text-slate-500 ml-auto">icon + message + CTA</span>
+                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-slate-700/30">
+                <span class="text-[10px] text-slate-500">src/shared/components/common/</span>
+              </div>
+            </div>
+
+            <!-- Layout -->
+            <div class="p-5 rounded-xl bg-slate-800/30 border border-slate-700/30">
+              <div class="flex items-center gap-2 mb-4">
+                <div class="w-5 h-5 rounded bg-emerald-500/20 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+                </div>
+                <h4 class="font-bold text-white text-sm">Layout Components</h4>
+              </div>
+              <div class="space-y-2">
+                <div class="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                  <div class="flex items-center gap-2 mb-1">
+                    <code class="text-xs text-emerald-300 font-bold">Sidebar</code>
+                    <span class="tag bg-emerald-500/10 text-emerald-400 text-[10px]">collapsible</span>
+                  </div>
+                  <div class="text-[10px] text-slate-500">Navigation links, user menu, collapse toggle. Persists state in localStorage.</div>
+                </div>
+                <div class="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                  <div class="flex items-center gap-2 mb-1">
+                    <code class="text-xs text-emerald-300 font-bold">AppLayout</code>
+                  </div>
+                  <div class="text-[10px] text-slate-500">Sidebar + main content area (Outlet). Handles auth check, redirects unauthenticated.</div>
+                </div>
+                <div class="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                  <div class="flex items-center gap-2 mb-1">
+                    <code class="text-xs text-emerald-300 font-bold">PageHeader</code>
+                  </div>
+                  <div class="text-[10px] text-slate-500">Title, breadcrumbs, action buttons. Consistent across all pages.</div>
+                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-slate-700/30">
+                <span class="text-[10px] text-slate-500">src/shared/components/layout/</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 7. CONVERSATION DETAIL LAYOUT ======================= -->
+    <section id="layout">
+      <div class="section-card rounded-2xl p-8" style="box-shadow: 0 0 20px rgba(14, 165, 233, 0.12);">
+        <button onclick="toggleSection('layout-content')" class="w-full text-left flex items-center justify-between group">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center text-sky-400 text-sm font-bold">7</div>
+            <h2 class="text-2xl font-bold text-white group-hover:text-sky-300 transition-colors">Conversation Detail Layout</h2>
+          </div>
+          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-layout-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+
+        <div class="collapsible-content open mt-8" id="layout-content">
+          <!-- ASCII Mockup -->
+          <div class="ascii-box mb-6">
+<span class="text-sky-400">+-----------------------------------------------------------+-------------+</span>
+<span class="text-sky-400">|</span> <span class="text-amber-300">Header:</span> Conversation Title  <span class="text-slate-500">|</span>  Workflow Name    <span class="text-sky-400">|</span>  <span class="text-emerald-300">Actions</span>   <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>         <span class="text-slate-600">status badge</span>         <span class="text-slate-500">|</span>  <span class="text-slate-600">step X of Y</span>       <span class="text-sky-400">|</span>  <span class="text-rose-400">[Interrupt]</span><span class="text-sky-400">|</span>
+<span class="text-sky-400">+-----------------------------------------------------------+</span>  <span class="text-emerald-400">[Resume]</span>  <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>                                                           <span class="text-sky-400">|</span>  <span class="text-slate-400">[Delete]</span>  <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>  <span class="text-indigo-400">+------------------------------------------+</span>          <span class="text-sky-400">+-------------+</span>
+<span class="text-sky-400">|</span>  <span class="text-indigo-400">|</span> <span class="text-cyan-300">USER</span>                                     <span class="text-indigo-400">|</span>          <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>  <span class="text-indigo-400">|</span> Create a REST API for user management     <span class="text-indigo-400">|</span>          <span class="text-sky-400">|</span> <span class="text-amber-300">Step Panel</span>  <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>  <span class="text-indigo-400">+------------------------------------------+</span>          <span class="text-sky-400">|</span>  <span class="text-slate-600">(toggle)</span>  <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>                                                           <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>          <span class="text-purple-400">+------------------------------------------+</span> <span class="text-sky-400">|</span> <span class="text-emerald-400">Step 1</span> <span class="text-slate-500">Done</span>  <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>          <span class="text-purple-400">|</span> <span class="text-emerald-300">ASSISTANT</span>                               <span class="text-purple-400">|</span> <span class="text-sky-400">|</span> <span class="text-amber-400">Step 2</span> <span class="text-amber-300">Run.</span>  <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>          <span class="text-purple-400">|</span> I'll create the API with the following    <span class="text-purple-400">|</span> <span class="text-sky-400">|</span> <span class="text-slate-500">Step 3</span> <span class="text-slate-600">Wait</span>  <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>          <span class="text-purple-400">|</span> endpoints: GET /users, POST /users...     <span class="text-purple-400">|</span> <span class="text-sky-400">|</span> <span class="text-slate-500">Step 4</span> <span class="text-slate-600">Wait</span>  <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>          <span class="text-purple-400">|</span> <span class="text-orange-300 animate-pulse">|</span> <span class="text-slate-600">streaming...</span>                       <span class="text-purple-400">|</span> <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>          <span class="text-purple-400">+------------------------------------------+</span> <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
+<span class="text-sky-400">|</span>                                                           <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
+<span class="text-sky-400">+-----------------------------------------------------------+-------------+</span>
+<span class="text-sky-400">|</span> <span class="text-slate-400">[</span><span class="text-slate-300"> Type your message...                         </span><span class="text-slate-400">]</span> <span class="text-indigo-400">[Send]</span> <span class="text-rose-400">[Cancel]</span> <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
+<span class="text-sky-400">+-----------------------------------------------------------+-------------+</span></div>
+
+          <!-- Layout Breakdown -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="p-4 rounded-xl bg-amber-500/5 border border-amber-500/15">
+              <h5 class="text-xs font-bold text-amber-300 uppercase tracking-wider mb-2">Header Bar</h5>
+              <ul class="space-y-1 text-xs text-slate-400">
+                <li class="flex items-start gap-1.5"><span class="text-amber-400 mt-0.5">*</span> Conversation title (editable)</li>
+                <li class="flex items-start gap-1.5"><span class="text-amber-400 mt-0.5">*</span> Workflow name badge</li>
+                <li class="flex items-start gap-1.5"><span class="text-amber-400 mt-0.5">*</span> Status indicator (active/paused/done)</li>
+                <li class="flex items-start gap-1.5"><span class="text-amber-400 mt-0.5">*</span> Step counter (X of Y)</li>
+              </ul>
+            </div>
+
+            <div class="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/15">
+              <h5 class="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-2">Messages Area</h5>
+              <ul class="space-y-1 text-xs text-slate-400">
+                <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">*</span> Auto-scroll to bottom</li>
+                <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">*</span> User bubbles (right-aligned)</li>
+                <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">*</span> Assistant bubbles (left-aligned)</li>
+                <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">*</span> Streaming content with cursor</li>
+                <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">*</span> Markdown rendering</li>
+              </ul>
+            </div>
+
+            <div class="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
+              <h5 class="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-2">Step Panel</h5>
+              <ul class="space-y-1 text-xs text-slate-400">
+                <li class="flex items-start gap-1.5"><span class="text-emerald-400 mt-0.5">*</span> Toggleable sidebar</li>
+                <li class="flex items-start gap-1.5"><span class="text-emerald-400 mt-0.5">*</span> Step list with live status</li>
+                <li class="flex items-start gap-1.5"><span class="text-emerald-400 mt-0.5">*</span> Color-coded: done/running/waiting</li>
+                <li class="flex items-start gap-1.5"><span class="text-emerald-400 mt-0.5">*</span> Expand for step details</li>
+              </ul>
+            </div>
+
+            <div class="p-4 rounded-xl bg-sky-500/5 border border-sky-500/15">
+              <h5 class="text-xs font-bold text-sky-300 uppercase tracking-wider mb-2">Input Bar</h5>
+              <ul class="space-y-1 text-xs text-slate-400">
+                <li class="flex items-start gap-1.5"><span class="text-sky-400 mt-0.5">*</span> Textarea with auto-resize</li>
+                <li class="flex items-start gap-1.5"><span class="text-sky-400 mt-0.5">*</span> Send button (Ctrl+Enter)</li>
+                <li class="flex items-start gap-1.5"><span class="text-sky-400 mt-0.5">*</span> Cancel button (while streaming)</li>
+                <li class="flex items-start gap-1.5"><span class="text-sky-400 mt-0.5">*</span> Attachment support</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Component File Map -->
+          <div class="mt-6 p-4 rounded-xl bg-slate-800/30 border border-slate-700/30">
+            <div class="text-xs text-slate-500 mb-3 font-medium">Component File Map</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mono">
+              <div class="flex items-center gap-2 text-slate-400">
+                <div class="w-1.5 h-1.5 rounded-full bg-sky-400"></div>
+                <span class="text-sky-300">ConversationDetailPage.tsx</span>
+                <span class="text-slate-600 ml-auto">orchestrator</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-400">
+                <div class="w-1.5 h-1.5 rounded-full bg-amber-400"></div>
+                <span class="text-amber-300">ChatHeader.tsx</span>
+                <span class="text-slate-600 ml-auto">header bar</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-400">
+                <div class="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                <span class="text-indigo-300">MessageList.tsx</span>
+                <span class="text-slate-600 ml-auto">message area</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-400">
+                <div class="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
+                <span class="text-purple-300">MessageBubble.tsx</span>
+                <span class="text-slate-600 ml-auto">user/assistant</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-400">
+                <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                <span class="text-emerald-300">StepPanel.tsx</span>
+                <span class="text-slate-600 ml-auto">right sidebar</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-400">
+                <div class="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
+                <span class="text-cyan-300">ChatInput.tsx</span>
+                <span class="text-slate-600 ml-auto">input bar</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-400">
+                <div class="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
+                <span class="text-orange-300">useConversationSSE.ts</span>
+                <span class="text-slate-600 ml-auto">SSE hook</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-400">
+                <div class="w-1.5 h-1.5 rounded-full bg-rose-400"></div>
+                <span class="text-rose-300">useConversationActions.ts</span>
+                <span class="text-slate-600 ml-auto">mutations</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/60 mt-16">
+    <div class="max-w-7xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-6 h-6 rounded bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white font-bold text-[10px]">O</div>
+        <span class="text-sm text-slate-500">Orquetrador Claude &mdash; System Map</span>
+      </div>
+      <div class="flex items-center gap-4 text-xs text-slate-600">
+        <span>06 / Frontend Architecture</span>
+        <span class="text-slate-700">|</span>
+        <span>React 18 + Vite + Tailwind</span>
+        <span class="text-slate-700">|</span>
+        <span id="buildDate"></span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Build date
+    document.getElementById('buildDate').textContent = new Date().toISOString().split('T')[0];
+
+    // Toggle sections
+    function toggleSection(id) {
+      const el = document.getElementById(id);
+      const chevron = document.getElementById('chevron-' + id);
+      if (el) {
+        el.classList.toggle('open');
+        if (chevron) {
+          chevron.style.transform = el.classList.contains('open') ? 'rotate(0deg)' : 'rotate(-90deg)';
+        }
+      }
+    }
+
+    // Side navigation
+    const sections = ['header', 'routes', 'hierarchy', 'stores', 'dataflow', 'userflows', 'components', 'layout'];
+    const dots = document.querySelectorAll('.nav-dot');
+
+    dots.forEach((dot, i) => {
+      dot.addEventListener('click', () => {
+        const target = document.getElementById(sections[i]);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    // Update active dot on scroll
+    function updateActiveNav() {
+      let current = 0;
+      sections.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= 200) current = i;
+        }
+      });
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === current);
+      });
+    }
+
+    window.addEventListener('scroll', updateActiveNav, { passive: true });
+    updateActiveNav();
+
+    // Smooth page load animation
+    document.querySelectorAll('.section-card').forEach((card, i) => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(20px)';
+      card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      setTimeout(() => {
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      }, 100 + i * 80);
+    });
+  </script>
+</body>
+</html>

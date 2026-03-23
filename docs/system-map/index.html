@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orquetrador Claude — Mapa do Sistema</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #0f172a; }
+    .glass { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.1); }
+    .glow-blue { box-shadow: 0 0 30px rgba(59, 130, 246, 0.15); }
+    .glow-purple { box-shadow: 0 0 30px rgba(139, 92, 246, 0.15); }
+    .glow-green { box-shadow: 0 0 30px rgba(34, 197, 94, 0.15); }
+    .glow-amber { box-shadow: 0 0 30px rgba(245, 158, 11, 0.15); }
+    .glow-rose { box-shadow: 0 0 30px rgba(244, 63, 94, 0.15); }
+    .glow-cyan { box-shadow: 0 0 30px rgba(6, 182, 212, 0.15); }
+    .card-hover { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+    .card-hover:hover { transform: translateY(-8px) scale(1.02); }
+    .fade-in { opacity: 0; transform: translateY(30px); transition: all 0.7s ease-out; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .gradient-text { background: linear-gradient(135deg, #3b82f6, #8b5cf6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .grid-bg { background-image: radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.05) 1px, transparent 0); background-size: 40px 40px; }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    .float-anim { animation: float 6s ease-in-out infinite; }
+    @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.4); opacity: 0; } }
+    .pulse-ring::before { content: ''; position: absolute; inset: -8px; border-radius: inherit; border: 2px solid currentColor; animation: pulse-ring 2s ease-out infinite; }
+    @keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    .animated-gradient { background-size: 200% 200%; animation: gradient-shift 8s ease infinite; }
+    .hero-pattern { background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234f46e5' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="min-h-screen grid-bg hero-pattern text-slate-200 antialiased">
+
+  <!-- Hero Section -->
+  <header class="relative overflow-hidden">
+    <!-- Background orbs -->
+    <div class="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-40 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-0 left-1/2 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl"></div>
+
+    <div class="relative max-w-7xl mx-auto px-6 pt-16 pb-20">
+      <!-- Badge -->
+      <div class="flex justify-center mb-8">
+        <div class="glass rounded-full px-4 py-1.5 flex items-center gap-2 text-sm">
+          <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+          <span class="text-slate-400">Sistema em Produção</span>
+          <span class="text-slate-600">•</span>
+          <span class="text-slate-400">v1.0</span>
+        </div>
+      </div>
+
+      <!-- Logo -->
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 via-purple-500 to-cyan-500 mb-6 float-anim">
+          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Title -->
+      <h1 class="text-5xl md:text-7xl font-black text-center mb-4">
+        <span class="gradient-text">Orquetrador Claude</span>
+      </h1>
+      <p class="text-xl md:text-2xl text-center text-slate-400 font-light mb-4">
+        Mapa Completo do Sistema
+      </p>
+      <p class="text-center text-slate-500 max-w-2xl mx-auto mb-12">
+        Documentação técnica interativa cobrindo arquitetura, fluxos de dados, banco de dados,
+        endpoints, segurança, integrações e todos os componentes da plataforma de orquestração com IA.
+      </p>
+
+      <!-- Stats bar -->
+      <div class="flex flex-wrap justify-center gap-6 md:gap-10 text-center">
+        <div>
+          <div class="text-3xl font-bold text-blue-400" data-count="138">0</div>
+          <div class="text-sm text-slate-500">Endpoints</div>
+        </div>
+        <div class="w-px h-12 bg-slate-700 hidden md:block"></div>
+        <div>
+          <div class="text-3xl font-bold text-purple-400" data-count="29">0</div>
+          <div class="text-sm text-slate-500">Tabelas</div>
+        </div>
+        <div class="w-px h-12 bg-slate-700 hidden md:block"></div>
+        <div>
+          <div class="text-3xl font-bold text-cyan-400" data-count="75">0</div>
+          <div class="text-sm text-slate-500">MCP Tools</div>
+        </div>
+        <div class="w-px h-12 bg-slate-700 hidden md:block"></div>
+        <div>
+          <div class="text-3xl font-bold text-green-400" data-count="3">0</div>
+          <div class="text-sm text-slate-500">Modos de Execução</div>
+        </div>
+        <div class="w-px h-12 bg-slate-700 hidden md:block"></div>
+        <div>
+          <div class="text-3xl font-bold text-amber-400" data-count="21">0</div>
+          <div class="text-sm text-slate-500">Domínios</div>
+        </div>
+        <div class="w-px h-12 bg-slate-700 hidden md:block"></div>
+        <div>
+          <div class="text-3xl font-bold text-rose-400" data-count="10">0</div>
+          <div class="text-sm text-slate-500">Páginas de Doc</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Pages Grid -->
+  <main class="max-w-7xl mx-auto px-6 pb-20">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- Page 01 -->
+      <a href="01-visao-geral.html" class="card-hover fade-in group">
+        <div class="glass rounded-2xl p-6 h-full glow-blue group-hover:border-blue-500/30 transition-colors">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 relative pulse-ring">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-blue-400/60">01</span>
+              <h3 class="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">Visão Geral</h3>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">Arquitetura completa, tech stack, números-chave, conceitos fundamentais e mapa de domínios do sistema.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400">Arquitetura</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400">Tech Stack</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400">Domínios</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Page 02 -->
+      <a href="02-fluxo-de-dados.html" class="card-hover fade-in group" style="transition-delay: 0.05s">
+        <div class="glass rounded-2xl p-6 h-full glow-purple group-hover:border-purple-500/30 transition-colors">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 relative pulse-ring">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-purple-400/60">02</span>
+              <h3 class="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors">Fluxo de Dados</h3>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">Ciclo de vida dos dados, máquina de estados, pontos de entrada/saída e fluxo completo de execução.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400">State Machine</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400">Lifecycle</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400">Events</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Page 03 -->
+      <a href="03-banco-de-dados.html" class="card-hover fade-in group" style="transition-delay: 0.1s">
+        <div class="glass rounded-2xl p-6 h-full glow-green group-hover:border-green-500/30 transition-colors">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center text-green-400 relative pulse-ring">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-green-400/60">03</span>
+              <h3 class="text-lg font-semibold text-white group-hover:text-green-400 transition-colors">Banco de Dados</h3>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">29 tabelas PostgreSQL + Prisma, diagrama ER, campos, relacionamentos, índices e dados Redis.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400">29 Tabelas</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400">Prisma</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400">Redis</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Page 04 -->
+      <a href="04-api-endpoints.html" class="card-hover fade-in group" style="transition-delay: 0.15s">
+        <div class="glass rounded-2xl p-6 h-full glow-amber group-hover:border-amber-500/30 transition-colors">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 relative pulse-ring">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-amber-400/60">04</span>
+              <h3 class="text-lg font-semibold text-white group-hover:text-amber-400 transition-colors">API Endpoints</h3>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">138 endpoints em 21 domínios, filtráveis por método HTTP, pesquisa em tempo real e documentação detalhada.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">138 Endpoints</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">Searchable</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">Filterable</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Page 05 -->
+      <a href="05-motor-execucao.html" class="card-hover fade-in group" style="transition-delay: 0.2s">
+        <div class="glass rounded-2xl p-6 h-full glow-rose group-hover:border-rose-500/30 transition-colors">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-400 relative pulse-ring">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-rose-400/60">05</span>
+              <h3 class="text-lg font-semibold text-white group-hover:text-rose-400 transition-colors">Motor de Execução</h3>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">3 modos de execução (Sequential, DAG, Step-by-Step), sandbox, Claude CLI e gerenciamento de contexto.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400">3 Modos</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400">Sandbox</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400">Claude CLI</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Page 06 -->
+      <a href="06-frontend.html" class="card-hover fade-in group" style="transition-delay: 0.25s">
+        <div class="glass rounded-2xl p-6 h-full glow-cyan group-hover:border-cyan-500/30 transition-colors">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 relative pulse-ring">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-cyan-400/60">06</span>
+              <h3 class="text-lg font-semibold text-white group-hover:text-cyan-400 transition-colors">Frontend</h3>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">React + Vite + Tailwind, rotas, stores Zustand, hierarquia de componentes e fluxos de usuário.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400">17 Rotas</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400">8 Stores</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400">shadcn/ui</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Page 07 -->
+      <a href="07-seguranca.html" class="card-hover fade-in group" style="transition-delay: 0.3s">
+        <div class="glass rounded-2xl p-6 h-full group-hover:border-red-500/30 transition-colors" style="box-shadow: 0 0 30px rgba(239, 68, 68, 0.1);">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400 relative pulse-ring">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-red-400/60">07</span>
+              <h3 class="text-lg font-semibold text-white group-hover:text-red-400 transition-colors">Segurança</h3>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">Dashboard de riscos, autenticação JWT + API Keys, RBAC, sandbox e recomendações de segurança.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">6 Riscos</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">RBAC</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">Sandbox</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Page 08 -->
+      <a href="08-integracoes.html" class="card-hover fade-in group" style="transition-delay: 0.35s">
+        <div class="glass rounded-2xl p-6 h-full glow-blue group-hover:border-indigo-500/30 transition-colors">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 relative pulse-ring">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-indigo-400/60">08</span>
+              <h3 class="text-lg font-semibold text-white group-hover:text-indigo-400 transition-colors">Integrações</h3>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">Claude CLI, Anthropic API, GitHub, PostgreSQL, Redis, webhooks e todas as conexões externas.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400">8 Integrações</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400">Claude CLI</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400">Webhooks</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Page 09 -->
+      <a href="09-mcp-server.html" class="card-hover fade-in group" style="transition-delay: 0.4s">
+        <div class="glass rounded-2xl p-6 h-full glow-purple group-hover:border-violet-500/30 transition-colors">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center text-violet-400 relative pulse-ring">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-violet-400/60">09</span>
+              <h3 class="text-lg font-semibold text-white group-hover:text-violet-400 transition-colors">MCP Server</h3>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">75 ferramentas em 10 categorias, Model Context Protocol, sessões HTTP e padrões de orquestração.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">75 Tools</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">10 Categorias</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">HTTP Transport</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Page 10 -->
+      <a href="10-tempo-real-filas.html" class="card-hover fade-in group" style="transition-delay: 0.45s">
+        <div class="glass rounded-2xl p-6 h-full glow-green group-hover:border-emerald-500/30 transition-colors">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 relative pulse-ring">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div>
+              <span class="text-xs font-mono text-emerald-400/60">10</span>
+              <h3 class="text-lg font-semibold text-white group-hover:text-emerald-400 transition-colors">Tempo Real e Filas</h3>
+            </div>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">SSE streaming, 16 tipos de eventos, BullMQ, Redis Pub/Sub e sistema de webhooks.</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">16 Eventos</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">SSE</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">BullMQ</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- Architecture Quick View -->
+    <section class="mt-20 fade-in">
+      <h2 class="text-2xl font-bold text-center mb-10">
+        <span class="gradient-text">Arquitetura em Um Olhar</span>
+      </h2>
+      <div class="glass rounded-2xl p-8 md:p-12">
+        <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 text-center">
+          <!-- User -->
+          <div class="glass rounded-xl px-6 py-4 border-slate-600">
+            <div class="text-2xl mb-1">👤</div>
+            <div class="font-semibold text-white text-sm">Usuário</div>
+            <div class="text-xs text-slate-500">Browser</div>
+          </div>
+          <div class="text-slate-600 text-xl hidden md:block">→</div>
+          <div class="text-slate-600 text-xl md:hidden">↓</div>
+          <!-- Frontend -->
+          <div class="glass rounded-xl px-6 py-4 border-blue-500/30 glow-blue">
+            <div class="text-2xl mb-1">⚛️</div>
+            <div class="font-semibold text-blue-400 text-sm">Frontend</div>
+            <div class="text-xs text-slate-500">React + Vite :5173</div>
+          </div>
+          <div class="text-slate-600 text-xl hidden md:block">→</div>
+          <div class="text-slate-600 text-xl md:hidden">↓</div>
+          <!-- Backend -->
+          <div class="glass rounded-xl px-6 py-4 border-green-500/30 glow-green">
+            <div class="text-2xl mb-1">🚀</div>
+            <div class="font-semibold text-green-400 text-sm">Backend API</div>
+            <div class="text-xs text-slate-500">Fastify :3333</div>
+          </div>
+          <div class="text-slate-600 text-xl hidden md:block">→</div>
+          <div class="text-slate-600 text-xl md:hidden">↓</div>
+          <!-- Orchestrator -->
+          <div class="glass rounded-xl px-6 py-4 border-purple-500/30 glow-purple">
+            <div class="text-2xl mb-1">🧠</div>
+            <div class="font-semibold text-purple-400 text-sm">Orchestrator</div>
+            <div class="text-xs text-slate-500">3 Modos</div>
+          </div>
+          <div class="text-slate-600 text-xl hidden md:block">→</div>
+          <div class="text-slate-600 text-xl md:hidden">↓</div>
+          <!-- Claude CLI -->
+          <div class="glass rounded-xl px-6 py-4 border-amber-500/30 glow-amber">
+            <div class="text-2xl mb-1">🤖</div>
+            <div class="font-semibold text-amber-400 text-sm">Claude CLI</div>
+            <div class="text-xs text-slate-500">Sandbox</div>
+          </div>
+        </div>
+        <!-- Lower row: DB + Redis + MCP -->
+        <div class="flex flex-wrap justify-center gap-6 mt-8 pt-8 border-t border-slate-700/50">
+          <div class="glass rounded-xl px-5 py-3 text-center">
+            <div class="text-lg mb-1">🐘</div>
+            <div class="font-semibold text-green-400 text-xs">PostgreSQL</div>
+            <div class="text-xs text-slate-500">29 tabelas</div>
+          </div>
+          <div class="glass rounded-xl px-5 py-3 text-center">
+            <div class="text-lg mb-1">🔴</div>
+            <div class="font-semibold text-red-400 text-xs">Redis</div>
+            <div class="text-xs text-slate-500">Cache + Pub/Sub</div>
+          </div>
+          <div class="glass rounded-xl px-5 py-3 text-center">
+            <div class="text-lg mb-1">🔌</div>
+            <div class="font-semibold text-violet-400 text-xs">MCP Server</div>
+            <div class="text-xs text-slate-500">75 tools :3334</div>
+          </div>
+          <div class="glass rounded-xl px-5 py-3 text-center">
+            <div class="text-lg mb-1">📡</div>
+            <div class="font-semibold text-cyan-400 text-xs">SSE Stream</div>
+            <div class="text-xs text-slate-500">16 eventos</div>
+          </div>
+          <div class="glass rounded-xl px-5 py-3 text-center">
+            <div class="text-lg mb-1">🪝</div>
+            <div class="font-semibold text-amber-400 text-xs">Webhooks</div>
+            <div class="text-xs text-slate-500">HMAC-SHA256</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tech Stack -->
+    <section class="mt-16 fade-in">
+      <h2 class="text-2xl font-bold text-center mb-10">
+        <span class="gradient-text">Tech Stack</span>
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Backend -->
+        <div class="glass rounded-2xl p-6">
+          <h3 class="font-semibold text-green-400 mb-4 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-green-400"></span> Backend
+          </h3>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-300 text-xs font-medium">Node.js ESM</span>
+            <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-300 text-xs font-medium">TypeScript 5.7</span>
+            <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-300 text-xs font-medium">Fastify 5</span>
+            <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-300 text-xs font-medium">Prisma 6</span>
+            <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-300 text-xs font-medium">BullMQ 5</span>
+            <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-300 text-xs font-medium">Redis/ioredis</span>
+            <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-300 text-xs font-medium">Zod</span>
+            <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-300 text-xs font-medium">JWT</span>
+            <span class="px-3 py-1.5 rounded-lg bg-green-500/10 text-green-300 text-xs font-medium">Swagger</span>
+          </div>
+        </div>
+        <!-- Frontend -->
+        <div class="glass rounded-2xl p-6">
+          <h3 class="font-semibold text-blue-400 mb-4 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-blue-400"></span> Frontend
+          </h3>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-medium">React 18</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-medium">Vite 6</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-medium">Tailwind CSS</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-medium">shadcn/ui</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-medium">Zustand 5</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-medium">TanStack Query</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-medium">React Router 7</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-medium">Recharts</span>
+            <span class="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-300 text-xs font-medium">Lucide Icons</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 py-8 mt-10">
+    <div class="max-w-7xl mx-auto px-6 text-center">
+      <p class="text-slate-500 text-sm">
+        Orquetrador Claude — Documentação do Sistema • Gerado em Março 2026
+      </p>
+      <p class="text-slate-600 text-xs mt-2">
+        10 páginas • 138 endpoints • 29 tabelas • 75 MCP tools • 3 modos de execução
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // Counter animation
+    document.querySelectorAll('[data-count]').forEach(el => {
+      const target = parseInt(el.dataset.count);
+      let current = 0;
+      const step = Math.max(1, Math.floor(target / 40));
+      const interval = setInterval(() => {
+        current += step;
+        if (current >= target) { current = target; clearInterval(interval); }
+        el.textContent = current;
+      }, 30);
+    });
+
+    // Scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

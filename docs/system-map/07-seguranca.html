@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seguranca & Riscos — Orquetrador Claude</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        surface: { 50: '#f8fafc', 100: '#1e1e2e', 200: '#181825', 300: '#11111b', 400: '#0a0a14' },
+        accent: { 400: '#89b4fa', 500: '#74c7ec', 600: '#94e2d5' },
+        crit: '#f38ba8',
+        high: '#fab387',
+        med: '#f9e2af',
+        good: '#a6e3a1',
+      },
+      fontFamily: { mono: ['"JetBrains Mono"', 'Fira Code', 'monospace'], sans: ['Inter', 'system-ui', 'sans-serif'] },
+    }
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { scrollbar-width: thin; scrollbar-color: #313244 #11111b; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #11111b; }
+  ::-webkit-scrollbar-thumb { background: #313244; border-radius: 3px; }
+
+  @keyframes pulse-crit { 0%, 100% { box-shadow: 0 0 0 0 rgba(243,139,168,0.4); } 50% { box-shadow: 0 0 20px 4px rgba(243,139,168,0.2); } }
+  @keyframes pulse-high { 0%, 100% { box-shadow: 0 0 0 0 rgba(250,179,135,0.4); } 50% { box-shadow: 0 0 20px 4px rgba(250,179,135,0.2); } }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100vh); } }
+  @keyframes ringPulse { 0% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.03); opacity: 1; } 100% { transform: scale(1); opacity: 0.6; } }
+
+  .animate-fade-in { animation: fadeInUp 0.6s ease-out forwards; opacity: 0; }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+  .delay-5 { animation-delay: 0.5s; }
+
+  .card-crit { animation: pulse-crit 3s ease-in-out infinite; border-left: 4px solid #f38ba8; }
+  .card-high { animation: pulse-high 3.5s ease-in-out infinite; border-left: 4px solid #fab387; }
+  .card-med { border-left: 4px solid #f9e2af; }
+  .card-good { border-left: 4px solid #a6e3a1; }
+
+  .severity-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .badge-crit { background: rgba(243,139,168,0.15); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+  .badge-high { background: rgba(250,179,135,0.15); color: #fab387; border: 1px solid rgba(250,179,135,0.3); }
+  .badge-med { background: rgba(249,226,175,0.15); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
+  .badge-good { background: rgba(166,227,161,0.15); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+
+  .glow-line { height: 1px; background: linear-gradient(90deg, transparent, #89b4fa, transparent); }
+
+  .matrix-cell { transition: all 0.2s; }
+  .matrix-cell:hover { transform: scale(1.1); }
+
+  .nav-dot { width: 10px; height: 10px; border-radius: 50%; background: #313244; cursor: pointer; transition: all 0.3s; }
+  .nav-dot.active { background: #89b4fa; box-shadow: 0 0 10px rgba(137,180,250,0.5); }
+  .nav-dot:hover { background: #585b70; }
+
+  .score-ring { transition: stroke-dashoffset 1s ease-out; }
+
+  .code-block { background: #0a0a14; border: 1px solid #313244; border-radius: 8px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; overflow-x: auto; }
+  .code-keyword { color: #cba6f7; }
+  .code-string { color: #a6e3a1; }
+  .code-comment { color: #585b70; }
+  .code-fn { color: #89b4fa; }
+  .code-var { color: #f9e2af; }
+  .code-op { color: #89dceb; }
+</style>
+</head>
+<body class="bg-surface-300 text-gray-200 font-sans min-h-screen antialiased">
+
+<!-- Scanline overlay -->
+<div class="fixed inset-0 pointer-events-none z-50 overflow-hidden opacity-[0.02]">
+  <div class="w-full h-1 bg-accent-400" style="animation: scanline 8s linear infinite;"></div>
+</div>
+
+<!-- Fixed side nav dots -->
+<nav class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-3" id="sideNav">
+  <div class="nav-dot active" data-section="dashboard" onclick="scrollToSection('dashboard')"></div>
+  <div class="nav-dot" data-section="auth-flow" onclick="scrollToSection('auth-flow')"></div>
+  <div class="nav-dot" data-section="auth-matrix" onclick="scrollToSection('auth-matrix')"></div>
+  <div class="nav-dot" data-section="sandbox" onclick="scrollToSection('sandbox')"></div>
+  <div class="nav-dot" data-section="data-protection" onclick="scrollToSection('data-protection')"></div>
+  <div class="nav-dot" data-section="attack-surface" onclick="scrollToSection('attack-surface')"></div>
+  <div class="nav-dot" data-section="recommendations" onclick="scrollToSection('recommendations')"></div>
+</nav>
+
+<!-- Header -->
+<header class="relative overflow-hidden border-b border-red-900/30 bg-gradient-to-b from-red-950/20 to-surface-300">
+  <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(243,139,168,0.08),transparent_60%)]"></div>
+  <div class="relative max-w-7xl mx-auto px-6 py-16">
+    <div class="flex items-center gap-3 mb-4 animate-fade-in">
+      <span class="text-sm font-mono text-gray-500 tracking-widest uppercase">07</span>
+      <div class="w-12 h-px bg-gradient-to-r from-crit to-transparent"></div>
+      <span class="text-sm font-mono text-crit/80 tracking-wider">SECURITY ANALYSIS</span>
+    </div>
+    <h1 class="text-5xl md:text-6xl font-black text-white mb-4 animate-fade-in delay-1">
+      Seguranca
+    </h1>
+    <p class="text-xl md:text-2xl text-gray-400 font-light animate-fade-in delay-2">
+      Autenticacao, Autorizacao & Riscos
+    </p>
+    <div class="mt-8 flex flex-wrap gap-4 animate-fade-in delay-3">
+      <div class="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-full px-4 py-2">
+        <div class="w-2 h-2 rounded-full bg-crit animate-pulse"></div>
+        <span class="text-sm font-mono text-crit">4 Criticos</span>
+      </div>
+      <div class="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-full px-4 py-2">
+        <div class="w-2 h-2 rounded-full bg-high"></div>
+        <span class="text-sm font-mono text-high">3 Altos</span>
+      </div>
+      <div class="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-4 py-2">
+        <div class="w-2 h-2 rounded-full bg-med"></div>
+        <span class="text-sm font-mono text-med">3 Medios</span>
+      </div>
+      <div class="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-2">
+        <div class="w-2 h-2 rounded-full bg-good"></div>
+        <span class="text-sm font-mono text-good">6 Bem implementados</span>
+      </div>
+    </div>
+
+    <!-- Security Score -->
+    <div class="mt-10 animate-fade-in delay-4">
+      <div class="inline-flex items-center gap-6 bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
+        <svg width="80" height="80" viewBox="0 0 80 80" class="transform -rotate-90">
+          <circle cx="40" cy="40" r="34" fill="none" stroke="#1e1e2e" stroke-width="6"/>
+          <circle cx="40" cy="40" r="34" fill="none" stroke="#f38ba8" stroke-width="6" stroke-dasharray="213.6" stroke-dashoffset="128" stroke-linecap="round" class="score-ring"/>
+        </svg>
+        <div>
+          <div class="text-3xl font-black text-crit">40<span class="text-lg text-gray-500">/100</span></div>
+          <div class="text-sm text-gray-500 font-mono">Security Score</div>
+          <div class="text-xs text-crit mt-1 font-semibold">Precisa atencao urgente</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-12 space-y-20">
+
+  <!-- ============================================================ -->
+  <!-- RISK DASHBOARD -->
+  <!-- ============================================================ -->
+  <section id="dashboard" class="scroll-mt-8">
+    <div class="flex items-center gap-4 mb-10 animate-fade-in">
+      <div class="w-10 h-10 rounded-lg bg-crit/10 border border-crit/20 flex items-center justify-center">
+        <svg class="w-5 h-5 text-crit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+      </div>
+      <div>
+        <h2 class="text-3xl font-bold text-white">Risk Dashboard</h2>
+        <p class="text-gray-500 text-sm font-mono mt-1">Analise de vulnerabilidades identificadas</p>
+      </div>
+    </div>
+
+    <!-- CRITICO -->
+    <div class="mb-10 animate-fade-in delay-1">
+      <div class="flex items-center gap-3 mb-5">
+        <span class="severity-badge badge-crit">
+          <span class="w-2 h-2 rounded-full bg-crit animate-pulse"></span>
+          Critico
+        </span>
+        <span class="text-gray-500 text-sm font-mono">4 vulnerabilidades</span>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="card-crit bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
+          <div class="flex items-start justify-between mb-3">
+            <h3 class="text-white font-semibold group-hover:text-crit transition-colors">CORS Aberto</h3>
+            <span class="text-xs font-mono bg-crit/10 text-crit px-2 py-1 rounded">CVE-like</span>
+          </div>
+          <p class="text-gray-400 text-sm mb-3"><code class="text-crit/80 bg-crit/5 px-1.5 py-0.5 rounded font-mono text-xs">origin: true</code> — qualquer dominio acessa a API</p>
+          <div class="code-block text-xs">
+            <span class="code-comment">// backend/src/app.ts</span><br>
+            app.<span class="code-fn">register</span>(cors, { <span class="code-var">origin</span>: <span class="code-keyword">true</span> })
+          </div>
+          <div class="mt-3 flex items-center gap-2 text-xs text-gray-600">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Permite CSRF cross-origin e data exfiltration
+          </div>
+        </div>
+
+        <div class="card-crit bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
+          <div class="flex items-start justify-between mb-3">
+            <h3 class="text-white font-semibold group-hover:text-crit transition-colors">Rate Limiting Desabilitado</h3>
+            <span class="text-xs font-mono bg-crit/10 text-crit px-2 py-1 rounded">DoS Risk</span>
+          </div>
+          <p class="text-gray-400 text-sm mb-3">Rate limiting registrado mas <strong class="text-crit/80">desabilitado globalmente</strong></p>
+          <div class="code-block text-xs">
+            <span class="code-comment">// @fastify/rate-limit</span><br>
+            <span class="code-var">global</span>: <span class="code-keyword">false</span> <span class="code-comment">// nao aplica a nenhuma rota</span>
+          </div>
+          <div class="mt-3 flex items-center gap-2 text-xs text-gray-600">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Brute force, credential stuffing, resource exhaustion
+          </div>
+        </div>
+
+        <div class="card-crit bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
+          <div class="flex items-start justify-between mb-3">
+            <h3 class="text-white font-semibold group-hover:text-crit transition-colors">Sem Token Refresh</h3>
+            <span class="text-xs font-mono bg-crit/10 text-crit px-2 py-1 rounded">Auth Gap</span>
+          </div>
+          <p class="text-gray-400 text-sm mb-3">Tokens JWT de <strong class="text-crit/80">7 dias</strong> sem nenhum mecanismo de rotacao</p>
+          <div class="code-block text-xs">
+            <span class="code-comment">// JWT sign options</span><br>
+            { <span class="code-var">expiresIn</span>: <span class="code-string">'7d'</span> } <span class="code-comment">// no refresh, no revocation</span>
+          </div>
+          <div class="mt-3 flex items-center gap-2 text-xs text-gray-600">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Token roubado = acesso por 7 dias sem possibilidade de revogacao
+          </div>
+        </div>
+
+        <div class="card-crit bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
+          <div class="flex items-start justify-between mb-3">
+            <h3 class="text-white font-semibold group-hover:text-crit transition-colors">GitHub Tokens em Plain Text</h3>
+            <span class="text-xs font-mono bg-crit/10 text-crit px-2 py-1 rounded">Data Leak</span>
+          </div>
+          <p class="text-gray-400 text-sm mb-3">Tokens do GitHub armazenados <strong class="text-crit/80">sem criptografia</strong> no banco de dados</p>
+          <div class="code-block text-xs">
+            <span class="code-comment">// prisma schema</span><br>
+            <span class="code-var">githubToken</span>  String? <span class="code-comment">// plain text in DB!</span>
+          </div>
+          <div class="mt-3 flex items-center gap-2 text-xs text-gray-600">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            DB breach = acesso total aos repos GitHub dos usuarios
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALTO -->
+    <div class="mb-10 animate-fade-in delay-2">
+      <div class="flex items-center gap-3 mb-5">
+        <span class="severity-badge badge-high">
+          <span class="w-2 h-2 rounded-full bg-high"></span>
+          Alto
+        </span>
+        <span class="text-gray-500 text-sm font-mono">3 vulnerabilidades</span>
+      </div>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="card-high bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
+          <h3 class="text-white font-semibold mb-2 group-hover:text-high transition-colors">Sem Security Headers</h3>
+          <p class="text-gray-400 text-sm">Nenhum header de seguranca configurado:</p>
+          <ul class="mt-2 space-y-1 text-xs text-gray-500 font-mono">
+            <li class="flex items-center gap-2"><span class="text-high">x</span> HSTS</li>
+            <li class="flex items-center gap-2"><span class="text-high">x</span> Content-Security-Policy</li>
+            <li class="flex items-center gap-2"><span class="text-high">x</span> X-Frame-Options</li>
+            <li class="flex items-center gap-2"><span class="text-high">x</span> X-Content-Type-Options</li>
+          </ul>
+        </div>
+
+        <div class="card-high bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
+          <h3 class="text-white font-semibold mb-2 group-hover:text-high transition-colors">localStorage para JWT</h3>
+          <p class="text-gray-400 text-sm mb-2">Tokens JWT armazenados em localStorage</p>
+          <div class="code-block text-xs">
+            <span class="code-fn">localStorage</span>.<span class="code-fn">setItem</span>(<span class="code-string">'token'</span>, jwt)
+          </div>
+          <p class="text-xs text-gray-600 mt-2">Vulneravel a XSS — qualquer script injetado rouba o token</p>
+        </div>
+
+        <div class="card-high bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
+          <h3 class="text-white font-semibold mb-2 group-hover:text-high transition-colors">JWT_SECRET Default Fraco</h3>
+          <p class="text-gray-400 text-sm mb-2">Fallback para secret hardcoded quando env nao esta setada</p>
+          <div class="code-block text-xs">
+            <span class="code-var">JWT_SECRET</span> = process.env.JWT_SECRET<br>
+            &nbsp;&nbsp;<span class="code-op">||</span> <span class="code-string">'default-secret'</span>
+          </div>
+          <p class="text-xs text-gray-600 mt-2">Permite forjar tokens se env nao estiver configurada</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDIO -->
+    <div class="mb-10 animate-fade-in delay-3">
+      <div class="flex items-center gap-3 mb-5">
+        <span class="severity-badge badge-med">
+          <span class="w-2 h-2 rounded-full bg-med"></span>
+          Medio
+        </span>
+        <span class="text-gray-500 text-sm font-mono">3 vulnerabilidades</span>
+      </div>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="card-med bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all">
+          <h3 class="text-white font-semibold mb-2">Sem HTTPOnly Cookies</h3>
+          <p class="text-gray-400 text-sm">Tokens nunca sao armazenados em cookies HTTPOnly. Toda autenticacao via headers manuais.</p>
+        </div>
+        <div class="card-med bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all">
+          <h3 class="text-white font-semibold mb-2">Sem Protecao CSRF</h3>
+          <p class="text-gray-400 text-sm">Nenhum token CSRF. Combinado com CORS aberto, permite requisicoes forjadas cross-origin.</p>
+        </div>
+        <div class="card-med bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all">
+          <h3 class="text-white font-semibold mb-2">API Keys Exibidas Uma Vez</h3>
+          <p class="text-gray-400 text-sm">A key completa e exibida apenas na criacao. Apos isso, apenas o hash fica no banco. Se o usuario perder, precisa gerar outra.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- BEM IMPLEMENTADO -->
+    <div class="animate-fade-in delay-4">
+      <div class="flex items-center gap-3 mb-5">
+        <span class="severity-badge badge-good">
+          <span class="w-2 h-2 rounded-full bg-good"></span>
+          Bem Implementado
+        </span>
+        <span class="text-gray-500 text-sm font-mono">6 itens</span>
+      </div>
+      <div class="grid md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
+          <div class="text-2xl mb-2">🔒</div>
+          <h3 class="text-good text-sm font-semibold">Bcrypt</h3>
+          <p class="text-gray-500 text-xs mt-1">Salt rounds: 10</p>
+        </div>
+        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
+          <div class="text-2xl mb-2">👥</div>
+          <h3 class="text-good text-sm font-semibold">RBAC</h3>
+          <p class="text-gray-500 text-xs mt-1">admin / dev / viewer</p>
+        </div>
+        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
+          <div class="text-2xl mb-2">✅</div>
+          <h3 class="text-good text-sm font-semibold">Zod Validation</h3>
+          <p class="text-gray-500 text-xs mt-1">Todos endpoints</p>
+        </div>
+        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
+          <div class="text-2xl mb-2">🛡️</div>
+          <h3 class="text-good text-sm font-semibold">Error Handling</h3>
+          <p class="text-gray-500 text-xs mt-1">Centralizado</p>
+        </div>
+        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
+          <div class="text-2xl mb-2">🔐</div>
+          <h3 class="text-good text-sm font-semibold">Data Isolation</h3>
+          <p class="text-gray-500 text-xs mt-1">Filtro por userId</p>
+        </div>
+        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
+          <div class="text-2xl mb-2">#️⃣</div>
+          <h3 class="text-good text-sm font-semibold">API Key Hash</h3>
+          <p class="text-gray-500 text-xs mt-1">SHA-256</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-line my-4"></div>
+
+  <!-- ============================================================ -->
+  <!-- AUTHENTICATION FLOW -->
+  <!-- ============================================================ -->
+  <section id="auth-flow" class="scroll-mt-8">
+    <div class="flex items-center gap-4 mb-10 animate-fade-in">
+      <div class="w-10 h-10 rounded-lg bg-accent-400/10 border border-accent-400/20 flex items-center justify-center">
+        <svg class="w-5 h-5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+      </div>
+      <div>
+        <h2 class="text-3xl font-bold text-white">Authentication Flow</h2>
+        <p class="text-gray-500 text-sm font-mono mt-1">Fluxos de autenticacao do sistema</p>
+      </div>
+    </div>
+
+    <!-- Login Flow -->
+    <div class="mb-8">
+      <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <span class="w-6 h-6 rounded bg-accent-400/20 text-accent-400 text-xs flex items-center justify-center font-mono">1</span>
+        Login Flow — JWT
+      </h3>
+      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-8 overflow-x-auto">
+        <div class="flex items-center gap-3 min-w-[700px]">
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[120px]">
+            <div class="text-2xl mb-1">👤</div>
+            <div class="text-xs font-mono text-gray-400">Client</div>
+            <div class="text-xs text-accent-400 mt-1 font-semibold">email + password</div>
+          </div>
+          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[120px]">
+            <div class="text-2xl mb-1">🔍</div>
+            <div class="text-xs font-mono text-gray-400">POST /auth/login</div>
+            <div class="text-xs text-med mt-1 font-semibold">Zod validate</div>
+          </div>
+          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[120px]">
+            <div class="text-2xl mb-1">🔒</div>
+            <div class="text-xs font-mono text-gray-400">bcrypt</div>
+            <div class="text-xs text-good mt-1 font-semibold">compare()</div>
+          </div>
+          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[120px]">
+            <div class="text-2xl mb-1">🎫</div>
+            <div class="text-xs font-mono text-gray-400">JWT sign</div>
+            <div class="text-xs text-high mt-1 font-semibold">expiresIn: 7d</div>
+          </div>
+          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
+          <div class="flex-shrink-0 bg-surface-300 border border-crit/30 rounded-xl p-4 text-center min-w-[120px]">
+            <div class="text-2xl mb-1">💾</div>
+            <div class="text-xs font-mono text-gray-400">Client</div>
+            <div class="text-xs text-crit mt-1 font-semibold">localStorage</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Key Flow -->
+    <div class="mb-8">
+      <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <span class="w-6 h-6 rounded bg-accent-400/20 text-accent-400 text-xs flex items-center justify-center font-mono">2</span>
+        API Key Flow
+      </h3>
+      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-8 overflow-x-auto">
+        <div class="flex items-center gap-3 min-w-[700px]">
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[140px]">
+            <div class="text-2xl mb-1">🔑</div>
+            <div class="text-xs font-mono text-gray-400">Bearer</div>
+            <div class="text-xs text-accent-400 mt-1 font-mono font-semibold">exk_*</div>
+          </div>
+          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[140px]">
+            <div class="text-2xl mb-1">#️⃣</div>
+            <div class="text-xs font-mono text-gray-400">Hash</div>
+            <div class="text-xs text-good mt-1 font-semibold">SHA-256</div>
+          </div>
+          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[140px]">
+            <div class="text-2xl mb-1">🗄️</div>
+            <div class="text-xs font-mono text-gray-400">Database</div>
+            <div class="text-xs text-accent-400 mt-1 font-semibold">Lookup by hash</div>
+          </div>
+          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[140px]">
+            <div class="text-2xl mb-1">✅</div>
+            <div class="text-xs font-mono text-gray-400">Resolve</div>
+            <div class="text-xs text-good mt-1 font-semibold">userId</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth Middleware -->
+    <div>
+      <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <span class="w-6 h-6 rounded bg-accent-400/20 text-accent-400 text-xs flex items-center justify-center font-mono">3</span>
+        Auth Middleware Pipeline
+      </h3>
+      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-8 overflow-x-auto">
+        <div class="flex items-center gap-3 min-w-[800px]">
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[150px]">
+            <div class="text-xs font-mono text-gray-500 mb-2">Step 1</div>
+            <div class="text-sm text-white font-semibold">Extract Token</div>
+            <div class="text-xs text-gray-500 mt-1">Authorization header<br/>ou query param</div>
+          </div>
+          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[150px]">
+            <div class="text-xs font-mono text-gray-500 mb-2">Step 2</div>
+            <div class="text-sm text-white font-semibold">Detect Type</div>
+            <div class="text-xs text-gray-500 mt-1">JWT token ou<br/><code class="text-accent-400">exk_</code> API key</div>
+          </div>
+          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[150px]">
+            <div class="text-xs font-mono text-gray-500 mb-2">Step 3</div>
+            <div class="text-sm text-white font-semibold">Verify</div>
+            <div class="text-xs text-gray-500 mt-1">JWT: verify signature<br/>Key: SHA-256 + DB lookup</div>
+          </div>
+          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
+          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[150px]">
+            <div class="text-xs font-mono text-gray-500 mb-2">Step 4</div>
+            <div class="text-sm text-white font-semibold">getCurrentUserId()</div>
+            <div class="text-xs text-good mt-1">request.user = { id, role }</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-line my-4"></div>
+
+  <!-- ============================================================ -->
+  <!-- AUTHORIZATION MATRIX -->
+  <!-- ============================================================ -->
+  <section id="auth-matrix" class="scroll-mt-8">
+    <div class="flex items-center gap-4 mb-10 animate-fade-in">
+      <div class="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      </div>
+      <div>
+        <h2 class="text-3xl font-bold text-white">Authorization Matrix</h2>
+        <p class="text-gray-500 text-sm font-mono mt-1">RBAC — Role-Based Access Control</p>
+      </div>
+    </div>
+
+    <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-800">
+            <th class="text-left px-6 py-4 text-gray-400 font-mono text-xs uppercase tracking-wider">Resource / Action</th>
+            <th class="text-center px-6 py-4">
+              <div class="flex flex-col items-center gap-1">
+                <span class="w-8 h-8 rounded-lg bg-crit/10 border border-crit/20 flex items-center justify-center text-crit text-lg">👑</span>
+                <span class="text-xs font-mono text-crit">Admin</span>
+              </div>
+            </th>
+            <th class="text-center px-6 py-4">
+              <div class="flex flex-col items-center gap-1">
+                <span class="w-8 h-8 rounded-lg bg-accent-400/10 border border-accent-400/20 flex items-center justify-center text-accent-400 text-lg">💻</span>
+                <span class="text-xs font-mono text-accent-400">Developer</span>
+              </div>
+            </th>
+            <th class="text-center px-6 py-4">
+              <div class="flex flex-col items-center gap-1">
+                <span class="w-8 h-8 rounded-lg bg-gray-500/10 border border-gray-500/20 flex items-center justify-center text-gray-400 text-lg">👁️</span>
+                <span class="text-xs font-mono text-gray-400">Viewer</span>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="authMatrix">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Roles Legend -->
+    <div class="mt-6 grid md:grid-cols-3 gap-4">
+      <div class="bg-surface-200/40 border border-crit/10 rounded-xl p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-crit font-semibold text-sm">Admin</span>
+        </div>
+        <p class="text-gray-500 text-xs">Acesso total. Gerencia usuarios, workflows, execucoes e configuracoes do sistema.</p>
+      </div>
+      <div class="bg-surface-200/40 border border-accent-400/10 rounded-xl p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-accent-400 font-semibold text-sm">Developer</span>
+        </div>
+        <p class="text-gray-500 text-xs">Cria e executa workflows. Pode ver e editar seus proprios recursos.</p>
+      </div>
+      <div class="bg-surface-200/40 border border-gray-500/10 rounded-xl p-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-gray-400 font-semibold text-sm">Viewer</span>
+        </div>
+        <p class="text-gray-500 text-xs">Apenas leitura. Pode visualizar workflows e resultados de execucoes.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-line my-4"></div>
+
+  <!-- ============================================================ -->
+  <!-- SANDBOX SECURITY -->
+  <!-- ============================================================ -->
+  <section id="sandbox" class="scroll-mt-8">
+    <div class="flex items-center gap-4 mb-10 animate-fade-in">
+      <div class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      </div>
+      <div>
+        <h2 class="text-3xl font-bold text-white">Sandbox Security</h2>
+        <p class="text-gray-500 text-sm font-mono mt-1">Isolamento de processos Claude CLI</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6">
+      <!-- Process Isolation -->
+      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+          </div>
+          <h3 class="text-white font-semibold">Process Isolation</h3>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3 bg-surface-300/50 rounded-lg p-3">
+            <span class="text-good text-sm mt-0.5">✓</span>
+            <div>
+              <div class="text-sm text-white font-medium">claude-sandbox user</div>
+              <div class="text-xs text-gray-500">Processos rodam sob usuario separado via <code class="text-cyan-400 bg-cyan-400/5 px-1 rounded">sudo -u claude-sandbox</code></div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 bg-surface-300/50 rounded-lg p-3">
+            <span class="text-good text-sm mt-0.5">✓</span>
+            <div>
+              <div class="text-sm text-white font-medium">Process Group Kill</div>
+              <div class="text-xs text-gray-500">Cancelamento mata todo o grupo de processos (<code class="text-cyan-400 bg-cyan-400/5 px-1 rounded">kill -TERM -pgid</code>)</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 bg-surface-300/50 rounded-lg p-3">
+            <span class="text-good text-sm mt-0.5">✓</span>
+            <div>
+              <div class="text-sm text-white font-medium">Configurable Toggle</div>
+              <div class="text-xs text-gray-500">Env <code class="text-cyan-400 bg-cyan-400/5 px-1 rounded">SANDBOX_ENABLED</code> controla ativacao</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Environment Blocklist -->
+      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-8 h-8 rounded-lg bg-crit/10 flex items-center justify-center">
+            <svg class="w-4 h-4 text-crit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+          </div>
+          <h3 class="text-white font-semibold">Environment Variable Blocklist</h3>
+        </div>
+        <div class="code-block space-y-1">
+          <div class="text-gray-500 text-xs font-mono mb-2">// Variaveis bloqueadas para o sandbox</div>
+          <div class="flex flex-wrap gap-2">
+            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">DATABASE_URL</span>
+            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">JWT_SECRET</span>
+            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">REDIS_URL</span>
+            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">GITHUB_TOKEN</span>
+            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">ANTHROPIC_API_KEY</span>
+            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">WEBHOOK_SECRET</span>
+          </div>
+        </div>
+        <div class="mt-4 text-xs text-gray-500">Estas variaveis sao removidas do ambiente antes de invocar o Claude CLI no modo sandbox.</div>
+      </div>
+
+      <!-- Filesystem Access -->
+      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-8 h-8 rounded-lg bg-med/10 flex items-center justify-center">
+            <svg class="w-4 h-4 text-med" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          </div>
+          <h3 class="text-white font-semibold">Filesystem Access Restrictions</h3>
+        </div>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between bg-surface-300/50 rounded-lg p-3">
+            <span class="text-sm text-gray-300 font-mono">/workspace/orquetrador-claude/</span>
+            <span class="text-xs font-mono bg-crit/10 text-crit px-2 py-0.5 rounded">owner-only</span>
+          </div>
+          <div class="flex items-center justify-between bg-surface-300/50 rounded-lg p-3">
+            <span class="text-sm text-gray-300 font-mono">/home/dev/.claude/</span>
+            <span class="text-xs font-mono bg-good/10 text-good px-2 py-0.5 rounded">copied to sandbox</span>
+          </div>
+          <div class="flex items-center justify-between bg-surface-300/50 rounded-lg p-3">
+            <span class="text-sm text-gray-300 font-mono">project working dir</span>
+            <span class="text-xs font-mono bg-good/10 text-good px-2 py-0.5 rounded">read+write via group</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sandbox Architecture Diagram -->
+      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-8 h-8 rounded-lg bg-accent-400/10 flex items-center justify-center">
+            <svg class="w-4 h-4 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          </div>
+          <h3 class="text-white font-semibold">Sandbox Architecture</h3>
+        </div>
+        <div class="space-y-4">
+          <div class="relative">
+            <div class="border-2 border-accent-400/30 rounded-xl p-4 bg-accent-400/5">
+              <div class="text-xs font-mono text-accent-400 mb-3">Fastify Backend (dev user)</div>
+              <div class="border-2 border-cyan-400/30 rounded-lg p-4 bg-cyan-400/5">
+                <div class="text-xs font-mono text-cyan-400 mb-3">Sandbox Boundary</div>
+                <div class="border border-gray-700 rounded-lg p-3 bg-surface-300/80">
+                  <div class="text-xs font-mono text-gray-400 mb-1">claude-sandbox user</div>
+                  <div class="flex items-center gap-2">
+                    <span class="bg-purple-500/10 text-purple-400 text-xs font-mono px-2 py-0.5 rounded">claude CLI</span>
+                    <span class="text-gray-600">→</span>
+                    <span class="bg-gray-700/50 text-gray-400 text-xs font-mono px-2 py-0.5 rounded">project files</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="text-xs text-gray-600 text-center">O processo Claude CLI roda isolado do backend principal</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-line my-4"></div>
+
+  <!-- ============================================================ -->
+  <!-- DATA PROTECTION -->
+  <!-- ============================================================ -->
+  <section id="data-protection" class="scroll-mt-8">
+    <div class="flex items-center gap-4 mb-10 animate-fade-in">
+      <div class="w-10 h-10 rounded-lg bg-good/10 border border-good/20 flex items-center justify-center">
+        <svg class="w-5 h-5 text-good" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      </div>
+      <div>
+        <h2 class="text-3xl font-bold text-white">Data Protection</h2>
+        <p class="text-gray-500 text-sm font-mono mt-1">Como os dados sensiveis sao tratados</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <!-- Hashed -->
+      <div class="bg-surface-200/60 backdrop-blur border border-good/20 rounded-2xl p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-3 h-3 rounded-full bg-good"></div>
+          <h3 class="text-good font-semibold text-sm uppercase tracking-wider">Hashed</h3>
+        </div>
+        <div class="space-y-3">
+          <div class="bg-surface-300/50 rounded-lg p-3">
+            <div class="text-white text-sm font-medium">Passwords</div>
+            <div class="text-xs text-gray-500 font-mono mt-1">bcrypt (salt 10)</div>
+            <div class="mt-2 w-full h-1.5 bg-surface-400 rounded-full overflow-hidden">
+              <div class="h-full bg-good rounded-full" style="width: 95%"></div>
+            </div>
+          </div>
+          <div class="bg-surface-300/50 rounded-lg p-3">
+            <div class="text-white text-sm font-medium">API Keys</div>
+            <div class="text-xs text-gray-500 font-mono mt-1">SHA-256</div>
+            <div class="mt-2 w-full h-1.5 bg-surface-400 rounded-full overflow-hidden">
+              <div class="h-full bg-good rounded-full" style="width: 90%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Encrypted -->
+      <div class="bg-surface-200/60 backdrop-blur border border-crit/20 rounded-2xl p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-3 h-3 rounded-full bg-crit animate-pulse"></div>
+          <h3 class="text-crit font-semibold text-sm uppercase tracking-wider">Encrypted</h3>
+        </div>
+        <div class="flex flex-col items-center justify-center h-[calc(100%-3rem)] text-center">
+          <div class="text-4xl mb-3 opacity-30">🚫</div>
+          <div class="text-crit font-semibold text-lg">Nothing!</div>
+          <div class="text-xs text-gray-600 mt-2">Nenhum dado e criptografado at-rest. Este e um gap significativo de seguranca.</div>
+        </div>
+      </div>
+
+      <!-- Plain Text -->
+      <div class="bg-surface-200/60 backdrop-blur border border-high/20 rounded-2xl p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-3 h-3 rounded-full bg-high"></div>
+          <h3 class="text-high font-semibold text-sm uppercase tracking-wider">Plain Text</h3>
+        </div>
+        <div class="space-y-3">
+          <div class="bg-surface-300/50 rounded-lg p-3">
+            <div class="text-white text-sm font-medium">GitHub Tokens</div>
+            <div class="text-xs text-crit/80 mt-1">Armazenado em texto no DB</div>
+          </div>
+          <div class="bg-surface-300/50 rounded-lg p-3">
+            <div class="text-white text-sm font-medium">Webhook Secrets</div>
+            <div class="text-xs text-crit/80 mt-1">Armazenado em texto no DB</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Token Budget -->
+      <div class="bg-surface-200/60 backdrop-blur border border-accent-400/20 rounded-2xl p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-3 h-3 rounded-full bg-accent-400"></div>
+          <h3 class="text-accent-400 font-semibold text-sm uppercase tracking-wider">Token Limits</h3>
+        </div>
+        <div class="space-y-3">
+          <div class="bg-surface-300/50 rounded-lg p-3">
+            <div class="text-white text-sm font-medium">Daily Limit</div>
+            <div class="text-xs text-accent-400 font-mono mt-1">5,000,000 tokens</div>
+            <div class="mt-2 w-full h-1.5 bg-surface-400 rounded-full overflow-hidden">
+              <div class="h-full bg-accent-400 rounded-full" style="width: 40%"></div>
+            </div>
+          </div>
+          <div class="bg-surface-300/50 rounded-lg p-3">
+            <div class="text-white text-sm font-medium">Monthly Limit</div>
+            <div class="text-xs text-accent-400 font-mono mt-1">100,000,000 tokens</div>
+            <div class="mt-2 w-full h-1.5 bg-surface-400 rounded-full overflow-hidden">
+              <div class="h-full bg-accent-400 rounded-full" style="width: 25%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Flow Table -->
+    <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
+      <h3 class="text-white font-semibold mb-4 flex items-center gap-2">
+        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        Data Sensitivity Flow
+      </h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-800">
+              <th class="text-left px-4 py-3 text-gray-500 font-mono text-xs">Dado</th>
+              <th class="text-center px-4 py-3 text-gray-500 font-mono text-xs">Em transito</th>
+              <th class="text-center px-4 py-3 text-gray-500 font-mono text-xs">Em repouso</th>
+              <th class="text-center px-4 py-3 text-gray-500 font-mono text-xs">Protecao</th>
+              <th class="text-center px-4 py-3 text-gray-500 font-mono text-xs">Risco</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800/50">
+            <tr class="hover:bg-surface-100/30 transition-colors">
+              <td class="px-4 py-3 text-white">Passwords</td>
+              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">HTTPS</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">bcrypt hash</span></td>
+              <td class="px-4 py-3 text-center"><span class="severity-badge badge-good text-xs">Forte</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-good">Baixo</span></td>
+            </tr>
+            <tr class="hover:bg-surface-100/30 transition-colors">
+              <td class="px-4 py-3 text-white">API Keys</td>
+              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">HTTPS</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">SHA-256 hash</span></td>
+              <td class="px-4 py-3 text-center"><span class="severity-badge badge-good text-xs">Forte</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-good">Baixo</span></td>
+            </tr>
+            <tr class="hover:bg-surface-100/30 transition-colors">
+              <td class="px-4 py-3 text-white">JWT Tokens</td>
+              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">HTTPS</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-high text-xs font-mono">localStorage</span></td>
+              <td class="px-4 py-3 text-center"><span class="severity-badge badge-high text-xs">Fraca</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-high">Alto</span></td>
+            </tr>
+            <tr class="hover:bg-surface-100/30 transition-colors">
+              <td class="px-4 py-3 text-white">GitHub Tokens</td>
+              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">HTTPS</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-crit text-xs font-mono">plain text DB</span></td>
+              <td class="px-4 py-3 text-center"><span class="severity-badge badge-crit text-xs">Nenhuma</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-crit">Critico</span></td>
+            </tr>
+            <tr class="hover:bg-surface-100/30 transition-colors">
+              <td class="px-4 py-3 text-white">Webhook Secrets</td>
+              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">HTTPS</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-crit text-xs font-mono">plain text DB</span></td>
+              <td class="px-4 py-3 text-center"><span class="severity-badge badge-crit text-xs">Nenhuma</span></td>
+              <td class="px-4 py-3 text-center"><span class="text-crit">Critico</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-line my-4"></div>
+
+  <!-- ============================================================ -->
+  <!-- ATTACK SURFACE MAP -->
+  <!-- ============================================================ -->
+  <section id="attack-surface" class="scroll-mt-8">
+    <div class="flex items-center gap-4 mb-10 animate-fade-in">
+      <div class="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+        <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <div>
+        <h2 class="text-3xl font-bold text-white">Attack Surface Map</h2>
+        <p class="text-gray-500 text-sm font-mono mt-1">Vetores de ataque identificados</p>
+      </div>
+    </div>
+
+    <!-- Concentric Rings Visualization -->
+    <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-8 mb-8">
+      <div class="relative mx-auto" style="width: 100%; max-width: 700px; height: 500px;">
+        <!-- Outer ring - External -->
+        <div class="absolute inset-0 rounded-full border-2 border-crit/30 bg-crit/5 flex items-start justify-center pt-6" style="animation: ringPulse 4s ease-in-out infinite;">
+          <span class="text-xs font-mono text-crit uppercase tracking-widest bg-surface-200/90 px-3 py-1 rounded-full">External Attack Surface</span>
+        </div>
+        <!-- Middle ring - Internal -->
+        <div class="absolute rounded-full border-2 border-high/30 bg-high/5 flex items-start justify-center pt-5" style="top: 15%; left: 15%; right: 15%; bottom: 15%; animation: ringPulse 4.5s ease-in-out infinite 0.5s;">
+          <span class="text-xs font-mono text-high uppercase tracking-widest bg-surface-200/90 px-3 py-1 rounded-full">Internal Systems</span>
+        </div>
+        <!-- Inner ring - User Input -->
+        <div class="absolute rounded-full border-2 border-med/30 bg-med/5 flex items-start justify-center pt-4" style="top: 30%; left: 30%; right: 30%; bottom: 30%; animation: ringPulse 5s ease-in-out infinite 1s;">
+          <span class="text-xs font-mono text-med uppercase tracking-widest bg-surface-200/90 px-3 py-1 rounded-full">User Input</span>
+        </div>
+        <!-- Core -->
+        <div class="absolute rounded-full border-2 border-good/30 bg-good/10 flex items-center justify-center" style="top: 43%; left: 43%; right: 43%; bottom: 43%;">
+          <span class="text-xs font-mono text-good font-bold">CORE</span>
+        </div>
+
+        <!-- External Labels -->
+        <div class="absolute text-xs text-crit/80 font-mono" style="top: 18%; left: 5%;">HTTPS endpoints</div>
+        <div class="absolute text-xs text-crit/80 font-mono" style="top: 35%; right: 3%;">SSE connections</div>
+        <div class="absolute text-xs text-crit/80 font-mono" style="bottom: 20%; left: 5%;">Webhook callbacks</div>
+
+        <!-- Internal Labels -->
+        <div class="absolute text-xs text-high/80 font-mono" style="top: 28%; left: 20%;">Claude CLI</div>
+        <div class="absolute text-xs text-high/80 font-mono" style="bottom: 30%; right: 18%;">Redis</div>
+        <div class="absolute text-xs text-high/80 font-mono" style="bottom: 22%; left: 22%;">PostgreSQL</div>
+        <div class="absolute text-xs text-high/80 font-mono" style="top: 25%; right: 18%;">Filesystem</div>
+
+        <!-- User Input Labels -->
+        <div class="absolute text-xs text-med/80 font-mono text-center" style="top: 42%; left: 33%;">Chat msgs</div>
+        <div class="absolute text-xs text-med/80 font-mono text-center" style="bottom: 35%; right: 32%;">Workflows</div>
+        <div class="absolute text-xs text-med/80 font-mono text-center" style="bottom: 38%; left: 33%;">Skills</div>
+      </div>
+    </div>
+
+    <!-- Detailed Attack Vectors -->
+    <div class="grid md:grid-cols-3 gap-6">
+      <!-- External -->
+      <div class="bg-surface-200/60 backdrop-blur border border-crit/20 rounded-2xl p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-3 h-3 rounded-full bg-crit"></div>
+          <h3 class="text-crit font-semibold text-sm uppercase tracking-wider">External</h3>
+        </div>
+        <div class="space-y-3">
+          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-crit/30">
+            <div class="text-sm text-white font-medium">HTTPS Endpoints</div>
+            <div class="text-xs text-gray-500 mt-1">REST API, Swagger UI, auth routes</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-xs bg-crit/10 text-crit px-1.5 py-0.5 rounded">CORS open</span>
+              <span class="text-xs bg-crit/10 text-crit px-1.5 py-0.5 rounded">no rate limit</span>
+            </div>
+          </div>
+          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-crit/30">
+            <div class="text-sm text-white font-medium">SSE Connections</div>
+            <div class="text-xs text-gray-500 mt-1">Server-Sent Events para execucoes em tempo real</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-xs bg-high/10 text-high px-1.5 py-0.5 rounded">long-lived</span>
+            </div>
+          </div>
+          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-crit/30">
+            <div class="text-sm text-white font-medium">Webhook Callbacks</div>
+            <div class="text-xs text-gray-500 mt-1">GitHub webhooks, notificacoes externas</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-xs bg-high/10 text-high px-1.5 py-0.5 rounded">secret in plaintext</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Internal -->
+      <div class="bg-surface-200/60 backdrop-blur border border-high/20 rounded-2xl p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-3 h-3 rounded-full bg-high"></div>
+          <h3 class="text-high font-semibold text-sm uppercase tracking-wider">Internal</h3>
+        </div>
+        <div class="space-y-3">
+          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-high/30">
+            <div class="text-sm text-white font-medium">Claude CLI Subprocess</div>
+            <div class="text-xs text-gray-500 mt-1">Executa comandos via claude-sandbox</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-xs bg-good/10 text-good px-1.5 py-0.5 rounded">sandboxed</span>
+            </div>
+          </div>
+          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-high/30">
+            <div class="text-sm text-white font-medium">File System Writes</div>
+            <div class="text-xs text-gray-500 mt-1">Execucoes produzem artefatos no disco</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-xs bg-med/10 text-med px-1.5 py-0.5 rounded">scoped to project</span>
+            </div>
+          </div>
+          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-high/30">
+            <div class="text-sm text-white font-medium">Redis & PostgreSQL</div>
+            <div class="text-xs text-gray-500 mt-1">Cache, filas (BullMQ), dados persistentes</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-xs bg-med/10 text-med px-1.5 py-0.5 rounded">password auth</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Input -->
+      <div class="bg-surface-200/60 backdrop-blur border border-med/20 rounded-2xl p-6">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-3 h-3 rounded-full bg-med"></div>
+          <h3 class="text-med font-semibold text-sm uppercase tracking-wider">User Input</h3>
+        </div>
+        <div class="space-y-3">
+          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-med/30">
+            <div class="text-sm text-white font-medium">Chat Messages</div>
+            <div class="text-xs text-gray-500 mt-1">Enviadas diretamente ao Claude CLI</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-xs bg-med/10 text-med px-1.5 py-0.5 rounded">prompt injection</span>
+            </div>
+          </div>
+          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-med/30">
+            <div class="text-sm text-white font-medium">Workflow Definitions</div>
+            <div class="text-xs text-gray-500 mt-1">YAML/JSON com steps, condicoes, loops</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-xs bg-good/10 text-good px-1.5 py-0.5 rounded">Zod validated</span>
+            </div>
+          </div>
+          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-med/30">
+            <div class="text-sm text-white font-medium">Skills & System Prompts</div>
+            <div class="text-xs text-gray-500 mt-1">Conteudo customizado injetado no contexto</div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <span class="text-xs bg-med/10 text-med px-1.5 py-0.5 rounded">indirect injection</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="glow-line my-4"></div>
+
+  <!-- ============================================================ -->
+  <!-- RECOMMENDATIONS -->
+  <!-- ============================================================ -->
+  <section id="recommendations" class="scroll-mt-8">
+    <div class="flex items-center gap-4 mb-10 animate-fade-in">
+      <div class="w-10 h-10 rounded-lg bg-good/10 border border-good/20 flex items-center justify-center">
+        <svg class="w-5 h-5 text-good" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <div>
+        <h2 class="text-3xl font-bold text-white">Recommendations</h2>
+        <p class="text-gray-500 text-sm font-mono mt-1">Acoes recomendadas por prioridade</p>
+      </div>
+    </div>
+
+    <div class="space-y-4" id="recommendations-list">
+    </div>
+
+    <!-- Security Roadmap -->
+    <div class="mt-12 bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-8">
+      <h3 class="text-white font-semibold text-lg mb-6 flex items-center gap-2">
+        <svg class="w-5 h-5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Security Improvement Roadmap
+      </h3>
+      <div class="relative">
+        <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-crit via-high to-good"></div>
+
+        <div class="space-y-8 relative">
+          <!-- Sprint 1 -->
+          <div class="flex gap-6">
+            <div class="flex-shrink-0 w-12 h-12 rounded-full bg-crit/10 border-2 border-crit flex items-center justify-center z-10">
+              <span class="text-crit font-bold text-sm">S1</span>
+            </div>
+            <div class="flex-1 bg-surface-300/50 rounded-xl p-5 border border-crit/10">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-white font-semibold">Sprint 1 — Urgente</h4>
+                <span class="text-xs font-mono text-crit bg-crit/10 px-2 py-0.5 rounded">~2 dias</span>
+              </div>
+              <div class="space-y-2 text-sm text-gray-400">
+                <div class="flex items-center gap-2"><span class="text-crit">1.</span> Restringir CORS para origens conhecidas</div>
+                <div class="flex items-center gap-2"><span class="text-crit">2.</span> Habilitar rate limiting global</div>
+                <div class="flex items-center gap-2"><span class="text-crit">3.</span> Randomizar JWT_SECRET em producao</div>
+              </div>
+              <div class="mt-3 text-xs text-gray-600">Score estimado apos sprint: <span class="text-med font-semibold">55/100</span></div>
+            </div>
+          </div>
+
+          <!-- Sprint 2 -->
+          <div class="flex gap-6">
+            <div class="flex-shrink-0 w-12 h-12 rounded-full bg-high/10 border-2 border-high flex items-center justify-center z-10">
+              <span class="text-high font-bold text-sm">S2</span>
+            </div>
+            <div class="flex-1 bg-surface-300/50 rounded-xl p-5 border border-high/10">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-white font-semibold">Sprint 2 — Importante</h4>
+                <span class="text-xs font-mono text-high bg-high/10 px-2 py-0.5 rounded">~3 dias</span>
+              </div>
+              <div class="space-y-2 text-sm text-gray-400">
+                <div class="flex items-center gap-2"><span class="text-high">4.</span> Implementar token refresh (access 15min + refresh 7d)</div>
+                <div class="flex items-center gap-2"><span class="text-high">5.</span> Criptografar GitHub tokens at-rest (AES-256-GCM)</div>
+                <div class="flex items-center gap-2"><span class="text-high">6.</span> Adicionar security headers via @fastify/helmet</div>
+              </div>
+              <div class="mt-3 text-xs text-gray-600">Score estimado apos sprint: <span class="text-med font-semibold">72/100</span></div>
+            </div>
+          </div>
+
+          <!-- Sprint 3 -->
+          <div class="flex gap-6">
+            <div class="flex-shrink-0 w-12 h-12 rounded-full bg-good/10 border-2 border-good flex items-center justify-center z-10">
+              <span class="text-good font-bold text-sm">S3</span>
+            </div>
+            <div class="flex-1 bg-surface-300/50 rounded-xl p-5 border border-good/10">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-white font-semibold">Sprint 3 — Hardening</h4>
+                <span class="text-xs font-mono text-good bg-good/10 px-2 py-0.5 rounded">~3 dias</span>
+              </div>
+              <div class="space-y-2 text-sm text-gray-400">
+                <div class="flex items-center gap-2"><span class="text-good">7.</span> Migrar JWT para HttpOnly cookies</div>
+                <div class="flex items-center gap-2"><span class="text-good">8.</span> Implementar CSRF tokens</div>
+                <div class="flex items-center gap-2"><span class="text-good">9.</span> Audit logging para acoes sensiveis</div>
+              </div>
+              <div class="mt-3 text-xs text-gray-600">Score estimado apos sprint: <span class="text-good font-semibold">90/100</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Footer -->
+<footer class="border-t border-gray-800/50 bg-surface-400/50 mt-20">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-mono text-gray-600">07 / seguranca</span>
+        <div class="w-8 h-px bg-gray-800"></div>
+        <span class="text-sm text-gray-600">Orquetrador Claude — System Map</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="text-xs text-gray-700 font-mono">Security Score: <span class="text-crit">40/100</span></span>
+        <div class="w-px h-4 bg-gray-800"></div>
+        <span class="text-xs text-gray-700 font-mono" id="footerDate"></span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ==================================================
+// Authorization Matrix
+// ==================================================
+const matrixData = [
+  { resource: 'Manage Users', admin: true, developer: false, viewer: false, icon: '👥' },
+  { resource: 'System Settings', admin: true, developer: false, viewer: false, icon: '⚙️' },
+  { resource: 'Create Workflows', admin: true, developer: true, viewer: false, icon: '🔄' },
+  { resource: 'Edit Workflows', admin: true, developer: true, viewer: false, icon: '✏️' },
+  { resource: 'Execute Workflows', admin: true, developer: true, viewer: false, icon: '▶️' },
+  { resource: 'Create Skills', admin: true, developer: true, viewer: false, icon: '🧩' },
+  { resource: 'Manage API Keys', admin: true, developer: true, viewer: false, icon: '🔑' },
+  { resource: 'View Results', admin: true, developer: true, viewer: true, icon: '📊' },
+  { resource: 'View Workflows', admin: true, developer: true, viewer: true, icon: '👁️' },
+  { resource: 'View Dashboard', admin: true, developer: true, viewer: true, icon: '📈' },
+];
+
+function renderMatrix() {
+  const tbody = document.getElementById('authMatrix');
+  tbody.innerHTML = matrixData.map((row, i) => `
+    <tr class="border-b border-gray-800/30 hover:bg-surface-100/20 transition-colors" style="animation: fadeInUp 0.4s ease-out ${i * 0.05}s forwards; opacity: 0;">
+      <td class="px-6 py-3">
+        <div class="flex items-center gap-3">
+          <span class="text-lg">${row.icon}</span>
+          <span class="text-white text-sm font-medium">${row.resource}</span>
+        </div>
+      </td>
+      <td class="text-center px-6 py-3">
+        <span class="matrix-cell inline-block text-lg cursor-default ${row.admin ? '' : 'opacity-30'}">${row.admin ? '✅' : '❌'}</span>
+      </td>
+      <td class="text-center px-6 py-3">
+        <span class="matrix-cell inline-block text-lg cursor-default ${row.developer ? '' : 'opacity-30'}">${row.developer ? '✅' : '❌'}</span>
+      </td>
+      <td class="text-center px-6 py-3">
+        <span class="matrix-cell inline-block text-lg cursor-default ${row.viewer ? '' : 'opacity-30'}">${row.viewer ? '✅' : '❌'}</span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ==================================================
+// Recommendations
+// ==================================================
+const recommendations = [
+  {
+    severity: 'crit',
+    title: 'Restringir CORS para origens conhecidas',
+    description: 'Substituir origin: true por lista explicita de dominios permitidos.',
+    code: `app.register(cors, {\n  origin: [\n    'https://orquestrador.ddw1sl.easypanel.host',\n    'https://loadbalance.ddw1sl.easypanel.host'\n  ]\n})`,
+    effort: 'Baixo',
+    impact: 'Alto'
+  },
+  {
+    severity: 'crit',
+    title: 'Habilitar rate limiting global',
+    description: 'Ativar rate limit em todas as rotas, com limites customizados para auth.',
+    code: `app.register(rateLimit, {\n  global: true,\n  max: 100,\n  timeWindow: '1 minute'\n})`,
+    effort: 'Baixo',
+    impact: 'Alto'
+  },
+  {
+    severity: 'crit',
+    title: 'Implementar token refresh',
+    description: 'Access token curto (15min) + refresh token (7d) com rotacao automatica.',
+    code: `// Access: expiresIn '15m'\n// Refresh: expiresIn '7d', stored HttpOnly cookie\n// POST /auth/refresh rotates both`,
+    effort: 'Medio',
+    impact: 'Alto'
+  },
+  {
+    severity: 'crit',
+    title: 'Criptografar GitHub tokens at-rest',
+    description: 'Usar AES-256-GCM para criptografar tokens antes de salvar no banco.',
+    code: `import { createCipheriv, createDecipheriv } from 'crypto'\n// Encrypt before DB write, decrypt on read\n// Key from env: ENCRYPTION_KEY`,
+    effort: 'Medio',
+    impact: 'Alto'
+  },
+  {
+    severity: 'high',
+    title: 'Adicionar security headers',
+    description: 'Instalar @fastify/helmet para HSTS, CSP, X-Frame-Options e mais.',
+    code: `app.register(helmet, {\n  contentSecurityPolicy: { ... },\n  hsts: { maxAge: 31536000 }\n})`,
+    effort: 'Baixo',
+    impact: 'Medio'
+  },
+  {
+    severity: 'high',
+    title: 'Migrar JWT para HttpOnly cookies',
+    description: 'Eliminar uso de localStorage para tokens. Protege contra XSS.',
+    code: `reply.setCookie('token', jwt, {\n  httpOnly: true,\n  secure: true,\n  sameSite: 'strict',\n  path: '/'\n})`,
+    effort: 'Medio',
+    impact: 'Alto'
+  },
+  {
+    severity: 'high',
+    title: 'Randomizar JWT_SECRET em producao',
+    description: 'Remover default fraco e exigir JWT_SECRET forte via env.',
+    code: `const JWT_SECRET = process.env.JWT_SECRET\nif (!JWT_SECRET) throw new Error('JWT_SECRET required')`,
+    effort: 'Baixo',
+    impact: 'Alto'
+  }
+];
+
+function renderRecommendations() {
+  const container = document.getElementById('recommendations-list');
+  container.innerHTML = recommendations.map((rec, i) => {
+    const colors = {
+      crit: { bg: 'bg-crit/5', border: 'border-crit/20', text: 'text-crit', badge: 'badge-crit', label: 'Critico' },
+      high: { bg: 'bg-high/5', border: 'border-high/20', text: 'text-high', badge: 'badge-high', label: 'Alto' },
+      med: { bg: 'bg-med/5', border: 'border-med/20', text: 'text-med', badge: 'badge-med', label: 'Medio' }
+    };
+    const c = colors[rec.severity];
+    return `
+      <div class="${c.bg} border ${c.border} rounded-2xl p-6 hover:bg-surface-200/40 transition-all cursor-pointer group"
+           onclick="toggleRec(this)"
+           style="animation: fadeInUp 0.5s ease-out ${i * 0.08}s forwards; opacity: 0;">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-start gap-4 flex-1">
+            <div class="flex-shrink-0 w-8 h-8 rounded-lg ${c.bg} border ${c.border} flex items-center justify-center ${c.text} font-bold text-sm mt-0.5">
+              ${i + 1}
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-1 flex-wrap">
+                <h3 class="text-white font-semibold group-hover:${c.text} transition-colors">${rec.title}</h3>
+                <span class="severity-badge ${c.badge}">${c.label}</span>
+              </div>
+              <p class="text-gray-400 text-sm">${rec.description}</p>
+              <div class="rec-detail hidden mt-4">
+                <div class="code-block text-xs mb-3"><pre class="whitespace-pre-wrap">${rec.code}</pre></div>
+                <div class="flex gap-4 text-xs">
+                  <span class="text-gray-500">Esforco: <span class="${c.text}">${rec.effort}</span></span>
+                  <span class="text-gray-500">Impacto: <span class="${c.text}">${rec.impact}</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <svg class="w-5 h-5 text-gray-600 flex-shrink-0 mt-1 transition-transform rec-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleRec(el) {
+  const detail = el.querySelector('.rec-detail');
+  const chevron = el.querySelector('.rec-chevron');
+  detail.classList.toggle('hidden');
+  chevron.style.transform = detail.classList.contains('hidden') ? '' : 'rotate(180deg)';
+}
+
+// ==================================================
+// Scroll Spy
+// ==================================================
+function scrollToSection(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+}
+
+function updateScrollSpy() {
+  const sections = ['dashboard', 'auth-flow', 'auth-matrix', 'sandbox', 'data-protection', 'attack-surface', 'recommendations'];
+  const scrollY = window.scrollY + 200;
+  let activeSection = sections[0];
+  for (const id of sections) {
+    const el = document.getElementById(id);
+    if (el && el.offsetTop <= scrollY) activeSection = id;
+  }
+  document.querySelectorAll('.nav-dot').forEach(dot => {
+    dot.classList.toggle('active', dot.dataset.section === activeSection);
+  });
+}
+
+window.addEventListener('scroll', updateScrollSpy, { passive: true });
+
+// ==================================================
+// Footer Date
+// ==================================================
+document.getElementById('footerDate').textContent = `Generated: ${new Date().toLocaleDateString('pt-BR')}`;
+
+// ==================================================
+// Init
+// ==================================================
+renderMatrix();
+renderRecommendations();
+updateScrollSpy();
+</script>
+
+</body>
+</html>
