@@ -4,26 +4,42 @@ import { AppLayout } from './app-layout'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { ProtectedRoute } from '@/features/auth/protected-route'
 
+// Retry dynamic import — forces page reload on stale chunk 404
+function lazyRetry<T extends { default: React.ComponentType }>(
+  factory: () => Promise<T>,
+): React.LazyExoticComponent<T['default']> {
+  return lazy(() =>
+    factory().catch(() => {
+      const key = 'chunk-reload'
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1')
+        window.location.reload()
+      }
+      return factory()
+    }),
+  )
+}
+
 // Lazy load pages
-const LoginPage = lazy(() => import('@/features/auth/login'))
-const RegisterPage = lazy(() => import('@/features/auth/register'))
-const DashboardPage = lazy(() => import('@/features/dashboard'))
-const WorkflowsPage = lazy(() => import('@/features/workflows'))
-const WorkflowWizardPage = lazy(() => import('@/features/workflows/wizard'))
-const ConversationsPage = lazy(() => import('@/features/conversations'))
-const ConversationDetailPage = lazy(() => import('@/features/conversations/[id]'))
-const McpServersPage = lazy(() => import('@/features/mcp-servers'))
-const SkillsPage = lazy(() => import('@/features/skills'))
-const AgentsPage = lazy(() => import('@/features/agents'))
-const RulesPage = lazy(() => import('@/features/rules'))
-const PluginsPage = lazy(() => import('@/features/plugins'))
-const HooksPage = lazy(() => import('@/features/hooks'))
-const SettingsPage = lazy(() => import('@/features/settings'))
-const AdminPage = lazy(() => import('@/features/admin'))
-const WebhooksPage = lazy(() => import('@/features/webhooks'))
-const StepTemplatesPage = lazy(() => import('@/features/step-templates'))
-const ExecutionsPage = lazy(() => import('@/features/executions'))
-const WorkflowChatPage = lazy(() => import('@/features/workflow-chat'))
+const LoginPage = lazyRetry(() => import('@/features/auth/login'))
+const RegisterPage = lazyRetry(() => import('@/features/auth/register'))
+const DashboardPage = lazyRetry(() => import('@/features/dashboard'))
+const WorkflowsPage = lazyRetry(() => import('@/features/workflows'))
+const WorkflowWizardPage = lazyRetry(() => import('@/features/workflows/wizard'))
+const ConversationsPage = lazyRetry(() => import('@/features/conversations'))
+const ConversationDetailPage = lazyRetry(() => import('@/features/conversations/[id]'))
+const McpServersPage = lazyRetry(() => import('@/features/mcp-servers'))
+const SkillsPage = lazyRetry(() => import('@/features/skills'))
+const AgentsPage = lazyRetry(() => import('@/features/agents'))
+const RulesPage = lazyRetry(() => import('@/features/rules'))
+const PluginsPage = lazyRetry(() => import('@/features/plugins'))
+const HooksPage = lazyRetry(() => import('@/features/hooks'))
+const SettingsPage = lazyRetry(() => import('@/features/settings'))
+const AdminPage = lazyRetry(() => import('@/features/admin'))
+const WebhooksPage = lazyRetry(() => import('@/features/webhooks'))
+const StepTemplatesPage = lazyRetry(() => import('@/features/step-templates'))
+const ExecutionsPage = lazyRetry(() => import('@/features/executions'))
+const WorkflowChatPage = lazyRetry(() => import('@/features/workflow-chat'))
 
 // Page loader
 function PageLoader() {

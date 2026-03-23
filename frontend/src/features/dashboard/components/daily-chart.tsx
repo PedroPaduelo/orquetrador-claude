@@ -63,7 +63,7 @@ export function DailyChart({ data, isLoading }: DailyChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-64">
+        <div className="h-64 min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={formatted} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
