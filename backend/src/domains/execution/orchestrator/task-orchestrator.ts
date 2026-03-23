@@ -1460,7 +1460,7 @@ export class TaskOrchestrator {
 
     try {
       // Execute the SAME step with --resume to continue the session
-      const result = await this.executeStep(
+      let result = await this.executeStep(
         executionId,
         conversationId,
         step,
@@ -1536,17 +1536,33 @@ export class TaskOrchestrator {
         return
       }
 
-      if (result.error) {
+      if (isStepError(result)) {
+        const decision = decideOnError(step, result)
+        const errMsg = getErrorMessage(result)
+        console.warn(decision.logMessage)
         orchestratorEvents.emitStepError({
-          executionId,
-          conversationId,
-          stepId: step.id,
-          stepName: step.name,
-          error: result.error,
+          executionId, conversationId,
+          stepId: step.id, stepName: step.name,
+          error: `[${decision.action}] ${errMsg}`,
         })
-        await executionStateManager.markFailed(executionId, result.error)
-        this.activeExecutions.delete(conversationId)
-        return
+        if (decision.action === 'fail') {
+          await executionStateManager.markFailed(executionId, errMsg)
+          this.activeExecutions.delete(conversationId)
+          return
+        }
+        if (decision.action === 'fallback') {
+          const fbResult = await this.executeStep(
+            executionId, conversationId, step,
+            FALLBACK_MESSAGE, projectPath, undefined, userId,
+          )
+          if (isStepError(fbResult)) {
+            await executionStateManager.markFailed(executionId, getErrorMessage(fbResult))
+            this.activeExecutions.delete(conversationId)
+            return
+          }
+          result = fbResult
+        }
+        // skip and continue_next: fall through
       }
 
       // Save result
@@ -1615,7 +1631,7 @@ export class TaskOrchestrator {
             totalSteps: steps.length,
           })
 
-          const nextResult = await this.executeStep(
+          let nextResult = await this.executeStep(
             executionId,
             conversationId,
             nextStep,
@@ -1689,17 +1705,36 @@ export class TaskOrchestrator {
             return
           }
 
-          if (nextResult.error) {
+          if (isStepError(nextResult)) {
+            const decision = decideOnError(nextStep, nextResult)
+            const errMsg = getErrorMessage(nextResult)
+            console.warn(decision.logMessage)
             orchestratorEvents.emitStepError({
-              executionId,
-              conversationId,
-              stepId: nextStep.id,
-              stepName: nextStep.name,
-              error: nextResult.error,
+              executionId, conversationId,
+              stepId: nextStep.id, stepName: nextStep.name,
+              error: `[${decision.action}] ${errMsg}`,
             })
-            await executionStateManager.markFailed(executionId, nextResult.error)
-            this.activeExecutions.delete(conversationId)
-            return
+            if (decision.action === 'fail') {
+              await executionStateManager.markFailed(executionId, errMsg)
+              this.activeExecutions.delete(conversationId)
+              return
+            }
+            if (decision.action === 'fallback') {
+              const fbResult = await this.executeStep(
+                executionId, conversationId, nextStep,
+                FALLBACK_MESSAGE, projectPath, undefined, userId,
+              )
+              if (isStepError(fbResult)) {
+                await executionStateManager.markFailed(executionId, getErrorMessage(fbResult))
+                this.activeExecutions.delete(conversationId)
+                return
+              }
+              nextResult = fbResult
+            }
+            if (decision.skipStep) {
+              continue
+            }
+            // continue_next: fall through
           }
 
           // Run validators
