@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js'
+import { logAudit } from '../../lib/audit-log.js'
 import { validateMcpServerUrl } from '../../lib/validation.js'
 
 function fromDbList(record: {
@@ -109,10 +110,20 @@ export const mcpServersRepository = {
         userId,
       },
     })
+
+    void logAudit({
+      userId,
+      action: 'create',
+      resourceType: 'mcp_server',
+      resourceId: server.id,
+      resourceName: server.name,
+      diff: { after: fromDbFull(server) },
+    })
+
     return fromDbFull(server)
   },
 
-  async update(id: string, _userId: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string | null
     type?: string
@@ -127,6 +138,7 @@ export const mcpServersRepository = {
       validateMcpServerUrl(input.uri)
     }
 
+    const before = await prisma.mcpServer.findUnique({ where: { id } })
     const data: Record<string, unknown> = {}
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description
@@ -142,11 +154,33 @@ export const mcpServersRepository = {
       where: { id },
       data: data as Parameters<typeof prisma.mcpServer.update>[0]['data'],
     })
+
+    void logAudit({
+      userId,
+      action: 'update',
+      resourceType: 'mcp_server',
+      resourceId: server.id,
+      resourceName: server.name,
+      diff: { before: before ? fromDbFull(before) : undefined, after: fromDbFull(server) },
+    })
+
     return fromDbFull(server)
   },
 
   async delete(id: string, userId: string) {
+    const before = await prisma.mcpServer.findUnique({ where: { id } })
     await prisma.mcpServer.deleteMany({ where: { id, userId } })
+
+    if (before) {
+      void logAudit({
+        userId,
+        action: 'delete',
+        resourceType: 'mcp_server',
+        resourceId: id,
+        resourceName: before.name,
+        diff: { before: fromDbFull(before) },
+      })
+    }
   },
 
   async toggle(id: string, _userId: string, currentEnabled: boolean) {

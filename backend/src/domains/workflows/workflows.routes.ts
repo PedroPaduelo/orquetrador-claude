@@ -189,11 +189,11 @@ export async function workflowsRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await request.getCurrentUserId()
+      const userId = await request.getCurrentUserId()
       const existing = await workflowsRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('Workflow not found')
 
-      return workflowsRepository.update(request.params.id, request.body)
+      return workflowsRepository.update(request.params.id, request.body, userId)
     },
   )
 
@@ -208,11 +208,11 @@ export async function workflowsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      await request.getCurrentUserId()
+      const userId = await request.getCurrentUserId()
       const existing = await workflowsRepository.findById(request.params.id)
       if (!existing) throw new NotFoundError('Workflow not found')
 
-      await workflowsRepository.delete(request.params.id)
+      await workflowsRepository.delete(request.params.id, userId)
       return reply.status(204).send(null)
     },
   )

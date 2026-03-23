@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js'
+import { logAudit } from '../../lib/audit-log.js'
 import type { JsonValue } from '@prisma/client/runtime/library'
 
 function toStringArray(val: JsonValue | null | undefined): string[] {
@@ -117,10 +118,20 @@ export const agentsRepository = {
         lastSyncedAt: input.lastSyncedAt,
       },
     })
+
+    void logAudit({
+      userId,
+      action: 'create',
+      resourceType: 'agent',
+      resourceId: agent.id,
+      resourceName: agent.name,
+      diff: { after: fromDb(agent) },
+    })
+
     return fromDb(agent)
   },
 
-  async update(id: string, _userId: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string | null
     systemPrompt?: string
@@ -134,6 +145,7 @@ export const agentsRepository = {
     isGlobal?: boolean
     lastSyncedAt?: Date | null
   }) {
+    const before = await prisma.agent.findUnique({ where: { id } })
     const data: Record<string, unknown> = {}
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description
@@ -152,11 +164,33 @@ export const agentsRepository = {
       where: { id },
       data: data as Parameters<typeof prisma.agent.update>[0]['data'],
     })
+
+    void logAudit({
+      userId,
+      action: 'update',
+      resourceType: 'agent',
+      resourceId: agent.id,
+      resourceName: agent.name,
+      diff: { before: before ? fromDb(before) : undefined, after: fromDb(agent) },
+    })
+
     return fromDb(agent)
   },
 
   async delete(id: string, userId: string) {
+    const before = await prisma.agent.findUnique({ where: { id } })
     await prisma.agent.deleteMany({ where: { id, userId } })
+
+    if (before) {
+      void logAudit({
+        userId,
+        action: 'delete',
+        resourceType: 'agent',
+        resourceId: id,
+        resourceName: before.name,
+        diff: { before: fromDb(before) },
+      })
+    }
   },
 
   async toggle(id: string, _userId: string, currentEnabled: boolean) {

@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js'
+import { logAudit } from '../../lib/audit-log.js'
 import type { JsonValue, InputJsonValue } from '@prisma/client/runtime/library'
 
 function toStringArray(val: JsonValue | null | undefined): string[] {
@@ -91,10 +92,20 @@ export const skillsRepository = {
         fileManifest: input.fileManifest as InputJsonValue | undefined,
       },
     })
+
+    void logAudit({
+      userId,
+      action: 'create',
+      resourceType: 'skill',
+      resourceId: skill.id,
+      resourceName: skill.name,
+      diff: { after: fromDb(skill) },
+    })
+
     return fromDb(skill)
   },
 
-  async update(id: string, _userId: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string
     body?: string
@@ -106,6 +117,7 @@ export const skillsRepository = {
     fileManifest?: Array<{ path: string; content: string }>
     lastSyncedAt?: Date | null
   }) {
+    const before = await prisma.skill.findUnique({ where: { id } })
     const data: Record<string, unknown> = {}
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description
@@ -122,11 +134,33 @@ export const skillsRepository = {
       where: { id },
       data: data as Parameters<typeof prisma.skill.update>[0]['data'],
     })
+
+    void logAudit({
+      userId,
+      action: 'update',
+      resourceType: 'skill',
+      resourceId: skill.id,
+      resourceName: skill.name,
+      diff: { before: before ? fromDb(before) : undefined, after: fromDb(skill) },
+    })
+
     return fromDb(skill)
   },
 
   async delete(id: string, userId: string) {
+    const before = await prisma.skill.findUnique({ where: { id } })
     await prisma.skill.deleteMany({ where: { id, userId } })
+
+    if (before) {
+      void logAudit({
+        userId,
+        action: 'delete',
+        resourceType: 'skill',
+        resourceId: id,
+        resourceName: before.name,
+        diff: { before: fromDb(before) },
+      })
+    }
   },
 
   async toggle(id: string, _userId: string, currentEnabled: boolean) {

@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js'
+import { logAudit } from '../../lib/audit-log.js'
 
 function fromDb(record: {
   id: string
@@ -100,10 +101,20 @@ export const rulesRepository = {
         lastSyncedAt: input.lastSyncedAt,
       },
     })
+
+    void logAudit({
+      userId,
+      action: 'create',
+      resourceType: 'rule',
+      resourceId: rule.id,
+      resourceName: rule.name,
+      diff: { after: fromDb(rule) },
+    })
+
     return fromDb(rule)
   },
 
-  async update(id: string, _userId: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string | null
     body?: string
@@ -112,6 +123,7 @@ export const rulesRepository = {
     skillId?: string | null
     lastSyncedAt?: Date | null
   }) {
+    const before = await prisma.rule.findUnique({ where: { id } })
     const data: Record<string, unknown> = {}
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description
@@ -125,11 +137,33 @@ export const rulesRepository = {
       where: { id },
       data: data as Parameters<typeof prisma.rule.update>[0]['data'],
     })
+
+    void logAudit({
+      userId,
+      action: 'update',
+      resourceType: 'rule',
+      resourceId: rule.id,
+      resourceName: rule.name,
+      diff: { before: before ? fromDb(before) : undefined, after: fromDb(rule) },
+    })
+
     return fromDb(rule)
   },
 
   async delete(id: string, userId: string) {
+    const before = await prisma.rule.findUnique({ where: { id } })
     await prisma.rule.deleteMany({ where: { id, userId } })
+
+    if (before) {
+      void logAudit({
+        userId,
+        action: 'delete',
+        resourceType: 'rule',
+        resourceId: id,
+        resourceName: before.name,
+        diff: { before: fromDb(before) },
+      })
+    }
   },
 
   async toggle(id: string, _userId: string, currentEnabled: boolean) {

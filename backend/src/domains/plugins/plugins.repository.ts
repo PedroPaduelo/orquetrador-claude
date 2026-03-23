@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js'
+import { logAudit } from '../../lib/audit-log.js'
 
 // ---- fromDb helper ----
 
@@ -182,6 +183,16 @@ export const pluginsRepository = {
           : undefined,
       },
     })
+
+    void logAudit({
+      userId,
+      action: 'create',
+      resourceType: 'plugin',
+      resourceId: plugin.id,
+      resourceName: plugin.name,
+      diff: { after: fromDb(plugin) },
+    })
+
     return fromDb(plugin)
   },
 
@@ -209,10 +220,22 @@ export const pluginsRepository = {
   },
 
   async delete(id: string, userId: string) {
+    const before = await prisma.plugin.findUnique({ where: { id } })
     await prisma.mcpServer.deleteMany({ where: { pluginId: id, userId } })
     await prisma.skill.deleteMany({ where: { pluginId: id, userId } })
     await prisma.agent.deleteMany({ where: { pluginId: id, userId } })
     await prisma.plugin.deleteMany({ where: { id, userId } })
+
+    if (before) {
+      void logAudit({
+        userId,
+        action: 'delete',
+        resourceType: 'plugin',
+        resourceId: id,
+        resourceName: before.name,
+        diff: { before: fromDb(before) },
+      })
+    }
   },
 
   async toggle(id: string, _userId: string, currentEnabled: boolean) {

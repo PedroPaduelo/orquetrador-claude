@@ -1,4 +1,5 @@
 import { prisma } from '../../lib/prisma.js'
+import { logAudit } from '../../lib/audit-log.js'
 
 function fromDb(record: {
   id: string
@@ -93,10 +94,20 @@ export const hooksRepository = {
         templateId: input.templateId ?? null,
       },
     })
+
+    void logAudit({
+      userId,
+      action: 'create',
+      resourceType: 'hook',
+      resourceId: hook.id,
+      resourceName: hook.name,
+      diff: { after: fromDb(hook) },
+    })
+
     return fromDb(hook)
   },
 
-  async update(id: string, _userId: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string | null
     eventType?: string
@@ -111,6 +122,7 @@ export const hooksRepository = {
     isGlobal?: boolean
     projectPath?: string | null
   }) {
+    const before = await prisma.hook.findUnique({ where: { id } })
     const data: Record<string, unknown> = {}
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description
@@ -130,11 +142,33 @@ export const hooksRepository = {
       where: { id },
       data: data as Parameters<typeof prisma.hook.update>[0]['data'],
     })
+
+    void logAudit({
+      userId,
+      action: 'update',
+      resourceType: 'hook',
+      resourceId: hook.id,
+      resourceName: hook.name,
+      diff: { before: before ? fromDb(before) : undefined, after: fromDb(hook) },
+    })
+
     return fromDb(hook)
   },
 
   async delete(id: string, userId: string) {
+    const before = await prisma.hook.findUnique({ where: { id } })
     await prisma.hook.deleteMany({ where: { id, userId } })
+
+    if (before) {
+      void logAudit({
+        userId,
+        action: 'delete',
+        resourceType: 'hook',
+        resourceId: id,
+        resourceName: before.name,
+        diff: { before: fromDb(before) },
+      })
+    }
   },
 
   async toggle(id: string, _userId: string, currentEnabled: boolean) {
