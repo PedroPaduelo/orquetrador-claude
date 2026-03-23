@@ -77,23 +77,23 @@ tailwind.config = {
 </head>
 <body class="bg-surface-300 text-gray-200 font-sans min-h-screen antialiased">
 
-<nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.8);backdrop-filter:blur(12px);border-bottom:1px solid rgba(148,163,184,0.1)">
+<nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);border-bottom:1px solid rgba(148,163,184,0.1)">
   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-    <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-red-400 transition">
+    <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-blue-400 transition">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
       Orquetrador Claude
     </a>
-    <div class="hidden md:flex items-center gap-1 text-xs">
-      <a href="01-visao-geral.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visão Geral</a>
-      <a href="02-fluxo-de-dados.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
-      <a href="03-banco-de-dados.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">03 DB</a>
-      <a href="04-api-endpoints.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">04 API</a>
-      <a href="05-motor-execucao.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">05 Execução</a>
-      <a href="06-frontend.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">06 Frontend</a>
-      <a href="07-seguranca.html" class="px-2 py-1 rounded bg-red-500/20 text-red-400 font-semibold">07 Segurança</a>
-      <a href="08-integracoes.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">08 Integrações</a>
-      <a href="09-mcp-server.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">09 MCP</a>
-      <a href="10-tempo-real-filas.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">10 Real-time</a>
+    <div class="hidden lg:flex items-center gap-1 text-xs">
+      <a href="01-visao-geral.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visão Geral</a>
+      <a href="02-fluxo-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
+      <a href="03-banco-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">03 DB</a>
+      <a href="04-api-endpoints.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">04 API</a>
+      <a href="05-motor-execucao.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">05 Execução</a>
+      <a href="06-frontend.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">06 Frontend</a>
+      <a href="07-seguranca.html" class="px-2.5 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 font-semibold" id="nav07">07 Segurança</a>
+      <a href="08-integracoes.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav08">08 Integrações</a>
+      <a href="09-mcp-server.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">09 MCP</a>
+      <a href="10-tempo-real-filas.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">10 Real-time</a>
     </div>
   </div>
 </nav>
@@ -1092,23 +1092,6 @@ tailwind.config = {
 
 </main>
 
-<!-- Footer -->
-<footer class="border-t border-gray-800/50 bg-surface-400/50 mt-20">
-  <div class="max-w-7xl mx-auto px-6 py-8">
-    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <span class="text-sm font-mono text-gray-600">07 / seguranca</span>
-        <div class="w-8 h-px bg-gray-800"></div>
-        <span class="text-sm text-gray-600">Orquetrador Claude — System Map</span>
-      </div>
-      <div class="flex items-center gap-4">
-        <span class="text-xs text-gray-700 font-mono">Security Score: <span class="text-crit">40/100</span></span>
-        <div class="w-px h-4 bg-gray-800"></div>
-        <span class="text-xs text-gray-700 font-mono" id="footerDate"></span>
-      </div>
-    </div>
-  </div>
-</footer>
 
 <script>
 // ==================================================
@@ -1296,9 +1279,9 @@ updateScrollSpy();
 
 <footer class="border-t border-slate-800 py-6 mt-10">
   <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-slate-500">
-    <a href="06-frontend.html" class="hover:text-white transition">← 06 Frontend</a>
-    <span>Orquetrador Claude — Segurança</span>
-    <a href="08-integracoes.html" class="hover:text-white transition">08 Integrações →</a>
+    <a href="06-frontend.html" class="hover:text-white transition">&larr; 06 Frontend</a>
+    <span class="text-slate-600">Orquetrador Claude</span>
+    <a href="08-integracoes.html" class="hover:text-white transition">08 Integrações &rarr;</a>
   </div>
 </footer>
 

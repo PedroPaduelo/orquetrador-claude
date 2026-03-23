@@ -114,57 +114,29 @@
 <body>
 
 <!-- Top Navigation -->
-<nav class="fixed top-0 left-0 right-0 z-50 glass-strong">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between h-16">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-          </svg>
-        </div>
-        <span class="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-          System Map
-        </span>
-        <span class="text-slate-500 text-sm hidden sm:inline">/ API Endpoints</span>
-      </div>
-      <div class="hidden md:flex items-center gap-1 text-sm overflow-x-auto">
-        <a href="index.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">Home</a>
-        <a href="01-visao-geral.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">01 Visao Geral</a>
-        <a href="02-fluxo-de-dados.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">02 Fluxo</a>
-        <a href="03-banco-de-dados.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">03 Banco</a>
-        <a href="04-api-endpoints.html" class="nav-link active px-3 py-2 text-blue-400 rounded-lg transition-colors whitespace-nowrap font-medium">04 API</a>
-        <a href="05-motor-execucao.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">05 Motor Exec</a>
-        <a href="06-frontend.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">06 Frontend</a>
-        <a href="07-seguranca.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">07 Seguranca</a>
-        <a href="08-integracoes.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">08 Integracoes</a>
-        <a href="09-mcp-server.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">09 MCP Server</a>
-        <a href="10-tempo-real-filas.html" class="nav-link px-3 py-2 text-slate-400 hover:text-slate-200 rounded-lg transition-colors whitespace-nowrap">10 Tempo Real</a>
-      </div>
-      <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="md:hidden p-2 text-slate-400 hover:text-white">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-        </svg>
-      </button>
-    </div>
-    <div id="mobileMenu" class="hidden md:hidden pb-4 grid grid-cols-2 gap-1 text-sm">
-      <a href="index.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">Home</a>
-      <a href="01-visao-geral.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">01 Visao Geral</a>
-      <a href="02-fluxo-de-dados.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">02 Fluxo</a>
-      <a href="03-banco-de-dados.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">03 Banco</a>
-      <a href="04-api-endpoints.html" class="px-3 py-2 text-blue-400 font-medium rounded-lg">04 API</a>
-      <a href="05-motor-execucao.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">05 Motor Exec</a>
-      <a href="06-frontend.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">06 Frontend</a>
-      <a href="07-seguranca.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">07 Seguranca</a>
-      <a href="08-integracoes.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">08 Integracoes</a>
-      <a href="09-mcp-server.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">09 MCP Server</a>
-      <a href="10-tempo-real-filas.html" class="px-3 py-2 text-slate-400 hover:text-white rounded-lg">10 Tempo Real</a>
+<nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);border-bottom:1px solid rgba(148,163,184,0.1)">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-blue-400 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+      Orquetrador Claude
+    </a>
+    <div class="hidden lg:flex items-center gap-1 text-xs">
+      <a href="01-visao-geral.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visão Geral</a>
+      <a href="02-fluxo-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
+      <a href="03-banco-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav03">03 DB</a>
+      <a href="04-api-endpoints.html" class="px-2.5 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 font-semibold" id="nav04">04 API</a>
+      <a href="05-motor-execucao.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">05 Execução</a>
+      <a href="06-frontend.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">06 Frontend</a>
+      <a href="07-seguranca.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">07 Segurança</a>
+      <a href="08-integracoes.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">08 Integrações</a>
+      <a href="09-mcp-server.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">09 MCP</a>
+      <a href="10-tempo-real-filas.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">10 Real-time</a>
     </div>
   </div>
 </nav>
 
 <!-- Hero Section -->
-<section class="pt-24 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+<section class="pt-8 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
   <div class="text-center mb-10 float-in">
     <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-sm text-blue-400 mb-4">
       <span class="w-2 h-2 rounded-full bg-blue-400 pulse-dot"></span>
@@ -645,6 +617,14 @@ renderDomainChips();
 renderEndpoints();
 setTimeout(observeRevealElements, 100);
 </script>
+
+<footer class="border-t border-slate-800 py-6 mt-10">
+  <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-slate-500">
+    <a href="03-banco-de-dados.html" class="hover:text-white transition">← 03 Banco de Dados</a>
+    <span class="text-slate-600">Orquetrador Claude</span>
+    <a href="05-motor-execucao.html" class="hover:text-white transition">05 Motor de Execução →</a>
+  </div>
+</footer>
 
 </body>
 </html>
