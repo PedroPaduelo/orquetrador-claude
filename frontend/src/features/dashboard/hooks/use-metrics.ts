@@ -1,6 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { metricsApi } from '../api'
 
+export function useToolAnalytics() {
+  return useQuery({
+    queryKey: ['metrics', 'tool-analytics'],
+    queryFn: () => metricsApi.getToolAnalytics(),
+    staleTime: 60000,
+    refetchInterval: 60000,
+  })
+}
+
 export function useDailyMetrics() {
   return useQuery({
     queryKey: ['metrics', 'daily'],

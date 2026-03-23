@@ -82,6 +82,46 @@ export class TaskOrchestrator {
     return lower.includes('no conversation found with session id') || lower.includes('session not found') || lower.includes('session_not_found')
   }
 
+  private evaluateSkipCondition(condition: string, input: string, stepIndex: number): boolean {
+    try {
+      // Simple expression evaluator for skip conditions
+      // Supports: "empty_input", "step_index > N", "contains:keyword", "true", "false"
+      const cond = condition.trim().toLowerCase()
+      if (cond === 'true') return true
+      if (cond === 'false') return false
+      if (cond === 'empty_input') return !input || input.trim().length === 0
+      if (cond.startsWith('contains:')) {
+        const keyword = condition.substring('contains:'.length).trim()
+        return input.toLowerCase().includes(keyword.toLowerCase())
+      }
+      if (cond.startsWith('not_contains:')) {
+        const keyword = condition.substring('not_contains:'.length).trim()
+        return !input.toLowerCase().includes(keyword.toLowerCase())
+      }
+      if (cond.startsWith('step_index')) {
+        const match = cond.match(/step_index\s*(>|<|>=|<=|==)\s*(\d+)/)
+        if (match) {
+          const op = match[1]
+          const val = parseInt(match[2], 10)
+          if (op === '>') return stepIndex > val
+          if (op === '<') return stepIndex < val
+          if (op === '>=') return stepIndex >= val
+          if (op === '<=') return stepIndex <= val
+          if (op === '==') return stepIndex === val
+        }
+      }
+      return false
+    } catch {
+      return false
+    }
+  }
+
+  private backoffDelay(attempt: number): Promise<void> {
+    // Exponential backoff: 2^attempt * 1000ms, capped at 30s
+    const ms = Math.min(Math.pow(2, attempt) * 1000, 30000)
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
   async executeStep(
     executionId: string,
     conversationId: string,
@@ -583,6 +623,25 @@ export class TaskOrchestrator {
 
         const step = steps[i]
 
+        // Evaluate skipCondition before executing
+        if (step.skipCondition) {
+          const shouldSkip = this.evaluateSkipCondition(step.skipCondition, currentInput, i)
+          if (shouldSkip) {
+            await executionStateManager.logEvent(
+              executionId, conversationId, 'step_skipped',
+              { reason: 'skipCondition', condition: step.skipCondition },
+              step.id, step.name,
+            )
+            orchestratorEvents.emitStepStream({
+              executionId, conversationId, stepId: step.id,
+              type: 'action',
+              action: { type: 'system', content: `Step "${step.name}" pulado (condição: ${step.skipCondition})` },
+            })
+            i++
+            continue
+          }
+        }
+
         await executionStateManager.updateStepIndex(executionId, i)
 
         await executionStateManager.logEvent(
@@ -752,6 +811,7 @@ export class TaskOrchestrator {
             const maxRetries = step.maxRetries || 2
             if (currentRetry < maxRetries) {
               retryCounts[`validator_${step.id}`] = currentRetry
+              await this.backoffDelay(currentRetry)
               currentInput = `A validacao falhou: ${feedback}\n\nPor favor corrija e tente novamente. Output anterior:\n${result.content}`
               continue
             }
@@ -835,6 +895,7 @@ export class TaskOrchestrator {
               retryMessage,
             })
 
+            await this.backoffDelay(currentRetry)
             currentInput = retryMessage
           }
         } else if (nextStep.isFinished) {
@@ -888,6 +949,7 @@ export class TaskOrchestrator {
                 toStepIndex: nextStep.nextIndex,
               })
 
+              await this.backoffDelay(currentRetry)
               i = nextStep.nextIndex
               currentInput = retryMessage
             }

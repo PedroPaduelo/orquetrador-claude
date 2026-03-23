@@ -7,6 +7,7 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/components/ui/collapsible'
 import { UserQuestionCard } from './user-question-card'
+import { MessageFeedback } from './message-feedback'
 import type { Message, Action, Attachment } from '../types'
 import type { StreamingPhase } from '../store'
 
@@ -270,6 +271,11 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming,
               </div>
             </CollapsibleContent>
           </Collapsible>
+        )}
+
+        {/* Feedback thumbs up/down for assistant messages */}
+        {!isUser && !isStreaming && message.content && (
+          <MessageFeedback messageId={message.id} />
         )}
       </div>
     </div>

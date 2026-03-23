@@ -133,6 +133,56 @@ export async function metricsRoutes(app: FastifyInstance) {
     return alerts
   })
 
+  server.get('/metrics/tool-analytics', {
+    schema: {
+      tags: ['Metrics'],
+      summary: 'Top tools by usage, success rate, and average duration',
+      querystring: z.object({
+        days: z.coerce.number().min(1).max(90).default(7),
+        limit: z.coerce.number().min(1).max(50).default(20),
+      }),
+    },
+  }, async (request) => {
+    const userId = await request.getCurrentUserId()
+    const { days, limit } = request.query
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+
+    const toolStats = await prisma.executionToolCall.groupBy({
+      by: ['toolName'],
+      where: {
+        trace: {
+          conversation: { userId },
+          createdAt: { gte: since },
+        },
+      },
+      _count: { id: true },
+      _avg: { durationMs: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: limit,
+    })
+
+    // Get success counts separately
+    const successCounts = await prisma.executionToolCall.groupBy({
+      by: ['toolName'],
+      where: {
+        trace: {
+          conversation: { userId },
+          createdAt: { gte: since },
+        },
+        success: true,
+      },
+      _count: { id: true },
+    })
+    const successMap = new Map(successCounts.map(s => [s.toolName, s._count.id]))
+
+    return toolStats.map(t => ({
+      toolName: t.toolName,
+      count: t._count.id,
+      successRate: t._count.id > 0 ? Math.round(((successMap.get(t.toolName) || 0) / t._count.id) * 100) : 0,
+      avgDurationMs: Math.round(t._avg.durationMs || 0),
+    }))
+  })
+
   // GET /executions - list all executions with status
   server.get('/executions', {
     schema: {

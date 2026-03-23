@@ -19,6 +19,9 @@ import { useDailyMetrics, useWorkflowMetrics, useMetricAlerts } from './hooks/us
 import { DailyChart } from './components/daily-chart'
 import { WorkflowComparison } from './components/workflow-comparison'
 import { AlertsPanel } from './components/alerts-panel'
+import { PerformanceCards } from './components/performance-cards'
+import { TokenBudgetBar } from './components/token-budget-bar'
+import { ToolAnalytics } from './components/tool-analytics'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -81,11 +84,20 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Charts */}
+      {/* Performance Cards (latency, errors, models) */}
+      <PerformanceCards data={dailyMetrics} isLoading={loadingDaily} />
+
+      {/* Token Budget */}
+      <TokenBudgetBar />
+
+      {/* Charts + Tool Analytics */}
       <div className="grid gap-6 lg:grid-cols-2">
         <DailyChart data={dailyMetrics} isLoading={loadingDaily} />
         <WorkflowComparison data={workflowMetrics} isLoading={loadingWFMetrics} />
       </div>
+
+      {/* Tool Analytics */}
+      <ToolAnalytics />
 
       {/* Quick Actions + Recent */}
       <div className="grid gap-6 lg:grid-cols-3">

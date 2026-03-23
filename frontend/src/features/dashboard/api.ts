@@ -6,6 +6,10 @@ export interface DailyMetric {
   tokens: number
   executions: number
   errors: number
+  p50DurationMs: number | null
+  p95DurationMs: number | null
+  errorBreakdown: Record<string, number>
+  modelBreakdown: Record<string, { count: number; tokens: number; cost: number }>
 }
 
 export interface WorkflowMetric {
@@ -23,6 +27,13 @@ export interface MetricAlert {
   message: string
 }
 
+export interface ToolAnalytic {
+  toolName: string
+  count: number
+  successRate: number
+  avgDurationMs: number
+}
+
 export const metricsApi = {
   async getDaily(): Promise<DailyMetric[]> {
     const { data } = await apiClient.get('/metrics/daily')
@@ -34,6 +45,10 @@ export const metricsApi = {
   },
   async getAlerts(): Promise<MetricAlert[]> {
     const { data } = await apiClient.get('/metrics/alerts')
+    return data
+  },
+  async getToolAnalytics(days = 7): Promise<ToolAnalytic[]> {
+    const { data } = await apiClient.get('/metrics/tool-analytics', { params: { days } })
     return data
   },
 }
