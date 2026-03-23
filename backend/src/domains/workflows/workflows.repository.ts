@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma.js'
 import { logAudit } from '../../lib/audit-log.js'
 import { workflowVersioningService } from './workflow-versioning.service.js'
+import { syncWorkflowDependencies, deleteWorkflowDependencies } from './resource-dependency.service.js'
 
 type JsonValue = Prisma.JsonValue
 
@@ -200,6 +201,10 @@ export const workflowsRepository = {
       diff: { after: { name: workflow.name, description: workflow.description, type: workflow.type } },
     })
 
+    if (input.steps?.length) {
+      void syncWorkflowDependencies(workflow.id, input.steps)
+    }
+
     return {
       id: workflow.id,
       name: workflow.name,
@@ -315,6 +320,7 @@ export const workflowsRepository = {
       }
 
       void workflowVersioningService.createVersion(id)
+      void syncWorkflowDependencies(id, input.steps!)
 
       return {
         id: workflow.id,
@@ -359,6 +365,7 @@ export const workflowsRepository = {
 
   async delete(id: string, userId?: string) {
     const before = await prisma.workflow.findUnique({ where: { id }, select: { name: true, description: true, type: true, userId: true } })
+    void deleteWorkflowDependencies(id)
     await prisma.workflow.delete({ where: { id } })
 
     const ownerId = userId ?? before?.userId

@@ -1,5 +1,6 @@
 import { prisma } from '../../../lib/prisma.js'
 import { projectPathLock } from '../lock/project-path-lock.js'
+import { aggregateHourlyTokens } from './hourly-token-aggregator.js'
 
 const RETENTION_DAYS = 7
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000 // 24h
@@ -7,6 +8,9 @@ const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000 // 24h
 async function cleanupOldTraces() {
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000)
   try {
+    // Aggregate token usage BEFORE deleting traces
+    await aggregateHourlyTokens(cutoff)
+
     const result = await prisma.executionTrace.deleteMany({
       where: { createdAt: { lt: cutoff } },
     })

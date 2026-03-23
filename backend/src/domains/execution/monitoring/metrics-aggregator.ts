@@ -1,4 +1,5 @@
 import { prisma } from '../../../lib/prisma.js'
+import { aggregateResourcePerformance } from './resource-performance.service.js'
 
 const AGGREGATION_INTERVAL_MS = 60 * 60 * 1000 // 1 hora
 
@@ -143,20 +144,25 @@ export async function aggregateBackfill(days: number) {
   for (let i = 1; i <= days; i++) {
     const d = new Date()
     d.setUTCDate(d.getUTCDate() - i)
-    await aggregateDailyMetrics(d)
+    await runAllAggregations(d)
   }
   console.log(`[MetricsAggregator] Backfill concluido (${days} dias)`)
 }
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null
 
+async function runAllAggregations(date?: Date) {
+  await aggregateDailyMetrics(date)
+  await aggregateResourcePerformance(date)
+}
+
 export function startMetricsAggregation() {
   // Roda imediatamente para ontem
-  aggregateDailyMetrics().catch(err => {
+  runAllAggregations().catch(err => {
     console.error('[MetricsAggregator] Erro na agregacao inicial:', err)
   })
   intervalHandle = setInterval(() => {
-    aggregateDailyMetrics().catch(err => {
+    runAllAggregations().catch(err => {
       console.error('[MetricsAggregator] Erro na agregacao periodica:', err)
     })
   }, AGGREGATION_INTERVAL_MS)
