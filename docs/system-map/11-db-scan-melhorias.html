@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>11 - Database Scan & Melhorias | Orquetrador Claude</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #0f172a; }
+    .glass { background: rgba(30,41,59,0.5); backdrop-filter: blur(12px); border: 1px solid rgba(148,163,184,0.1); }
+    .fade-in { opacity:0; transform:translateY(30px); transition: all 0.7s ease-out; }
+    .fade-in.visible { opacity:1; transform:translateY(0); }
+    .gradient-text { background: linear-gradient(135deg,#f43f5e,#f59e0b,#22c55e); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .grid-bg { background-image: radial-gradient(circle at 1px 1px, rgba(148,163,184,0.05) 1px, transparent 0); background-size: 40px 40px; }
+    ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:#0f172a; } ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+    .severity-critical { border-left: 4px solid #ef4444; }
+    .severity-high { border-left: 4px solid #f97316; }
+    .severity-medium { border-left: 4px solid #eab308; }
+    .severity-low { border-left: 4px solid #3b82f6; }
+    .as-is { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); }
+    .to-be { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
+    .compare-card { transition: all 0.3s ease; }
+    .compare-card:hover { transform: translateY(-2px); }
+    .tab-btn { transition: all 0.2s; }
+    .tab-btn.active { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .issue-card { cursor: pointer; transition: all 0.3s; }
+    .issue-card:hover { border-color: rgba(148,163,184,0.3); }
+    .issue-card .detail { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+    .issue-card.open .detail { max-height: 2000px; }
+    .issue-card .chevron { transition: transform 0.3s; }
+    .issue-card.open .chevron { transform: rotate(180deg); }
+    .score-ring { transition: stroke-dashoffset 1.5s ease-out; }
+    @keyframes pulse-glow { 0%,100%{box-shadow:0 0 20px rgba(239,68,68,0.1)} 50%{box-shadow:0 0 30px rgba(239,68,68,0.3)} }
+    .pulse-critical { animation: pulse-glow 2s infinite; }
+    pre { background: rgba(15,23,42,0.8); border: 1px solid rgba(148,163,184,0.1); border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 12px; line-height: 1.6; }
+    code { font-family: 'JetBrains Mono', monospace; }
+    .code-bad { color: #f87171; }
+    .code-good { color: #4ade80; }
+  </style>
+</head>
+<body class="min-h-screen grid-bg text-slate-200 antialiased">
+
+  <!-- Nav -->
+  <nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);border-bottom:1px solid rgba(148,163,184,0.1)">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-blue-400 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+        Orquetrador Claude
+      </a>
+      <div class="hidden lg:flex items-center gap-1 text-xs">
+        <a href="01-visao-geral.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visão Geral</a>
+        <a href="02-fluxo-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
+        <a href="03-banco-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">03 DB</a>
+        <a href="04-api-endpoints.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">04 API</a>
+        <a href="05-motor-execucao.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">05 Execução</a>
+        <a href="06-frontend.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">06 Frontend</a>
+        <a href="07-seguranca.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">07 Segurança</a>
+        <a href="08-integracoes.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">08 Integrações</a>
+        <a href="09-mcp-server.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">09 MCP</a>
+        <a href="10-tempo-real-filas.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">10 Real-time</a>
+        <a href="11-db-scan-melhorias.html" class="px-2.5 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 font-semibold">11 DB Scan</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="relative overflow-hidden">
+    <div class="absolute top-10 left-10 w-72 h-72 bg-red-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-20 right-20 w-80 h-80 bg-green-500/10 rounded-full blur-3xl"></div>
+    <div class="max-w-7xl mx-auto px-6 pt-16 pb-12 relative">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="text-xs font-mono text-amber-400/60 bg-amber-500/10 px-2 py-1 rounded">11</span>
+        <span class="text-xs text-slate-500">Database Scan & Melhorias</span>
+      </div>
+      <h1 class="text-4xl md:text-5xl font-bold mb-4">
+        <span class="gradient-text">Scan Completo do Banco</span>
+      </h1>
+      <p class="text-lg text-slate-400 max-w-3xl">Análise profunda do PostgreSQL + Prisma — 23 problemas encontrados, organizados por severidade com proposta de melhoria AS-IS → TO-BE para cada um.</p>
+    </div>
+  </header>
+
+  <!-- Health Score -->
+  <section class="max-w-7xl mx-auto px-6 mb-16 fade-in">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <!-- Score Ring -->
+      <div class="glass rounded-2xl p-6 flex flex-col items-center justify-center">
+        <svg width="120" height="120" class="mb-3">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#1e293b" stroke-width="8"/>
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#eab308" stroke-width="8"
+            stroke-dasharray="327" stroke-dashoffset="131" stroke-linecap="round"
+            transform="rotate(-90 60 60)" class="score-ring"/>
+          <text x="60" y="55" text-anchor="middle" fill="#eab308" font-size="28" font-weight="800">60</text>
+          <text x="60" y="72" text-anchor="middle" fill="#94a3b8" font-size="11">/100</text>
+        </svg>
+        <span class="text-sm font-semibold text-amber-400">Health Score</span>
+        <span class="text-xs text-slate-500">Precisa atenção</span>
+      </div>
+      <!-- Stats -->
+      <div class="glass rounded-2xl p-6 text-center">
+        <div class="text-3xl font-bold text-red-400">3</div>
+        <div class="text-sm text-slate-400 mt-1">Críticos</div>
+        <div class="w-full bg-slate-800 rounded-full h-2 mt-3"><div class="bg-red-500 h-2 rounded-full" style="width:100%"></div></div>
+        <div class="text-xs text-red-400 mt-1">Resolver imediatamente</div>
+      </div>
+      <div class="glass rounded-2xl p-6 text-center">
+        <div class="text-3xl font-bold text-orange-400">7</div>
+        <div class="text-sm text-slate-400 mt-1">Altos</div>
+        <div class="w-full bg-slate-800 rounded-full h-2 mt-3"><div class="bg-orange-500 h-2 rounded-full" style="width:70%"></div></div>
+        <div class="text-xs text-orange-400 mt-1">Planejar para próximo sprint</div>
+      </div>
+      <div class="glass rounded-2xl p-6 text-center">
+        <div class="text-3xl font-bold text-yellow-400">13</div>
+        <div class="text-sm text-slate-400 mt-1">Médios/Baixos</div>
+        <div class="w-full bg-slate-800 rounded-full h-2 mt-3"><div class="bg-yellow-500 h-2 rounded-full" style="width:40%"></div></div>
+        <div class="text-xs text-yellow-400 mt-1">Backlog de melhorias</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tabs -->
+  <section class="max-w-7xl mx-auto px-6 mb-8 fade-in">
+    <div class="flex gap-2 flex-wrap">
+      <button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium" onclick="filterIssues('all',this)">Todos (23)</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white" onclick="filterIssues('critical',this)">Críticos (3)</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white" onclick="filterIssues('high',this)">Altos (7)</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white" onclick="filterIssues('medium',this)">Médios (8)</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white" onclick="filterIssues('low',this)">Baixos (5)</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white" onclick="filterIssues('security',this)">Segurança</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white" onclick="filterIssues('performance',this)">Performance</button>
+      <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white" onclick="filterIssues('architecture',this)">Arquitetura</button>
+    </div>
+  </section>
+
+  <!-- Issues List -->
+  <main class="max-w-7xl mx-auto px-6 pb-20 space-y-4" id="issues">
+
+    <!-- ==================== CRÍTICOS ==================== -->
+
+    <!-- Issue 1 -->
+    <div class="issue-card glass rounded-xl p-6 severity-critical pulse-critical" data-severity="critical" data-category="architecture" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-red-500/20 text-red-400">CRÍTICO</span>
+          <div>
+            <h3 class="font-semibold text-white">Workflow Update sem $transaction — 7 operações desprotegidas</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">workflows.repository.ts:226-293</code></p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2 h-2 rounded-full bg-red-400"></span>
+              <span class="text-sm font-semibold text-red-400">AS-IS (Atual)</span>
+            </div>
+            <p class="text-sm text-slate-400 mb-3">7 operações sequenciais sem transação. Se o delete de hooks falhar, steps antigos já foram removidos mas novos não criados — workflow corrompido.</p>
+            <pre><code><span class="code-bad">// ❌ Sem $transaction — inconsistência garantida em falha
+const existingSteps = await prisma.workflowStep.findMany(...)
+await prisma.workflowStepMcpServer.deleteMany(...)
+await prisma.workflowStepSkill.deleteMany(...)
+await prisma.workflowStepAgent.deleteMany(...)
+await prisma.workflowStepRule.deleteMany(...)
+await prisma.workflowStepHook.deleteMany(...)
+await prisma.workflowStep.deleteMany(...)
+const workflow = await prisma.workflow.update(...)</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2 h-2 rounded-full bg-green-400"></span>
+              <span class="text-sm font-semibold text-green-400">TO-BE (Proposto)</span>
+            </div>
+            <p class="text-sm text-slate-400 mb-3">Envolver tudo em <code>$transaction</code>. Se qualquer operação falhar, todas são revertidas. Workflow mantém integridade.</p>
+            <pre><code><span class="code-good">// ✅ Tudo atômico — falha reverte tudo
+const workflow = await prisma.$transaction(async (tx) => {
+  await tx.workflowStepMcpServer.deleteMany(...)
+  await tx.workflowStepSkill.deleteMany(...)
+  await tx.workflowStepAgent.deleteMany(...)
+  await tx.workflowStepRule.deleteMany(...)
+  await tx.workflowStepHook.deleteMany(...)
+  await tx.workflowStep.deleteMany(...)
+  return tx.workflow.update(...)
+})</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 2 -->
+    <div class="issue-card glass rounded-xl p-6 severity-critical pulse-critical" data-severity="critical" data-category="security" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-red-500/20 text-red-400">CRÍTICO</span>
+          <div>
+            <h3 class="font-semibold text-white">GitHub Tokens armazenados em plain text</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">User.githubToken</code> + <code class="text-xs">GitAccount.token</code></p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2 h-2 rounded-full bg-red-400"></span>
+              <span class="text-sm font-semibold text-red-400">AS-IS</span>
+            </div>
+            <p class="text-sm text-slate-400 mb-3">Tokens GitHub gravados como String sem qualquer criptografia. Qualquer acesso ao banco expõe tokens de todos os usuários.</p>
+            <pre><code><span class="code-bad">// ❌ Plain text — vazamento do banco = acesso total ao GitHub
+model User {
+  githubToken  String?  @map("github_token")
+}
+model GitAccount {
+  token  String  // plain text!
+}</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2 h-2 rounded-full bg-green-400"></span>
+              <span class="text-sm font-semibold text-green-400">TO-BE</span>
+            </div>
+            <p class="text-sm text-slate-400 mb-3">Criptografia AES-256-GCM com chave em variável de ambiente. Tokens decriptados apenas em runtime quando necessários.</p>
+            <pre><code><span class="code-good">// ✅ Criptografado — banco exposto não revela tokens
+model GitAccount {
+  tokenEncrypted  String  @map("token_encrypted")
+  tokenIv         String  @map("token_iv")  // initialization vector
+}
+
+// Service layer
+function encryptToken(token: string): { encrypted: string, iv: string }
+function decryptToken(encrypted: string, iv: string): string
+// Chave: process.env.TOKEN_ENCRYPTION_KEY (AES-256)</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 3 -->
+    <div class="issue-card glass rounded-xl p-6 severity-critical" data-severity="critical" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-red-500/20 text-red-400">CRÍTICO</span>
+          <div>
+            <h3 class="font-semibold text-white">Metrics carregam TODOS os traces em memória e agregam em JS</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">metrics.routes.ts</code> — /metrics/daily, /metrics/by-workflow</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2 h-2 rounded-full bg-red-400"></span>
+              <span class="text-sm font-semibold text-red-400">AS-IS</span>
+            </div>
+            <p class="text-sm text-slate-400 mb-3"><code>/metrics/by-workflow</code> carrega TODOS os traces do usuário sem limite de tempo e agrega com JavaScript. Risco de OOM.</p>
+            <pre><code><span class="code-bad">// ❌ Carrega tudo em memória — OOM com volume alto
+const traces = await prisma.executionTrace.findMany({
+  where: { conversation: { userId } },
+  // Sem take, sem limite de data
+})
+// Agrega em JS com reduce/map
+const grouped = traces.reduce((acc, t) => { ... })</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2 h-2 rounded-full bg-green-400"></span>
+              <span class="text-sm font-semibold text-green-400">TO-BE</span>
+            </div>
+            <p class="text-sm text-slate-400 mb-3">Usar <code>groupBy</code> do Prisma ou raw SQL com <code>DATE_TRUNC</code> para agregar no banco. Zero dados em memória.</p>
+            <pre><code><span class="code-good">// ✅ Agregação no banco — constante em memória
+const daily = await prisma.executionTrace.groupBy({
+  by: ['conversationId'],
+  where: {
+    conversation: { userId },
+    createdAt: { gte: thirtyDaysAgo },
+  },
+  _count: true,
+  _sum: { totalCostUsd: true, inputTokens: true },
+  _avg: { durationMs: true },
+})
+
+// Ou raw SQL para DATE_TRUNC
+const daily = await prisma.$queryRaw\`
+  SELECT DATE_TRUNC('day', created_at) as day,
+         COUNT(*), SUM(total_cost_usd), AVG(duration_ms)
+  FROM execution_traces et
+  JOIN conversations c ON c.id = et.conversation_id
+  WHERE c.user_id = ${userId}
+  GROUP BY 1 ORDER BY 1\`</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== ALTOS ==================== -->
+
+    <!-- Issue 4 -->
+    <div class="issue-card glass rounded-xl p-6 severity-high" data-severity="high" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-orange-500/20 text-orange-400">ALTO</span>
+          <div>
+            <h3 class="font-semibold text-white">findById carrega TODAS as mensagens — usado em advanceStep/goBack</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">conversations.repository.ts:37-57</code> → <code class="text-xs">conversations.service.ts</code></p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <p class="text-sm text-slate-400 mb-3"><code>findById</code> faz include de TODAS as messages com attachments. Métodos como advanceStep e goBack só precisam do workflow+steps.</p>
+            <pre><code><span class="code-bad">// ❌ advanceStep carrega 1000+ mensagens desnecessárias
+const conv = await conversationsRepository.findById(id)
+// findById inclui: messages (ALL) + attachments + steps
+// advanceStep só usa: workflow.steps, currentStepId</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <p class="text-sm text-slate-400 mb-3">Criar <code>findWithWorkflow</code> que só carrega o necessário. Reservar findById completo para quando mensagens são realmente precisas.</p>
+            <pre><code><span class="code-good">// ✅ Query específica para cada caso de uso
+async findWithWorkflow(id: string) {
+  return prisma.conversation.findUnique({
+    where: { id },
+    include: {
+      workflow: { include: { steps: { orderBy: { stepOrder: 'asc' } } } },
+    },
+  })
+}
+
+// findById completo: só nas rotas que EXIBEM mensagens
+async findById(id: string, messageTake = 50) {
+  return prisma.conversation.findUnique({
+    where: { id },
+    include: {
+      messages: { take: messageTake, orderBy: ... },
+    },
+  })
+}</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 5 -->
+    <div class="issue-card glass rounded-xl p-6 severity-high" data-severity="high" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-orange-500/20 text-orange-400">ALTO</span>
+          <div>
+            <h3 class="font-semibold text-white">Nenhum list endpoint tem paginação — 10+ repositories afetados</h3>
+            <p class="text-sm text-slate-400 mt-1">conversations, skills, agents, rules, hooks, webhooks, workflows, messages, admin/users</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <p class="text-sm text-slate-400 mb-3">Todos os <code>findAll</code> retornam tudo sem <code>take/skip</code>. Com crescimento do sistema, resposta fica cada vez mais lenta.</p>
+            <pre><code><span class="code-bad">// ❌ Retorna TUDO — 10.000 conversas? Sem problema... 💀
+async findAll(userId: string) {
+  return prisma.conversation.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    // Sem take, sem skip, sem cursor
+  })
+}</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <p class="text-sm text-slate-400 mb-3">Paginação cursor-based (mais eficiente que offset) com retorno de metadados. Padrão reutilizável em todos os repositories.</p>
+            <pre><code><span class="code-good">// ✅ Cursor-based pagination — constante em qualquer volume
+async findAll(userId: string, opts?: {
+  take?: number, cursor?: string, search?: string
+}) {
+  const take = opts?.take ?? 20
+  const [items, total] = await prisma.$transaction([
+    prisma.conversation.findMany({
+      where: { userId },
+      take: take + 1,  // +1 para saber se tem próxima
+      ...(opts?.cursor && { cursor: { id: opts.cursor }, skip: 1 }),
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, title: true, createdAt: true },
+    }),
+    prisma.conversation.count({ where: { userId } }),
+  ])
+  return {
+    items: items.slice(0, take),
+    hasMore: items.length > take,
+    total,
+  }
+}</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 6 -->
+    <div class="issue-card glass rounded-xl p-6 severity-high" data-severity="high" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-orange-500/20 text-orange-400">ALTO</span>
+          <div>
+            <h3 class="font-semibold text-white">Webhooks filtrados em memória com JSON.parse — campo events é String</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">webhooks.repository.ts:60-68</code></p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <pre><code><span class="code-bad">// ❌ Busca TODOS webhooks e filtra em JS
+const webhooks = await prisma.webhook.findMany({
+  where: { userId, enabled: true },
+})
+return webhooks.filter(w => {
+  const events = JSON.parse(w.events)
+  return events.includes(event) || events.includes('*')
+})</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <pre><code><span class="code-good">// ✅ Filtra no banco com operador JSON do PostgreSQL
+const webhooks = await prisma.$queryRaw\`
+  SELECT * FROM webhooks
+  WHERE user_id = ${userId}
+    AND enabled = true
+    AND (events::jsonb ? ${event} OR events::jsonb ? '*')
+\`
+
+// Alternativa: criar tabela WebhookEvent (N:M)
+// para queries sem JSON</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 7 -->
+    <div class="issue-card glass rounded-xl p-6 severity-high" data-severity="high" data-category="architecture" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-orange-500/20 text-orange-400">ALTO</span>
+          <div>
+            <h3 class="font-semibold text-white">10+ campos JSON String que deveriam ser relações ou JSONB tipado</h3>
+            <p class="text-sm text-slate-400 mt-1">conditions, validators, dependsOn, tools, events, manifest, envVars, args, resourceIds...</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <p class="text-sm text-slate-400 mb-3">Dados complexos armazenados como String JSON. Sem validação no banco, sem queries, JSON.parse em todo lugar.</p>
+            <pre><code><span class="code-bad">// ❌ String que esconde estrutura — sem validação
+conditions   String @default("{}")    // JSON object
+validators   String @default("[]")    // JSON array
+dependsOn    String @default("[]")    // JSON array of step IDs
+tools        String @default("[]")    // JSON array
+events       String @default("[]")    // JSON array
+metadata     String @default("{}")    // JSON object</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <p class="text-sm text-slate-400 mb-3">Usar tipo <code>Json</code> do Prisma (mapeia para JSONB no PostgreSQL). Permite queries JSON nativas e validação.</p>
+            <pre><code><span class="code-good">// ✅ Tipo Json — validação e queries nativas
+conditions   Json   @default("{}")    // JSONB no PostgreSQL
+validators   Json   @default("[]")    // Queryable via @>
+dependsOn    Json   @default("[]")    // FK check via trigger
+metadata     Json   @default("{}")
+
+// Queries nativas possíveis:
+prisma.webhook.findMany({
+  where: { events: { array_contains: ['execution.complete'] } }
+})</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 8 -->
+    <div class="issue-card glass rounded-xl p-6 severity-high" data-severity="high" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-orange-500/20 text-orange-400">ALTO</span>
+          <div>
+            <h3 class="font-semibold text-white">List endpoints retornam body/systemPrompt/fileManifest inteiros</h3>
+            <p class="text-sm text-slate-400 mt-1">skills, agents, rules, hooks — campos gigantes em listagens</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <pre><code><span class="code-bad">// ❌ findAll retorna TODOS os campos
+// body, systemPrompt, fileManifest podem ter 100KB+ cada
+async findAll(userId: string) {
+  return prisma.skill.findMany({
+    where: { userId },
+    // Sem select — transfere megabytes de texto
+  })
+}</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <pre><code><span class="code-good">// ✅ select apenas campos da listagem
+async findAll(userId: string) {
+  return prisma.skill.findMany({
+    where: { userId },
+    select: {
+      id: true, name: true, description: true,
+      enabled: true, isGlobal: true, source: true,
+      createdAt: true, updatedAt: true,
+      // body, frontmatter, fileManifest: EXCLUÍDOS
+    },
+    orderBy: { name: 'asc' },
+  })
+}
+// body/fileManifest só no findById (detalhe)</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 9 -->
+    <div class="issue-card glass rounded-xl p-6 severity-high" data-severity="high" data-category="architecture" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-orange-500/20 text-orange-400">ALTO</span>
+          <div>
+            <h3 class="font-semibold text-white">Sem connection pooling configurado no Prisma</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">prisma/schema.prisma</code> — datasource sem connection_limit</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <pre><code><span class="code-bad">// ❌ Sem limite de conexões
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Default: num_cpus * 2 + 1 conexões
+  // fileSyncService faz 6 queries paralelas por execução
+  // 3 execuções simultâneas = 18+ conexões abertas
+}</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <pre><code><span class="code-good">// ✅ Pool configurado com limites
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Na DATABASE_URL:
+// ?connection_limit=20&pool_timeout=10
+
+// Ou usar PgBouncer como proxy:
+// DATABASE_URL="...?pgbouncer=true&connection_limit=10"</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 10 -->
+    <div class="issue-card glass rounded-xl p-6 severity-high" data-severity="high" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-orange-500/20 text-orange-400">ALTO</span>
+          <div>
+            <h3 class="font-semibold text-white">N+1 em webhooks.dispatch — deliveries criados em loop sequencial</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">webhooks.service.ts:14-33</code></p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <pre><code><span class="code-bad">// ❌ N creates sequenciais
+for (const webhook of webhooks) {
+  const delivery = await prisma.webhookDelivery.create({
+    data: { webhookId: webhook.id, payload, status: 'pending' },
+  })
+  this.deliverWithRetry(webhook, delivery)
+}</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <pre><code><span class="code-good">// ✅ Batch insert + parallel dispatch
+const deliveries = await prisma.webhookDelivery.createManyAndReturn({
+  data: webhooks.map(w => ({
+    webhookId: w.id, payload, status: 'pending',
+  })),
+})
+await Promise.allSettled(
+  deliveries.map((d, i) => this.deliverWithRetry(webhooks[i], d))
+)</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== MÉDIOS ==================== -->
+
+    <!-- Issue 11 -->
+    <div class="issue-card glass rounded-xl p-6 severity-medium" data-severity="medium" data-category="architecture" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-yellow-500/20 text-yellow-400">MÉDIO</span>
+          <div>
+            <h3 class="font-semibold text-white">tokenBudget read-update sem transaction — race condition no reset</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">token-budget-service.ts:18-46</code></p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <p class="text-sm text-slate-400 mb-3">Lê budget → verifica se precisa reset → atualiza. Dois requests simultâneos podem ler o mesmo valor antigo.</p>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <p class="text-sm text-slate-400 mb-3">Usar <code>prisma.$transaction</code> com isolation level <code>Serializable</code> ou atomic increment com <code>prisma.$executeRaw</code>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 12 -->
+    <div class="issue-card glass rounded-xl p-6 severity-medium" data-severity="medium" data-category="architecture" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-yellow-500/20 text-yellow-400">MÉDIO</span>
+          <div>
+            <h3 class="font-semibold text-white">executionState metadata merge sem transaction — perda de dados</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">execution-state.ts:106-129</code> — read → merge JS → write</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <pre><code><span class="code-bad">// ❌ Read-merge-write sem lock
+const state = await prisma.executionState.findUnique(...)
+const merged = { ...JSON.parse(state.metadata), ...newMeta }
+await prisma.executionState.update({ data: { metadata: JSON.stringify(merged) } })</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <pre><code><span class="code-good">// ✅ Atomic JSON merge no PostgreSQL
+await prisma.$executeRaw\`
+  UPDATE execution_state
+  SET metadata = metadata::jsonb || ${JSON.stringify(newMeta)}::jsonb
+  WHERE id = ${id}\`</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 13 -->
+    <div class="issue-card glass rounded-xl p-6 severity-medium" data-severity="medium" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-yellow-500/20 text-yellow-400">MÉDIO</span>
+          <div>
+            <h3 class="font-semibold text-white">findByIdSimple usado 6x só para verificar existência</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">conversations.routes.ts</code> — linhas 210, 283, 408, 454, 488, 554</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <pre><code><span class="code-bad">// ❌ Busca todos os campos só para checar existência
+const conv = await conversationsRepository.findByIdSimple(id)
+if (!conv) return reply.status(404)...</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <pre><code><span class="code-good">// ✅ count ou select apenas id
+async exists(id: string, userId: string): Promise&lt;boolean&gt; {
+  const count = await prisma.conversation.count({
+    where: { id, userId },
+  })
+  return count > 0
+}</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 14 -->
+    <div class="issue-card glass rounded-xl p-6 severity-medium" data-severity="medium" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-yellow-500/20 text-yellow-400">MÉDIO</span>
+          <div>
+            <h3 class="font-semibold text-white">Índices compostos faltando para queries frequentes</h3>
+            <p class="text-sm text-slate-400 mt-1">ExecutionTrace, ExecutionState, Webhook — 3 índices missing</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <pre><code><span class="code-bad">// ❌ Índices individuais — full table scan em queries compostas
+ExecutionTrace: @@index([conversationId]) @@index([stepId])
+ExecutionState: @@index([conversationId]) @@index([state])
+Webhook: @@index([userId])  // sem enabled</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <pre><code><span class="code-good">// ✅ Índices compostos para queries reais
+ExecutionTrace: @@index([conversationId, stepId])
+ExecutionState: @@index([conversationId, state])
+Webhook: @@index([userId, enabled])</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issue 15-18 (médios compactos) -->
+    <div class="issue-card glass rounded-xl p-6 severity-medium" data-severity="medium" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-yellow-500/20 text-yellow-400">MÉDIO</span>
+          <div>
+            <h3 class="font-semibold text-white">fileSyncService faz 6 queries paralelas quando 1 bastaria</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">file-sync-service.ts:91-117</code></p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <p class="text-sm text-slate-400">6 queries em Promise.all: 1 para step include, 5 para globais (skills, agents, rules, mcpServers, hooks). 6 roundtrips ao banco por execução.</p>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <p class="text-sm text-slate-400">Usar raw query com UNION ou uma view materializada. Ou agrupar as 5 queries globais em uma única query com OR conditions.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="issue-card glass rounded-xl p-6 severity-medium" data-severity="medium" data-category="architecture" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-yellow-500/20 text-yellow-400">MÉDIO</span>
+          <div>
+            <h3 class="font-semibold text-white">Sem graceful shutdown — prisma.$disconnect() nunca chamado</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">prisma.ts</code> — conexões ficam penduradas no PostgreSQL após restart</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <p class="text-sm text-slate-400">Nenhum hook de shutdown. Conexões ficam abertas até timeout do PostgreSQL.</p>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <pre><code><span class="code-good">// No server.ts
+process.on('SIGTERM', async () => {
+  await server.close()
+  await prisma.$disconnect()
+  process.exit(0)
+})</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="issue-card glass rounded-xl p-6 severity-medium" data-severity="medium" data-category="architecture" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-yellow-500/20 text-yellow-400">MÉDIO</span>
+          <div>
+            <h3 class="font-semibold text-white">Enums como String ao invés de Prisma enum — sem validação no banco</h3>
+            <p class="text-sm text-slate-400 mt-1">role, type, state, status, source, handlerType, eventType...</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+          <div class="as-is rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-sm font-semibold text-red-400">AS-IS</span></div>
+            <pre><code><span class="code-bad">role    String @default("developer") // nada impede "hacker"
+type    String @default("sequential") // pode ser "banana"
+state   String @default("queued")     // qualquer string aceita</span></code></pre>
+          </div>
+          <div class="to-be rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="w-2 h-2 rounded-full bg-green-400"></span><span class="text-sm font-semibold text-green-400">TO-BE</span></div>
+            <pre><code><span class="code-good">enum UserRole { admin developer viewer }
+enum WorkflowType { sequential dag step_by_step }
+enum ExecutionStatus { queued running completed failed cancelled }
+
+model User { role UserRole @default(developer) }
+model Workflow { type WorkflowType @default(sequential) }</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="issue-card glass rounded-xl p-6 severity-medium" data-severity="medium" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-yellow-500/20 text-yellow-400">MÉDIO</span>
+          <div>
+            <h3 class="font-semibold text-white">getOrCreateConversation faz create + re-fetch separados</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">workflow-api.routes.ts:22-57</code> — 2 queries quando 1 bastaria</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail"><div class="mt-4 text-sm text-slate-400">Criar conversation já com <code>include: { workflow: { include: { steps } } }</code> no próprio create, eliminando o re-fetch.</div></div>
+    </div>
+
+    <!-- ==================== BAIXOS ==================== -->
+
+    <div class="issue-card glass rounded-xl p-6 severity-low" data-severity="low" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-blue-500/20 text-blue-400">BAIXO</span>
+          <div>
+            <h3 class="font-semibold text-white">sessionManager.saveSession faz count redundante antes de upsert</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">session-manager.ts:26-49</code> — FK violation já indica step inexistente</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail"><div class="mt-4 text-sm text-slate-400">Remover o <code>stepExists</code> check. O upsert já falhará com FK violation se o step não existir. Try/catch no upsert é suficiente.</div></div>
+    </div>
+
+    <div class="issue-card glass rounded-xl p-6 severity-low" data-severity="low" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-blue-500/20 text-blue-400">BAIXO</span>
+          <div>
+            <h3 class="font-semibold text-white">updateActions faz findUnique + update — poderia ser atomic</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">messages.repository.ts:114-137</code></p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail"><div class="mt-4 text-sm text-slate-400">Com metadata como JSONB, usar <code>jsonb_set</code> via raw query para atomic update sem read prévio.</div></div>
+    </div>
+
+    <div class="issue-card glass rounded-xl p-6 severity-low" data-severity="low" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-blue-500/20 text-blue-400">BAIXO</span>
+          <div>
+            <h3 class="font-semibold text-white">Existence checks redundantes — findById antes de operações que já validam</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">execution.routes.ts</code> — PUT /messages/:id/select, /messages/:id/actions</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail"><div class="mt-4 text-sm text-slate-400">Remover o findById prévio. Fazer o update/toggle diretamente e tratar o <code>RecordNotFound</code> do Prisma como 404.</div></div>
+    </div>
+
+    <div class="issue-card glass rounded-xl p-6 severity-low" data-severity="low" data-category="performance" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-blue-500/20 text-blue-400">BAIXO</span>
+          <div>
+            <h3 class="font-semibold text-white">Executions endpoint faz 3 queries para dados que caberiam em 1</h3>
+            <p class="text-sm text-slate-400 mt-1"><code class="text-xs">workflow-api.routes.ts:517-557</code> — findUnique + count + findMany</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail"><div class="mt-4 text-sm text-slate-400">Consolidar em <code>$transaction([findUnique, count, findMany])</code> para single roundtrip. Ou usar include com _count.</div></div>
+    </div>
+
+    <div class="issue-card glass rounded-xl p-6 severity-low" data-severity="low" data-category="architecture" onclick="this.classList.toggle('open')">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <span class="flex-shrink-0 px-2 py-1 rounded text-xs font-bold bg-blue-500/20 text-blue-400">BAIXO</span>
+          <div>
+            <h3 class="font-semibold text-white">Sem soft delete — dados removidos permanentemente</h3>
+            <p class="text-sm text-slate-400 mt-1">Todas as tabelas usam cascade hard delete</p>
+          </div>
+        </div>
+        <svg class="w-5 h-5 text-slate-500 chevron flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="detail"><div class="mt-4 text-sm text-slate-400">Adicionar <code>deletedAt DateTime?</code> nas tabelas principais (User, Workflow, Conversation) e middleware Prisma para filtrar automaticamente.</div></div>
+    </div>
+
+  </main>
+
+  <!-- Roadmap -->
+  <section class="max-w-7xl mx-auto px-6 pb-20 fade-in">
+    <h2 class="text-2xl font-bold mb-8 text-white">Roadmap de Implementação</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="glass rounded-2xl p-6 border-l-4 border-red-500">
+        <h3 class="font-bold text-red-400 mb-2">Sprint 1 — Urgente</h3>
+        <p class="text-xs text-slate-500 mb-4">1-2 semanas</p>
+        <ul class="space-y-2 text-sm text-slate-300">
+          <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">●</span> $transaction no workflow update</li>
+          <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">●</span> Criptografar GitHub tokens</li>
+          <li class="flex items-start gap-2"><span class="text-red-400 mt-0.5">●</span> Agregar metrics no banco (não em JS)</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t border-slate-700/50">
+          <div class="text-xs text-slate-500">Score após: <span class="text-amber-400 font-bold">60 → 75</span></div>
+        </div>
+      </div>
+      <div class="glass rounded-2xl p-6 border-l-4 border-orange-500">
+        <h3 class="font-bold text-orange-400 mb-2">Sprint 2 — Performance</h3>
+        <p class="text-xs text-slate-500 mb-4">2-3 semanas</p>
+        <ul class="space-y-2 text-sm text-slate-300">
+          <li class="flex items-start gap-2"><span class="text-orange-400 mt-0.5">●</span> Paginação em todos os list endpoints</li>
+          <li class="flex items-start gap-2"><span class="text-orange-400 mt-0.5">●</span> findWithWorkflow (sem mensagens)</li>
+          <li class="flex items-start gap-2"><span class="text-orange-400 mt-0.5">●</span> select nos list de skills/agents/rules</li>
+          <li class="flex items-start gap-2"><span class="text-orange-400 mt-0.5">●</span> Connection pooling</li>
+          <li class="flex items-start gap-2"><span class="text-orange-400 mt-0.5">●</span> Índices compostos</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t border-slate-700/50">
+          <div class="text-xs text-slate-500">Score após: <span class="text-green-400 font-bold">75 → 88</span></div>
+        </div>
+      </div>
+      <div class="glass rounded-2xl p-6 border-l-4 border-blue-500">
+        <h3 class="font-bold text-blue-400 mb-2">Sprint 3 — Arquitetura</h3>
+        <p class="text-xs text-slate-500 mb-4">3-4 semanas</p>
+        <ul class="space-y-2 text-sm text-slate-300">
+          <li class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">●</span> Migrar String JSON → JSONB</li>
+          <li class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">●</span> Prisma enums para roles/types/states</li>
+          <li class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">●</span> Graceful shutdown</li>
+          <li class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">●</span> Soft delete nas tabelas principais</li>
+          <li class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">●</span> Webhook events como relação N:M</li>
+        </ul>
+        <div class="mt-4 pt-4 border-t border-slate-700/50">
+          <div class="text-xs text-slate-500">Score após: <span class="text-green-400 font-bold">88 → 95</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 py-6 mt-10">
+    <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-slate-500">
+      <a href="10-tempo-real-filas.html" class="hover:text-white transition">← 10 Tempo Real</a>
+      <span class="text-slate-600">Orquetrador Claude</span>
+      <a href="index.html" class="hover:text-white transition">Início →</a>
+    </div>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+
+    // Filter tabs
+    function filterIssues(filter, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      document.querySelectorAll('.issue-card').forEach(card => {
+        if (filter === 'all') {
+          card.style.display = '';
+        } else if (['critical','high','medium','low'].includes(filter)) {
+          card.style.display = card.dataset.severity === filter ? '' : 'none';
+        } else {
+          card.style.display = card.dataset.category === filter ? '' : 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
