@@ -25,6 +25,10 @@ import { workflowApiRoutes } from './workflows/workflow-api.routes.js'
 import { workflowVersionsRoutes } from './workflows/workflow-versions.routes.js'
 import { tagsRoutes } from './tags/tags.routes.js'
 import { metricsAggregatorRoutes } from './execution/monitoring/metrics-aggregator.routes.js'
+import { executionRatingsRoutes } from './execution/monitoring/execution-ratings.routes.js'
+import { hourlyTokenUsageRoutes } from './execution/monitoring/hourly-token-usage.routes.js'
+import { resourcePerformanceRoutes } from './execution/monitoring/resource-performance.routes.js'
+import { gitSourceRoutes } from './resources/git-source.routes.js'
 
 export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   authRoutes,
@@ -52,4 +56,8 @@ export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   workflowVersionsRoutes,
   tagsRoutes,
   metricsAggregatorRoutes,
+  executionRatingsRoutes,
+  hourlyTokenUsageRoutes,
+  resourcePerformanceRoutes,
+  gitSourceRoutes,
 ]

@@ -80,36 +80,38 @@ enum ResourceType {
 // USERS
 // ============================================
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  passwordHash String     @map("password_hash")
-  name         String?
-  githubToken  String?    @map("github_token")
-  status       UserStatus @default(active)
-  role         UserRole   @default(developer)
-  preferences  Json       @default("{}")
-  lastLoginAt  DateTime?  @map("last_login_at")
-  maxConcurrentExecutions Int @default(5) @map("max_concurrent_executions")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at")
+  id                      String     @id @default(uuid())
+  email                   String     @unique
+  passwordHash            String     @map("password_hash")
+  name                    String?
+  githubToken             String?    @map("github_token")
+  status                  UserStatus @default(active)
+  role                    UserRole   @default(developer)
+  preferences             Json       @default("{}")
+  lastLoginAt             DateTime?  @map("last_login_at")
+  maxConcurrentExecutions Int        @default(5) @map("max_concurrent_executions")
+  createdAt               DateTime   @default(now()) @map("created_at")
+  updatedAt               DateTime   @default(now()) @updatedAt @map("updated_at")
 
-  workflows     Workflow[]
-  conversations Conversation[]
-  mcpServers    McpServer[]
-  skills        Skill[]
-  agents        Agent[]
-  rules         Rule[]
-  plugins       Plugin[]
-  hooks         Hook[]
-  apiKeys       ApiKey[]
-  tokenBudget   UserTokenBudget?
-  webhooks      Webhook[]
-  promptVersions PromptVersion[]
-  gitAccounts   GitAccount[]
+  workflows         Workflow[]
+  conversations     Conversation[]
+  mcpServers        McpServer[]
+  skills            Skill[]
+  agents            Agent[]
+  rules             Rule[]
+  plugins           Plugin[]
+  hooks             Hook[]
+  apiKeys           ApiKey[]
+  tokenBudget       UserTokenBudget?
+  webhooks          Webhook[]
+  promptVersions    PromptVersion[]
+  gitAccounts       GitAccount[]
   tokenUsageHistory TokenUsageHistory[]
-  auditLogs     AuditLog[]
-  tags          Tag[]
-  stepTemplates StepTemplate[]
+  auditLogs         AuditLog[]
+  tags              Tag[]
+  stepTemplates     StepTemplate[]
+  hourlyTokenUsage  HourlyTokenUsage[]
+  executionRatings  ExecutionRating[]
 
   @@map("users")
 }
@@ -118,18 +120,18 @@ model User {
 // API KEYS (for MCP Server & external access)
 // ============================================
 model ApiKey {
-  id        String    @id @default(uuid())
-  name      String
-  keyHash   String    @unique @map("key_hash")
-  prefix    String    // first 8 chars for identification (e.g. "exk_abc1")
-  scopes    Json      @default("[]") // JSON array of allowed scopes
-  rateLimit Int?      @map("rate_limit") // requests per minute
-  usageCount Int      @default(0) @map("usage_count")
-  ipWhitelist Json    @default("[]") @map("ip_whitelist") // JSON array of allowed IPs
-  lastUsedAt DateTime? @map("last_used_at")
-  expiresAt DateTime?  @map("expires_at")
-  revoked   Boolean   @default(false)
-  createdAt DateTime  @default(now()) @map("created_at")
+  id          String    @id @default(uuid())
+  name        String
+  keyHash     String    @unique @map("key_hash")
+  prefix      String // first 8 chars for identification (e.g. "exk_abc1")
+  scopes      Json      @default("[]") // JSON array of allowed scopes
+  rateLimit   Int?      @map("rate_limit") // requests per minute
+  usageCount  Int       @default(0) @map("usage_count")
+  ipWhitelist Json      @default("[]") @map("ip_whitelist") // JSON array of allowed IPs
+  lastUsedAt  DateTime? @map("last_used_at")
+  expiresAt   DateTime? @map("expires_at")
+  revoked     Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @map("created_at")
 
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -143,16 +145,16 @@ model ApiKey {
 // WORKFLOWS
 // ============================================
 model Workflow {
-  id          String         @id @default(uuid())
-  name        String
-  description String?
-  type        String         @default("sequential")
-  status      WorkflowStatus @default(active)
-  tags        Json           @default("[]")
-  lastExecutedAt DateTime?   @map("last_executed_at")
-  executionCount Int         @default(0) @map("execution_count")
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at")
+  id             String         @id @default(uuid())
+  name           String
+  description    String?
+  type           String         @default("sequential")
+  status         WorkflowStatus @default(active)
+  tags           Json           @default("[]")
+  lastExecutedAt DateTime?      @map("last_executed_at")
+  executionCount Int            @default(0) @map("execution_count")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @default(now()) @updatedAt @map("updated_at")
 
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -174,8 +176,8 @@ model WorkflowStep {
   stepOrder  Int    @map("step_order")
 
   // Prompts
-  systemPrompt       String?  @map("system_prompt")
-  useBasePrompt      Boolean  @default(true) @map("use_base_prompt")
+  systemPrompt  String? @map("system_prompt")
+  useBasePrompt Boolean @default(true) @map("use_base_prompt")
 
   // Conditions (now native Json)
   conditions Json @default("{}")
@@ -197,11 +199,11 @@ model WorkflowStep {
   model   String?
 
   // Error handling & timeout
-  timeout      Int?             @default(300000) // ms, default 5min
-  errorHandler StepErrorHandler @default(fail) @map("error_handler")
-  skipCondition String?         @map("skip_condition") // expression to evaluate
-  subWorkflowId String?         @map("sub_workflow_id") // for sub-workflow steps
-  outputSchema  Json?           @map("output_schema") // expected output JSON schema
+  timeout       Int?             @default(300000) // ms, default 5min
+  errorHandler  StepErrorHandler @default(fail) @map("error_handler")
+  skipCondition String?          @map("skip_condition") // expression to evaluate
+  subWorkflowId String?          @map("sub_workflow_id") // for sub-workflow steps
+  outputSchema  Json?            @map("output_schema") // expected output JSON schema
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -230,15 +232,15 @@ model WorkflowStep {
 // WORKFLOW VERSIONS
 // ============================================
 model WorkflowVersion {
-  id          String   @id @default(uuid())
-  version     Int
-  snapshot    Json     // complete workflow+steps snapshot
-  diff        Json?    // structural diff from previous version
-  changelog   String?
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid())
+  version   Int
+  snapshot  Json // complete workflow+steps snapshot
+  diff      Json? // structural diff from previous version
+  changelog String?
+  createdAt DateTime @default(now()) @map("created_at")
 
   workflowId String   @map("workflow_id")
-  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   @@unique([workflowId, version])
   @@index([workflowId])
@@ -249,34 +251,34 @@ model WorkflowVersion {
 // CONVERSATIONS
 // ============================================
 model Conversation {
-  id             String             @id @default(uuid())
-  title          String?
-  projectPath    String?            @map("project_path")
-  status         ConversationStatus @default(active)
-  totalTokensUsed Int               @default(0) @map("total_tokens_used")
-  totalCostUsd   Float?             @map("total_cost_usd")
-  lastMessageAt  DateTime?          @map("last_message_at")
-  isArchived     Boolean            @default(false) @map("is_archived")
-  tags           Json               @default("[]")
-  parentId       String?            @map("parent_id") // fork support
-  createdAt      DateTime           @default(now()) @map("created_at")
-  updatedAt      DateTime           @default(now()) @updatedAt @map("updated_at")
+  id              String             @id @default(uuid())
+  title           String?
+  projectPath     String?            @map("project_path")
+  status          ConversationStatus @default(active)
+  totalTokensUsed Int                @default(0) @map("total_tokens_used")
+  totalCostUsd    Float?             @map("total_cost_usd")
+  lastMessageAt   DateTime?          @map("last_message_at")
+  isArchived      Boolean            @default(false) @map("is_archived")
+  tags            Json               @default("[]")
+  parentId        String?            @map("parent_id") // fork support
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at")
 
   // Relations
-  userId        String       @map("user_id")
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workflowId    String       @map("workflow_id")
-  workflow      Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  currentStepId String?      @map("current_step_id")
+  userId        String        @map("user_id")
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workflowId    String        @map("workflow_id")
+  workflow      Workflow      @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  currentStepId String?       @map("current_step_id")
   currentStep   WorkflowStep? @relation("CurrentStep", fields: [currentStepId], references: [id], onDelete: SetNull)
 
   // Reverse relations
-  messages        Message[]
-  sessions        ConversationSession[]
-  stepMemories    StepMemory[]
-  executionStates ExecutionState[]
-  executionLogs   ExecutionLog[]
-  executionTraces ExecutionTrace[]
+  messages         Message[]
+  sessions         ConversationSession[]
+  stepMemories     StepMemory[]
+  executionStates  ExecutionState[]
+  executionLogs    ExecutionLog[]
+  executionTraces  ExecutionTrace[]
   messageFeedbacks MessageFeedback[]
 
   @@index([userId])
@@ -289,20 +291,20 @@ model Conversation {
 // MESSAGES
 // ============================================
 model Message {
-  id                 String  @id @default(uuid())
+  id                 String   @id @default(uuid())
   role               String
   content            String
-  selectedForContext Boolean @default(false) @map("selected_for_context")
+  selectedForContext Boolean  @default(false) @map("selected_for_context")
   metadata           Json?
-  tokenCount         Int?    @map("token_count")
+  tokenCount         Int?     @map("token_count")
   model              String?
   createdAt          DateTime @default(now()) @map("created_at")
 
   // Relations
-  conversationId String       @map("conversation_id")
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  stepId         String?      @map("step_id")
-  step           WorkflowStep? @relation(fields: [stepId], references: [id], onDelete: SetNull)
+  conversationId String              @map("conversation_id")
+  conversation   Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  stepId         String?             @map("step_id")
+  step           WorkflowStep?       @relation(fields: [stepId], references: [id], onDelete: SetNull)
   attachments    MessageAttachment[]
   feedbacks      MessageFeedback[]
 
@@ -317,7 +319,7 @@ model Message {
 // ============================================
 model MessageFeedback {
   id        String   @id @default(uuid())
-  rating    Int      // 1-5
+  rating    Int // 1-5
   comment   String?
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -338,8 +340,8 @@ model MessageAttachment {
   id          String   @id @default(uuid())
   filename    String
   mimeType    String   @map("mime_type")
-  size        Int      // bytes
-  path        String   // relative path on disk
+  size        Int // bytes
+  path        String // relative path on disk
   projectPath String   @map("project_path") // absolute path in project dir (for Claude CLI)
   url         String   @default("") // URL to serve the file
   createdAt   DateTime @default(now()) @map("created_at")
@@ -376,7 +378,7 @@ model ConversationSession {
 // ============================================
 model StepMemory {
   id        String   @id @default(uuid())
-  content   String   // Resumo acumulado da conversa para este step
+  content   String // Resumo acumulado da conversa para este step
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -439,27 +441,27 @@ model ExecutionLog {
 // MCP SERVERS
 // ============================================
 model McpServer {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
   description String?
-  type        String   @default("http") // http | sse | stdio
+  type        String    @default("http") // http | sse | stdio
   uri         String?
   command     String?
-  args        Json     @default("[]")
-  envVars     Json     @default("{}") @map("env_vars")
-  enabled     Boolean  @default(true)
-  isGlobal    Boolean  @default(false) @map("is_global")
-  toolsCache  Json?    @map("tools_cache")
+  args        Json      @default("[]")
+  envVars     Json      @default("{}") @map("env_vars")
+  enabled     Boolean   @default(true)
+  isGlobal    Boolean   @default(false) @map("is_global")
+  toolsCache  Json?     @map("tools_cache")
   lastTestAt  DateTime? @map("last_test_at")
   lastTestOk  Boolean?  @map("last_test_ok")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  userId      String   @map("user_id")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String                  @map("user_id")
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   stepServers WorkflowStepMcpServer[]
-  pluginId    String?  @map("plugin_id")
-  plugin      Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
+  pluginId    String?                 @map("plugin_id")
+  plugin      Plugin?                 @relation(fields: [pluginId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@map("mcp_servers")
@@ -469,36 +471,37 @@ model McpServer {
 // SKILLS
 // ============================================
 model Skill {
-  id           String   @id @default(uuid())
+  id           String  @id @default(uuid())
   name         String
   description  String?
-  frontmatter  Json     @default("{}")
-  body         String   @default("")
-  allowedTools Json     @default("[]") @map("allowed_tools")
+  frontmatter  Json    @default("{}")
+  body         String  @default("")
+  allowedTools Json    @default("[]") @map("allowed_tools")
   model        String?
-  enabled      Boolean  @default(true)
-  isGlobal     Boolean  @default(false) @map("is_global")
-  source       String   @default("manual") // manual | imported
-  repoUrl      String?  @map("repo_url")
-  projectPath  String?  @map("project_path")
+  enabled      Boolean @default(true)
+  isGlobal     Boolean @default(false) @map("is_global")
+  source       String  @default("manual") // manual | imported
+  repoUrl      String? @map("repo_url")
+  projectPath  String? @map("project_path")
 
   // Structured GitHub tracking
-  repoOwner    String?  @map("repo_owner")
-  repoName     String?  @map("repo_name")
-  repoBranch   String?  @default("main") @map("repo_branch")
-  repoPath     String?  @map("repo_path")
-  fileManifest Json     @default("[]") @map("file_manifest")
+  repoOwner    String?   @map("repo_owner")
+  repoName     String?   @map("repo_name")
+  repoBranch   String?   @default("main") @map("repo_branch")
+  repoPath     String?   @map("repo_path")
+  fileManifest Json      @default("[]") @map("file_manifest")
   lastSyncedAt DateTime? @map("last_synced_at")
 
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  userId     String   @map("user_id")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String              @map("user_id")
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   stepSkills WorkflowStepSkill[]
+  agentSkills AgentSkill[]
   rules      Rule[]
-  pluginId   String?  @map("plugin_id")
-  plugin     Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
+  pluginId   String?             @map("plugin_id")
+  plugin     Plugin?             @relation(fields: [pluginId], references: [id], onDelete: SetNull)
 
   @@unique([name, userId])
   @@index([userId])
@@ -509,37 +512,38 @@ model Skill {
 // AGENTS
 // ============================================
 model Agent {
-  id              String   @id @default(uuid())
+  id              String  @id @default(uuid())
   name            String
   description     String?
-  systemPrompt    String   @default("") @map("system_prompt")
-  tools           Json     @default("[]")
-  disallowedTools Json     @default("[]") @map("disallowed_tools")
+  systemPrompt    String  @default("") @map("system_prompt")
+  tools           Json    @default("[]")
+  disallowedTools Json    @default("[]") @map("disallowed_tools")
   model           String?
-  permissionMode  String   @default("default") @map("permission_mode")
-  maxTurns        Int?     @map("max_turns")
-  skills          Json     @default("[]")
-  enabled         Boolean  @default(true)
-  isGlobal        Boolean  @default(false) @map("is_global")
-  source          String   @default("manual") // manual | imported
-  repoUrl         String?  @map("repo_url")
-  projectPath     String?  @map("project_path")
+  permissionMode  String  @default("default") @map("permission_mode")
+  maxTurns        Int?    @map("max_turns")
+  skills          Json    @default("[]")
+  enabled         Boolean @default(true)
+  isGlobal        Boolean @default(false) @map("is_global")
+  source          String  @default("manual") // manual | imported
+  repoUrl         String? @map("repo_url")
+  projectPath     String? @map("project_path")
 
   // Structured GitHub tracking
-  repoOwner    String?  @map("repo_owner")
-  repoName     String?  @map("repo_name")
-  repoBranch   String?  @default("main") @map("repo_branch")
-  repoPath     String?  @map("repo_path")
+  repoOwner    String?   @map("repo_owner")
+  repoName     String?   @map("repo_name")
+  repoBranch   String?   @default("main") @map("repo_branch")
+  repoPath     String?   @map("repo_path")
   lastSyncedAt DateTime? @map("last_synced_at")
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  userId     String   @map("user_id")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String              @map("user_id")
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   stepAgents WorkflowStepAgent[]
-  pluginId   String?  @map("plugin_id")
-  plugin     Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
+  agentSkills AgentSkill[]
+  pluginId   String?             @map("plugin_id")
+  plugin     Plugin?             @relation(fields: [pluginId], references: [id], onDelete: SetNull)
 
   @@unique([name, userId])
   @@index([userId])
@@ -550,32 +554,32 @@ model Agent {
 // RULES
 // ============================================
 model Rule {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   description String?
-  body        String   @default("")
-  enabled     Boolean  @default(true)
-  isGlobal    Boolean  @default(false) @map("is_global")
-  source      String   @default("manual")
-  repoUrl     String?  @map("repo_url")
-  projectPath String?  @map("project_path")
+  body        String  @default("")
+  enabled     Boolean @default(true)
+  isGlobal    Boolean @default(false) @map("is_global")
+  source      String  @default("manual")
+  repoUrl     String? @map("repo_url")
+  projectPath String? @map("project_path")
 
   // Structured GitHub tracking
-  repoOwner    String?  @map("repo_owner")
-  repoName     String?  @map("repo_name")
-  repoBranch   String?  @default("main") @map("repo_branch")
-  repoPath     String?  @map("repo_path")
+  repoOwner    String?   @map("repo_owner")
+  repoName     String?   @map("repo_name")
+  repoBranch   String?   @default("main") @map("repo_branch")
+  repoPath     String?   @map("repo_path")
   lastSyncedAt DateTime? @map("last_synced_at")
 
-  userId      String   @map("user_id")
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skillId     String?  @map("skill_id")
-  skill       Skill?   @relation(fields: [skillId], references: [id], onDelete: SetNull)
-  pluginId    String?  @map("plugin_id")
-  plugin      Plugin?  @relation(fields: [pluginId], references: [id], onDelete: SetNull)
-  stepRules   WorkflowStepRule[]
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  userId    String             @map("user_id")
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId   String?            @map("skill_id")
+  skill     Skill?             @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  pluginId  String?            @map("plugin_id")
+  plugin    Plugin?            @relation(fields: [pluginId], references: [id], onDelete: SetNull)
+  stepRules WorkflowStepRule[]
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @default(now()) @updatedAt @map("updated_at")
 
   @@unique([name, userId])
   @@index([userId])
@@ -599,8 +603,8 @@ model Plugin {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
-  userId     String   @map("user_id")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String      @map("user_id")
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   mcpServers McpServer[]
   skills     Skill[]
   agents     Agent[]
@@ -615,27 +619,27 @@ model Plugin {
 // EXECUTION TRACES (Monitoring)
 // ============================================
 model ExecutionTrace {
-  id             String    @id @default(uuid())
-  executionId    String    @map("execution_id")
-  conversationId String    @map("conversation_id")
-  stepId         String    @map("step_id")
+  id             String @id @default(uuid())
+  executionId    String @map("execution_id")
+  conversationId String @map("conversation_id")
+  stepId         String @map("step_id")
 
   // Input
-  commandLine    String    @map("command_line")
-  envSnapshot    Json      @default("{}") @map("env_snapshot")
-  messageLength  Int       @map("message_length")
-  systemPrompt   String?   @map("system_prompt_preview")
-  resumeToken    String?   @map("resume_token")
-  model          String?
-  projectPath    String    @map("project_path")
-  pid            Int?
+  commandLine   String  @map("command_line")
+  envSnapshot   Json    @default("{}") @map("env_snapshot")
+  messageLength Int     @map("message_length")
+  systemPrompt  String? @map("system_prompt_preview")
+  resumeToken   String? @map("resume_token")
+  model         String?
+  projectPath   String  @map("project_path")
+  pid           Int?
 
   // Raw I/O
-  stdoutRaw      String    @default("") @map("stdout_raw")
-  stderrRaw      String    @default("") @map("stderr_raw")
+  stdoutRaw String @default("") @map("stdout_raw")
+  stderrRaw String @default("") @map("stderr_raw")
 
   // Timeline
-  parsedEvents   Json      @default("[]") @map("parsed_events")
+  parsedEvents Json @default("[]") @map("parsed_events")
 
   // Timing
   startedAt      DateTime  @map("started_at")
@@ -645,55 +649,55 @@ model ExecutionTrace {
   durationMs     Int?      @map("duration_ms")
 
   // Result
-  exitCode       Int?      @map("exit_code")
+  exitCode       Int?           @map("exit_code")
   signal         String?
-  resultStatus   String    @map("result_status")
-  errorMessage   String?   @map("error_message")
+  resultStatus   String         @map("result_status")
+  errorMessage   String?        @map("error_message")
   errorCategory  ErrorCategory? @map("error_category")
-  errorCode      String?   @map("error_code")
-  contentLength  Int       @default(0) @map("content_length")
-  actionsCount   Int       @default(0) @map("actions_count")
-  resumeTokenOut String?   @map("resume_token_out")
+  errorCode      String?        @map("error_code")
+  contentLength  Int            @default(0) @map("content_length")
+  actionsCount   Int            @default(0) @map("actions_count")
+  resumeTokenOut String?        @map("resume_token_out")
 
   // Token usage (from stream-json)
-  inputTokens  Int @default(0) @map("input_tokens")
-  outputTokens Int @default(0) @map("output_tokens")
-  cacheCreationInputTokens  Int @default(0) @map("cache_creation_input_tokens")
-  cacheReadInputTokens      Int @default(0) @map("cache_read_input_tokens")
+  inputTokens              Int @default(0) @map("input_tokens")
+  outputTokens             Int @default(0) @map("output_tokens")
+  cacheCreationInputTokens Int @default(0) @map("cache_creation_input_tokens")
+  cacheReadInputTokens     Int @default(0) @map("cache_read_input_tokens")
 
   // Server tool usage
-  webSearchRequests  Int @default(0) @map("web_search_requests")
-  webFetchRequests   Int @default(0) @map("web_fetch_requests")
+  webSearchRequests Int @default(0) @map("web_search_requests")
+  webFetchRequests  Int @default(0) @map("web_fetch_requests")
 
   // Cost and performance
-  totalCostUsd     Float?    @map("total_cost_usd")
-  durationApiMs    Int?      @map("duration_api_ms")
-  numTurns         Int       @default(0) @map("num_turns")
-  stopReason       String?   @map("stop_reason")
+  totalCostUsd  Float?  @map("total_cost_usd")
+  durationApiMs Int?    @map("duration_api_ms")
+  numTurns      Int     @default(0) @map("num_turns")
+  stopReason    String? @map("stop_reason")
 
   // Claude Code metadata
-  claudeCodeVersion String?  @map("claude_code_version")
-  outputStyle       String?  @map("output_style")
-  fastModeState     String?  @map("fast_mode_state")
-  permissionMode    String?  @map("permission_mode")
-  sessionId         String?  @map("session_id")
+  claudeCodeVersion String? @map("claude_code_version")
+  outputStyle       String? @map("output_style")
+  fastModeState     String? @map("fast_mode_state")
+  permissionMode    String? @map("permission_mode")
+  sessionId         String? @map("session_id")
 
   // Additional metadata (native Json)
-  serviceTier       String?   @map("service_tier")
-  inferenceGeo      String?   @map("inference_geo")
-  iterations        Json      @default("[]")
-  modelUsage        Json      @default("{}")  @map("model_usage")
-  permissionDenials Json      @default("[]")  @map("permission_denials")
-  cacheCreation     Json      @default("{}")  @map("cache_creation")
+  serviceTier       String? @map("service_tier")
+  inferenceGeo      String? @map("inference_geo")
+  iterations        Json    @default("[]")
+  modelUsage        Json    @default("{}") @map("model_usage")
+  permissionDenials Json    @default("[]") @map("permission_denials")
+  cacheCreation     Json    @default("{}") @map("cache_creation")
 
-  createdAt      DateTime  @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  step           WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  step         WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
 
   promptVersionId String? @map("prompt_version_id")
 
-  toolCalls      ExecutionToolCall[]
+  toolCalls ExecutionToolCall[]
 
   @@index([executionId])
   @@index([conversationId])
@@ -706,14 +710,14 @@ model ExecutionTrace {
 // EXECUTION TOOL CALLS (Extracted from opaque JSON)
 // ============================================
 model ExecutionToolCall {
-  id          String   @id @default(uuid())
-  toolName    String   @map("tool_name")
-  input       Json     @default("{}")
-  output      Json?
-  durationMs  Int?     @map("duration_ms")
-  success     Boolean  @default(true)
-  errorMessage String? @map("error_message")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  toolName     String   @map("tool_name")
+  input        Json     @default("{}")
+  output       Json?
+  durationMs   Int?     @map("duration_ms")
+  success      Boolean  @default(true)
+  errorMessage String?  @map("error_message")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   traceId String         @map("trace_id")
   trace   ExecutionTrace @relation(fields: [traceId], references: [id], onDelete: Cascade)
@@ -727,22 +731,22 @@ model ExecutionToolCall {
 // EXECUTION AGGREGATE (Cross-step metrics)
 // ============================================
 model ExecutionAggregate {
-  id              String   @id @default(uuid())
-  executionId     String   @unique @map("execution_id")
-  conversationId  String   @map("conversation_id")
-  workflowId      String   @map("workflow_id")
-  totalSteps      Int      @default(0) @map("total_steps")
-  completedSteps  Int      @default(0) @map("completed_steps")
-  failedSteps     Int      @default(0) @map("failed_steps")
-  skippedSteps    Int      @default(0) @map("skipped_steps")
-  totalInputTokens  Int    @default(0) @map("total_input_tokens")
-  totalOutputTokens Int    @default(0) @map("total_output_tokens")
-  totalCostUsd    Float?   @map("total_cost_usd")
-  totalDurationMs Int?     @map("total_duration_ms")
-  startedAt       DateTime @map("started_at")
-  completedAt     DateTime? @map("completed_at")
-  finalStatus     String   @default("running") @map("final_status")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id                String    @id @default(uuid())
+  executionId       String    @unique @map("execution_id")
+  conversationId    String    @map("conversation_id")
+  workflowId        String    @map("workflow_id")
+  totalSteps        Int       @default(0) @map("total_steps")
+  completedSteps    Int       @default(0) @map("completed_steps")
+  failedSteps       Int       @default(0) @map("failed_steps")
+  skippedSteps      Int       @default(0) @map("skipped_steps")
+  totalInputTokens  Int       @default(0) @map("total_input_tokens")
+  totalOutputTokens Int       @default(0) @map("total_output_tokens")
+  totalCostUsd      Float?    @map("total_cost_usd")
+  totalDurationMs   Int?      @map("total_duration_ms")
+  startedAt         DateTime  @map("started_at")
+  completedAt       DateTime? @map("completed_at")
+  finalStatus       String    @default("running") @map("final_status")
+  createdAt         DateTime  @default(now()) @map("created_at")
 
   @@index([conversationId])
   @@index([workflowId])
@@ -754,23 +758,23 @@ model ExecutionAggregate {
 // DAILY EXECUTION METRICS (Pre-aggregated)
 // ============================================
 model DailyExecutionMetrics {
-  id              String   @id @default(uuid())
-  date            DateTime @db.Date
-  totalExecutions Int      @default(0) @map("total_executions")
-  successCount    Int      @default(0) @map("success_count")
-  failureCount    Int      @default(0) @map("failure_count")
-  totalInputTokens  Int    @default(0) @map("total_input_tokens")
-  totalOutputTokens Int    @default(0) @map("total_output_tokens")
-  totalCostUsd    Float    @default(0) @map("total_cost_usd")
-  avgDurationMs   Float?   @map("avg_duration_ms")
-  p50DurationMs   Float?   @map("p50_duration_ms")
-  p95DurationMs   Float?   @map("p95_duration_ms")
-  uniqueWorkflows Int      @default(0) @map("unique_workflows")
-  uniqueUsers     Int      @default(0) @map("unique_users")
-  errorBreakdown  Json     @default("{}") @map("error_breakdown")
-  modelBreakdown  Json     @default("{}") @map("model_breakdown")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  id                String   @id @default(uuid())
+  date              DateTime @db.Date
+  totalExecutions   Int      @default(0) @map("total_executions")
+  successCount      Int      @default(0) @map("success_count")
+  failureCount      Int      @default(0) @map("failure_count")
+  totalInputTokens  Int      @default(0) @map("total_input_tokens")
+  totalOutputTokens Int      @default(0) @map("total_output_tokens")
+  totalCostUsd      Float    @default(0) @map("total_cost_usd")
+  avgDurationMs     Float?   @map("avg_duration_ms")
+  p50DurationMs     Float?   @map("p50_duration_ms")
+  p95DurationMs     Float?   @map("p95_duration_ms")
+  uniqueWorkflows   Int      @default(0) @map("unique_workflows")
+  uniqueUsers       Int      @default(0) @map("unique_users")
+  errorBreakdown    Json     @default("{}") @map("error_breakdown")
+  modelBreakdown    Json     @default("{}") @map("model_breakdown")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@unique([date])
   @@index([date])
@@ -781,29 +785,29 @@ model DailyExecutionMetrics {
 // HOOKS (Claude Code Hooks)
 // ============================================
 model Hook {
-  id            String   @id @default(uuid())
+  id            String  @id @default(uuid())
   name          String
   description   String?
-  eventType     String   @map("event_type") // PreToolUse, PostToolUse, Stop, etc.
-  matcher       String?  // regex pattern for matchers (tool name, session type, etc.)
-  handlerType   String   @default("command") @map("handler_type") // command | prompt | agent
-  command       String?  // shell command (for command handler)
-  prompt        String?  // prompt text (for prompt/agent handler)
-  timeout       Int      @default(60000) // timeout in ms
-  isAsync       Boolean  @default(false) @map("is_async")
-  statusMessage String?  @map("status_message") // message shown during execution
-  enabled       Boolean  @default(true)
-  isGlobal      Boolean  @default(false) @map("is_global")
-  projectPath   String?  @map("project_path") // project-specific hook
-  isTemplate    Boolean  @default(false) @map("is_template") // system template
-  templateId    String?  @map("template_id") // if created from template
+  eventType     String  @map("event_type") // PreToolUse, PostToolUse, Stop, etc.
+  matcher       String? // regex pattern for matchers (tool name, session type, etc.)
+  handlerType   String  @default("command") @map("handler_type") // command | prompt | agent
+  command       String? // shell command (for command handler)
+  prompt        String? // prompt text (for prompt/agent handler)
+  timeout       Int     @default(60000) // timeout in ms
+  isAsync       Boolean @default(false) @map("is_async")
+  statusMessage String? @map("status_message") // message shown during execution
+  enabled       Boolean @default(true)
+  isGlobal      Boolean @default(false) @map("is_global")
+  projectPath   String? @map("project_path") // project-specific hook
+  isTemplate    Boolean @default(false) @map("is_template") // system template
+  templateId    String? @map("template_id") // if created from template
 
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  userId        String   @map("user_id")
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stepHooks     WorkflowStepHook[]
+  userId    String             @map("user_id")
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stepHooks WorkflowStepHook[]
 
   @@index([userId])
   @@index([eventType])
@@ -884,8 +888,8 @@ model PromptVersion {
   diff      String?
   createdAt DateTime @default(now()) @map("created_at")
 
-  createdBy String @map("created_by")
-  creator   User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdBy String       @map("created_by")
+  creator   User         @relation(fields: [createdBy], references: [id], onDelete: Cascade)
   step      WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
 
   @@index([stepId])
@@ -913,13 +917,13 @@ model Webhook {
 }
 
 model WebhookDelivery {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   payload      Json
-  responseCode Int?     @map("response_code")
-  responseBody String?  @map("response_body")
-  attempts     Int      @default(0)
-  status       String   @default("pending") // pending | success | failed
-  createdAt    DateTime @default(now()) @map("created_at")
+  responseCode Int?      @map("response_code")
+  responseBody String?   @map("response_body")
+  attempts     Int       @default(0)
+  status       String    @default("pending") // pending | success | failed
+  createdAt    DateTime  @default(now()) @map("created_at")
   completedAt  DateTime? @map("completed_at")
 
   webhookId String  @map("webhook_id")
@@ -933,21 +937,21 @@ model WebhookDelivery {
 // WORKFLOW TRIGGERS
 // ============================================
 model WorkflowTrigger {
-  id           String      @id @default(uuid())
-  type         TriggerType @default(manual)
-  cronExpr     String?     @map("cron_expr") // cron expression
-  cronTimezone String?     @map("cron_timezone") // e.g. "America/Sao_Paulo"
-  webhookSecret String?    @map("webhook_secret")
-  eventName    String?     @map("event_name") // e.g. "workflow_complete", "step_failed"
-  eventFilter  Json?       @map("event_filter") // filter conditions for event
-  rateLimit    Int?        @map("rate_limit") // max triggers per hour
-  enabled      Boolean     @default(true)
-  lastTriggeredAt DateTime? @map("last_triggered_at")
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at")
+  id              String      @id @default(uuid())
+  type            TriggerType @default(manual)
+  cronExpr        String?     @map("cron_expr") // cron expression
+  cronTimezone    String?     @map("cron_timezone") // e.g. "America/Sao_Paulo"
+  webhookSecret   String?     @map("webhook_secret")
+  eventName       String?     @map("event_name") // e.g. "workflow_complete", "step_failed"
+  eventFilter     Json?       @map("event_filter") // filter conditions for event
+  rateLimit       Int?        @map("rate_limit") // max triggers per hour
+  enabled         Boolean     @default(true)
+  lastTriggeredAt DateTime?   @map("last_triggered_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @default(now()) @updatedAt @map("updated_at")
 
   workflowId String   @map("workflow_id")
-  workflow   Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   scheduledExecutions ScheduledExecution[]
 
@@ -960,13 +964,13 @@ model WorkflowTrigger {
 // SCHEDULED EXECUTIONS
 // ============================================
 model ScheduledExecution {
-  id          String    @id @default(uuid())
-  scheduledAt DateTime  @map("scheduled_at")
-  executedAt  DateTime? @map("executed_at")
-  status      String    @default("pending") // pending | running | completed | failed | cancelled
-  result      Json?
-  errorMessage String?  @map("error_message")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id           String    @id @default(uuid())
+  scheduledAt  DateTime  @map("scheduled_at")
+  executedAt   DateTime? @map("executed_at")
+  status       String    @default("pending") // pending | running | completed | failed | cancelled
+  result       Json?
+  errorMessage String?   @map("error_message")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   triggerId String          @map("trigger_id")
   trigger   WorkflowTrigger @relation(fields: [triggerId], references: [id], onDelete: Cascade)
@@ -982,11 +986,11 @@ model ScheduledExecution {
 // ============================================
 model AuditLog {
   id           String       @id @default(uuid())
-  action       String       // create, update, delete, execute, login, etc.
+  action       String // create, update, delete, execute, login, etc.
   resourceType ResourceType @map("resource_type")
   resourceId   String       @map("resource_id")
   resourceName String?      @map("resource_name")
-  diff         Json?        // changes diff {before, after}
+  diff         Json? // changes diff {before, after}
   metadata     Json?
   ipAddress    String?      @map("ip_address")
   createdAt    DateTime     @default(now()) @map("created_at")
@@ -1006,11 +1010,11 @@ model AuditLog {
 model Tag {
   id        String   @id @default(uuid())
   name      String
-  color     String?  // hex color
+  color     String? // hex color
   createdAt DateTime @default(now()) @map("created_at")
 
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   resources ResourceTag[]
 
@@ -1040,14 +1044,14 @@ model ResourceTag {
 // RESOURCE DEPENDENCIES (Declarative)
 // ============================================
 model ResourceDependency {
-  id               String       @id @default(uuid())
-  sourceType       ResourceType @map("source_type")
-  sourceId         String       @map("source_id")
-  dependencyType   ResourceType @map("dependency_type")
-  dependencyId     String       @map("dependency_id")
-  dependencyName   String?      @map("dependency_name")
-  isOptional       Boolean      @default(false) @map("is_optional")
-  createdAt        DateTime     @default(now()) @map("created_at")
+  id             String       @id @default(uuid())
+  sourceType     ResourceType @map("source_type")
+  sourceId       String       @map("source_id")
+  dependencyType ResourceType @map("dependency_type")
+  dependencyId   String       @map("dependency_id")
+  dependencyName String?      @map("dependency_name")
+  isOptional     Boolean      @default(false) @map("is_optional")
+  createdAt      DateTime     @default(now()) @map("created_at")
 
   @@unique([sourceType, sourceId, dependencyType, dependencyId])
   @@index([sourceType, sourceId])
@@ -1131,14 +1135,14 @@ model WorkflowStepHook {
 // ============================================
 model GitAccount {
   id        String   @id @default(uuid())
-  label     String   // e.g. "Pessoal", "Trabalho"
+  label     String // e.g. "Pessoal", "Trabalho"
   token     String
-  username  String?  // cached GitHub username
+  username  String? // cached GitHub username
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   projectMappings ProjectGitMapping[]
 
@@ -1151,13 +1155,112 @@ model GitAccount {
 // PROJECT GIT MAPPING (project path -> git account)
 // ============================================
 model ProjectGitMapping {
-  id           String     @id @default(uuid())
-  projectPath  String     @unique @map("project_path")
-  createdAt    DateTime   @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  projectPath String   @unique @map("project_path")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   gitAccountId String     @map("git_account_id")
   gitAccount   GitAccount @relation(fields: [gitAccountId], references: [id], onDelete: Cascade)
 
   @@index([gitAccountId])
   @@map("project_git_mappings")
+}
+
+// ============================================
+// HOURLY TOKEN USAGE (Observability)
+// ============================================
+model HourlyTokenUsage {
+  id        String   @id @default(uuid())
+  hour      DateTime
+  tokens    Int      @default(0)
+  costUsd   Float    @default(0) @map("cost_usd")
+  model     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([hour, userId, model])
+  @@index([userId])
+  @@map("hourly_token_usage")
+}
+
+// ============================================
+// RESOURCE PERFORMANCE METRICS (Observability)
+// ============================================
+model ResourcePerformanceMetric {
+  id              String       @id @default(uuid())
+  resourceType    ResourceType @map("resource_type")
+  resourceId      String       @map("resource_id")
+  period          String       @default("daily")
+  periodStart     DateTime     @map("period_start")
+  executionCount  Int          @default(0) @map("execution_count")
+  successCount    Int          @default(0) @map("success_count")
+  avgDurationMs   Float?       @map("avg_duration_ms")
+  p95DurationMs   Float?       @map("p95_duration_ms")
+  totalCostUsd    Float        @default(0) @map("total_cost_usd")
+  avgQualityScore Float?       @map("avg_quality_score")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([resourceType, resourceId, period, periodStart])
+  @@index([resourceType, resourceId])
+  @@map("resource_performance_metrics")
+}
+
+// ============================================
+// EXECUTION RATINGS (Observability)
+// ============================================
+model ExecutionRating {
+  id        String   @id @default(uuid())
+  rating    Int
+  feedback  String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  executionId String  @map("execution_id")
+  stepId      String? @map("step_id")
+  userId      String  @map("user_id")
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([executionId, stepId, userId])
+  @@index([executionId])
+  @@map("execution_ratings")
+}
+
+// ============================================
+// GIT SOURCES (Centralized git tracking)
+// ============================================
+model GitSource {
+  id           String       @id @default(uuid())
+  resourceType ResourceType @map("resource_type")
+  resourceId   String       @map("resource_id")
+  repoOwner    String       @map("repo_owner")
+  repoName     String       @map("repo_name")
+  repoBranch   String       @default("main") @map("repo_branch")
+  repoPath     String?      @map("repo_path")
+  lastSyncedAt DateTime?    @map("last_synced_at")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([resourceType, resourceId])
+  @@index([resourceType, resourceId])
+  @@map("git_sources")
+}
+
+// ============================================
+// AGENT SKILLS (Join table)
+// ============================================
+model AgentSkill {
+  id        String   @id @default(uuid())
+  order     Int      @default(0)
+  config    Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  agentId String @map("agent_id")
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  skillId String @map("skill_id")
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, skillId])
+  @@map("agent_skills")
 }
