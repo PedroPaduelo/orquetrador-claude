@@ -28,6 +28,7 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
 import { FastifyAdapter } from '@bull-board/fastify'
 import { closeAllRedis } from './lib/redis.js'
 import { recoverStaleExecutions } from './domains/execution/orchestrator/recovery.js'
+import { startMetricsAggregation, stopMetricsAggregation } from './domains/execution/monitoring/metrics-aggregator.js'
 
 const app = Fastify({
   logger: {
@@ -174,6 +175,7 @@ async function start() {
     httpServer.timeout = 0 // no socket timeout
 
     startTraceCleanup()
+    startMetricsAggregation()
 
     // Recover stale executions from previous server crash
     await recoverStaleExecutions()
@@ -207,6 +209,7 @@ signals.forEach((signal) => {
   process.on(signal, async () => {
     console.log(`\n${signal} received, shutting down gracefully...`)
     projectPathLock.cleanup()
+    try { stopMetricsAggregation() } catch { /* ignore */ }
     try { await stopExecutionWorker() } catch { /* ignore */ }
     try { await closeExecutionQueue() } catch { /* ignore */ }
     try { await app.close() } catch { /* ignore */ }
