@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>12 - Estrutura de Dados & Melhorias | Orquetrador Claude</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #0f172a; }
+    .glass { background: rgba(30,41,59,0.5); backdrop-filter: blur(12px); border: 1px solid rgba(148,163,184,0.1); }
+    .fade-in { opacity:0; transform:translateY(30px); transition: all 0.7s ease-out; }
+    .fade-in.visible { opacity:1; transform:translateY(0); }
+    .gradient-text { background: linear-gradient(135deg,#a78bfa,#6366f1,#818cf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .grid-bg { background-image: radial-gradient(circle at 1px 1px, rgba(148,163,184,0.05) 1px, transparent 0); background-size: 40px 40px; }
+    ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:#0f172a; } ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+    .domain-card { transition: all 0.3s ease; cursor: pointer; }
+    .domain-card:hover { transform: translateY(-2px); border-color: rgba(148,163,184,0.3); }
+    .domain-card .detail { max-height: 0; overflow: hidden; transition: max-height 0.5s ease; }
+    .domain-card.open .detail { max-height: 8000px; }
+    .domain-card .chevron { transition: transform 0.3s; }
+    .domain-card.open .chevron { transform: rotate(180deg); }
+    .as-is { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; }
+    .to-be { background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.2); border-radius: 12px; }
+    .prop-card { background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.2); border-radius: 12px; }
+    pre { background: rgba(15,23,42,0.8); border: 1px solid rgba(148,163,184,0.1); border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 12px; line-height: 1.6; }
+    code { font-family: 'JetBrains Mono', monospace; }
+    .code-bad { color: #f87171; }
+    .code-good { color: #4ade80; }
+    .code-highlight { color: #818cf8; }
+    .tab-btn { transition: all 0.2s; }
+    .tab-btn.active { background: rgba(99,102,241,0.2); color: #a78bfa; }
+    .impact-critical { color: #ef4444; }
+    .impact-high { color: #f97316; }
+    .impact-medium { color: #eab308; }
+    .impact-low { color: #3b82f6; }
+    .badge-critical { background: rgba(239,68,68,0.15); color: #f87171; }
+    .badge-high { background: rgba(249,115,22,0.15); color: #fb923c; }
+    .badge-medium { background: rgba(234,179,8,0.15); color: #facc15; }
+    .badge-low { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .badge-new { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .connector-line { position: relative; }
+    .connector-line::before { content:''; position:absolute; left:24px; top:0; bottom:0; width:2px; background: linear-gradient(to bottom, rgba(99,102,241,0.3), rgba(99,102,241,0.05)); }
+    @keyframes pulse-glow { 0%,100%{box-shadow:0 0 20px rgba(99,102,241,0.1)} 50%{box-shadow:0 0 30px rgba(99,102,241,0.25)} }
+    .pulse-glow { animation: pulse-glow 3s infinite; }
+    .stat-ring { transition: stroke-dashoffset 1.5s ease-out; }
+  </style>
+</head>
+<body class="min-h-screen grid-bg text-slate-200 antialiased">
+
+  <!-- Nav -->
+  <nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);border-bottom:1px solid rgba(148,163,184,0.1)">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-blue-400 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+        Orquetrador Claude
+      </a>
+      <div class="hidden lg:flex items-center gap-1 text-xs">
+        <a href="01-visao-geral.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visao</a>
+        <a href="02-fluxo-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
+        <a href="03-banco-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">03 DB</a>
+        <a href="04-api-endpoints.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">04 API</a>
+        <a href="05-motor-execucao.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">05 Exec</a>
+        <a href="06-frontend.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">06 Front</a>
+        <a href="07-seguranca.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">07 Seg</a>
+        <a href="08-integracoes.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">08 Integ</a>
+        <a href="09-mcp-server.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">09 MCP</a>
+        <a href="10-tempo-real-filas.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">10 RT</a>
+        <a href="11-db-scan-melhorias.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">11 Scan</a>
+        <a href="12-estrutura-dados.html" class="px-2.5 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 font-semibold">12 Estrutura</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="relative overflow-hidden">
+    <div class="absolute top-10 left-10 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-20 right-20 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl"></div>
+    <div class="max-w-7xl mx-auto px-4 py-16 relative z-10">
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-medium mb-6">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          Analise Estrutural Completa
+        </div>
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">
+          <span class="gradient-text">Estrutura de Dados</span>
+          <br><span class="text-white">AS-IS vs TO-BE</span>
+        </h1>
+        <p class="text-slate-400 max-w-2xl mx-auto text-lg">Analise profunda de cada dominio do sistema com propostas de novos modelos, campos e relacoes para transformar o Orquetrador em uma plataforma de classe mundial.</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-12">
+        <div class="glass rounded-xl p-4 text-center pulse-glow">
+          <div class="text-2xl font-bold text-white">8</div>
+          <div class="text-xs text-slate-400 mt-1">Dominios Analisados</div>
+        </div>
+        <div class="glass rounded-xl p-4 text-center">
+          <div class="text-2xl font-bold text-indigo-400">25</div>
+          <div class="text-xs text-slate-400 mt-1">Modelos Atuais</div>
+        </div>
+        <div class="glass rounded-xl p-4 text-center">
+          <div class="text-2xl font-bold text-green-400">+14</div>
+          <div class="text-xs text-slate-400 mt-1">Novos Modelos Propostos</div>
+        </div>
+        <div class="glass rounded-xl p-4 text-center">
+          <div class="text-2xl font-bold text-amber-400">+87</div>
+          <div class="text-xs text-slate-400 mt-1">Campos Faltantes</div>
+        </div>
+        <div class="glass rounded-xl p-4 text-center">
+          <div class="text-2xl font-bold text-red-400">8</div>
+          <div class="text-xs text-slate-400 mt-1">FKs Orfas</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Maturity Score -->
+  <section class="max-w-7xl mx-auto px-4 py-12 fade-in">
+    <div class="glass rounded-2xl p-8">
+      <h2 class="text-xl font-bold text-white mb-6">Maturidade da Estrutura de Dados</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div class="text-center">
+          <div class="relative w-24 h-24 mx-auto mb-3">
+            <svg class="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(148,163,184,0.1)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#ef4444" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="198" stroke-linecap="round" class="stat-ring"/>
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-lg font-bold text-red-400">25%</span>
+          </div>
+          <div class="text-sm font-medium text-white">Integridade</div>
+          <div class="text-xs text-slate-500">FKs e relacoes</div>
+        </div>
+        <div class="text-center">
+          <div class="relative w-24 h-24 mx-auto mb-3">
+            <svg class="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(148,163,184,0.1)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#f97316" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="158" stroke-linecap="round" class="stat-ring"/>
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-lg font-bold text-orange-400">40%</span>
+          </div>
+          <div class="text-sm font-medium text-white">Tipos de Dados</div>
+          <div class="text-xs text-slate-500">JSON Strings vs Json</div>
+        </div>
+        <div class="text-center">
+          <div class="relative w-24 h-24 mx-auto mb-3">
+            <svg class="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(148,163,184,0.1)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#eab308" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="132" stroke-linecap="round" class="stat-ring"/>
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-lg font-bold text-yellow-400">50%</span>
+          </div>
+          <div class="text-sm font-medium text-white">Observabilidade</div>
+          <div class="text-xs text-slate-500">Metricas e analytics</div>
+        </div>
+        <div class="text-center">
+          <div class="relative w-24 h-24 mx-auto mb-3">
+            <svg class="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(148,163,184,0.1)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#3b82f6" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="224" stroke-linecap="round" class="stat-ring"/>
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-lg font-bold text-blue-400">15%</span>
+          </div>
+          <div class="text-sm font-medium text-white">Colaboracao</div>
+          <div class="text-xs text-slate-500">Teams, sharing, tags</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filter Tabs -->
+  <section class="max-w-7xl mx-auto px-4 mb-6 fade-in">
+    <div class="flex flex-wrap gap-2">
+      <button onclick="filterDomain('all')" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="all">Todos (8)</button>
+      <button onclick="filterDomain('auth')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="auth">Auth</button>
+      <button onclick="filterDomain('workflows')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="workflows">Workflows</button>
+      <button onclick="filterDomain('execution')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="execution">Execucao</button>
+      <button onclick="filterDomain('conversations')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="conversations">Conversas</button>
+      <button onclick="filterDomain('resources')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="resources">Recursos</button>
+      <button onclick="filterDomain('observability')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="observability">Observabilidade</button>
+      <button onclick="filterDomain('collaboration')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="collaboration">Colaboracao</button>
+      <button onclick="filterDomain('triggers')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="triggers">Triggers</button>
+    </div>
+  </section>
+
+  <!-- Domain Cards -->
+  <section class="max-w-7xl mx-auto px-4 pb-20 space-y-4" id="domains">
+
+    <!-- ==================== DOMAIN 1: AUTH ==================== -->
+    <div class="domain-card glass rounded-2xl overflow-hidden" data-domain="auth" onclick="toggleCard(this)">
+      <div class="p-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center text-red-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">1. Autenticacao & Identidade</h3>
+            <p class="text-sm text-slate-400">User, ApiKey, UserTokenBudget — 3 modelos</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs px-2 py-1 rounded-full badge-critical font-medium">3 FKs orfas</span>
+          <span class="text-xs px-2 py-1 rounded-full badge-high font-medium">+12 campos</span>
+          <svg class="w-5 h-5 text-slate-400 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="px-6 pb-6 space-y-6">
+          <!-- AS-IS -->
+          <div class="as-is p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400">AS-IS</span>
+              <span class="text-sm font-semibold text-red-300">Estado Atual</span>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300">
+              <div><strong class="text-white">User:</strong> Modelo basico com <code class="code-bad">githubToken</code> legado (duplicado com GitAccount), <code class="code-bad">role</code> como String livre sem validacao, sem campos de perfil, status ou preferencias.</div>
+              <div><strong class="text-white">ApiKey:</strong> Sem <code class="code-bad">scopes</code> (toda chave tem acesso total), sem rate limit, sem descricao do proposito.</div>
+              <div><strong class="text-white">TokenBudget:</strong> Apenas limites em tokens brutos. Reset por logica manual com <code class="code-bad">race condition</code> em operacoes concorrentes. Sem historico — dados perdidos a cada reset.</div>
+            </div>
+            <pre class="mt-4"><code><span class="code-bad">// User — sem status, sem preferences, role sem validacao</span>
+model User {
+  role        String  @default("developer")  <span class="code-bad">// qualquer string aceita</span>
+  githubToken String? <span class="code-bad">// legado, texto puro</span>
+}
+
+<span class="code-bad">// ApiKey — acesso total, sem scopes</span>
+model ApiKey {
+  keyHash  String @unique
+  <span class="code-bad">// sem scopes, sem rateLimit, sem usageCount</span>
+}
+
+<span class="code-bad">// Budget — race condition no recordUsage</span>
+async recordUsage(userId, tokens) {
+  const budget = await this.getOrCreate(userId) <span class="code-bad">// pode resetar</span>
+  await prisma.update({ increment: tokens })    <span class="code-bad">// outra execucao pode ter resetado entre estas linhas</span>
+}</code></pre>
+          </div>
+
+          <!-- TO-BE -->
+          <div class="to-be p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400">TO-BE</span>
+              <span class="text-sm font-semibold text-green-300">Estado Proposto</span>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300">
+              <div><strong class="text-white">User:</strong> Campo <code class="code-good">status</code> (active/suspended), <code class="code-good">role</code> como enum, <code class="code-good">preferences</code> JSON, <code class="code-good">lastLoginAt</code>, <code class="code-good">maxConcurrentExecutions</code>, remocao do githubToken legado.</div>
+              <div><strong class="text-white">ApiKey:</strong> <code class="code-good">scopes</code> JSON (read/write/execute), <code class="code-good">rateLimit</code>, <code class="code-good">usageCount</code>, <code class="code-good">ipWhitelist</code>.</div>
+              <div><strong class="text-white">TokenBudget:</strong> Limites em <code class="code-good">USD alem de tokens</code>, <code class="code-good">alertThreshold</code> (80%), <code class="code-good">overagePolicy</code> (block/warn/allow), historico via <code class="code-good">TokenUsageHistory</code>.</div>
+            </div>
+            <pre class="mt-4"><code><span class="code-good">// User — completo com enum e campos de gestao</span>
+enum UserRole { admin developer viewer }
+enum UserStatus { active suspended invited }
+
+model User {
+  role            UserRole   @default(developer)
+  status          UserStatus @default(active)
+  lastLoginAt     DateTime?
+  preferences     Json       @default("{}")
+  maxConcurrent   Int        @default(3)
+  <span class="code-good">// githubToken REMOVIDO — usar GitAccount</span>
+}
+
+<span class="code-good">// ApiKey — granular com scopes</span>
+model ApiKey {
+  scopes      Json     @default("[\"read\"]")
+  rateLimit   Int?     <span class="code-good">// requests/min</span>
+  usageCount  Int      @default(0)
+  ipWhitelist String?  <span class="code-good">// JSON array de IPs permitidos</span>
+}
+
+<span class="code-good">// Budget — com historico e USD</span>
+model UserTokenBudget {
+  dailyCostLimitUsd    Float?
+  monthlyCostLimitUsd  Float?
+  alertThreshold       Float  @default(0.8)
+  overagePolicy        String @default("block")
+}
+
+<span class="code-good">// NOVO: Historico de consumo</span>
+model TokenUsageHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  date      DateTime @db.Date
+  tokens    BigInt
+  costUsd   Float
+  @@unique([userId, date])
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== DOMAIN 2: WORKFLOWS ==================== -->
+    <div class="domain-card glass rounded-2xl overflow-hidden" data-domain="workflows" onclick="toggleCard(this)">
+      <div class="p-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center text-violet-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">2. Workflows & Steps</h3>
+            <p class="text-sm text-slate-400">Workflow, WorkflowStep, StepTemplate, PromptVersion — 4 modelos</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs px-2 py-1 rounded-full badge-critical font-medium">Sem versionamento</span>
+          <span class="text-xs px-2 py-1 rounded-full badge-high font-medium">+20 campos</span>
+          <svg class="w-5 h-5 text-slate-400 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="px-6 pb-6 space-y-6">
+          <div class="as-is p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400">AS-IS</span>
+              <span class="text-sm font-semibold text-red-300">Problemas Criticos</span>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300">
+              <div><strong class="text-white">Sem versionamento:</strong> Ao editar um workflow, o repository faz <code class="code-bad">DELETE ALL steps + CREATE ALL</code>, destruindo todo historico. Sem rollback possivel.</div>
+              <div><strong class="text-white">Sem status/draft:</strong> Todo workflow criado esta imediatamente "ativo". Nao ha conceito de rascunho, arquivo ou publicacao.</div>
+              <div><strong class="text-white">JSON como String:</strong> <code class="code-bad">conditions</code>, <code class="code-bad">dependsOn</code>, <code class="code-bad">validators</code>, <code class="code-bad">inputVariables</code>, <code class="code-bad">outputVariables</code> — 5 campos JSON serializados como String.</div>
+              <div><strong class="text-white">StepTemplate desconectado:</strong> <code class="code-bad">userId</code> sem relacao com User, <code class="code-bad">templateId</code> no WorkflowStep sem FK. Nenhuma integridade referencial.</div>
+              <div><strong class="text-white">Sem timeout/error handling:</strong> Se um step trava, nao ha como abortar. Se falha, todo o workflow para.</div>
+            </div>
+            <pre class="mt-4"><code><span class="code-bad">// Update workflow = DESTRUIR + RECRIAR todos os steps</span>
+await prisma.workflowStep.deleteMany({ where: { workflowId } })
+await prisma.workflowStep.createMany({ data: newSteps })
+<span class="code-bad">// versao anterior? PERDIDA PARA SEMPRE</span>
+
+<span class="code-bad">// WorkflowStep — 5 campos JSON como String</span>
+conditions      String @default("[]")   <span class="code-bad">// JSON.parse() obrigatorio</span>
+dependsOn       String @default("[]")   <span class="code-bad">// sem query possivel</span>
+validators      String @default("[]")   <span class="code-bad">// sem validacao DB</span>
+outputVariables String @default("[]")   <span class="code-bad">// sem indexacao</span>
+inputVariables  String @default("[]")   <span class="code-bad">// sem tipo</span></code></pre>
+          </div>
+
+          <div class="to-be p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400">TO-BE</span>
+              <span class="text-sm font-semibold text-green-300">Proposta Completa</span>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300">
+              <div><strong class="text-white">Versionamento:</strong> Novo modelo <code class="code-good">WorkflowVersion</code> com snapshot completo, diff estrutural e rollback.</div>
+              <div><strong class="text-white">Status:</strong> Campo <code class="code-good">status</code> (draft/active/archived) + <code class="code-good">lastExecutedAt</code> + <code class="code-good">executionCount</code>.</div>
+              <div><strong class="text-white">DAG avancado:</strong> <code class="code-good">timeout</code>, <code class="code-good">errorHandler</code> (fail/skip/fallback/continue), <code class="code-good">skipCondition</code>, <code class="code-good">subWorkflowId</code>, <code class="code-good">outputSchema</code>.</div>
+            </div>
+            <pre class="mt-4"><code><span class="code-good">// NOVO: Versionamento completo</span>
+model WorkflowVersion {
+  id            String   @id @default(uuid())
+  workflowId    String
+  version       Int
+  label         String?  <span class="code-good">// "v2.1 - added QA step"</span>
+  snapshot      Json     <span class="code-good">// workflow + steps + resources</span>
+  diff          Json?    <span class="code-good">// diff vs versao anterior</span>
+  changeType    String   <span class="code-good">// step_added, prompt_changed...</span>
+  isPublished   Boolean  @default(false)
+  workflow      Workflow @relation(...)
+  @@index([workflowId, version])
+}
+
+<span class="code-good">// Workflow com status e metricas</span>
+model Workflow {
+  status          String  @default("active") <span class="code-good">// draft/active/archived</span>
+  tags            Json    @default("[]")
+  lastExecutedAt  DateTime?
+  executionCount  Int     @default(0)
+  timeoutMs       Int?
+  versions        WorkflowVersion[]
+}
+
+<span class="code-good">// WorkflowStep com campos avancados</span>
+model WorkflowStep {
+  conditions    Json    @default("[]") <span class="code-good">// tipo nativo</span>
+  dependsOn     Json    @default("[]")
+  timeout       Int?    <span class="code-good">// ms, abort se exceder</span>
+  errorHandler  String  @default("fail") <span class="code-good">// fail|skip|fallback|continue</span>
+  fallbackStepId String?
+  skipCondition String? <span class="code-good">// expression para pular step</span>
+  subWorkflowId String? <span class="code-good">// composicao!</span>
+  outputSchema  Json?   <span class="code-good">// JSON Schema para validar output</span>
+  description   String?
+  updatedAt     DateTime @updatedAt
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== DOMAIN 3: EXECUTION ==================== -->
+    <div class="domain-card glass rounded-2xl overflow-hidden" data-domain="execution" onclick="toggleCard(this)">
+      <div class="p-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">3. Motor de Execucao</h3>
+            <p class="text-sm text-slate-400">ExecutionState, ExecutionLog, ExecutionTrace — 3 modelos, 46+ campos</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs px-2 py-1 rounded-full badge-critical font-medium">Sem agregacao</span>
+          <span class="text-xs px-2 py-1 rounded-full badge-high font-medium">Full-table scans</span>
+          <svg class="w-5 h-5 text-slate-400 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="px-6 pb-6 space-y-6">
+          <div class="as-is p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400">AS-IS</span>
+              <span class="text-sm font-semibold text-red-300">Gargalos Graves</span>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300">
+              <div><strong class="text-white">Sem agregacao:</strong> <code class="code-bad">/metrics/daily</code> e <code class="code-bad">/metrics/by-workflow</code> fazem scan completo de <code>execution_traces</code> e agregam em JS. Nao escala.</div>
+              <div><strong class="text-white">Sem error taxonomy:</strong> <code class="code-bad">resultStatus</code> e String livre ("success"/"error"). Sem categorizacao (timeout, rate_limit, context_overflow, budget_exceeded).</div>
+              <div><strong class="text-white">Tool usage invisivel:</strong> Uso de ferramentas esta dentro de <code class="code-bad">parsedEvents</code> JSON opaco. Impossivel saber "qual tool e mais usada?"</div>
+              <div><strong class="text-white">Cleanup destrutivo:</strong> Traces deletados apos 7 dias <code class="code-bad">sem agregacao previa</code>. Dados historicos perdidos para sempre.</div>
+              <div><strong class="text-white">3 FKs orfas:</strong> <code class="code-bad">stepId</code>, <code class="code-bad">executionId</code>, <code class="code-bad">promptVersionId</code> no ExecutionTrace sao Strings sem integridade referencial.</div>
+            </div>
+            <pre class="mt-4"><code><span class="code-bad">// metrics.routes.ts — full table scan em TODA chamada</span>
+const traces = await prisma.executionTrace.findMany({
+  where: { conversation: { userId } }  <span class="code-bad">// TODOS os traces do usuario</span>
+})
+const daily = {} <span class="code-bad">// agrega em JS...</span>
+traces.forEach(t => {
+  const day = t.createdAt.toISOString().split('T')[0]
+  daily[day] = (daily[day] || 0) + t.totalCostUsd
+})
+
+<span class="code-bad">// Cleanup — deleta sem salvar nada</span>
+await prisma.executionTrace.deleteMany({
+  where: { createdAt: { lt: sevenDaysAgo } }
+}) <span class="code-bad">// historico? adeus</span></code></pre>
+          </div>
+
+          <div class="to-be p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400">TO-BE</span>
+              <span class="text-sm font-semibold text-green-300">Observabilidade Completa</span>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300">
+              <div><strong class="text-white">3 camadas:</strong> <code class="code-good">DailyExecutionMetrics</code> (pre-agregado), <code class="code-good">ExecutionAggregate</code> (por execucao), <code class="code-good">ExecutionToolCall</code> (por ferramenta).</div>
+              <div><strong class="text-white">Error taxonomy:</strong> <code class="code-good">errorCategory</code> enum (timeout, rate_limit, context_overflow, budget_exceeded, tool_error, permission_denied).</div>
+              <div><strong class="text-white">Retencao inteligente:</strong> 7 dias raw traces, 90 dias agregados diarios, indefinido mensal.</div>
+            </div>
+            <pre class="mt-4"><code><span class="code-good">// NOVO: Metricas pre-agregadas — ZERO full-table scans</span>
+model DailyExecutionMetrics {
+  date             DateTime @db.Date
+  userId           String
+  workflowId       String?
+  model            String?
+  executionCount   Int      @default(0)
+  successCount     Int      @default(0)
+  errorCount       Int      @default(0)
+  totalCostUsd     Float    @default(0)
+  totalInputTokens BigInt   @default(0)
+  durationP50Ms    Int?
+  durationP95Ms    Int?
+  toolUsageCounts  Json     @default("{}")  <span class="code-good">// {"Bash":45,"Read":30}</span>
+  errorCategories  Json     @default("{}")  <span class="code-good">// {"timeout":2}</span>
+  @@unique([date, userId, workflowId, model])
+}
+
+<span class="code-good">// NOVO: Agregado por execucao (cross-step)</span>
+model ExecutionAggregate {
+  id              String @id
+  conversationId  String
+  workflowId      String
+  totalSteps      Int
+  completedSteps  Int
+  failedSteps     Int
+  totalCostUsd    Float  @default(0)
+  totalDurationMs Int?
+  finalStatus     String
+  errorCategory   String?
+}
+
+<span class="code-good">// NOVO: Tool calls extraidos do JSON opaco</span>
+model ExecutionToolCall {
+  id         String  @id @default(uuid())
+  traceId    String
+  toolName   String  <span class="code-good">// Bash, Read, Edit, Write...</span>
+  durationMs Int?
+  success    Boolean @default(true)
+  @@index([toolName])
+  @@index([traceId])
+}
+
+<span class="code-good">// ExecutionTrace com FKs reais e error taxonomy</span>
+model ExecutionTrace {
+  step           WorkflowStep? @relation(...)  <span class="code-good">// FK real</span>
+  execution      ExecutionState @relation(...)  <span class="code-good">// FK real</span>
+  errorCategory  String?  <span class="code-good">// timeout|rate_limit|...</span>
+  errorCode      String?  <span class="code-good">// machine-readable</span>
+  isRetryable    Boolean?
+  toolCalls      ExecutionToolCall[]
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== DOMAIN 4: CONVERSATIONS ==================== -->
+    <div class="domain-card glass rounded-2xl overflow-hidden" data-domain="conversations" onclick="toggleCard(this)">
+      <div class="p-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">4. Conversas & Mensagens</h3>
+            <p class="text-sm text-slate-400">Conversation, Message, MessageAttachment, Session, StepMemory — 5 modelos</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs px-2 py-1 rounded-full badge-high font-medium">Sem status</span>
+          <span class="text-xs px-2 py-1 rounded-full badge-medium font-medium">+15 campos</span>
+          <svg class="w-5 h-5 text-slate-400 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="px-6 pb-6 space-y-6">
+          <div class="as-is p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400">AS-IS</span>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300">
+              <div><strong class="text-white">Conversation sem status:</strong> Para saber se esta "rodando", precisa checar <code class="code-bad">taskOrchestrator.isExecuting(id)</code> em memoria + <code class="code-bad">executionState</code>. Fragil.</div>
+              <div><strong class="text-white">Sem custo/duracao na listagem:</strong> <code class="code-bad">totalCost</code> e <code class="code-bad">duration</code> so disponiveis via endpoint separado, impossivel mostrar na lista.</div>
+              <div><strong class="text-white">Message sem tokenCount:</strong> Impossivel saber quanto cada mensagem custou.</div>
+              <div><strong class="text-white">findById carrega TUDO:</strong> <code class="code-bad">include: { messages: { include: { attachments } } }</code> — todas as mensagens de uma vez. Em conversas longas = memoria explodindo.</div>
+              <div><strong class="text-white">Sem busca full-text:</strong> Busca em <code>message.content</code> faria scan completo sem indice.</div>
+            </div>
+          </div>
+          <div class="to-be p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400">TO-BE</span>
+            </div>
+            <pre class="mt-2"><code><span class="code-good">// Conversation com status e metricas denormalizadas</span>
+model Conversation {
+  status          String    @default("active") <span class="code-good">// active|completed|failed|archived</span>
+  completedAt     DateTime?
+  totalTokensUsed Int       @default(0) <span class="code-good">// cache para listagem rapida</span>
+  totalCostUsd    Float     @default(0)
+  lastMessageAt   DateTime?
+  isArchived      Boolean   @default(false) <span class="code-good">// soft delete</span>
+  tags            Json      @default("[]")
+  parentId        String?   <span class="code-good">// fork de conversa</span>
+}
+
+<span class="code-good">// Message com metricas</span>
+model Message {
+  role       String <span class="code-good">// enum: user|assistant|system</span>
+  tokenCount Int?   <span class="code-good">// custo da mensagem</span>
+  model      String? <span class="code-good">// qual modelo gerou</span>
+  metadata   Json?   <span class="code-good">// tipo nativo, nao String</span>
+}
+
+<span class="code-good">// NOVO: Feedback por mensagem</span>
+model MessageFeedback {
+  id        String @id @default(uuid())
+  messageId String
+  rating    Int    <span class="code-good">// 1-5 ou thumbs up/down</span>
+  feedback  String?
+  userId    String
+  @@unique([messageId, userId])
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== DOMAIN 5: RESOURCES ==================== -->
+    <div class="domain-card glass rounded-2xl overflow-hidden" data-domain="resources" onclick="toggleCard(this)">
+      <div class="p-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">5. Recursos (MCP, Skills, Agents, Rules, Plugins, Hooks)</h3>
+            <p class="text-sm text-slate-400">6 modelos + 5 join tables — mais complexo dominio do sistema</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs px-2 py-1 rounded-full badge-critical font-medium">Deps quebradas</span>
+          <span class="text-xs px-2 py-1 rounded-full badge-high font-medium">GitHub 3x duplicado</span>
+          <svg class="w-5 h-5 text-slate-400 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="px-6 pb-6 space-y-6">
+          <div class="as-is p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400">AS-IS</span>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300">
+              <div><strong class="text-white">Dependencias invisiveis:</strong> Skill.allowedTools referencia tools por <code class="code-bad">nome (String)</code>, nao por ID de MCP. Deletar um MCP quebra Skills silenciosamente.</div>
+              <div><strong class="text-white">Agent.skills duplicado:</strong> Campo <code class="code-bad">skills String @default("[]")</code> guarda IDs de Skills como JSON. Mas ja existe join table WorkflowStepSkill. Duas fontes de verdade.</div>
+              <div><strong class="text-white">Git tracking 3x:</strong> Campos <code class="code-bad">repoOwner, repoName, repoBranch, repoPath, lastSyncedAt</code> duplicados em Skill, Agent e Rule.</div>
+              <div><strong class="text-white">Sem tags/categorias:</strong> Nenhum recurso tem campo de tag ou categoria. Impossivel organizar com dezenas de Skills.</div>
+              <div><strong class="text-white">Join tables sem metadata:</strong> Nenhuma join table tem <code class="code-bad">createdAt</code>, <code class="code-bad">order</code> ou <code class="code-bad">config</code>. Impossivel saber quando foi vinculado ou customizar por step.</div>
+              <div><strong class="text-white">Hook fora do Plugin:</strong> Unico recurso sem <code class="code-bad">pluginId</code>. Inconsistencia arquitetural.</div>
+            </div>
+          </div>
+          <div class="to-be p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400">TO-BE</span>
+            </div>
+            <pre class="mt-2"><code><span class="code-good">// NOVO: Dependencias declarativas entre recursos</span>
+model ResourceDependency {
+  id             String @id @default(uuid())
+  sourceType     String <span class="code-good">// "skill"|"agent"|"rule"|"hook"</span>
+  sourceId       String
+  dependencyType String <span class="code-good">// "requires_mcp"|"requires_skill"</span>
+  dependencyRef  String <span class="code-good">// ID do recurso dependente</span>
+  isOptional     Boolean @default(false)
+  @@unique([sourceType, sourceId, dependencyType, dependencyRef])
+}
+
+<span class="code-good">// NOVO: Git source extraido (elimina duplicacao 3x)</span>
+model GitSource {
+  id           String @id @default(uuid())
+  resourceType String <span class="code-good">// "skill"|"agent"|"rule"</span>
+  resourceId   String
+  repoOwner    String
+  repoName     String
+  repoBranch   String @default("main")
+  repoPath     String?
+  lastSyncedAt DateTime?
+  @@unique([resourceType, resourceId])
+}
+
+<span class="code-good">// NOVO: Tags universais</span>
+model Tag {
+  id       String @id @default(uuid())
+  name     String
+  color    String? <span class="code-good">// hex para UI</span>
+  userId   String
+  @@unique([name, userId])
+}
+model ResourceTag {
+  resourceType String
+  resourceId   String
+  tagId        String
+  @@unique([resourceType, resourceId, tagId])
+}
+
+<span class="code-good">// Join tables enriquecidas</span>
+model WorkflowStepMcpServer {
+  stepId      String
+  mcpServerId String
+  order       Int?      <span class="code-good">// prioridade</span>
+  config      Json?     <span class="code-good">// override por step</span>
+  createdAt   DateTime  @default(now())
+}
+
+<span class="code-good">// Agent — skills como relacao real</span>
+model AgentSkill {
+  agentId String
+  skillId String
+  @@unique([agentId, skillId])
+}
+<span class="code-good">// REMOVER Agent.skills String</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== DOMAIN 6: OBSERVABILITY ==================== -->
+    <div class="domain-card glass rounded-2xl overflow-hidden" data-domain="observability" onclick="toggleCard(this)">
+      <div class="p-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">6. Observabilidade & Metricas</h3>
+            <p class="text-sm text-slate-400">0 modelos dedicados — tudo calculado em tempo real com full scans</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs px-2 py-1 rounded-full badge-new font-medium">+5 novos modelos</span>
+          <svg class="w-5 h-5 text-slate-400 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="px-6 pb-6 space-y-6">
+          <div class="as-is p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400">AS-IS</span>
+              <span class="text-sm font-semibold text-red-300">Nenhum modelo de observabilidade</span>
+            </div>
+            <div class="space-y-3 text-sm text-slate-300">
+              <div>Metricas calculadas <code class="code-bad">on-the-fly</code> via full scan de ExecutionTrace. Sem percentis (p50/p95), sem cost breakdown, sem trend data, sem tool analytics.</div>
+              <div>Dashboard mostra <code class="code-bad">numeros sem contexto</code> — "5 workflows" sem delta vs ontem. TokenBudget existe mas <code class="code-bad">nao aparece no frontend</code>.</div>
+              <div>Perguntas impossiveis: "Qual e o custo medio por workflow?" "Qual tool e mais lenta?" "A qualidade melhorou apos mudar o prompt?"</div>
+            </div>
+          </div>
+          <div class="to-be p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400">TO-BE</span>
+              <span class="text-sm font-semibold text-green-300">Observabilidade em 3 Camadas</span>
+            </div>
+            <pre class="mt-2"><code><span class="code-good">// Camada 1: Metricas pre-agregadas (atualiza no flush do monitor)</span>
+model DailyExecutionMetrics { ... }  <span class="code-good">// ja detalhado em Execucao</span>
+model HourlyTokenUsage {
+  hour     DateTime
+  userId   String
+  tokens   BigInt
+  costUsd  Float
+  @@unique([hour, userId])
+}
+
+<span class="code-good">// Camada 2: Performance por recurso</span>
+model ResourcePerformanceMetric {
+  resourceType   String  <span class="code-good">// skill|agent|mcp|workflow</span>
+  resourceId     String
+  period         String  <span class="code-good">// daily|weekly|monthly</span>
+  periodStart    DateTime
+  executionCount Int
+  successCount   Int
+  avgDurationMs  Float?
+  p95DurationMs  Float?
+  totalCostUsd   Float   @default(0)
+  avgQualityScore Float? <span class="code-good">// from ratings</span>
+  @@unique([resourceType, resourceId, period, periodStart])
+}
+
+<span class="code-good">// Camada 3: Feedback humano</span>
+model ExecutionRating {
+  executionId String
+  stepId      String?
+  rating      Int     <span class="code-good">// 1-5</span>
+  feedback    String?
+  userId      String
+  @@unique([executionId, stepId, userId])
+}
+
+<span class="code-good">// Camada 4: Audit trail global</span>
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String   <span class="code-good">// create|update|delete|execute</span>
+  entityType String   <span class="code-good">// workflow|skill|agent|...</span>
+  entityId   String
+  changes    Json?    <span class="code-good">// diff do que mudou</span>
+  createdAt  DateTime @default(now())
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== DOMAIN 7: COLLABORATION ==================== -->
+    <div class="domain-card glass rounded-2xl overflow-hidden" data-domain="collaboration" onclick="toggleCard(this)">
+      <div class="p-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center text-pink-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">7. Colaboracao & Sharing</h3>
+            <p class="text-sm text-slate-400">0 modelos — completamente ausente apesar de RBAC existir</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs px-2 py-1 rounded-full badge-new font-medium">+6 novos modelos</span>
+          <svg class="w-5 h-5 text-slate-400 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="px-6 pb-6 space-y-6">
+          <div class="as-is p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400">AS-IS</span>
+              <span class="text-sm font-semibold text-red-300">Single-user por design</span>
+            </div>
+            <div class="text-sm text-slate-300">
+              Tudo e scoped por <code class="code-bad">userId</code>. Existem roles (admin/developer/viewer) e <code>useRole()</code> hook no frontend, mas nao ha nenhuma estrutura para: teams/workspaces, comentarios, sharing de workflows, notificacoes, activity feed, favoritos, ou busca entre usuarios.
+            </div>
+          </div>
+          <div class="to-be p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400">TO-BE</span>
+              <span class="text-sm font-semibold text-green-300">Estrutura Multi-tenant</span>
+            </div>
+            <pre class="mt-2"><code><span class="code-good">// NOVO: Workspaces/Teams</span>
+model Workspace {
+  id   String @id @default(uuid())
+  name String
+  slug String @unique
+  members WorkspaceMember[]
+}
+model WorkspaceMember {
+  workspaceId String
+  userId      String
+  role        String <span class="code-good">// owner|admin|member|viewer</span>
+  @@unique([workspaceId, userId])
+}
+
+<span class="code-good">// NOVO: Comentarios universais</span>
+model Comment {
+  id           String @id @default(uuid())
+  content      String
+  entityType   String <span class="code-good">// workflow|conversation|execution</span>
+  entityId     String
+  userId       String
+  parentId     String? <span class="code-good">// thread/reply</span>
+  createdAt    DateTime @default(now())
+}
+
+<span class="code-good">// NOVO: Notificacoes</span>
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   <span class="code-good">// execution_done|error|comment|budget_warning</span>
+  title     String
+  data      Json
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+<span class="code-good">// NOVO: Favoritos</span>
+model Favorite {
+  userId       String
+  entityType   String
+  entityId     String
+  @@unique([userId, entityType, entityId])
+}
+
+<span class="code-good">// NOVO: Marketplace</span>
+model ResourceTemplate {
+  id           String @id @default(uuid())
+  name         String
+  resourceType String
+  snapshot     Json
+  authorId     String
+  forkCount    Int    @default(0)
+  usageCount   Int    @default(0)
+  isPublic     Boolean @default(false)
+}
+model ResourceFork {
+  sourceType String
+  sourceId   String
+  forkedId   String
+  userId     String
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== DOMAIN 8: TRIGGERS ==================== -->
+    <div class="domain-card glass rounded-2xl overflow-hidden" data-domain="triggers" onclick="toggleCard(this)">
+      <div class="p-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">8. Triggers & Scheduling</h3>
+            <p class="text-sm text-slate-400">0 modelos — toda execucao e manual via API</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs px-2 py-1 rounded-full badge-new font-medium">+2 novos modelos</span>
+          <svg class="w-5 h-5 text-slate-400 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="px-6 pb-6 space-y-6">
+          <div class="as-is p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400">AS-IS</span>
+            </div>
+            <div class="text-sm text-slate-300">
+              <code class="code-bad">Webhook</code> existente e apenas OUTBOUND (notifica sistemas externos). Nao ha nenhum mecanismo para disparar workflows automaticamente: sem cron, sem webhook inbound, sem event chaining, sem file watch, sem git push trigger.
+            </div>
+          </div>
+          <div class="to-be p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400">TO-BE</span>
+            </div>
+            <pre class="mt-2"><code><span class="code-good">// NOVO: Workflow Triggers</span>
+model WorkflowTrigger {
+  id             String  @id @default(uuid())
+  workflowId     String
+  name           String
+  type           String  <span class="code-good">// manual|cron|webhook_inbound|event|git_push</span>
+  enabled        Boolean @default(true)
+
+  <span class="code-good">// Cron</span>
+  cronExpression String? <span class="code-good">// "0 9 * * 1" = Monday 9am</span>
+  timezone       String? @default("America/Sao_Paulo")
+
+  <span class="code-good">// Webhook inbound</span>
+  webhookPath    String? @unique <span class="code-good">// /triggers/abc123</span>
+  webhookSecret  String?
+
+  <span class="code-good">// Event chaining</span>
+  eventSource    String? <span class="code-good">// workflow_complete|step_failed</span>
+  eventFilter    Json?
+
+  <span class="code-good">// Config</span>
+  initialMessage String?
+  variables      Json    @default("{}")
+  maxPerHour     Int?    <span class="code-good">// rate limiting</span>
+  cooldownSec    Int?
+  lastTriggeredAt DateTime?
+
+  workflow       Workflow @relation(...)
+}
+
+<span class="code-good">// NOVO: Log de execucoes agendadas</span>
+model ScheduledExecution {
+  id             String    @id @default(uuid())
+  triggerId      String
+  status         String    @default("pending")
+  triggerData    Json      @default("{}")
+  scheduledAt    DateTime
+  startedAt      DateTime?
+  completedAt    DateTime?
+  conversationId String? <span class="code-good">// conversa criada</span>
+  error          String?
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Roadmap -->
+  <section class="max-w-7xl mx-auto px-4 pb-20 fade-in">
+    <div class="glass rounded-2xl p-8">
+      <h2 class="text-2xl font-bold text-white mb-2">Roadmap de Implementacao</h2>
+      <p class="text-slate-400 mb-8">Priorizado por impacto e esforco, dividido em 4 sprints</p>
+
+      <div class="space-y-8">
+        <!-- Sprint 1 -->
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center text-red-400 font-bold text-sm">S1</span>
+            <h3 class="font-semibold text-white">Sprint 1 — Fundacao (1-2 semanas)</h3>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">Critico</span>
+          </div>
+          <div class="grid md:grid-cols-2 gap-3 ml-11">
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-red-400 font-mono">01</span> <span class="text-slate-300">Migrar 15+ campos JSON String para tipo <code class="code-good">Json</code> nativo</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-red-400 font-mono">02</span> <span class="text-slate-300">Adicionar 8 FKs faltantes (StepTemplate, PromptVersion, ExecutionTrace)</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-red-400 font-mono">03</span> <span class="text-slate-300">Converter Strings livres em <code class="code-good">enums</code> (role, status, type)</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-red-400 font-mono">04</span> <span class="text-slate-300">Adicionar <code class="code-good">status</code> em Workflow e Conversation</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-red-400 font-mono">05</span> <span class="text-slate-300">Implementar <code class="code-good">Prisma migrations</code> (sair do db push)</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-red-400 font-mono">06</span> <span class="text-slate-300">Criptografar tokens (GitAccount, Webhook, McpServer envVars)</span></div>
+          </div>
+        </div>
+
+        <!-- Sprint 2 -->
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-sm">S2</span>
+            <h3 class="font-semibold text-white">Sprint 2 — Observabilidade (2-3 semanas)</h3>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400">Alto</span>
+          </div>
+          <div class="grid md:grid-cols-2 gap-3 ml-11">
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-orange-400 font-mono">07</span> <span class="text-slate-300">Criar <code class="code-good">DailyExecutionMetrics</code> e pipeline de agregacao</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-orange-400 font-mono">08</span> <span class="text-slate-300">Criar <code class="code-good">ExecutionToolCall</code> — extrair do parsedEvents JSON</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-orange-400 font-mono">09</span> <span class="text-slate-300">Criar <code class="code-good">ExecutionAggregate</code> (metricas cross-step)</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-orange-400 font-mono">10</span> <span class="text-slate-300">Implementar <code class="code-good">error taxonomy</code> e categorization</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-orange-400 font-mono">11</span> <span class="text-slate-300">Criar <code class="code-good">AuditLog</code> global</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-orange-400 font-mono">12</span> <span class="text-slate-300">Retencao inteligente: agregar antes de deletar traces</span></div>
+          </div>
+        </div>
+
+        <!-- Sprint 3 -->
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold text-sm">S3</span>
+            <h3 class="font-semibold text-white">Sprint 3 — Organizacao & Versionamento (2-3 semanas)</h3>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400">Medio</span>
+          </div>
+          <div class="grid md:grid-cols-2 gap-3 ml-11">
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">13</span> <span class="text-slate-300">Criar <code class="code-good">WorkflowVersion</code> com snapshot e diff</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">14</span> <span class="text-slate-300">Criar <code class="code-good">Tag</code> + <code class="code-good">ResourceTag</code> universais</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">15</span> <span class="text-slate-300">Criar <code class="code-good">ResourceDependency</code> com impact analysis</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">16</span> <span class="text-slate-300">Extrair <code class="code-good">GitSource</code> (eliminar duplicacao 3x)</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">17</span> <span class="text-slate-300">Criar <code class="code-good">AgentSkill</code> join table (remover JSON de skills)</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">18</span> <span class="text-slate-300">Adicionar <code class="code-good">timeout</code>, <code class="code-good">errorHandler</code>, <code class="code-good">skipCondition</code> no WorkflowStep</span></div>
+          </div>
+        </div>
+
+        <!-- Sprint 4 -->
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">S4</span>
+            <h3 class="font-semibold text-white">Sprint 4 — Colaboracao & Automacao (3-4 semanas)</h3>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400">Futuro</span>
+          </div>
+          <div class="grid md:grid-cols-2 gap-3 ml-11">
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">19</span> <span class="text-slate-300">Criar <code class="code-good">WorkflowTrigger</code> (cron, webhook, event)</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">20</span> <span class="text-slate-300">Criar <code class="code-good">Workspace</code> + <code class="code-good">WorkspaceMember</code></span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">21</span> <span class="text-slate-300">Criar <code class="code-good">Comment</code>, <code class="code-good">Notification</code>, <code class="code-good">Favorite</code></span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">22</span> <span class="text-slate-300">Criar <code class="code-good">ResourceTemplate</code> + <code class="code-good">ResourceFork</code> (marketplace)</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">23</span> <span class="text-slate-300">Criar <code class="code-good">MessageFeedback</code> + <code class="code-good">ExecutionRating</code></span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">24</span> <span class="text-slate-300">Sub-workflows: <code class="code-good">subWorkflowId</code> no WorkflowStep</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Summary -->
+  <section class="max-w-7xl mx-auto px-4 pb-20 fade-in">
+    <div class="glass rounded-2xl p-8">
+      <h2 class="text-2xl font-bold text-white mb-6">Resumo: AS-IS vs TO-BE</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-700">
+              <th class="text-left py-3 px-4 text-slate-400 font-medium">Dimensao</th>
+              <th class="text-left py-3 px-4 text-red-400 font-medium">AS-IS</th>
+              <th class="text-left py-3 px-4 text-green-400 font-medium">TO-BE</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800">
+            <tr><td class="py-3 px-4 text-white font-medium">Modelos</td><td class="py-3 px-4 text-slate-400">25 modelos</td><td class="py-3 px-4 text-green-300">39 modelos (+14)</td></tr>
+            <tr><td class="py-3 px-4 text-white font-medium">Integridade referencial</td><td class="py-3 px-4 text-red-300">8 FKs orfas, Strings sem relacao</td><td class="py-3 px-4 text-green-300">100% FKs com constraints</td></tr>
+            <tr><td class="py-3 px-4 text-white font-medium">Tipos de dados</td><td class="py-3 px-4 text-red-300">15+ campos JSON como String</td><td class="py-3 px-4 text-green-300">Tipo Json nativo + enums</td></tr>
+            <tr><td class="py-3 px-4 text-white font-medium">Versionamento</td><td class="py-3 px-4 text-red-300">Apenas prompts</td><td class="py-3 px-4 text-green-300">Workflows completos + diff</td></tr>
+            <tr><td class="py-3 px-4 text-white font-medium">Observabilidade</td><td class="py-3 px-4 text-red-300">Full-table scans, sem percentis</td><td class="py-3 px-4 text-green-300">Pre-agregado, p50/p95, por recurso</td></tr>
+            <tr><td class="py-3 px-4 text-white font-medium">Colaboracao</td><td class="py-3 px-4 text-red-300">Single-user</td><td class="py-3 px-4 text-green-300">Teams, comments, sharing, marketplace</td></tr>
+            <tr><td class="py-3 px-4 text-white font-medium">Automacao</td><td class="py-3 px-4 text-red-300">100% manual</td><td class="py-3 px-4 text-green-300">Cron, webhooks, event chaining</td></tr>
+            <tr><td class="py-3 px-4 text-white font-medium">Organizacao</td><td class="py-3 px-4 text-red-300">Sem tags, sem categorias</td><td class="py-3 px-4 text-green-300">Tags universais + categorias</td></tr>
+            <tr><td class="py-3 px-4 text-white font-medium">Error handling</td><td class="py-3 px-4 text-red-300">Workflow para em qualquer erro</td><td class="py-3 px-4 text-green-300">Skip, fallback, continue, timeout</td></tr>
+            <tr><td class="py-3 px-4 text-white font-medium">Seguranca</td><td class="py-3 px-4 text-red-300">Tokens em texto puro</td><td class="py-3 px-4 text-green-300">Criptografia at-rest + scopes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 py-8">
+    <div class="max-w-7xl mx-auto px-4 text-center text-sm text-slate-500">
+      Orquetrador Claude — Analise Estrutural gerada em Mar 2026 | 8 dominios, 25 modelos analisados, 14 novos propostos
+    </div>
+  </footer>
+
+  <script>
+    // Intersection Observer for fade-in
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }});
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+
+    // Toggle domain cards
+    function toggleCard(card) {
+      card.classList.toggle('open');
+    }
+
+    // Filter domains
+    function filterDomain(filter) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+      });
+      document.querySelectorAll('.domain-card').forEach(card => {
+        if (filter === 'all') {
+          card.style.display = '';
+        } else {
+          card.style.display = card.dataset.domain === filter ? '' : 'none';
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
