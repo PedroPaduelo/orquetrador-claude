@@ -11,31 +11,31 @@ interface McpServerData {
   type: string
   uri?: string | null
   command?: string | null
-  args: string
-  envVars: string
+  args: unknown
+  envVars: unknown
 }
 
 interface SkillData {
   name: string
   description?: string | null
-  frontmatter: string
+  frontmatter: unknown
   body: string
-  allowedTools: string
+  allowedTools: unknown
   model?: string | null
   source: string
-  fileManifest: string
+  fileManifest: unknown
 }
 
 interface AgentData {
   name: string
   description?: string | null
   systemPrompt: string
-  tools: string
-  disallowedTools: string
+  tools: unknown
+  disallowedTools: unknown
   model?: string | null
   permissionMode: string
   maxTurns?: number | null
-  skills: string
+  skills: unknown
 }
 
 interface RuleData {
@@ -56,12 +56,9 @@ interface HookData {
   enabled: boolean
 }
 
-function safeJsonParse<T>(value: string, fallback: T): T {
-  try {
-    return JSON.parse(value) as T
-  } catch {
-    return fallback
-  }
+function asType<T>(value: unknown, fallback: T): T {
+  if (value === null || value === undefined) return fallback
+  return value as T
 }
 
 export class FileSyncService {
@@ -325,10 +322,10 @@ exit 0
 
     for (const server of servers) {
       // Servers do step/global sobrescrevem base servers com mesmo nome
-      const envVars = safeJsonParse<Record<string, string>>(server.envVars, {})
+      const envVars = asType<Record<string, string>>(server.envVars, {})
 
       if (server.type === 'stdio' && server.command) {
-        const args = safeJsonParse<string[]>(server.args, [])
+        const args = asType<string[]>(server.args, [])
         const entry: Record<string, unknown> = {
           command: server.command,
           args,
@@ -396,7 +393,7 @@ exit 0
    * For manual skills: reconstructs SKILL.md from DB fields.
    */
   syncSkillFile(projectPath: string, skill: SkillData): void {
-    const manifest = safeJsonParse<Array<{ path: string; content: string }>>(skill.fileManifest, [])
+    const manifest = asType<Array<{ path: string; content: string }>>(skill.fileManifest, [])
 
     if (skill.source === 'imported' && manifest.length > 0) {
       // Imported skill: write ALL files from manifest
@@ -406,7 +403,7 @@ exit 0
       }
     } else {
       // Manual skill: reconstruct SKILL.md from DB fields
-      const allowedTools = safeJsonParse<string[]>(skill.allowedTools, [])
+      const allowedTools = asType<string[]>(skill.allowedTools, [])
 
       const frontmatterLines: string[] = ['---']
       frontmatterLines.push(`name: ${skill.name}`)
@@ -434,9 +431,9 @@ exit 0
    * Sync an agent file to .claude/agents/{name}/agent.md
    */
   syncAgentFile(projectPath: string, agent: AgentData): void {
-    const tools = safeJsonParse<string[]>(agent.tools, [])
-    const disallowedTools = safeJsonParse<string[]>(agent.disallowedTools, [])
-    const skills = safeJsonParse<string[]>(agent.skills, [])
+    const tools = asType<string[]>(agent.tools, [])
+    const disallowedTools = asType<string[]>(agent.disallowedTools, [])
+    const skills = asType<string[]>(agent.skills, [])
 
     const frontmatterLines: string[] = ['---']
     frontmatterLines.push(`name: ${agent.name}`)

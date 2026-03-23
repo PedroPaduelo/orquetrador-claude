@@ -1,31 +1,9 @@
 import { prisma } from '../../lib/prisma.js'
+import type { JsonValue, InputJsonValue } from '@prisma/client/runtime/library'
 
-// ---- toDb / fromDb helpers ----
-
-function toDb(input: {
-  name: string
-  description?: string
-  body?: string
-  allowedTools?: string[]
-  model?: string | null
-  enabled?: boolean
-  isGlobal?: boolean
-  frontmatter?: string
-  source?: string
-  repoUrl?: string | null
-  repoOwner?: string | null
-  repoName?: string | null
-  repoBranch?: string | null
-  repoPath?: string | null
-  fileManifest?: string
-  projectPath?: string | null
-  pluginId?: string | null
-  lastSyncedAt?: Date | null
-}) {
-  return {
-    ...input,
-    allowedTools: input.allowedTools !== undefined ? JSON.stringify(input.allowedTools) : undefined,
-  }
+function toStringArray(val: JsonValue | null | undefined): string[] {
+  if (Array.isArray(val)) return val.filter((v): v is string => typeof v === 'string')
+  return []
 }
 
 function fromDb(record: {
@@ -33,7 +11,7 @@ function fromDb(record: {
   name: string
   description: string | null
   body: string
-  allowedTools: string | null
+  allowedTools: JsonValue
   model: string | null
   enabled: boolean
   isGlobal: boolean
@@ -53,7 +31,7 @@ function fromDb(record: {
     name: record.name,
     description: record.description,
     body: record.body,
-    allowedTools: JSON.parse(record.allowedTools || '[]') as string[],
+    allowedTools: toStringArray(record.allowedTools),
     model: record.model,
     enabled: record.enabled,
     isGlobal: record.isGlobal,
@@ -94,19 +72,24 @@ export const skillsRepository = {
     model?: string | null
     enabled?: boolean
     isGlobal?: boolean
-    frontmatter?: string
+    frontmatter?: Record<string, unknown>
     source?: string
     repoUrl?: string | null
     repoOwner?: string | null
     repoName?: string | null
     repoBranch?: string | null
     repoPath?: string | null
-    fileManifest?: string
+    fileManifest?: Array<{ path: string; content: string }>
     projectPath?: string | null
     lastSyncedAt?: Date | null
   }, userId: string) {
     const skill = await prisma.skill.create({
-      data: { ...toDb(input as Parameters<typeof toDb>[0]), userId },
+      data: {
+        ...input,
+        userId,
+        frontmatter: input.frontmatter as InputJsonValue | undefined,
+        fileManifest: input.fileManifest as InputJsonValue | undefined,
+      },
     })
     return fromDb(skill)
   },
@@ -119,15 +102,15 @@ export const skillsRepository = {
     model?: string | null
     enabled?: boolean
     isGlobal?: boolean
-    frontmatter?: string
-    fileManifest?: string
+    frontmatter?: Record<string, unknown>
+    fileManifest?: Array<{ path: string; content: string }>
     lastSyncedAt?: Date | null
   }) {
     const data: Record<string, unknown> = {}
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description
     if (input.body !== undefined) data.body = input.body
-    if (input.allowedTools !== undefined) data.allowedTools = JSON.stringify(input.allowedTools)
+    if (input.allowedTools !== undefined) data.allowedTools = input.allowedTools
     if (input.model !== undefined) data.model = input.model
     if (input.enabled !== undefined) data.enabled = input.enabled
     if (input.isGlobal !== undefined) data.isGlobal = input.isGlobal

@@ -1,6 +1,14 @@
 import { skillsRepository } from './skills.repository.js'
 import { parseFrontmatter } from '../../lib/frontmatter.js'
-import { fetchMarkdownFromUrl, extractNameFromUrl, fetchJson, fetchText, rawGitHubUrl, toJsonArray } from '../../lib/github.js'
+import { fetchMarkdownFromUrl, extractNameFromUrl, fetchJson, fetchText, rawGitHubUrl } from '../../lib/github.js'
+
+function toArray(val: unknown): string[] {
+  if (Array.isArray(val)) return val.map(String)
+  if (typeof val === 'string' && val.trim()) {
+    return val.split(',').map((s) => s.trim()).filter(Boolean)
+  }
+  return []
+}
 
 interface GitHubTreeItem {
   path: string
@@ -32,7 +40,7 @@ export const skillsService = {
       body,
       allowedTools: Array.isArray(allowedTools) ? allowedTools : [],
       model: typeof model === 'string' ? model : null,
-      frontmatter: JSON.stringify(frontmatter),
+      frontmatter: frontmatter as Record<string, unknown>,
       enabled: true,
       isGlobal,
     }, userId!)
@@ -90,16 +98,16 @@ export const skillsService = {
     // Parse SKILL.md for DB fields
     const now = new Date()
     const updateData: Parameters<typeof skillsRepository.update>[2] = {
-      fileManifest: JSON.stringify(manifest),
+      fileManifest: manifest,
       lastSyncedAt: now,
     }
 
     if (skillMdContent) {
       const { frontmatter, body } = parseFrontmatter(skillMdContent)
       updateData.body = body
-      updateData.frontmatter = JSON.stringify(frontmatter)
+      updateData.frontmatter = frontmatter as Record<string, unknown>
       const toolsVal = frontmatter['allowed-tools'] || frontmatter.allowedTools
-      updateData.allowedTools = JSON.parse(toJsonArray(toolsVal))
+      updateData.allowedTools = toArray(toolsVal)
       if (frontmatter.description) updateData.description = frontmatter.description as string
     }
 

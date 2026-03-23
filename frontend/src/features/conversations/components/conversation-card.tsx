@@ -128,7 +128,7 @@ export function ConversationCard({ conversation, onDelete, onClone, selectionMod
         {/* Footer */}
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
           <div className="flex items-center gap-1.5">
-            {'status' in conversation && conversation.status === 'running' && (
+            {'status' in conversation && (conversation as { status: string }).status === 'running' && (
               <span className="flex items-center gap-1 text-[11px] text-amber-500">
                 <Circle className="h-2 w-2 fill-amber-500" />
                 Executando

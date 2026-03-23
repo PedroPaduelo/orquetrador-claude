@@ -1,15 +1,9 @@
 import { prisma } from '../../lib/prisma.js'
+import type { JsonValue } from '@prisma/client/runtime/library'
 
-function safeParseArray(val: string | null | undefined): string[] {
-  if (!val) return []
-  try {
-    const parsed = JSON.parse(val)
-    if (Array.isArray(parsed)) return parsed
-    if (typeof parsed === 'string') return parsed.split(',').map((s) => s.trim()).filter(Boolean)
-    return []
-  } catch {
-    return val.split(',').map((s) => s.trim()).filter(Boolean)
-  }
+function toStringArray(val: JsonValue | null | undefined): string[] {
+  if (Array.isArray(val)) return val.filter((v): v is string => typeof v === 'string')
+  return []
 }
 
 function fromDb(record: {
@@ -17,12 +11,12 @@ function fromDb(record: {
   name: string
   description: string | null
   systemPrompt: string
-  tools: string | null
-  disallowedTools: string | null
+  tools: JsonValue
+  disallowedTools: JsonValue
   model: string | null
   permissionMode: string
   maxTurns: number | null
-  skills: string | null
+  skills: JsonValue
   enabled: boolean
   isGlobal: boolean
   pluginId: string | null
@@ -41,12 +35,12 @@ function fromDb(record: {
     name: record.name,
     description: record.description,
     systemPrompt: record.systemPrompt,
-    tools: safeParseArray(record.tools),
-    disallowedTools: safeParseArray(record.disallowedTools),
+    tools: toStringArray(record.tools),
+    disallowedTools: toStringArray(record.disallowedTools),
     model: record.model,
     permissionMode: record.permissionMode,
     maxTurns: record.maxTurns,
-    skills: safeParseArray(record.skills),
+    skills: toStringArray(record.skills),
     enabled: record.enabled,
     isGlobal: record.isGlobal,
     pluginId: record.pluginId,
@@ -105,12 +99,12 @@ export const agentsRepository = {
         userId,
         description: input.description,
         systemPrompt: input.systemPrompt ?? '',
-        tools: JSON.stringify(input.tools ?? []),
-        disallowedTools: JSON.stringify(input.disallowedTools ?? []),
+        tools: input.tools ?? [],
+        disallowedTools: input.disallowedTools ?? [],
         model: input.model,
         permissionMode: input.permissionMode ?? 'default',
         maxTurns: input.maxTurns,
-        skills: JSON.stringify(input.skills ?? []),
+        skills: input.skills ?? [],
         enabled: input.enabled ?? true,
         isGlobal: input.isGlobal ?? true,
         source: input.source,
@@ -144,12 +138,12 @@ export const agentsRepository = {
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description
     if (input.systemPrompt !== undefined) data.systemPrompt = input.systemPrompt
-    if (input.tools !== undefined) data.tools = JSON.stringify(input.tools)
-    if (input.disallowedTools !== undefined) data.disallowedTools = JSON.stringify(input.disallowedTools)
+    if (input.tools !== undefined) data.tools = input.tools
+    if (input.disallowedTools !== undefined) data.disallowedTools = input.disallowedTools
     if (input.model !== undefined) data.model = input.model
     if (input.permissionMode !== undefined) data.permissionMode = input.permissionMode
     if (input.maxTurns !== undefined) data.maxTurns = input.maxTurns
-    if (input.skills !== undefined) data.skills = JSON.stringify(input.skills)
+    if (input.skills !== undefined) data.skills = input.skills
     if (input.enabled !== undefined) data.enabled = input.enabled
     if (input.isGlobal !== undefined) data.isGlobal = input.isGlobal
     if (input.lastSyncedAt !== undefined) data.lastSyncedAt = input.lastSyncedAt

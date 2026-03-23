@@ -14,8 +14,7 @@ export class DAGExecutor {
   constructor(steps: WorkflowStep[]) {
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i]
-      let deps: string[] = []
-      try { deps = JSON.parse(step.dependsOn || '[]') } catch { deps = [] }
+      const deps: string[] = (step.dependsOn as string[] || [])
       this.graph.set(step.id, { step, index: i, dependsOn: deps })
     }
   }
@@ -99,9 +98,7 @@ export class DAGExecutor {
 
 export function isDAGWorkflow(steps: WorkflowStep[]): boolean {
   return steps.some(step => {
-    try {
-      const deps = JSON.parse(step.dependsOn || '[]')
-      return Array.isArray(deps) && deps.length > 0
-    } catch { return false }
+    const deps = step.dependsOn as string[] || []
+    return Array.isArray(deps) && deps.length > 0
   })
 }

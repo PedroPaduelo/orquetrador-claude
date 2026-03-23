@@ -8,7 +8,7 @@ export const stepTemplatesRepository = {
     })
     return templates.map(t => ({
       ...t,
-      resourceIds: JSON.parse(t.resourceIds || '{}'),
+      resourceIds: t.resourceIds ?? {},
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
     }))
@@ -19,7 +19,7 @@ export const stepTemplatesRepository = {
     if (!t) return null
     return {
       ...t,
-      resourceIds: JSON.parse(t.resourceIds || '{}'),
+      resourceIds: t.resourceIds ?? {},
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
     }
@@ -40,11 +40,11 @@ export const stepTemplatesRepository = {
         baseUrl: input.baseUrl || '',
         systemPrompt: input.systemPrompt,
         conditions: input.conditions || '{}',
-        resourceIds: JSON.stringify(input.resourceIds || {}),
+        resourceIds: input.resourceIds || {},
         userId,
       },
     })
-    return { ...t, resourceIds: JSON.parse(t.resourceIds), createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString() }
+    return { ...t, resourceIds: t.resourceIds ?? {}, createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString() }
   },
 
   async update(id: string, _userId: string, input: {
@@ -61,10 +61,10 @@ export const stepTemplatesRepository = {
     if (input.baseUrl !== undefined) data.baseUrl = input.baseUrl
     if (input.systemPrompt !== undefined) data.systemPrompt = input.systemPrompt
     if (input.conditions !== undefined) data.conditions = input.conditions
-    if (input.resourceIds !== undefined) data.resourceIds = JSON.stringify(input.resourceIds)
+    if (input.resourceIds !== undefined) data.resourceIds = input.resourceIds
 
     const t = await prisma.stepTemplate.update({ where: { id }, data: data as any })
-    return { ...t, resourceIds: JSON.parse(t.resourceIds), createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString() }
+    return { ...t, resourceIds: t.resourceIds ?? {}, createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString() }
   },
 
   async delete(id: string) {

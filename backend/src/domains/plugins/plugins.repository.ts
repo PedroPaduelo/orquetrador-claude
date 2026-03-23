@@ -8,7 +8,7 @@ function fromDb(record: {
   description: string | null
   version: string | null
   author: string | null
-  manifest: string
+  manifest: unknown
   enabled: boolean
   source: string
   repoUrl: string | null
@@ -22,7 +22,7 @@ function fromDb(record: {
     description: record.description,
     version: record.version,
     author: record.author,
-    manifest: (() => { try { return JSON.parse(record.manifest) } catch { return {} } })(),
+    manifest: record.manifest ?? {},
     enabled: record.enabled,
     source: record.source,
     repoUrl: record.repoUrl,
@@ -127,7 +127,7 @@ export const pluginsRepository = {
         description: input.description ?? null,
         version: input.version ?? null,
         author: input.author ?? null,
-        manifest: JSON.stringify(input.manifest ?? {}),
+        manifest: input.manifest ?? {},
         enabled: input.enabled ?? true,
         source: input.source ?? 'manual',
         repoUrl: input.repoUrl ?? null,
@@ -140,8 +140,8 @@ export const pluginsRepository = {
                 type: s.type,
                 uri: s.uri ?? null,
                 command: s.command ?? null,
-                args: JSON.stringify(s.args ?? []),
-                envVars: JSON.stringify(s.envVars ?? {}),
+                args: s.args ?? [],
+                envVars: s.envVars ?? {},
                 enabled: true,
                 isGlobal: false,
                 userId,
@@ -154,7 +154,7 @@ export const pluginsRepository = {
                 name: s.name,
                 description: s.description ?? null,
                 body: s.body ?? '',
-                allowedTools: JSON.stringify(s.allowedTools ?? []),
+                allowedTools: s.allowedTools ?? [],
                 model: s.model ?? null,
                 enabled: true,
                 isGlobal: false,
@@ -168,12 +168,12 @@ export const pluginsRepository = {
                 name: a.name,
                 description: a.description ?? null,
                 systemPrompt: a.systemPrompt ?? '',
-                tools: JSON.stringify(a.tools ?? []),
-                disallowedTools: JSON.stringify(a.disallowedTools ?? []),
+                tools: a.tools ?? [],
+                disallowedTools: a.disallowedTools ?? [],
                 model: a.model ?? null,
                 permissionMode: a.permissionMode ?? 'default',
                 maxTurns: a.maxTurns ?? null,
-                skills: JSON.stringify(a.skills ?? []),
+                skills: a.skills ?? [],
                 enabled: true,
                 isGlobal: false,
                 userId,

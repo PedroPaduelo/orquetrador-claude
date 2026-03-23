@@ -361,7 +361,7 @@ export async function importSingleFile(
           repoName: repo,
           repoBranch: branch,
           repoPath: dir,
-          fileManifest: JSON.stringify(manifest),
+          fileManifest: manifest,
           lastSyncedAt: now,
         }
 
@@ -373,7 +373,7 @@ export async function importSingleFile(
             body,
             allowedTools: toJsonArray(frontmatter['allowed-tools'] || frontmatter.allowedTools),
             model: (frontmatter.model as string) || null,
-            frontmatter: JSON.stringify(frontmatter),
+            frontmatter: frontmatter as unknown as import('@prisma/client').Prisma.InputJsonValue,
             source: 'imported',
             repoUrl: skillRepoUrl,
             projectPath,
@@ -386,7 +386,7 @@ export async function importSingleFile(
             body,
             allowedTools: toJsonArray(frontmatter['allowed-tools'] || frontmatter.allowedTools),
             model: (frontmatter.model as string) || null,
-            frontmatter: JSON.stringify(frontmatter),
+            frontmatter: frontmatter as unknown as import('@prisma/client').Prisma.InputJsonValue,
             enabled: true,
             isGlobal: false,
             source: 'imported',
@@ -515,7 +515,7 @@ export async function saveItemToDb(
         repoName: repo,
         repoBranch: branch,
         repoPath: item.dir,
-        fileManifest: JSON.stringify(manifest),
+        fileManifest: manifest,
         lastSyncedAt: now,
       }
 
@@ -528,7 +528,7 @@ export async function saveItemToDb(
           body,
           allowedTools: toJsonArray(frontmatter['allowed-tools'] || frontmatter.allowedTools),
           model: (frontmatter.model as string) || null,
-          frontmatter: JSON.stringify(frontmatter),
+          frontmatter: frontmatter as unknown as import('@prisma/client').Prisma.InputJsonValue,
           source: 'imported',
           repoUrl,
           projectPath: projPath,
@@ -542,7 +542,7 @@ export async function saveItemToDb(
           body,
           allowedTools: toJsonArray(frontmatter['allowed-tools'] || frontmatter.allowedTools),
           model: (frontmatter.model as string) || null,
-          frontmatter: JSON.stringify(frontmatter),
+          frontmatter: frontmatter as unknown as import('@prisma/client').Prisma.InputJsonValue,
           enabled: true,
           isGlobal: false,
           source: 'imported',

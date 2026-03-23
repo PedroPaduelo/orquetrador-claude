@@ -222,6 +222,8 @@ export function useSSEStream(options: UseSSEStreamOptions) {
               stepId: (data.stepId as string) || null,
               stepName: (data.stepName as string) || null,
               selectedForContext: false,
+              tokenCount: null,
+              model: null,
               metadata: data.metadata ? { actions: (data.metadata as Record<string, unknown>).actions as Action[] || [] } : undefined,
               attachments: (data.attachments as Array<{
                 id: string

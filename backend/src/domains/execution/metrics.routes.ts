@@ -155,7 +155,7 @@ export async function metricsRoutes(app: FastifyInstance) {
     })
 
     return executions.map(e => {
-      const metadata = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : (e.metadata || {})
+      const metadata = (e.metadata || {}) as Record<string, unknown>
       return {
         id: e.id,
         state: e.state,

@@ -1,6 +1,14 @@
 import { agentsRepository } from './agents.repository.js'
 import { parseFrontmatter } from '../../lib/frontmatter.js'
-import { fetchMarkdownFromUrl, extractNameFromUrl, fetchText, rawGitHubUrl, toJsonArray } from '../../lib/github.js'
+import { fetchMarkdownFromUrl, extractNameFromUrl, fetchText, rawGitHubUrl } from '../../lib/github.js'
+
+function toArray(val: unknown): string[] {
+  if (Array.isArray(val)) return val.map(String)
+  if (typeof val === 'string' && val.trim()) {
+    return val.split(',').map((s) => s.trim()).filter(Boolean)
+  }
+  return []
+}
 
 export const agentsService = {
   async importFromUrl(url: string, isGlobal: boolean, userId: string) {
@@ -58,12 +66,12 @@ export const agentsService = {
     await agentsRepository.update(id, userId, {
       description: (frontmatter.description as string) || agent.description,
       systemPrompt: body,
-      tools: JSON.parse(toJsonArray(frontmatter.tools)),
-      disallowedTools: JSON.parse(toJsonArray(frontmatter.disallowedTools || frontmatter['disallowed-tools'])),
+      tools: toArray(frontmatter.tools),
+      disallowedTools: toArray(frontmatter.disallowedTools || frontmatter['disallowed-tools']),
       model: (frontmatter.model as string) || null,
       permissionMode: (frontmatter.permissionMode as string) || (frontmatter['permission-mode'] as string) || 'default',
       maxTurns: frontmatter.maxTurns ? parseInt(String(frontmatter.maxTurns), 10) || null : null,
-      skills: JSON.parse(toJsonArray(frontmatter.skills)),
+      skills: toArray(frontmatter.skills),
       lastSyncedAt: now,
     })
 

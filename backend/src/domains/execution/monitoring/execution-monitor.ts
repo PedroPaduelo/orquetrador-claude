@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '../../../lib/prisma.js'
 import type { StreamEvent, Metadata } from '../engine/types.js'
 import { tokenBudgetService } from '../budget/token-budget-service.js'
@@ -33,7 +34,7 @@ export class ExecutionMonitor {
   private stderrSize = 0
   private events: CompactEvent[] = []
   private commandLine = ''
-  private envSnapshot = '{}'
+  private envSnapshot: Record<string, unknown> = {}
   private messageLength = 0
   private systemPrompt: string | null = null
   private resumeToken: string | null = null
@@ -157,7 +158,7 @@ export class ExecutionMonitor {
         conversationId: this.conversationId,
         stepId: this.stepId,
         commandLine: this.commandLine,
-        envSnapshot: this.envSnapshot,
+        envSnapshot: this.envSnapshot as Prisma.InputJsonValue,
         messageLength: this.messageLength,
         systemPrompt: this.systemPrompt,
         resumeToken: this.resumeToken,
@@ -166,7 +167,7 @@ export class ExecutionMonitor {
         pid: this.pid,
         stdoutRaw: this.stdoutChunks.join(''),
         stderrRaw: this.stderrChunks.join(''),
-        parsedEvents: JSON.stringify(this.events),
+        parsedEvents: this.events as unknown as Prisma.InputJsonValue,
         startedAt: this.startedAt,
         firstByteAt: this.firstByteAt,
         firstContentAt: this.firstContentAt,
@@ -201,10 +202,10 @@ export class ExecutionMonitor {
         // Additional metadata (JSON fields)
         serviceTier: this.metadata.service_tier,
         inferenceGeo: this.metadata.inference_geo,
-        iterations: this.metadata.iterations ? JSON.stringify(this.metadata.iterations) : undefined,
-        modelUsage: this.metadata.model_usage ? JSON.stringify(this.metadata.model_usage) : undefined,
-        permissionDenials: this.metadata.permission_denials ? JSON.stringify(this.metadata.permission_denials) : undefined,
-        cacheCreation: this.metadata.cache_creation ? JSON.stringify(this.metadata.cache_creation) : undefined,
+        iterations: (this.metadata.iterations as Prisma.InputJsonValue) ?? undefined,
+        modelUsage: (this.metadata.model_usage as Prisma.InputJsonValue) ?? undefined,
+        permissionDenials: (this.metadata.permission_denials as Prisma.InputJsonValue) ?? undefined,
+        cacheCreation: (this.metadata.cache_creation as Prisma.InputJsonValue) ?? undefined,
       },
     }).catch((err) => {
       console.error('[ExecutionMonitor] Failed to persist trace:', err.message)

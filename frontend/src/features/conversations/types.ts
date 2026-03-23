@@ -1,7 +1,16 @@
+export type ConversationStatus = 'active' | 'completed' | 'failed' | 'archived'
+
 export interface Conversation {
   id: string
   title: string | null
   projectPath: string | null
+  status: ConversationStatus
+  totalTokensUsed: number
+  totalCostUsd: number | null
+  lastMessageAt: string | null
+  isArchived: boolean
+  tags: string[]
+  parentId: string | null
   workflowId: string
   workflowName?: string
   workflowType?: 'sequential' | 'step_by_step'
@@ -35,6 +44,8 @@ export interface Message {
   stepId: string | null
   stepName: string | null
   selectedForContext: boolean
+  tokenCount: number | null
+  model: string | null
   metadata?: MessageMetadata
   attachments?: Attachment[]
   createdAt: string

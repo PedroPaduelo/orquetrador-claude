@@ -83,11 +83,7 @@ export const conversationsRepository = {
         stepId: m.stepId,
         stepName: m.step?.name ?? null,
         selectedForContext: m.selectedForContext,
-        metadata: m.metadata
-          ? (typeof m.metadata === 'string'
-              ? (() => { try { return JSON.parse(m.metadata) } catch { return null } })()
-              : m.metadata)
-          : null,
+        metadata: m.metadata ?? null,
         attachments: m.attachments.length > 0
           ? m.attachments.map((a) => ({
               id: a.id,

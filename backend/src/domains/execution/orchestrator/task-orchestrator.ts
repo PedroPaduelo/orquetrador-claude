@@ -13,7 +13,7 @@ import { runValidators } from '../validators/validator-runner.js'
 import type { ValidatorConfig } from '../validators/types.js'
 import { webhooksService } from '../../webhooks/webhooks.service.js'
 import { execSync } from 'child_process'
-import type { WorkflowStep } from '@prisma/client'
+import type { Prisma, WorkflowStep } from '@prisma/client'
 import type { PausedExecutionInfo } from './execution-state.js'
 
 export interface MessageAttachment {
@@ -218,12 +218,12 @@ export class TaskOrchestrator {
               stepId: step.id,
               role: 'assistant',
               content: result.content,
-              metadata: JSON.stringify({
+              metadata: {
                 actions: result.actions,
                 sessionId: result.resumeToken,
                 stepName: step.name,
                 interrupted: true,
-              }),
+              } as unknown as Prisma.InputJsonValue,
             },
           })
           orchestratorEvents.emitMessageSaved({
@@ -590,13 +590,13 @@ export class TaskOrchestrator {
                 stepId: step.id,
                 role: 'assistant',
                 content: result.content,
-                metadata: JSON.stringify({
+                metadata: {
                   actions: result.actions,
                   sessionId: result.resumeToken,
                   stepName: step.name,
                   stepOrder: i + 1,
                   needsUserInput: true,
-                }),
+                } as unknown as Prisma.InputJsonValue,
               },
             })
 
@@ -649,8 +649,7 @@ export class TaskOrchestrator {
         }
 
         // Run validators if configured
-        let validatorConfigs: ValidatorConfig[] = []
-        try { validatorConfigs = JSON.parse(step.validators || '[]') } catch { validatorConfigs = [] }
+        const validatorConfigs = (step.validators || []) as unknown as ValidatorConfig[]
 
         if (validatorConfigs.length > 0) {
           const validation = await runValidators(validatorConfigs, result.content, projectPath)
@@ -683,12 +682,12 @@ export class TaskOrchestrator {
             stepId: step.id,
             role: 'assistant',
             content: result.content,
-            metadata: JSON.stringify({
+            metadata: {
               actions: result.actions,
               sessionId: result.resumeToken,
               stepName: step.name,
               stepOrder: i + 1,
-            }),
+            } as unknown as Prisma.InputJsonValue,
           },
         })
 
@@ -706,11 +705,7 @@ export class TaskOrchestrator {
         // Save checkpoint after each successful step
         await executionStateManager.saveCheckpoint(executionId, i, result.content, result.content).catch(() => {})
 
-        let conditionsData: unknown = step.conditions
-        if (typeof step.conditions === 'string') {
-          try { conditionsData = JSON.parse(step.conditions) } catch { conditionsData = null }
-        }
-        const conditions = (conditionsData || { rules: [], default: 'continue' }) as unknown as StepConditions
+        const conditions = (step.conditions || { rules: [], default: 'continue' }) as unknown as StepConditions
         const conditionResult = conditionsEvaluator.evaluate(result.content, conditions)
 
         const nextStep = conditionsEvaluator.resolveNextStep(
@@ -972,12 +967,12 @@ export class TaskOrchestrator {
                   stepId: dagStep.step.id,
                   role: 'assistant',
                   content: result.content,
-                  metadata: JSON.stringify({
+                  metadata: {
                     actions: result.actions,
                     sessionId: result.resumeToken,
                     stepName: dagStep.step.name,
                     stepOrder: dagStep.index + 1,
-                  }),
+                  } as unknown as Prisma.InputJsonValue,
                 },
               })
               orchestratorEvents.emitMessageSaved({
@@ -1161,13 +1156,13 @@ export class TaskOrchestrator {
               stepId: step.id,
               role: 'assistant',
               content: result.content,
-              metadata: JSON.stringify({
+              metadata: {
                 actions: result.actions,
                 sessionId: result.resumeToken,
                 stepName: step.name,
                 stepOrder: stepIndex + 1,
                 needsUserInput: true,
-              }),
+              } as unknown as Prisma.InputJsonValue,
             },
           })
 
@@ -1210,12 +1205,12 @@ export class TaskOrchestrator {
             stepId: step.id,
             role: 'assistant',
             content: result.content,
-            metadata: JSON.stringify({
+            metadata: {
               actions: result.actions,
               sessionId: result.resumeToken,
               stepName: step.name,
               stepOrder: stepIndex + 1,
-            }),
+            } as unknown as Prisma.InputJsonValue,
           },
         })
 
@@ -1392,13 +1387,13 @@ export class TaskOrchestrator {
               stepId: step.id,
               role: 'assistant',
               content: result.content,
-              metadata: JSON.stringify({
+              metadata: {
                 actions: result.actions,
                 sessionId: result.resumeToken,
                 stepName: step.name,
                 stepOrder: stepIndex + 1,
                 needsUserInput: true,
-              }),
+              } as unknown as Prisma.InputJsonValue,
             },
           })
           orchestratorEvents.emitMessageSaved({
@@ -1448,12 +1443,12 @@ export class TaskOrchestrator {
             stepId: step.id,
             role: 'assistant',
             content: result.content,
-            metadata: JSON.stringify({
+            metadata: {
               actions: result.actions,
               sessionId: result.resumeToken,
               stepName: step.name,
               stepOrder: stepIndex + 1,
-            }),
+            } as unknown as Prisma.InputJsonValue,
           },
         })
         orchestratorEvents.emitMessageSaved({
@@ -1546,13 +1541,13 @@ export class TaskOrchestrator {
                   stepId: nextStep.id,
                   role: 'assistant',
                   content: nextResult.content,
-                  metadata: JSON.stringify({
+                  metadata: {
                     actions: nextResult.actions,
                     sessionId: nextResult.resumeToken,
                     stepName: nextStep.name,
                     stepOrder: i + 1,
                     needsUserInput: true,
-                  }),
+                  } as unknown as Prisma.InputJsonValue,
                 },
               })
               orchestratorEvents.emitMessageSaved({
@@ -1594,8 +1589,7 @@ export class TaskOrchestrator {
           }
 
           // Run validators
-          let validatorConfigs: ValidatorConfig[] = []
-          try { validatorConfigs = JSON.parse(nextStep.validators || '[]') } catch { validatorConfigs = [] }
+          const validatorConfigs = (nextStep.validators || []) as unknown as ValidatorConfig[]
 
           if (validatorConfigs.length > 0) {
             const validation = await runValidators(validatorConfigs, nextResult.content, projectPath)
@@ -1628,12 +1622,12 @@ export class TaskOrchestrator {
               stepId: nextStep.id,
               role: 'assistant',
               content: nextResult.content,
-              metadata: JSON.stringify({
+              metadata: {
                 actions: nextResult.actions,
                 sessionId: nextResult.resumeToken,
                 stepName: nextStep.name,
                 stepOrder: i + 1,
-              }),
+              } as unknown as Prisma.InputJsonValue,
             },
           })
           orchestratorEvents.emitMessageSaved({

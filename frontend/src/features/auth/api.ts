@@ -1,10 +1,16 @@
 import { apiClient } from '@/shared/lib/api-client'
 
+export type UserStatus = 'active' | 'suspended' | 'invited'
+export type UserRole = 'admin' | 'developer' | 'viewer'
+
 export interface AuthUser {
   id: string
   email: string
   name: string | null
-  role: string
+  status: UserStatus
+  role: UserRole
+  lastLoginAt: string | null
+  maxConcurrentExecutions: number
   basePath: string
   hasGithub: boolean
 }

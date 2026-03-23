@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma.js'
 
 type MessageAttachment = {
@@ -48,11 +49,7 @@ function fromDb(m: {
     stepId: m.stepId,
     stepName: m.step?.name ?? null,
     selectedForContext: m.selectedForContext,
-    metadata: m.metadata
-      ? typeof m.metadata === 'string'
-        ? JSON.parse(m.metadata)
-        : m.metadata
-      : null,
+    metadata: m.metadata ?? null,
     attachments:
       m.attachments && m.attachments.length > 0
         ? m.attachments.map((a) => ({
@@ -118,18 +115,15 @@ export const messagesRepository = {
       return { id, success: false }
     }
 
-    const currentMetadata =
-      typeof message.metadata === 'string'
-        ? JSON.parse(message.metadata)
-        : (message.metadata ?? {})
+    const currentMetadata = (message.metadata ?? {}) as Record<string, unknown>
 
     await prisma.message.update({
       where: { id },
       data: {
-        metadata: JSON.stringify({
+        metadata: {
           ...currentMetadata,
           actions,
-        }),
+        } as Prisma.InputJsonValue,
       },
     })
 

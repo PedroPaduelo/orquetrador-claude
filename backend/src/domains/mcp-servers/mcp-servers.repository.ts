@@ -38,22 +38,17 @@ function fromDbFull(record: {
   type: string
   uri: string | null
   command: string | null
-  args: string | null
-  envVars: string | null
+  args: unknown
+  envVars: unknown
   enabled: boolean
   isGlobal: boolean
-  toolsCache: string | null
+  toolsCache: unknown
   lastTestAt: Date | null
   lastTestOk: boolean | null
   pluginId: string | null
   createdAt: Date
   updatedAt: Date
 }) {
-  let toolsCache = null
-  if (record.toolsCache) {
-    try { toolsCache = JSON.parse(record.toolsCache) } catch { /* ignore */ }
-  }
-
   return {
     id: record.id,
     name: record.name,
@@ -61,11 +56,11 @@ function fromDbFull(record: {
     type: record.type,
     uri: record.uri,
     command: record.command,
-    args: JSON.parse(record.args || '[]') as string[],
-    envVars: JSON.parse(record.envVars || '{}') as Record<string, string>,
+    args: (record.args ?? []) as string[],
+    envVars: (record.envVars ?? {}) as Record<string, string>,
     enabled: record.enabled,
     isGlobal: record.isGlobal,
-    toolsCache,
+    toolsCache: record.toolsCache ?? null,
     lastTestAt: record.lastTestAt?.toISOString() ?? null,
     lastTestOk: record.lastTestOk,
     pluginId: record.pluginId,
@@ -107,8 +102,8 @@ export const mcpServersRepository = {
         type: input.type ?? 'http',
         uri: input.uri,
         command: input.command,
-        args: JSON.stringify(input.args ?? []),
-        envVars: JSON.stringify(input.envVars ?? {}),
+        args: input.args ?? [],
+        envVars: input.envVars ?? {},
         enabled: input.enabled ?? true,
         isGlobal: input.isGlobal ?? true,
         userId,
@@ -138,8 +133,8 @@ export const mcpServersRepository = {
     if (input.type !== undefined) data.type = input.type
     if (input.uri !== undefined) data.uri = input.uri
     if (input.command !== undefined) data.command = input.command
-    if (input.args !== undefined) data.args = JSON.stringify(input.args)
-    if (input.envVars !== undefined) data.envVars = JSON.stringify(input.envVars)
+    if (input.args !== undefined) data.args = input.args
+    if (input.envVars !== undefined) data.envVars = input.envVars
     if (input.enabled !== undefined) data.enabled = input.enabled
     if (input.isGlobal !== undefined) data.isGlobal = input.isGlobal
 

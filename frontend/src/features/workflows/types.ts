@@ -1,8 +1,14 @@
+export type WorkflowStatus = 'draft' | 'active' | 'archived'
+
 export interface Workflow {
   id: string
   name: string
   description: string | null
   type: 'sequential' | 'step_by_step'
+  status: WorkflowStatus
+  tags: string[]
+  lastExecutedAt: string | null
+  executionCount: number
   steps?: WorkflowStep[]
   stepsCount?: number
   conversationsCount?: number
@@ -38,6 +44,11 @@ export interface WorkflowStep {
   outputVariables?: string[]
   inputVariables?: string[]
   backend?: string
+  timeout?: number
+  errorHandler?: 'fail' | 'skip' | 'fallback' | 'continue_next'
+  skipCondition?: string
+  subWorkflowId?: string
+  outputSchema?: Record<string, unknown>
 }
 
 export interface StepConditions {

@@ -1,5 +1,7 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma.js'
-import { safeJsonParse } from '../../lib/safe-json.js'
+
+type JsonValue = Prisma.JsonValue
 
 function parseStep(step: {
   id: string
@@ -8,14 +10,14 @@ function parseStep(step: {
   stepOrder: number
   systemPrompt: string | null
   useBasePrompt: boolean
-  conditions: string
+  conditions: JsonValue
   maxRetries: number
   backend: string
   model: string | null
-  dependsOn: string
-  validators: string
-  outputVariables: string
-  inputVariables: string
+  dependsOn: JsonValue
+  validators: JsonValue
+  outputVariables: JsonValue
+  inputVariables: JsonValue
   mcpServers: { serverId: string }[]
   skills: { skillId: string }[]
   agents: { agentId: string }[]
@@ -29,14 +31,14 @@ function parseStep(step: {
     stepOrder: step.stepOrder,
     systemPrompt: step.systemPrompt,
     useBasePrompt: step.useBasePrompt,
-    conditions: safeJsonParse<unknown>(step.conditions, { rules: [], default: 'next' }),
+    conditions: step.conditions ?? { rules: [], default: 'next' },
     maxRetries: step.maxRetries,
     backend: step.backend,
     model: step.model,
-    dependsOn: safeJsonParse<string[]>(step.dependsOn, []),
-    validators: safeJsonParse<unknown[]>(step.validators, []),
-    outputVariables: safeJsonParse<string[]>(step.outputVariables, []),
-    inputVariables: safeJsonParse<string[]>(step.inputVariables, []),
+    dependsOn: (step.dependsOn as string[]) ?? [],
+    validators: (step.validators as unknown[]) ?? [],
+    outputVariables: (step.outputVariables as string[]) ?? [],
+    inputVariables: (step.inputVariables as string[]) ?? [],
     mcpServerIds: step.mcpServers.map((s) => s.serverId),
     skillIds: step.skills.map((s) => s.skillId),
     agentIds: step.agents.map((s) => s.agentId),
@@ -133,10 +135,10 @@ export const workflowsRepository = {
       maxRetries?: number
       backend?: string
       model?: string | null
-      dependsOn?: string[]
-      validators?: unknown[]
-      outputVariables?: string[]
-      inputVariables?: string[]
+      dependsOn?: unknown
+      validators?: unknown
+      outputVariables?: unknown
+      inputVariables?: unknown
       mcpServerIds?: string[]
       skillIds?: string[]
       agentIds?: string[]
@@ -158,14 +160,14 @@ export const workflowsRepository = {
                 stepOrder: index,
                 systemPrompt: step.systemPrompt,
                 useBasePrompt: step.useBasePrompt ?? true,
-                conditions: JSON.stringify(step.conditions ?? { rules: [], default: 'next' }),
+                conditions: (step.conditions ?? { rules: [], default: 'next' }) as Prisma.InputJsonValue,
                 maxRetries: step.maxRetries ?? 0,
                 backend: step.backend ?? 'claude',
                 model: step.model,
-                dependsOn: JSON.stringify(step.dependsOn ?? []),
-                validators: JSON.stringify(step.validators ?? []),
-                outputVariables: JSON.stringify(step.outputVariables ?? []),
-                inputVariables: JSON.stringify(step.inputVariables ?? []),
+                dependsOn: (step.dependsOn ?? []) as Prisma.InputJsonValue,
+                validators: (step.validators ?? []) as Prisma.InputJsonValue,
+                outputVariables: (step.outputVariables ?? []) as Prisma.InputJsonValue,
+                inputVariables: (step.inputVariables ?? []) as Prisma.InputJsonValue,
                 mcpServers: step.mcpServerIds?.length
                   ? { create: step.mcpServerIds.map((serverId) => ({ serverId })) }
                   : undefined,
@@ -212,10 +214,10 @@ export const workflowsRepository = {
         maxRetries?: number
         backend?: string
         model?: string | null
-        dependsOn?: string[]
-        validators?: unknown[]
-        outputVariables?: string[]
-        inputVariables?: string[]
+        dependsOn?: unknown
+        validators?: unknown
+        outputVariables?: unknown
+        inputVariables?: unknown
         mcpServerIds?: string[]
         skillIds?: string[]
         agentIds?: string[]
@@ -254,14 +256,14 @@ export const workflowsRepository = {
           stepOrder: index,
           systemPrompt: step.systemPrompt,
           useBasePrompt: step.useBasePrompt ?? true,
-          conditions: JSON.stringify(step.conditions ?? { rules: [], default: 'next' }),
+          conditions: (step.conditions ?? { rules: [], default: 'next' }) as Prisma.InputJsonValue,
           maxRetries: step.maxRetries ?? 0,
           backend: step.backend ?? 'claude',
           model: step.model,
-          dependsOn: JSON.stringify(step.dependsOn ?? []),
-          validators: JSON.stringify(step.validators ?? []),
-          outputVariables: JSON.stringify(step.outputVariables ?? []),
-          inputVariables: JSON.stringify(step.inputVariables ?? []),
+          dependsOn: (step.dependsOn ?? []) as Prisma.InputJsonValue,
+          validators: (step.validators ?? []) as Prisma.InputJsonValue,
+          outputVariables: (step.outputVariables ?? []) as Prisma.InputJsonValue,
+          inputVariables: (step.inputVariables ?? []) as Prisma.InputJsonValue,
           mcpServers: step.mcpServerIds?.length
             ? { create: step.mcpServerIds.map((serverId) => ({ serverId })) }
             : undefined,
