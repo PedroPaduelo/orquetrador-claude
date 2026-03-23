@@ -102,7 +102,7 @@
       <!-- Stats -->
       <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-12">
         <div class="glass rounded-xl p-4 text-center pulse-glow">
-          <div class="text-2xl font-bold text-white">8</div>
+          <div class="text-2xl font-bold text-white">7</div>
           <div class="text-xs text-slate-400 mt-1">Dominios Analisados</div>
         </div>
         <div class="glass rounded-xl p-4 text-center">
@@ -110,7 +110,7 @@
           <div class="text-xs text-slate-400 mt-1">Modelos Atuais</div>
         </div>
         <div class="glass rounded-xl p-4 text-center">
-          <div class="text-2xl font-bold text-green-400">+14</div>
+          <div class="text-2xl font-bold text-green-400">+8</div>
           <div class="text-xs text-slate-400 mt-1">Novos Modelos Propostos</div>
         </div>
         <div class="glass rounded-xl p-4 text-center">
@@ -129,7 +129,7 @@
   <section class="max-w-7xl mx-auto px-4 py-12 fade-in">
     <div class="glass rounded-2xl p-8">
       <h2 class="text-xl font-bold text-white mb-6">Maturidade da Estrutura de Dados</h2>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div class="grid grid-cols-3 gap-6">
         <div class="text-center">
           <div class="relative w-24 h-24 mx-auto mb-3">
             <svg class="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
@@ -163,17 +163,6 @@
           <div class="text-sm font-medium text-white">Observabilidade</div>
           <div class="text-xs text-slate-500">Metricas e analytics</div>
         </div>
-        <div class="text-center">
-          <div class="relative w-24 h-24 mx-auto mb-3">
-            <svg class="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(148,163,184,0.1)" stroke-width="8"/>
-              <circle cx="50" cy="50" r="42" fill="none" stroke="#3b82f6" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="224" stroke-linecap="round" class="stat-ring"/>
-            </svg>
-            <span class="absolute inset-0 flex items-center justify-center text-lg font-bold text-blue-400">15%</span>
-          </div>
-          <div class="text-sm font-medium text-white">Colaboracao</div>
-          <div class="text-xs text-slate-500">Teams, sharing, tags</div>
-        </div>
       </div>
     </div>
   </section>
@@ -181,14 +170,13 @@
   <!-- Filter Tabs -->
   <section class="max-w-7xl mx-auto px-4 mb-6 fade-in">
     <div class="flex flex-wrap gap-2">
-      <button onclick="filterDomain('all')" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="all">Todos (8)</button>
+      <button onclick="filterDomain('all')" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="all">Todos (7)</button>
       <button onclick="filterDomain('auth')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="auth">Auth</button>
       <button onclick="filterDomain('workflows')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="workflows">Workflows</button>
       <button onclick="filterDomain('execution')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="execution">Execucao</button>
       <button onclick="filterDomain('conversations')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="conversations">Conversas</button>
       <button onclick="filterDomain('resources')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="resources">Recursos</button>
       <button onclick="filterDomain('observability')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="observability">Observabilidade</button>
-      <button onclick="filterDomain('collaboration')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="collaboration">Colaboracao</button>
       <button onclick="filterDomain('triggers')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-400 hover:text-white" data-filter="triggers">Triggers</button>
     </div>
   </section>
@@ -766,106 +754,7 @@ model AuditLog {
       </div>
     </div>
 
-    <!-- ==================== DOMAIN 7: COLLABORATION ==================== -->
-    <div class="domain-card glass rounded-2xl overflow-hidden" data-domain="collaboration" onclick="toggleCard(this)">
-      <div class="p-6 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center text-pink-400">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-          </div>
-          <div>
-            <h3 class="text-lg font-bold text-white">7. Colaboracao & Sharing</h3>
-            <p class="text-sm text-slate-400">0 modelos — completamente ausente apesar de RBAC existir</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <span class="text-xs px-2 py-1 rounded-full badge-new font-medium">+6 novos modelos</span>
-          <svg class="w-5 h-5 text-slate-400 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-      </div>
-      <div class="detail">
-        <div class="px-6 pb-6 space-y-6">
-          <div class="as-is p-5">
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400">AS-IS</span>
-              <span class="text-sm font-semibold text-red-300">Single-user por design</span>
-            </div>
-            <div class="text-sm text-slate-300">
-              Tudo e scoped por <code class="code-bad">userId</code>. Existem roles (admin/developer/viewer) e <code>useRole()</code> hook no frontend, mas nao ha nenhuma estrutura para: teams/workspaces, comentarios, sharing de workflows, notificacoes, activity feed, favoritos, ou busca entre usuarios.
-            </div>
-          </div>
-          <div class="to-be p-5">
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-xs font-bold px-2 py-0.5 rounded bg-green-500/20 text-green-400">TO-BE</span>
-              <span class="text-sm font-semibold text-green-300">Estrutura Multi-tenant</span>
-            </div>
-            <pre class="mt-2"><code><span class="code-good">// NOVO: Workspaces/Teams</span>
-model Workspace {
-  id   String @id @default(uuid())
-  name String
-  slug String @unique
-  members WorkspaceMember[]
-}
-model WorkspaceMember {
-  workspaceId String
-  userId      String
-  role        String <span class="code-good">// owner|admin|member|viewer</span>
-  @@unique([workspaceId, userId])
-}
-
-<span class="code-good">// NOVO: Comentarios universais</span>
-model Comment {
-  id           String @id @default(uuid())
-  content      String
-  entityType   String <span class="code-good">// workflow|conversation|execution</span>
-  entityId     String
-  userId       String
-  parentId     String? <span class="code-good">// thread/reply</span>
-  createdAt    DateTime @default(now())
-}
-
-<span class="code-good">// NOVO: Notificacoes</span>
-model Notification {
-  id        String   @id @default(uuid())
-  userId    String
-  type      String   <span class="code-good">// execution_done|error|comment|budget_warning</span>
-  title     String
-  data      Json
-  readAt    DateTime?
-  createdAt DateTime @default(now())
-}
-
-<span class="code-good">// NOVO: Favoritos</span>
-model Favorite {
-  userId       String
-  entityType   String
-  entityId     String
-  @@unique([userId, entityType, entityId])
-}
-
-<span class="code-good">// NOVO: Marketplace</span>
-model ResourceTemplate {
-  id           String @id @default(uuid())
-  name         String
-  resourceType String
-  snapshot     Json
-  authorId     String
-  forkCount    Int    @default(0)
-  usageCount   Int    @default(0)
-  isPublic     Boolean @default(false)
-}
-model ResourceFork {
-  sourceType String
-  sourceId   String
-  forkedId   String
-  userId     String
-}</code></pre>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ==================== DOMAIN 8: TRIGGERS ==================== -->
+    <!-- ==================== DOMAIN 7: TRIGGERS ==================== -->
     <div class="domain-card glass rounded-2xl overflow-hidden" data-domain="triggers" onclick="toggleCard(this)">
       <div class="p-6 flex items-center justify-between">
         <div class="flex items-center gap-4">
@@ -873,7 +762,7 @@ model ResourceFork {
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
           <div>
-            <h3 class="text-lg font-bold text-white">8. Triggers & Scheduling</h3>
+            <h3 class="text-lg font-bold text-white">7. Triggers & Scheduling</h3>
             <p class="text-sm text-slate-400">0 modelos — toda execucao e manual via API</p>
           </div>
         </div>
@@ -949,7 +838,7 @@ model ScheduledExecution {
   <section class="max-w-7xl mx-auto px-4 pb-20 fade-in">
     <div class="glass rounded-2xl p-8">
       <h2 class="text-2xl font-bold text-white mb-2">Roadmap de Implementacao</h2>
-      <p class="text-slate-400 mb-8">Priorizado por impacto e esforco, dividido em 4 sprints</p>
+      <p class="text-slate-400 mb-8">Priorizado por impacto e esforco, dividido em 3 sprints</p>
 
       <div class="space-y-8">
         <!-- Sprint 1 -->
@@ -1000,23 +889,8 @@ model ScheduledExecution {
             <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">16</span> <span class="text-slate-300">Extrair <code class="code-good">GitSource</code> (eliminar duplicacao 3x)</span></div>
             <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">17</span> <span class="text-slate-300">Criar <code class="code-good">AgentSkill</code> join table (remover JSON de skills)</span></div>
             <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">18</span> <span class="text-slate-300">Adicionar <code class="code-good">timeout</code>, <code class="code-good">errorHandler</code>, <code class="code-good">skipCondition</code> no WorkflowStep</span></div>
-          </div>
-        </div>
-
-        <!-- Sprint 4 -->
-        <div>
-          <div class="flex items-center gap-3 mb-4">
-            <span class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">S4</span>
-            <h3 class="font-semibold text-white">Sprint 4 — Colaboracao & Automacao (3-4 semanas)</h3>
-            <span class="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400">Futuro</span>
-          </div>
-          <div class="grid md:grid-cols-2 gap-3 ml-11">
-            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">19</span> <span class="text-slate-300">Criar <code class="code-good">WorkflowTrigger</code> (cron, webhook, event)</span></div>
-            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">20</span> <span class="text-slate-300">Criar <code class="code-good">Workspace</code> + <code class="code-good">WorkspaceMember</code></span></div>
-            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">21</span> <span class="text-slate-300">Criar <code class="code-good">Comment</code>, <code class="code-good">Notification</code>, <code class="code-good">Favorite</code></span></div>
-            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">22</span> <span class="text-slate-300">Criar <code class="code-good">ResourceTemplate</code> + <code class="code-good">ResourceFork</code> (marketplace)</span></div>
-            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">23</span> <span class="text-slate-300">Criar <code class="code-good">MessageFeedback</code> + <code class="code-good">ExecutionRating</code></span></div>
-            <div class="glass rounded-lg p-3 text-sm"><span class="text-blue-400 font-mono">24</span> <span class="text-slate-300">Sub-workflows: <code class="code-good">subWorkflowId</code> no WorkflowStep</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">19</span> <span class="text-slate-300">Criar <code class="code-good">WorkflowTrigger</code> (cron, webhook, event)</span></div>
+            <div class="glass rounded-lg p-3 text-sm"><span class="text-yellow-400 font-mono">20</span> <span class="text-slate-300">Sub-workflows: <code class="code-good">subWorkflowId</code> no WorkflowStep</span></div>
           </div>
         </div>
       </div>
@@ -1037,12 +911,11 @@ model ScheduledExecution {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-800">
-            <tr><td class="py-3 px-4 text-white font-medium">Modelos</td><td class="py-3 px-4 text-slate-400">25 modelos</td><td class="py-3 px-4 text-green-300">39 modelos (+14)</td></tr>
+            <tr><td class="py-3 px-4 text-white font-medium">Modelos</td><td class="py-3 px-4 text-slate-400">25 modelos</td><td class="py-3 px-4 text-green-300">33 modelos (+8)</td></tr>
             <tr><td class="py-3 px-4 text-white font-medium">Integridade referencial</td><td class="py-3 px-4 text-red-300">8 FKs orfas, Strings sem relacao</td><td class="py-3 px-4 text-green-300">100% FKs com constraints</td></tr>
             <tr><td class="py-3 px-4 text-white font-medium">Tipos de dados</td><td class="py-3 px-4 text-red-300">15+ campos JSON como String</td><td class="py-3 px-4 text-green-300">Tipo Json nativo + enums</td></tr>
             <tr><td class="py-3 px-4 text-white font-medium">Versionamento</td><td class="py-3 px-4 text-red-300">Apenas prompts</td><td class="py-3 px-4 text-green-300">Workflows completos + diff</td></tr>
             <tr><td class="py-3 px-4 text-white font-medium">Observabilidade</td><td class="py-3 px-4 text-red-300">Full-table scans, sem percentis</td><td class="py-3 px-4 text-green-300">Pre-agregado, p50/p95, por recurso</td></tr>
-            <tr><td class="py-3 px-4 text-white font-medium">Colaboracao</td><td class="py-3 px-4 text-red-300">Single-user</td><td class="py-3 px-4 text-green-300">Teams, comments, sharing, marketplace</td></tr>
             <tr><td class="py-3 px-4 text-white font-medium">Automacao</td><td class="py-3 px-4 text-red-300">100% manual</td><td class="py-3 px-4 text-green-300">Cron, webhooks, event chaining</td></tr>
             <tr><td class="py-3 px-4 text-white font-medium">Organizacao</td><td class="py-3 px-4 text-red-300">Sem tags, sem categorias</td><td class="py-3 px-4 text-green-300">Tags universais + categorias</td></tr>
             <tr><td class="py-3 px-4 text-white font-medium">Error handling</td><td class="py-3 px-4 text-red-300">Workflow para em qualquer erro</td><td class="py-3 px-4 text-green-300">Skip, fallback, continue, timeout</td></tr>
@@ -1056,7 +929,7 @@ model ScheduledExecution {
   <!-- Footer -->
   <footer class="border-t border-slate-800 py-8">
     <div class="max-w-7xl mx-auto px-4 text-center text-sm text-slate-500">
-      Orquetrador Claude — Analise Estrutural gerada em Mar 2026 | 8 dominios, 25 modelos analisados, 14 novos propostos
+      Orquetrador Claude — Analise Estrutural gerada em Mar 2026 | 7 dominios, 25 modelos analisados, 8 novos propostos
     </div>
   </footer>
 
