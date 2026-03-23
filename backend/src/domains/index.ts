@@ -30,6 +30,8 @@ import { hourlyTokenUsageRoutes } from './execution/monitoring/hourly-token-usag
 import { resourcePerformanceRoutes } from './execution/monitoring/resource-performance.routes.js'
 import { gitSourceRoutes } from './resources/git-source.routes.js'
 import { feedbackRoutes } from './conversations/feedback.routes.js'
+import { resourceDependencyRoutes } from './workflows/resource-dependency.routes.js'
+import { triggersRoutes } from './triggers/triggers.routes.js'
 
 export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   authRoutes,
@@ -62,4 +64,6 @@ export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   resourcePerformanceRoutes,
   gitSourceRoutes,
   feedbackRoutes,
+  resourceDependencyRoutes,
+  triggersRoutes,
 ]

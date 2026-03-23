@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { cn } from '@/shared/lib/utils'
-import { Check, Loader2, AlertCircle, RotateCcw, SkipForward, SkipBack, MessageCircle, Zap, StopCircle } from 'lucide-react'
+import { Check, Loader2, AlertCircle, RotateCcw, SkipForward, SkipBack, MessageCircle, Zap, StopCircle, Activity } from 'lucide-react'
 import { ScrollArea } from '@/shared/components/ui/scroll-area'
 import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
@@ -7,6 +8,7 @@ import type { WorkflowStepSummary } from '../types'
 import { useConversationsStore } from '../store'
 import { useAdvanceStep, useGoBackStep, useJumpToStep, useResetStepSession, useTokenUsage } from '../hooks/use-conversations'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/shared/components/ui/tooltip'
+import { ExecutionTimeline } from './execution-timeline'
 
 interface StepPanelProps {
   steps: WorkflowStepSummary[]
@@ -17,6 +19,7 @@ interface StepPanelProps {
 }
 
 export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, conversationId }: StepPanelProps) {
+  const [activeTab, setActiveTab] = useState<'steps' | 'timeline'>('steps')
   const { stepStatuses } = useConversationsStore()
   const advanceStepMutation = useAdvanceStep(conversationId)
   const goBackStepMutation = useGoBackStep(conversationId)
@@ -48,8 +51,43 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
     )
   }
 
+  const stepNameMap = new Map(steps.map(s => [s.id, s.name]))
+
   return (
     <div className="flex flex-col h-full">
+      {/* Tab switcher */}
+      <div className="flex border-b px-2 pt-2 gap-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab('steps')}
+          className={cn(
+            'px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors',
+            activeTab === 'steps'
+              ? 'bg-background border border-b-0 border-border text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Steps
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('timeline')}
+          className={cn(
+            'px-3 py-1.5 text-xs font-medium rounded-t-md transition-colors flex items-center gap-1',
+            activeTab === 'timeline'
+              ? 'bg-background border border-b-0 border-border text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Activity className="h-3 w-3" />
+          Timeline
+        </button>
+      </div>
+
+      {activeTab === 'timeline' ? (
+        <ExecutionTimeline conversationId={conversationId} stepNames={stepNameMap} />
+      ) : (
+      <>
       {/* Header */}
       <div className="p-4 border-b">
         <div className="flex items-center justify-between">
@@ -246,6 +284,8 @@ export function StepPanel({ steps, currentStepIndex, isExecuting, workflowType, 
           })}
         </div>
       </ScrollArea>
+      </>
+      )}
     </div>
   )
 }

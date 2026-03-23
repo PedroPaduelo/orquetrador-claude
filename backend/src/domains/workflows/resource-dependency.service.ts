@@ -1,5 +1,62 @@
 import { ResourceType } from '@prisma/client'
 import { prisma } from '../../lib/prisma.js'
+import { BadRequestError } from '../../http/errors/index.js'
+
+interface DependentInfo {
+  id: string
+  sourceType: ResourceType
+  sourceId: string
+  dependencyName: string | null
+}
+
+interface DeletionValidation {
+  canDelete: boolean
+  dependents: DependentInfo[]
+}
+
+export async function validateDeletion(
+  resourceType: ResourceType,
+  resourceId: string,
+): Promise<DeletionValidation> {
+  const nonOptionalDependents = await prisma.resourceDependency.findMany({
+    where: {
+      dependencyType: resourceType,
+      dependencyId: resourceId,
+      isOptional: false,
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  if (nonOptionalDependents.length > 0) {
+    return {
+      canDelete: false,
+      dependents: nonOptionalDependents.map((d) => ({
+        id: d.id,
+        sourceType: d.sourceType,
+        sourceId: d.sourceId,
+        dependencyName: d.dependencyName,
+      })),
+    }
+  }
+
+  return { canDelete: true, dependents: [] }
+}
+
+export async function assertCanDelete(
+  resourceType: ResourceType,
+  resourceId: string,
+): Promise<void> {
+  const { canDelete, dependents } = await validateDeletion(resourceType, resourceId)
+
+  if (!canDelete) {
+    const names = dependents
+      .map((d) => `${d.sourceType}:${d.sourceId}`)
+      .join(', ')
+    throw new BadRequestError(
+      `Cannot delete ${resourceType}:${resourceId} — ${dependents.length} non-optional dependent(s): ${names}`,
+    )
+  }
+}
 
 interface StepResources {
   mcpServerIds?: string[]

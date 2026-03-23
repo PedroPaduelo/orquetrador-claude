@@ -6,6 +6,7 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { prisma } from '../../lib/prisma.js'
 import { BadRequestError, NotFoundError } from '../../http/errors/index.js'
+import { encrypt, decrypt } from '../../lib/crypto.js'
 
 const PROJECT_BASE_PATH = process.env.PROJECT_BASE_PATH || '/workspace/temp-orquestrador'
 
@@ -20,7 +21,7 @@ async function getUserGithubToken(userId: string): Promise<string | null> {
     orderBy: { createdAt: 'asc' },
     select: { token: true },
   })
-  return account?.token ?? null
+  return account?.token ? decrypt(account.token) : null
 }
 
 async function getTokenForProject(userId: string, projectPath: string): Promise<string | null> {
@@ -31,7 +32,7 @@ async function getTokenForProject(userId: string, projectPath: string): Promise<
   })
 
   if (mapping && mapping.gitAccount.userId === userId) {
-    return mapping.gitAccount.token
+    return decrypt(mapping.gitAccount.token)
   }
 
   // 2. Fall back to legacy user.githubToken
@@ -118,11 +119,11 @@ export async function gitRoutes(app: FastifyInstance) {
       if (existing) {
         await prisma.gitAccount.update({
           where: { id: existing.id },
-          data: { token: request.body.token },
+          data: { token: encrypt(request.body.token) },
         })
       } else {
         await prisma.gitAccount.create({
-          data: { label: 'Default', token: request.body.token, userId },
+          data: { label: 'Default', token: encrypt(request.body.token), userId },
         })
       }
       return { success: true, message: 'Token salvo com sucesso' }
@@ -252,7 +253,7 @@ export async function gitRoutes(app: FastifyInstance) {
           // Use cached username if available, otherwise validate
           let username = account.username
           if (!username) {
-            const validation = await validateGithubToken(account.token)
+            const validation = await validateGithubToken(decrypt(account.token))
             username = validation.username
             // Cache the username if we got one
             if (username) {
@@ -310,7 +311,7 @@ export async function gitRoutes(app: FastifyInstance) {
       const account = await prisma.gitAccount.create({
         data: {
           label,
-          token,
+          token: encrypt(token),
           username,
           userId,
         },
@@ -369,7 +370,7 @@ export async function gitRoutes(app: FastifyInstance) {
         if (!valid) {
           throw new BadRequestError('Token GitHub invalido ou expirado')
         }
-        updateData.token = token
+        updateData.token = encrypt(token)
         updateData.username = username
       }
 
@@ -459,7 +460,7 @@ export async function gitRoutes(app: FastifyInstance) {
       }
 
       const { page, perPage, sort } = request.query
-      const repos = await fetchGithubRepos(account.token, page, perPage, sort)
+      const repos = await fetchGithubRepos(decrypt(account.token), page, perPage, sort)
       return repos
     }
   )
@@ -549,7 +550,7 @@ export async function gitRoutes(app: FastifyInstance) {
         if (!account || account.userId !== userId) {
           throw new NotFoundError('Conta git nao encontrada')
         }
-        token = account.token
+        token = decrypt(account.token)
       } else {
         token = await getUserGithubToken(userId)
       }

@@ -63,7 +63,11 @@ async function registerPlugins() {
   await app.register(fastifyCors, {
     origin: env.CORS_ORIGINS
       ? env.CORS_ORIGINS.split(',').map(o => o.trim())
-      : true,
+      : [
+          'https://orquestrador.ddw1sl.easypanel.host',
+          'https://loadbalance.ddw1sl.easypanel.host',
+          'http://localhost:5173',
+        ],
     credentials: true,
   })
 

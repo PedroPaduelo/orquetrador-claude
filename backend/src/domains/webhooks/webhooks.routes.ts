@@ -4,15 +4,20 @@ import { z } from 'zod'
 import { webhooksRepository } from './webhooks.repository.js'
 import { webhooksService } from './webhooks.service.js'
 import { NotFoundError } from '../../http/errors/index.js'
+import { paginationSchema } from '../../lib/pagination.js'
 
 export async function webhooksRoutes(app: FastifyInstance) {
   const server = app.withTypeProvider<ZodTypeProvider>()
 
   server.get('/webhooks', {
-    schema: { tags: ['Webhooks'], summary: 'List webhooks' },
+    schema: {
+      tags: ['Webhooks'],
+      summary: 'List webhooks (paginated)',
+      querystring: paginationSchema,
+    },
   }, async (request) => {
     const userId = await request.getCurrentUserId()
-    return webhooksRepository.findAll(userId)
+    return webhooksRepository.findAllPaginated(userId, request.query)
   })
 
   server.get('/webhooks/:id', {
