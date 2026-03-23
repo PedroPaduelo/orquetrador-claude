@@ -59,20 +59,23 @@ body{-webkit-font-smoothing:antialiased}
 </head>
 <body class="bg-surface-900 text-gray-200 font-sans min-h-screen">
 
-<!-- ===== TOP NAV ===== -->
-<nav class="fixed top-0 inset-x-0 z-50 bg-surface-900/80 backdrop-blur-xl border-b border-white/5">
-  <div class="max-w-7xl mx-auto flex items-center justify-between px-6 h-14">
-    <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-      </div>
-      <span class="text-sm font-semibold text-white tracking-wide">Orquetrador Claude</span>
-      <span class="text-xs text-gray-500 hidden sm:inline">/</span>
-      <span class="text-xs text-gray-400 hidden sm:inline">System Map</span>
-    </div>
-    <div class="flex items-center gap-4">
-      <span class="hidden md:inline text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20">Port 3334</span>
-      <span class="hidden md:inline text-xs px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-400 font-medium border border-violet-500/20">75 Tools</span>
+<nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.8);backdrop-filter:blur(12px);border-bottom:1px solid rgba(148,163,184,0.1)">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-violet-400 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+      Orquetrador Claude
+    </a>
+    <div class="hidden md:flex items-center gap-1 text-xs">
+      <a href="01-visao-geral.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visão Geral</a>
+      <a href="02-fluxo-de-dados.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
+      <a href="03-banco-de-dados.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">03 DB</a>
+      <a href="04-api-endpoints.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">04 API</a>
+      <a href="05-motor-execucao.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">05 Execução</a>
+      <a href="06-frontend.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">06 Frontend</a>
+      <a href="07-seguranca.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">07 Segurança</a>
+      <a href="08-integracoes.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">08 Integrações</a>
+      <a href="09-mcp-server.html" class="px-2 py-1 rounded bg-violet-500/20 text-violet-400 font-semibold">09 MCP</a>
+      <a href="10-tempo-real-filas.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">10 Real-time</a>
     </div>
   </div>
 </nav>
@@ -1124,6 +1127,14 @@ searchInput.addEventListener('input', () => {
 document.querySelector('[data-cat-content="a"]').classList.add('open');
 document.querySelector('.cat-toggle[data-cat="a"] .cat-chevron').style.transform = 'rotate(180deg)';
 </script>
+
+<footer class="border-t border-slate-800 py-6 mt-10">
+  <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-slate-500">
+    <a href="08-integracoes.html" class="hover:text-white transition">&larr; 08 Integrações</a>
+    <span>Orquetrador Claude — MCP Server</span>
+    <a href="10-tempo-real-filas.html" class="hover:text-white transition">10 Tempo Real &rarr;</a>
+  </div>
+</footer>
 
 </body>
 </html>

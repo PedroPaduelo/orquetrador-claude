@@ -239,8 +239,29 @@
 </head>
 <body class="min-h-screen">
 
+<nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.8);backdrop-filter:blur(12px);border-bottom:1px solid rgba(148,163,184,0.1)">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-indigo-400 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
+      Orquetrador Claude
+    </a>
+    <div class="hidden md:flex items-center gap-1 text-xs">
+      <a href="01-visao-geral.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visão Geral</a>
+      <a href="02-fluxo-de-dados.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
+      <a href="03-banco-de-dados.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">03 DB</a>
+      <a href="04-api-endpoints.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">04 API</a>
+      <a href="05-motor-execucao.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">05 Execução</a>
+      <a href="06-frontend.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">06 Frontend</a>
+      <a href="07-seguranca.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">07 Segurança</a>
+      <a href="08-integracoes.html" class="px-2 py-1 rounded bg-indigo-500/20 text-indigo-400 font-semibold">08 Integrações</a>
+      <a href="09-mcp-server.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">09 MCP</a>
+      <a href="10-tempo-real-filas.html" class="px-2 py-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white transition">10 Real-time</a>
+    </div>
+  </div>
+</nav>
+
   <!-- Header -->
-  <header class="border-b border-gray-800 bg-[#0a0d14]/80 backdrop-blur-sm sticky top-0 z-50">
+  <header class="border-b border-gray-800 bg-[#0a0d14]/80 backdrop-blur-sm">
     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-9 h-9 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
@@ -983,9 +1004,13 @@ GET /repos/<span class="v">{owner}</span>/<span class="v">{repo}</span>/git/tree
 
   </main>
 
-  <footer class="border-t border-gray-800 mt-16 py-8 text-center">
-    <p class="text-xs text-gray-600">Orquetrador Claude — System Architecture Map</p>
-  </footer>
+<footer class="border-t border-slate-800 py-6 mt-10">
+  <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-slate-500">
+    <a href="07-seguranca.html" class="hover:text-white transition">← 07 Segurança</a>
+    <span>Orquetrador Claude — Integrações</span>
+    <a href="09-mcp-server.html" class="hover:text-white transition">09 MCP Server →</a>
+  </div>
+</footer>
 
   <script>
     // Toggle card expand/collapse
