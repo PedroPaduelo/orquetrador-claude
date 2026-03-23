@@ -1,4 +1,5 @@
 import { prisma } from '../../../lib/prisma.js'
+import type { Prisma } from '@prisma/client'
 
 export interface BudgetCheck {
   allowed: boolean
@@ -14,35 +15,51 @@ export interface UsageSummary {
   monthlyPercent: number
 }
 
+type TxClient = Omit<typeof prisma, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>
+
 export class TokenBudgetService {
-  async getOrCreate(userId: string) {
-    let budget = await prisma.userTokenBudget.findUnique({ where: { userId } })
+  private async getOrCreateInTx(tx: TxClient, userId: string) {
+    let budget = await tx.userTokenBudget.findUnique({ where: { userId } })
     if (!budget) {
-      budget = await prisma.userTokenBudget.create({
+      budget = await tx.userTokenBudget.create({
         data: { userId },
       })
     }
 
-    // Reset daily if needed
     const now = new Date()
+    let needsUpdate = false
+    const updateData: Record<string, unknown> = {}
+
+    // Reset daily if needed
     const lastDaily = new Date(budget.lastDailyResetAt)
     if (now.getDate() !== lastDaily.getDate() || now.getMonth() !== lastDaily.getMonth() || now.getFullYear() !== lastDaily.getFullYear()) {
-      budget = await prisma.userTokenBudget.update({
-        where: { userId },
-        data: { currentDailyUsage: 0, lastDailyResetAt: now },
-      })
+      updateData.currentDailyUsage = 0
+      updateData.lastDailyResetAt = now
+      needsUpdate = true
     }
 
     // Reset monthly if needed
     const lastMonthly = new Date(budget.lastMonthlyResetAt)
     if (now.getMonth() !== lastMonthly.getMonth() || now.getFullYear() !== lastMonthly.getFullYear()) {
-      budget = await prisma.userTokenBudget.update({
+      updateData.currentMonthlyUsage = 0
+      updateData.lastMonthlyResetAt = now
+      needsUpdate = true
+    }
+
+    if (needsUpdate) {
+      budget = await tx.userTokenBudget.update({
         where: { userId },
-        data: { currentMonthlyUsage: 0, lastMonthlyResetAt: now },
+        data: updateData as Prisma.UserTokenBudgetUpdateInput,
       })
     }
 
     return budget
+  }
+
+  async getOrCreate(userId: string) {
+    return prisma.$transaction(async (tx) => {
+      return this.getOrCreateInTx(tx, userId)
+    })
   }
 
   async checkBudget(userId: string): Promise<BudgetCheck> {
@@ -61,13 +78,15 @@ export class TokenBudgetService {
     const total = inputTokens + outputTokens
     if (total <= 0) return
 
-    await this.getOrCreate(userId) // ensure resets happen
-    await prisma.userTokenBudget.update({
-      where: { userId },
-      data: {
-        currentDailyUsage: { increment: total },
-        currentMonthlyUsage: { increment: total },
-      },
+    await prisma.$transaction(async (tx) => {
+      await this.getOrCreateInTx(tx, userId) // ensure resets happen
+      await tx.userTokenBudget.update({
+        where: { userId },
+        data: {
+          currentDailyUsage: { increment: total },
+          currentMonthlyUsage: { increment: total },
+        },
+      })
     })
   }
 

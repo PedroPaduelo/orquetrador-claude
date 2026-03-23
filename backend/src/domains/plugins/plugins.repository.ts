@@ -221,10 +221,12 @@ export const pluginsRepository = {
 
   async delete(id: string, userId: string) {
     const before = await prisma.plugin.findUnique({ where: { id } })
-    await prisma.mcpServer.deleteMany({ where: { pluginId: id, userId } })
-    await prisma.skill.deleteMany({ where: { pluginId: id, userId } })
-    await prisma.agent.deleteMany({ where: { pluginId: id, userId } })
-    await prisma.plugin.deleteMany({ where: { id, userId } })
+    await prisma.$transaction([
+      prisma.mcpServer.deleteMany({ where: { pluginId: id, userId } }),
+      prisma.skill.deleteMany({ where: { pluginId: id, userId } }),
+      prisma.agent.deleteMany({ where: { pluginId: id, userId } }),
+      prisma.plugin.deleteMany({ where: { id, userId } }),
+    ])
 
     if (before) {
       void logAudit({

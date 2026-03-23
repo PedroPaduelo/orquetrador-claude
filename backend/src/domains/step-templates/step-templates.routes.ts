@@ -74,7 +74,7 @@ export async function stepTemplatesRoutes(app: FastifyInstance) {
     const userId = await request.getCurrentUserId()
     const existing = await stepTemplatesRepository.findById(request.params.id, userId)
     if (!existing) throw new NotFoundError('Template not found')
-    await stepTemplatesRepository.delete(request.params.id)
+    await stepTemplatesRepository.delete(request.params.id, userId)
     return reply.status(204).send(null)
   })
 }

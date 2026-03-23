@@ -9,38 +9,26 @@ export async function metricsRoutes(app: FastifyInstance) {
   server.get('/metrics/daily', {
     schema: { tags: ['Metrics'], summary: 'Daily execution metrics (30 days)' },
   }, async (request) => {
-    const userId = await request.getCurrentUserId()
+    await request.getCurrentUserId()
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
-    const traces = await prisma.executionTrace.findMany({
-      where: {
-        conversation: { userId },
-        createdAt: { gte: since },
-      },
-      select: {
-        createdAt: true,
-        totalCostUsd: true,
-        inputTokens: true,
-        outputTokens: true,
-        resultStatus: true,
-      },
+    // Use pre-aggregated DailyExecutionMetrics instead of scanning all traces
+    const metrics = await prisma.dailyExecutionMetrics.findMany({
+      where: { date: { gte: since } },
+      orderBy: { date: 'asc' },
     })
 
-    const dailyMap = new Map<string, { cost: number; tokens: number; executions: number; errors: number }>()
-
-    for (const t of traces) {
-      const day = t.createdAt.toISOString().split('T')[0]
-      const entry = dailyMap.get(day) || { cost: 0, tokens: 0, executions: 0, errors: 0 }
-      entry.cost += t.totalCostUsd || 0
-      entry.tokens += t.inputTokens + t.outputTokens
-      entry.executions++
-      if (t.resultStatus === 'error') entry.errors++
-      dailyMap.set(day, entry)
-    }
-
-    return Array.from(dailyMap.entries())
-      .map(([date, data]) => ({ date, ...data }))
-      .sort((a, b) => a.date.localeCompare(b.date))
+    return metrics.map((m) => ({
+      date: m.date.toISOString().split('T')[0],
+      cost: Math.round(m.totalCostUsd * 100) / 100,
+      tokens: m.totalInputTokens + m.totalOutputTokens,
+      executions: m.totalExecutions,
+      errors: m.failureCount,
+      p50DurationMs: m.p50DurationMs,
+      p95DurationMs: m.p95DurationMs,
+      errorBreakdown: m.errorBreakdown,
+      modelBreakdown: m.modelBreakdown,
+    }))
   })
 
   server.get('/metrics/by-workflow', {
@@ -48,29 +36,48 @@ export async function metricsRoutes(app: FastifyInstance) {
   }, async (request) => {
     const userId = await request.getCurrentUserId()
 
-    const traces = await prisma.executionTrace.findMany({
+    // Use groupBy with aggregation instead of loading all traces
+    const results = await prisma.executionTrace.groupBy({
+      by: ['conversationId'],
       where: { conversation: { userId } },
-      select: {
+      _sum: {
         totalCostUsd: true,
-        inputTokens: true,
-        outputTokens: true,
-        resultStatus: true,
         durationMs: true,
-        conversation: {
-          select: { workflowId: true, workflow: { select: { name: true } } },
-        },
       },
+      _count: { id: true },
     })
 
-    const wfMap = new Map<string, { name: string; cost: number; executions: number; successes: number; avgDuration: number; totalDuration: number }>()
+    // Get workflow info for each conversation (deduplicated)
+    const conversationIds = results.map(r => r.conversationId)
+    const conversations = await prisma.conversation.findMany({
+      where: { id: { in: conversationIds } },
+      select: { id: true, workflowId: true, workflow: { select: { name: true } } },
+    })
+    const convMap = new Map(conversations.map(c => [c.id, c]))
 
-    for (const t of traces) {
-      const wfId = t.conversation.workflowId
-      const entry = wfMap.get(wfId) || { name: t.conversation.workflow.name, cost: 0, executions: 0, successes: 0, avgDuration: 0, totalDuration: 0 }
-      entry.cost += t.totalCostUsd || 0
-      entry.executions++
-      if (t.resultStatus === 'success') entry.successes++
-      entry.totalDuration += t.durationMs || 0
+    // Count successes per conversation
+    const successCounts = await prisma.executionTrace.groupBy({
+      by: ['conversationId'],
+      where: {
+        conversation: { userId },
+        resultStatus: 'success',
+      },
+      _count: { id: true },
+    })
+    const successMap = new Map(successCounts.map(s => [s.conversationId, s._count.id]))
+
+    // Aggregate by workflow
+    const wfMap = new Map<string, { name: string; cost: number; executions: number; successes: number; totalDuration: number }>()
+
+    for (const r of results) {
+      const conv = convMap.get(r.conversationId)
+      if (!conv) continue
+      const wfId = conv.workflowId
+      const entry = wfMap.get(wfId) || { name: conv.workflow.name, cost: 0, executions: 0, successes: 0, totalDuration: 0 }
+      entry.cost += r._sum.totalCostUsd || 0
+      entry.executions += r._count.id
+      entry.successes += successMap.get(r.conversationId) || 0
+      entry.totalDuration += r._sum.durationMs || 0
       wfMap.set(wfId, entry)
     }
 
@@ -90,28 +97,35 @@ export async function metricsRoutes(app: FastifyInstance) {
     const userId = await request.getCurrentUserId()
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
-    const recentTraces = await prisma.executionTrace.findMany({
-      where: {
-        conversation: { userId },
-        createdAt: { gte: since },
-      },
-      select: {
-        resultStatus: true,
-        totalCostUsd: true,
-      },
-    })
+    // Use count + aggregate instead of loading all traces
+    const [totals, errorCount] = await Promise.all([
+      prisma.executionTrace.aggregate({
+        where: {
+          conversation: { userId },
+          createdAt: { gte: since },
+        },
+        _count: { id: true },
+        _sum: { totalCostUsd: true },
+      }),
+      prisma.executionTrace.count({
+        where: {
+          conversation: { userId },
+          createdAt: { gte: since },
+          resultStatus: 'error',
+        },
+      }),
+    ])
 
     const alerts: Array<{ type: string; severity: 'warning' | 'danger'; message: string }> = []
-    const total = recentTraces.length
+    const total = totals._count.id
     if (total === 0) return alerts
 
-    const errors = recentTraces.filter(t => t.resultStatus === 'error').length
-    const errorRate = errors / total
+    const errorRate = errorCount / total
     if (errorRate > 0.3) {
-      alerts.push({ type: 'error_rate', severity: 'danger', message: `Error rate is ${Math.round(errorRate * 100)}% in last 24h (${errors}/${total})` })
+      alerts.push({ type: 'error_rate', severity: 'danger', message: `Error rate is ${Math.round(errorRate * 100)}% in last 24h (${errorCount}/${total})` })
     }
 
-    const totalCost = recentTraces.reduce((sum, t) => sum + (t.totalCostUsd || 0), 0)
+    const totalCost = totals._sum.totalCostUsd || 0
     if (totalCost > 10) {
       alerts.push({ type: 'cost', severity: 'warning', message: `Daily cost is $${totalCost.toFixed(2)}` })
     }

@@ -47,7 +47,7 @@ export const stepTemplatesRepository = {
     return { ...t, resourceIds: t.resourceIds ?? {}, createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString() }
   },
 
-  async update(id: string, _userId: string, input: {
+  async update(id: string, userId: string, input: {
     name?: string
     description?: string | null
     baseUrl?: string
@@ -55,6 +55,9 @@ export const stepTemplatesRepository = {
     conditions?: string
     resourceIds?: Record<string, string[]>
   }) {
+    const existing = await prisma.stepTemplate.findFirst({ where: { id, userId } })
+    if (!existing) return null
+
     const data: Record<string, unknown> = {}
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description
@@ -67,7 +70,9 @@ export const stepTemplatesRepository = {
     return { ...t, resourceIds: t.resourceIds ?? {}, createdAt: t.createdAt.toISOString(), updatedAt: t.updatedAt.toISOString() }
   },
 
-  async delete(id: string) {
+  async delete(id: string, userId: string) {
+    const existing = await prisma.stepTemplate.findFirst({ where: { id, userId } })
+    if (!existing) return
     await prisma.stepTemplate.delete({ where: { id } })
   },
 }

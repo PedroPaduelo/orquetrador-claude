@@ -245,54 +245,87 @@ export const workflowsRepository = {
     if (input.type !== undefined) data.type = input.type
 
     if (input.steps !== undefined) {
-      // Get all step IDs for this workflow to delete join tables
-      const existingSteps = await prisma.workflowStep.findMany({
-        where: { workflowId: id },
-        select: { id: true },
-      })
-      const stepIds = existingSteps.map((s) => s.id)
+      // Atomic: delete all join tables + steps + recreate in a single transaction
+      const workflow = await prisma.$transaction(async (tx) => {
+        const existingSteps = await tx.workflowStep.findMany({
+          where: { workflowId: id },
+          select: { id: true },
+        })
+        const stepIds = existingSteps.map((s) => s.id)
 
-      if (stepIds.length > 0) {
-        await prisma.workflowStepMcpServer.deleteMany({ where: { stepId: { in: stepIds } } })
-        await prisma.workflowStepSkill.deleteMany({ where: { stepId: { in: stepIds } } })
-        await prisma.workflowStepAgent.deleteMany({ where: { stepId: { in: stepIds } } })
-        await prisma.workflowStepRule.deleteMany({ where: { stepId: { in: stepIds } } })
-        await prisma.workflowStepHook.deleteMany({ where: { stepId: { in: stepIds } } })
+        if (stepIds.length > 0) {
+          await tx.workflowStepMcpServer.deleteMany({ where: { stepId: { in: stepIds } } })
+          await tx.workflowStepSkill.deleteMany({ where: { stepId: { in: stepIds } } })
+          await tx.workflowStepAgent.deleteMany({ where: { stepId: { in: stepIds } } })
+          await tx.workflowStepRule.deleteMany({ where: { stepId: { in: stepIds } } })
+          await tx.workflowStepHook.deleteMany({ where: { stepId: { in: stepIds } } })
+        }
+
+        await tx.workflowStep.deleteMany({ where: { workflowId: id } })
+
+        data.steps = {
+          create: input.steps!.map((step, index) => ({
+            name: step.name,
+            baseUrl: step.baseUrl ?? '',
+            stepOrder: index,
+            systemPrompt: step.systemPrompt,
+            useBasePrompt: step.useBasePrompt ?? true,
+            conditions: (step.conditions ?? { rules: [], default: 'next' }) as Prisma.InputJsonValue,
+            maxRetries: step.maxRetries ?? 0,
+            backend: step.backend ?? 'claude',
+            model: step.model,
+            dependsOn: (step.dependsOn ?? []) as Prisma.InputJsonValue,
+            validators: (step.validators ?? []) as Prisma.InputJsonValue,
+            outputVariables: (step.outputVariables ?? []) as Prisma.InputJsonValue,
+            inputVariables: (step.inputVariables ?? []) as Prisma.InputJsonValue,
+            mcpServers: step.mcpServerIds?.length
+              ? { create: step.mcpServerIds.map((serverId) => ({ serverId })) }
+              : undefined,
+            skills: step.skillIds?.length
+              ? { create: step.skillIds.map((skillId) => ({ skillId })) }
+              : undefined,
+            agents: step.agentIds?.length
+              ? { create: step.agentIds.map((agentId) => ({ agentId })) }
+              : undefined,
+            rules: step.ruleIds?.length
+              ? { create: step.ruleIds.map((ruleId) => ({ ruleId })) }
+              : undefined,
+          })),
+        }
+
+        return tx.workflow.update({
+          where: { id },
+          data: data as Parameters<typeof prisma.workflow.update>[0]['data'],
+        })
+      })
+
+      const ownerId = userId ?? before?.userId
+      if (ownerId) {
+        void logAudit({
+          userId: ownerId,
+          action: 'update',
+          resourceType: 'workflow',
+          resourceId: workflow.id,
+          resourceName: workflow.name,
+          diff: {
+            before: { name: before?.name, description: before?.description, type: before?.type },
+            after: { name: workflow.name, description: workflow.description, type: workflow.type },
+          },
+        })
       }
 
-      await prisma.workflowStep.deleteMany({ where: { workflowId: id } })
+      void workflowVersioningService.createVersion(id)
 
-      data.steps = {
-        create: input.steps.map((step, index) => ({
-          name: step.name,
-          baseUrl: step.baseUrl ?? '',
-          stepOrder: index,
-          systemPrompt: step.systemPrompt,
-          useBasePrompt: step.useBasePrompt ?? true,
-          conditions: (step.conditions ?? { rules: [], default: 'next' }) as Prisma.InputJsonValue,
-          maxRetries: step.maxRetries ?? 0,
-          backend: step.backend ?? 'claude',
-          model: step.model,
-          dependsOn: (step.dependsOn ?? []) as Prisma.InputJsonValue,
-          validators: (step.validators ?? []) as Prisma.InputJsonValue,
-          outputVariables: (step.outputVariables ?? []) as Prisma.InputJsonValue,
-          inputVariables: (step.inputVariables ?? []) as Prisma.InputJsonValue,
-          mcpServers: step.mcpServerIds?.length
-            ? { create: step.mcpServerIds.map((serverId) => ({ serverId })) }
-            : undefined,
-          skills: step.skillIds?.length
-            ? { create: step.skillIds.map((skillId) => ({ skillId })) }
-            : undefined,
-          agents: step.agentIds?.length
-            ? { create: step.agentIds.map((agentId) => ({ agentId })) }
-            : undefined,
-          rules: step.ruleIds?.length
-            ? { create: step.ruleIds.map((ruleId) => ({ ruleId })) }
-            : undefined,
-        })),
+      return {
+        id: workflow.id,
+        name: workflow.name,
+        description: workflow.description,
+        type: workflow.type,
+        updatedAt: workflow.updatedAt.toISOString(),
       }
     }
 
+    // No steps change — simple field update
     const workflow = await prisma.workflow.update({
       where: { id },
       data: data as Parameters<typeof prisma.workflow.update>[0]['data'],

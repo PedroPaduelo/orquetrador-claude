@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client'
+import { Prisma, ErrorCategory } from '@prisma/client'
 import { prisma } from '../../../lib/prisma.js'
 import type { StreamEvent, Metadata } from '../engine/types.js'
 import { tokenBudgetService } from '../budget/token-budget-service.js'
@@ -16,9 +16,32 @@ interface FlushOptions {
   signal?: string | null
   resultStatus: string
   errorMessage?: string
+  errorCategory?: ErrorCategory | null
   contentLength: number
   actionsCount: number
   resumeTokenOut?: string | null
+}
+
+export function classifyError(
+  resultStatus: string,
+  exitCode?: number | null,
+  errorMessage?: string,
+  stopReason?: string,
+): ErrorCategory | null {
+  if (resultStatus === 'success' || resultStatus === 'needs_input' || resultStatus === 'interrupted') return null
+
+  const msg = errorMessage?.toLowerCase() ?? ''
+
+  if (resultStatus === 'timeout' || msg.includes('timeout') || msg.includes('excedeu o timeout')) return ErrorCategory.timeout
+  if (msg.includes('rate limit') || msg.includes('rate_limit') || msg.includes('429')) return ErrorCategory.rate_limit
+  if (msg.includes('prompt is too long') || msg.includes('prompt_too_long') || msg.includes('context_length') || stopReason === 'max_tokens') return ErrorCategory.context_overflow
+  if (msg.includes('budget') || msg.includes('limite diario') || msg.includes('limite mensal')) return ErrorCategory.budget_exceeded
+  if (msg.includes('permission') || msg.includes('forbidden') || msg.includes('403')) return ErrorCategory.permission_denied
+  if (msg.includes('tool') && (msg.includes('error') || msg.includes('failed'))) return ErrorCategory.tool_error
+  if (exitCode === 137) return ErrorCategory.timeout // OOM kill / SIGKILL
+
+  if (resultStatus === 'error' || resultStatus === 'cancelled') return ErrorCategory.unknown
+  return null
 }
 
 export class ExecutionMonitor {
@@ -177,6 +200,7 @@ export class ExecutionMonitor {
         signal: opts.signal ?? null,
         resultStatus: opts.resultStatus,
         errorMessage: opts.errorMessage ?? null,
+        errorCategory: opts.errorCategory ?? classifyError(opts.resultStatus, opts.exitCode, opts.errorMessage, this.metadata.stop_reason),
         contentLength: opts.contentLength,
         actionsCount: opts.actionsCount,
         resumeTokenOut: opts.resumeTokenOut ?? null,

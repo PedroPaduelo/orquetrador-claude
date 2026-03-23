@@ -57,7 +57,7 @@ export async function webhooksRoutes(app: FastifyInstance) {
     const userId = await request.getCurrentUserId()
     const existing = await webhooksRepository.findById(request.params.id, userId)
     if (!existing) throw new NotFoundError('Webhook not found')
-    return webhooksRepository.update(request.params.id, request.body)
+    return webhooksRepository.update(request.params.id, userId, request.body)
   })
 
   server.delete('/webhooks/:id', {
@@ -70,7 +70,7 @@ export async function webhooksRoutes(app: FastifyInstance) {
     const userId = await request.getCurrentUserId()
     const existing = await webhooksRepository.findById(request.params.id, userId)
     if (!existing) throw new NotFoundError('Webhook not found')
-    await webhooksRepository.delete(request.params.id)
+    await webhooksRepository.delete(request.params.id, userId)
     return reply.status(204).send(null)
   })
 

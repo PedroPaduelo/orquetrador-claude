@@ -44,7 +44,10 @@ export const webhooksRepository = {
     return { id: w.id, url: w.url, events: w.events, enabled: w.enabled, createdAt: w.createdAt.toISOString() }
   },
 
-  async update(id: string, input: { url?: string; events?: string[]; enabled?: boolean }) {
+  async update(id: string, userId: string, input: { url?: string; events?: string[]; enabled?: boolean }) {
+    const existing = await prisma.webhook.findFirst({ where: { id, userId } })
+    if (!existing) return null
+
     const data: Record<string, unknown> = {}
     if (input.url !== undefined) data.url = input.url
     if (input.events !== undefined) data.events = input.events
@@ -53,7 +56,9 @@ export const webhooksRepository = {
     return { id: w.id, url: w.url, events: w.events, enabled: w.enabled }
   },
 
-  async delete(id: string) {
+  async delete(id: string, userId: string) {
+    const existing = await prisma.webhook.findFirst({ where: { id, userId } })
+    if (!existing) return
     await prisma.webhook.delete({ where: { id } })
   },
 
