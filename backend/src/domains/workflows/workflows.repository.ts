@@ -1,5 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../lib/prisma.js'
+import { logAudit } from '../../lib/audit-log.js'
+import { workflowVersioningService } from './workflow-versioning.service.js'
 
 type JsonValue = Prisma.JsonValue
 
@@ -189,6 +191,15 @@ export const workflowsRepository = {
       },
     })
 
+    void logAudit({
+      userId,
+      action: 'create',
+      resourceType: 'workflow',
+      resourceId: workflow.id,
+      resourceName: workflow.name,
+      diff: { after: { name: workflow.name, description: workflow.description, type: workflow.type } },
+    })
+
     return {
       id: workflow.id,
       name: workflow.name,
@@ -225,7 +236,9 @@ export const workflowsRepository = {
         hookIds?: string[]
       }>
     },
+    userId?: string,
   ) {
+    const before = await prisma.workflow.findUnique({ where: { id }, select: { name: true, description: true, type: true, userId: true } })
     const data: Record<string, unknown> = {}
     if (input.name !== undefined) data.name = input.name
     if (input.description !== undefined) data.description = input.description
@@ -285,6 +298,23 @@ export const workflowsRepository = {
       data: data as Parameters<typeof prisma.workflow.update>[0]['data'],
     })
 
+    const ownerId = userId ?? before?.userId
+    if (ownerId) {
+      void logAudit({
+        userId: ownerId,
+        action: 'update',
+        resourceType: 'workflow',
+        resourceId: workflow.id,
+        resourceName: workflow.name,
+        diff: {
+          before: { name: before?.name, description: before?.description, type: before?.type },
+          after: { name: workflow.name, description: workflow.description, type: workflow.type },
+        },
+      })
+    }
+
+    void workflowVersioningService.createVersion(id)
+
     return {
       id: workflow.id,
       name: workflow.name,
@@ -294,7 +324,20 @@ export const workflowsRepository = {
     }
   },
 
-  async delete(id: string) {
+  async delete(id: string, userId?: string) {
+    const before = await prisma.workflow.findUnique({ where: { id }, select: { name: true, description: true, type: true, userId: true } })
     await prisma.workflow.delete({ where: { id } })
+
+    const ownerId = userId ?? before?.userId
+    if (ownerId && before) {
+      void logAudit({
+        userId: ownerId,
+        action: 'delete',
+        resourceType: 'workflow',
+        resourceId: id,
+        resourceName: before.name,
+        diff: { before: { name: before.name, description: before.description, type: before.type } },
+      })
+    }
   },
 }

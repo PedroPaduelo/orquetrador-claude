@@ -12,9 +12,13 @@ import { DAGExecutor } from './dag-executor.js'
 import { runValidators } from '../validators/validator-runner.js'
 import type { ValidatorConfig } from '../validators/types.js'
 import { webhooksService } from '../../webhooks/webhooks.service.js'
+import { decideOnError, getStepTimeout, isStepError, getErrorMessage, resolveErrorHandler, FALLBACK_MESSAGE } from './step-error-handler.js'
 import { execSync } from 'child_process'
 import type { Prisma, WorkflowStep } from '@prisma/client'
+import type { EngineExecuteResult } from '../engine/types.js'
 import type { PausedExecutionInfo } from './execution-state.js'
+import { createOrUpdateAggregate } from '../monitoring/execution-aggregate.service.js'
+import { extractToolCallsForExecution } from '../monitoring/tool-call-extractor.js'
 
 export interface MessageAttachment {
   id: string
@@ -41,6 +45,29 @@ export class TaskOrchestrator {
 
   constructor(engine?: CliEngine) {
     this.engine = engine || defaultEngine
+  }
+
+  private finalizeExecution(executionId: string, conversationId: string) {
+    // Fire-and-forget: extract tool calls and build aggregate
+    Promise.all([
+      extractToolCallsForExecution(executionId),
+      createOrUpdateAggregate(executionId, conversationId),
+    ]).catch(err => {
+      console.error('[Orchestrator] Failed to finalize execution metrics:', err.message)
+    })
+  }
+
+  private withTimeout<T>(promise: Promise<T>, timeoutMs: number, stepName: string): Promise<T> {
+    if (timeoutMs <= 0) return promise
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`Step "${stepName}" excedeu o timeout de ${Math.round(timeoutMs / 1000)}s`))
+      }, timeoutMs)
+      promise.then(
+        (val) => { clearTimeout(timer); resolve(val) },
+        (err) => { clearTimeout(timer); reject(err) },
+      )
+    })
   }
 
   private isPromptTooLongError(error: string | undefined): boolean {
@@ -178,24 +205,47 @@ export class TaskOrchestrator {
     let currentAttachments = attachments
     let currentMonitor = monitor
 
+    const stepTimeoutMs = getStepTimeout(step)
+
     // Loop to handle user interrupts — when the user sends a message mid-execution,
     // we kill the process and re-execute with --resume passing the user's message
     while (true) {
-      const result = await this.engine.execute({
-        conversationId,
-        stepId: step.id,
-        message: currentMessage,
-        systemPrompt,
-        apiBaseUrl: step.baseUrl,
-        projectPath,
-        model: step.model || undefined,
-        attachments: currentAttachments,
-        resumeToken,
-        githubToken,
-        onEvent: makeOnEvent(currentMonitor),
-        onRawStdout: (chunk) => currentMonitor.onStdout(chunk),
-        onRawStderr: (chunk) => currentMonitor.onStderr(chunk),
-      })
+      let result: EngineExecuteResult
+      try {
+        result = await this.withTimeout(
+          this.engine.execute({
+            conversationId,
+            stepId: step.id,
+            message: currentMessage,
+            systemPrompt,
+            apiBaseUrl: step.baseUrl,
+            projectPath,
+            model: step.model || undefined,
+            attachments: currentAttachments,
+            resumeToken,
+            githubToken,
+            onEvent: makeOnEvent(currentMonitor),
+            onRawStdout: (chunk) => currentMonitor.onStdout(chunk),
+            onRawStderr: (chunk) => currentMonitor.onStderr(chunk),
+          }),
+          stepTimeoutMs,
+          step.name,
+        )
+      } catch (timeoutErr) {
+        // Timeout: kill process and return error result
+        this.engine.cancel(conversationId)
+        result = {
+          content: '',
+          resumeToken: null,
+          actions: [],
+          timedOut: true,
+          cancelled: false,
+          needsUserInput: false,
+          exitCode: null,
+          signal: null,
+          error: (timeoutErr as Error).message,
+        }
+      }
 
       // Handle user interrupt: kill → save → resume with user message
       if (result.interrupted && result.interruptMessage) {
@@ -547,7 +597,7 @@ export class TaskOrchestrator {
           totalSteps: steps.length,
         })
 
-        const result = await this.executeStep(
+        let result = await this.executeStep(
           executionId,
           conversationId,
           step,
@@ -634,18 +684,45 @@ export class TaskOrchestrator {
           return
         }
 
-        if (result.error) {
+        if (isStepError(result)) {
+          const decision = decideOnError(step, result)
+          const errMsg = getErrorMessage(result)
+          console.warn(decision.logMessage)
+
           orchestratorEvents.emitStepError({
-            executionId,
-            conversationId,
-            stepId: step.id,
-            stepName: step.name,
-            error: result.error,
+            executionId, conversationId,
+            stepId: step.id, stepName: step.name,
+            error: `[${decision.action}] ${errMsg}`,
           })
 
-          await executionStateManager.markFailed(executionId, result.error)
-          this.activeExecutions.delete(conversationId)
-          return
+          if (decision.action === 'fail') {
+            await executionStateManager.markFailed(executionId, errMsg)
+            this.activeExecutions.delete(conversationId)
+            return
+          }
+
+          if (decision.action === 'fallback') {
+            const fbResult = await this.executeStep(
+              executionId, conversationId, step,
+              FALLBACK_MESSAGE, projectPath, undefined, userId,
+            )
+            if (isStepError(fbResult)) {
+              await executionStateManager.markFailed(executionId, getErrorMessage(fbResult))
+              this.activeExecutions.delete(conversationId)
+              return
+            }
+            result = fbResult
+          }
+
+          if (decision.skipStep) {
+            await executionStateManager.logEvent(
+              executionId, conversationId, 'step_skipped',
+              { error: errMsg, handler: 'skip' }, step.id, step.name,
+            )
+            i++
+            continue
+          }
+          // continue_next: fall through, treat error result as success
         }
 
         // Run validators if configured
@@ -829,6 +906,7 @@ export class TaskOrchestrator {
       }
 
       await executionStateManager.markCompleted(executionId)
+      this.finalizeExecution(executionId, conversationId)
       orchestratorEvents.emitExecutionComplete({
         executionId,
         conversationId,
@@ -842,6 +920,7 @@ export class TaskOrchestrator {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       await executionStateManager.markFailed(executionId, errorMessage)
+      this.finalizeExecution(executionId, conversationId)
       // Dispatch error webhook
       if (userId) {
         webhooksService.dispatch('step:error', { executionId, conversationId, error: errorMessage }, userId).catch(() => {})
@@ -941,7 +1020,7 @@ export class TaskOrchestrator {
               totalSteps: dag.totalSteps,
             })
 
-            const result = await this.executeStep(
+            let result = await this.executeStep(
               executionId,
               conversationId,
               dagStep.step,
@@ -951,16 +1030,30 @@ export class TaskOrchestrator {
               userId,
             )
 
-            if (result.error) {
+            if (isStepError(result)) {
+              const decision = decideOnError(dagStep.step, result)
+              const errMsg = getErrorMessage(result)
+              console.warn(decision.logMessage)
+
               orchestratorEvents.emitStepError({
-                executionId,
-                conversationId,
-                stepId: dagStep.step.id,
-                stepName: dagStep.step.name,
-                error: result.error,
+                executionId, conversationId,
+                stepId: dagStep.step.id, stepName: dagStep.step.name,
+                error: `[${decision.action}] ${errMsg}`,
               })
-            } else {
-              // Save assistant message
+
+              if (decision.action === 'fallback') {
+                const fbResult = await this.executeStep(
+                  executionId, conversationId, dagStep.step,
+                  FALLBACK_MESSAGE, projectPath, undefined, userId,
+                )
+                if (!isStepError(fbResult)) {
+                  result = fbResult
+                }
+              }
+            }
+
+            if (!isStepError(result) || resolveErrorHandler(dagStep.step) !== 'fail') {
+              // Save assistant message (for success or non-fail handlers)
               const msg = await prisma.message.create({
                 data: {
                   conversationId,
@@ -1003,18 +1096,24 @@ export class TaskOrchestrator {
 
         // Mark completed and check for errors
         for (const { dagStep, result } of results) {
-          if (result.error) {
-            await executionStateManager.markFailed(executionId, result.error)
-            this.activeExecutions.delete(conversationId)
-            return
+          if (isStepError(result)) {
+            const handler = resolveErrorHandler(dagStep.step)
+            if (handler === 'fail') {
+              await executionStateManager.markFailed(executionId, getErrorMessage(result))
+              this.activeExecutions.delete(conversationId)
+              return
+            }
+            dag.markCompleted(dagStep.step.id, result.content || '')
+          } else {
+            dag.markCompleted(dagStep.step.id, result.content)
           }
-          dag.markCompleted(dagStep.step.id, result.content)
         }
 
         batchIndex++
       }
 
       await executionStateManager.markCompleted(executionId)
+      this.finalizeExecution(executionId, conversationId)
       orchestratorEvents.emitExecutionComplete({ executionId, conversationId, success: true })
 
       if (userId) {
@@ -1023,6 +1122,7 @@ export class TaskOrchestrator {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       await executionStateManager.markFailed(executionId, errorMessage)
+      this.finalizeExecution(executionId, conversationId)
       if (userId) {
         webhooksService.dispatch('step:error', { executionId, conversationId, error: errorMessage }, userId).catch(() => {})
       }
@@ -1102,7 +1202,7 @@ export class TaskOrchestrator {
     })
 
     try {
-      const result = await this.executeStep(
+      let result = await this.executeStep(
         executionId,
         conversationId,
         step,
@@ -1112,24 +1212,36 @@ export class TaskOrchestrator {
         userId,
       )
 
-      if (result.error) {
+      if (isStepError(result)) {
+        const decision = decideOnError(step, result)
+        const errMsg = getErrorMessage(result)
+        console.warn(decision.logMessage)
         await executionStateManager.logEvent(
-          executionId,
-          conversationId,
-          'step_error',
-          { error: result.error, stepOrder: stepIndex + 1 },
-          step.id,
-          step.name
+          executionId, conversationId, 'step_error',
+          { error: errMsg, handler: decision.action, stepOrder: stepIndex + 1 },
+          step.id, step.name,
         )
         orchestratorEvents.emitStepError({
-          executionId,
-          conversationId,
-          stepId: step.id,
-          stepName: step.name,
-          error: result.error,
+          executionId, conversationId,
+          stepId: step.id, stepName: step.name,
+          error: `[${decision.action}] ${errMsg}`,
         })
-        await executionStateManager.markFailed(executionId, result.error)
-        return
+        if (decision.action === 'fail') {
+          await executionStateManager.markFailed(executionId, errMsg)
+          return
+        }
+        if (decision.action === 'fallback') {
+          const fbResult = await this.executeStep(
+            executionId, conversationId, step,
+            FALLBACK_MESSAGE, projectPath, undefined, userId,
+          )
+          if (isStepError(fbResult)) {
+            await executionStateManager.markFailed(executionId, getErrorMessage(fbResult))
+            return
+          }
+          result = fbResult
+        }
+        // skip and continue_next: fall through to complete
       }
 
       // PAUSE: when Claude needs user input, save state and stop
@@ -1251,6 +1363,7 @@ export class TaskOrchestrator {
       })
 
       await executionStateManager.markCompleted(executionId)
+      this.finalizeExecution(executionId, conversationId)
       orchestratorEvents.emitExecutionComplete({
         executionId,
         conversationId,
@@ -1259,6 +1372,7 @@ export class TaskOrchestrator {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       await executionStateManager.markFailed(executionId, errorMessage)
+      this.finalizeExecution(executionId, conversationId)
       throw error
     }
   }
@@ -1657,6 +1771,7 @@ export class TaskOrchestrator {
       }
 
       await executionStateManager.markCompleted(executionId)
+      this.finalizeExecution(executionId, conversationId)
       orchestratorEvents.emitExecutionComplete({
         executionId,
         conversationId,
@@ -1669,6 +1784,7 @@ export class TaskOrchestrator {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       await executionStateManager.markFailed(executionId, errorMessage)
+      this.finalizeExecution(executionId, conversationId)
       if (userId) {
         webhooksService.dispatch('step:error', { executionId, conversationId, error: errorMessage }, userId).catch(() => {})
       }
