@@ -109,6 +109,7 @@ model User {
   tokenUsageHistory TokenUsageHistory[]
   auditLogs     AuditLog[]
   tags          Tag[]
+  stepTemplates StepTemplate[]
 
   @@map("users")
 }
@@ -212,6 +213,7 @@ model WorkflowStep {
   currentConversations Conversation[]        @relation("CurrentStep")
   executionLogs        ExecutionLog[]
   executionTraces      ExecutionTrace[]
+  promptVersions       PromptVersion[]
 
   // Join tables for MCP/Skills/Agents/Rules/Hooks
   mcpServers WorkflowStepMcpServer[]
@@ -864,6 +866,7 @@ model StepTemplate {
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([name, userId])
   @@index([userId])
@@ -883,6 +886,7 @@ model PromptVersion {
 
   createdBy String @map("created_by")
   creator   User   @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  step      WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
 
   @@index([stepId])
   @@map("prompt_versions")

@@ -5,9 +5,18 @@ import { createHash } from 'node:crypto'
 import { UnauthorizedError } from '../http/errors/index.js'
 import { prisma } from '../lib/prisma.js'
 
+export interface ApiKeyInfo {
+  id: string
+  userId: string
+  scopes: string[]
+  rateLimit: number | null
+  ipWhitelist: string[]
+}
+
 declare module 'fastify' {
   interface FastifyRequest {
     getCurrentUserId: () => Promise<string>
+    apiKeyInfo?: ApiKeyInfo
     jwtVerify<T extends object = { sub: string }>(): Promise<T>
   }
   interface FastifyInstance {
@@ -40,10 +49,21 @@ export const auth = fastifyPlugin(async (app: FastifyInstance) => {
           throw new UnauthorizedError('API key expired')
         }
 
-        // Update last used (fire and forget)
+        // Store API key info for enforcement middleware
+        const scopes = Array.isArray(apiKey.scopes) ? apiKey.scopes as string[] : []
+        const ipWhitelist = Array.isArray(apiKey.ipWhitelist) ? apiKey.ipWhitelist as string[] : []
+        request.apiKeyInfo = {
+          id: apiKey.id,
+          userId: apiKey.userId,
+          scopes,
+          rateLimit: apiKey.rateLimit,
+          ipWhitelist,
+        }
+
+        // Update last used + increment usageCount (fire and forget)
         prisma.apiKey.update({
           where: { id: apiKey.id },
-          data: { lastUsedAt: new Date() },
+          data: { lastUsedAt: new Date(), usageCount: { increment: 1 } },
         }).catch(() => {})
 
         return apiKey.userId

@@ -16,6 +16,7 @@ import { join } from 'path'
 import { env } from './lib/env.js'
 import { errorHandler } from './http/error-handler.js'
 import { auth } from './middlewares/auth.js'
+import { apiKeyEnforcement } from './middlewares/api-key-enforcement.js'
 // registerRateLimit disabled — kept for reference
 // import { registerRateLimit } from './middlewares/rate-limit.js'
 import { domainRoutes } from './domains/index.js'
@@ -74,6 +75,9 @@ async function registerPlugins() {
 
   // Auth middleware (adds getCurrentUserId to every request)
   await app.register(auth)
+
+  // API Key enforcement (scopes, rate limit, IP whitelist)
+  app.addHook('preHandler', apiKeyEnforcement)
 
   // Multipart (file uploads)
   await app.register(fastifyMultipart, {
