@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glossario | Orquetrador Claude - System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .glossary-search {
+      position: relative;
+      max-width: 700px;
+      margin: 0 auto 2rem;
+    }
+    .glossary-search input {
+      width: 100%;
+      padding: 1rem 1.25rem 1rem 3.25rem;
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 14px;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .glossary-search input:focus {
+      border-color: var(--border-accent);
+      box-shadow: 0 0 20px rgba(13, 148, 136, 0.2);
+    }
+    .glossary-search input::placeholder {
+      color: var(--text-muted);
+    }
+    .glossary-search .search-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      pointer-events: none;
+    }
+    .glossary-search .search-clear {
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: none;
+      padding: 0.25rem;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    .glossary-search .search-clear:hover {
+      color: var(--text-primary);
+    }
+
+    .search-stats {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+    .search-stats strong {
+      color: var(--text-accent);
+    }
+
+    .letter-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      justify-content: center;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+    }
+    .letter-nav a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .letter-nav a:hover, .letter-nav a.has-terms {
+      color: var(--text-accent);
+      background: var(--bg-accent-subtle);
+    }
+    .letter-nav a.disabled {
+      color: var(--text-muted);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .letter-group {
+      margin-bottom: 2.5rem;
+    }
+    .letter-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .letter-heading .letter {
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--gradient-1);
+      border-radius: 10px;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+    }
+    .letter-heading .count {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 1rem;
+    }
+
+    .term-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .term-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--gradient-1);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .term-card:hover {
+      border-color: rgba(13, 148, 136, 0.3);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+    .term-card:hover::before {
+      opacity: 1;
+    }
+    .term-card.hidden {
+      display: none;
+    }
+
+    .term-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-accent);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .term-name .term-icon {
+      font-size: 1rem;
+      opacity: 0.8;
+    }
+
+    .term-definition {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 0.75rem;
+    }
+
+    .term-context {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .term-context .ctx-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.55rem;
+      background: rgba(100, 116, 139, 0.1);
+      border: 1px solid rgba(100, 116, 139, 0.2);
+      border-radius: 6px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .term-highlight {
+      background: rgba(13, 148, 136, 0.25);
+      color: var(--text-accent);
+      border-radius: 3px;
+      padding: 0 2px;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 4rem 2rem;
+      display: none;
+    }
+    .no-results .icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+    .no-results h3 {
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+    .no-results p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .category-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+    .cat-filter {
+      padding: 0.4rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .cat-filter:hover, .cat-filter.active {
+      border-color: var(--border-accent);
+      color: var(--text-accent);
+      background: var(--bg-accent-subtle);
+    }
+
+    @media (max-width: 860px) {
+      .glossary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">System Map</a>
+      <span>›</span>
+      <span>Glossario</span>
+    </div>
+    <h1>Glossario</h1>
+    <p class="subtitle">Referencia completa de todos os termos e conceitos do Orquetrador Claude</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4" style="margin-bottom: 2rem;">
+    <div class="stat-box">
+      <div class="stat-value" data-count="43">43</div>
+      <div class="stat-label">Termos documentados</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="7">7</div>
+      <div class="stat-label">Categorias</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="18">18</div>
+      <div class="stat-label">Letras cobertas</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="45">45</div>
+      <div class="stat-label">Tabelas Prisma</div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="glossary-search">
+    <span class="search-icon">&#128269;</span>
+    <input type="text" id="glossarySearch" placeholder="Buscar termos... (ex: workflow, token, webhook)" autocomplete="off" autofocus>
+    <button class="search-clear" id="searchClear" title="Limpar busca">&times;</button>
+  </div>
+
+  <div class="search-stats" id="searchStats">
+    Mostrando <strong id="visibleCount">43</strong> de <strong>43</strong> termos
+  </div>
+
+  <!-- Category Filters -->
+  <div class="category-filters">
+    <button class="cat-filter active" data-cat="all">Todos</button>
+    <button class="cat-filter" data-cat="core">Core</button>
+    <button class="cat-filter" data-cat="execution">Execucao</button>
+    <button class="cat-filter" data-cat="data">Dados</button>
+    <button class="cat-filter" data-cat="auth">Auth & Seguranca</button>
+    <button class="cat-filter" data-cat="infra">Infraestrutura</button>
+    <button class="cat-filter" data-cat="integration">Integracao</button>
+    <button class="cat-filter" data-cat="frontend">Frontend</button>
+  </div>
+
+  <!-- Letter Navigation -->
+  <div class="letter-nav" id="letterNav"></div>
+
+  <!-- Glossary Content -->
+  <div id="glossaryContent"></div>
+
+  <!-- No Results -->
+  <div class="no-results" id="noResults">
+    <div class="icon">&#128270;</div>
+    <h3>Nenhum termo encontrado</h3>
+    <p>Tente buscar por outro termo ou limpe o filtro</p>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+const TERMS = [
+  {
+    name: 'Agent',
+    icon: '&#129302;',
+    definition: 'Executor inteligente com system prompt, tools e permissions proprios. Cada Agent tem configuracao isolada e pode ser anexado a WorkflowSteps para execucao especializada.',
+    context: ['WorkflowStep', 'Plugin', 'Execution'],
+    category: 'core'
+  },
+  {
+    name: 'API Key',
+    icon: '&#128273;',
+    definition: 'Chave de autenticacao no formato <code>exk_&lt;base64&gt;</code>. Armazenada como hash SHA256 no banco. Cada chave tem escopo (scoped) e rate-limiting configuravel.',
+    context: ['Autenticacao', 'Rate Limit', 'Backend'],
+    category: 'auth'
+  },
+  {
+    name: 'Attachment',
+    icon: '&#128206;',
+    definition: 'Arquivo enviado junto com uma mensagem em uma conversation. Salvo fisicamente no diretorio <code>/uploads/</code> com referencia no banco.',
+    context: ['Message', 'Conversation', 'Upload'],
+    category: 'data'
+  },
+  {
+    name: 'Audit Log',
+    icon: '&#128220;',
+    definition: 'Registro de auditoria de acoes no sistema. Captura eventos de create, update, delete, execute e login com metadados de usuario, IP e timestamp.',
+    context: ['Admin', 'Seguranca', 'Monitoramento'],
+    category: 'auth'
+  },
+  {
+    name: 'BullMQ',
+    icon: '&#128230;',
+    definition: 'Biblioteca de filas baseada em Redis. Gerencia execucao de jobs em background com retry, prioridade, concorrencia e dead-letter queues.',
+    context: ['Redis', 'Execution', 'Worker', 'Backend'],
+    category: 'infra'
+  },
+  {
+    name: 'Claude CLI',
+    icon: '&#9889;',
+    definition: 'Interface de linha de comando do Claude. Motor de execucao principal do sistema, invocado via <code>sudo -u claude-sandbox</code> para isolamento de processo.',
+    context: ['Execution', 'Sandbox', 'TaskOrchestrator'],
+    category: 'execution'
+  },
+  {
+    name: 'Condition',
+    icon: '&#128260;',
+    definition: 'Regra avaliada apos o output de um step. Tipos suportados: <code>contains</code>, <code>regex</code>, <code>equals</code>, entre outros. Acoes possiveis: <code>next</code>, <code>retry</code>, <code>jump</code>, <code>complete</code>.',
+    context: ['WorkflowStep', 'Execution', 'DAG'],
+    category: 'execution'
+  },
+  {
+    name: 'Conversation',
+    icon: '&#128172;',
+    definition: 'Instancia ativa de execucao de um workflow. Contem mensagens, traces de execucao e estados. Pode ser forkada mantendo referencia ao original.',
+    context: ['Workflow', 'Message', 'ExecutionTrace', 'Fork'],
+    category: 'core'
+  },
+  {
+    name: 'DAG',
+    icon: '&#128256;',
+    definition: 'Directed Acyclic Graph. Modo de execucao paralela de steps baseado em grafo de dependencias. Permite execucao concorrente de steps independentes.',
+    context: ['DAG Executor', 'WorkflowStep', 'Execution'],
+    category: 'execution'
+  },
+  {
+    name: 'DailyExecutionMetrics',
+    icon: '&#128200;',
+    definition: 'Agregacao diaria de metricas de execucao. Armazena contadores de sucesso, falha, tokens consumidos e custo por dia para dashboards e relatorios.',
+    context: ['Monitoramento', 'Admin', 'Banco de Dados'],
+    category: 'data'
+  },
+  {
+    name: 'ErrorCategory',
+    icon: '&#127991;',
+    definition: 'Categorizacao padronizada de erros do sistema: <code>timeout</code>, <code>rate_limit</code>, <code>context_overflow</code>, <code>budget_exceeded</code>, <code>tool_error</code>, <code>permission_denied</code>.',
+    context: ['ErrorHandler', 'ExecutionTrace', 'Monitoramento'],
+    category: 'execution'
+  },
+  {
+    name: 'ErrorHandler',
+    icon: '&#128679;',
+    definition: 'Estrategia de tratamento de erro configuravel por step. Opcoes: <code>fail</code> (aborta), <code>skip</code> (pula step), <code>fallback</code> (executa alternativo), <code>continue_next</code> (segue para proximo).',
+    context: ['WorkflowStep', 'Execution', 'ErrorCategory'],
+    category: 'execution'
+  },
+  {
+    name: 'Execution',
+    icon: '&#9654;',
+    definition: 'Processo de rodar um workflow. Passa por estados: <code>queued</code> &rarr; <code>running</code> &rarr; <code>completed</code>/<code>failed</code>. Cada execucao gera traces detalhados.',
+    context: ['Conversation', 'TaskOrchestrator', 'BullMQ'],
+    category: 'execution'
+  },
+  {
+    name: 'ExecutionState',
+    icon: '&#128202;',
+    definition: 'Estado atual de uma execucao em andamento. Contem <code>currentStepIndex</code>, <code>retryCounts</code> e metadata arbitraria para continuidade.',
+    context: ['Execution', 'TaskOrchestrator', 'Conversation'],
+    category: 'execution'
+  },
+  {
+    name: 'ExecutionTrace',
+    icon: '&#128209;',
+    definition: 'Registro detalhado de cada step executado. Captura stdout, stderr, tokens consumidos, timing (duracao), custo calculado e resultado.',
+    context: ['Execution', 'Step', 'Monitoramento'],
+    category: 'data'
+  },
+  {
+    name: 'Fastify',
+    icon: '&#128640;',
+    definition: 'Framework HTTP usado no backend. Versao 5 com Zod type provider para validacao automatica de schemas. Suporta plugins, hooks e decorators.',
+    context: ['Backend', 'API', 'Zod'],
+    category: 'infra'
+  },
+  {
+    name: 'Fork',
+    icon: '&#128258;',
+    definition: 'Operacao de clonar uma conversation mantendo referencia ao original via <code>parentId</code>. Permite experimentacao sem afetar a execucao principal.',
+    context: ['Conversation', 'Workflow'],
+    category: 'core'
+  },
+  {
+    name: 'GitSource',
+    icon: '&#128194;',
+    definition: 'Tracking centralizado de recursos importados do GitHub. Armazena owner, repo, path, branch e SHA do commit para rastreabilidade.',
+    context: ['Plugin', 'Skill', 'Rule', 'Integracao'],
+    category: 'integration'
+  },
+  {
+    name: 'Hook',
+    icon: '&#127907;',
+    definition: 'Automacao event-driven no Claude Code. Suporta 16 tipos de eventos e 3 tipos de handler. Permite interceptar e reagir a eventos do sistema.',
+    context: ['Plugin', 'Rule', 'Execution'],
+    category: 'core'
+  },
+  {
+    name: 'HourlyTokenUsage',
+    icon: '&#128336;',
+    definition: 'Agregacao horaria de uso de tokens. Granularidade fina para monitoramento em tempo real de consumo e deteccao de anomalias.',
+    context: ['TokenBudget', 'Monitoramento', 'Banco de Dados'],
+    category: 'data'
+  },
+  {
+    name: 'JWT',
+    icon: '&#128274;',
+    definition: 'JSON Web Token. Metodo de autenticacao principal do frontend. Token assinado com claims de usuario e role. Expira em 7 dias por padrao.',
+    context: ['Autenticacao', 'Frontend', '@fastify/jwt'],
+    category: 'auth'
+  },
+  {
+    name: 'MCP',
+    icon: '&#129302;',
+    definition: 'Model Context Protocol. Protocolo padrao para ferramentas externas do Claude. Permite registrar servidores que fornecem tools, resources e prompts.',
+    context: ['McpServer', 'Plugin', 'Integracao'],
+    category: 'integration'
+  },
+  {
+    name: 'McpServer',
+    icon: '&#128421;',
+    definition: 'Servidor MCP registrado no sistema. Suporta transportes <code>http</code>, <code>sse</code> e <code>stdio</code>. Cada servidor fornece um conjunto de tools ao Claude.',
+    context: ['MCP', 'Plugin', 'Tool'],
+    category: 'integration'
+  },
+  {
+    name: 'Message',
+    icon: '&#128172;',
+    definition: 'Mensagem individual em uma conversation. Possui role (<code>user</code>, <code>assistant</code>, <code>system</code>), conteudo e metadados de tokens.',
+    context: ['Conversation', 'Attachment', 'SSE'],
+    category: 'core'
+  },
+  {
+    name: 'Overage Policy',
+    icon: '&#128176;',
+    definition: 'Politica aplicada quando o budget de tokens e excedido. Tres opcoes: <code>block</code> (bloqueia execucao), <code>warn</code> (avisa mas continua), <code>allow</code> (ignora limite).',
+    context: ['TokenBudget', 'Execution', 'Admin'],
+    category: 'auth'
+  },
+  {
+    name: 'Plugin',
+    icon: '&#129513;',
+    definition: 'Container de recursos que agrupa MCP servers, skills, agents e rules. Suporta cascade enable/delete para ativar ou remover todos os recursos associados.',
+    context: ['McpServer', 'Skill', 'Agent', 'Rule'],
+    category: 'core'
+  },
+  {
+    name: 'Prisma',
+    icon: '&#128142;',
+    definition: 'ORM para PostgreSQL usado no backend. Versao 6 com 45 tabelas definidas no schema. Gerencia migrations, queries tipadas e relacoes.',
+    context: ['Banco de Dados', 'Backend', 'Migration'],
+    category: 'infra'
+  },
+  {
+    name: 'PromptVersion',
+    icon: '&#128221;',
+    definition: 'Historico de versoes do systemPrompt de cada step. Permite auditoria de mudancas e rollback para versoes anteriores do prompt.',
+    context: ['WorkflowStep', 'SystemPrompt', 'Versionamento'],
+    category: 'data'
+  },
+  {
+    name: 'RBAC',
+    icon: '&#128101;',
+    definition: 'Role-Based Access Control. Sistema de permissoes por papel. Roles disponiveis: <code>admin</code> (acesso total), <code>developer</code> (CRUD + execucao), <code>viewer</code> (somente leitura).',
+    context: ['Autenticacao', 'Admin', 'Middleware'],
+    category: 'auth'
+  },
+  {
+    name: 'Redis',
+    icon: '&#128997;',
+    definition: 'Servico de cache, filas (BullMQ) e pub/sub. Sistema opera com graceful degradation se Redis estiver indisponivel — funcionalidades de fila degradam mas API continua.',
+    context: ['BullMQ', 'Cache', 'SSE', 'Backend'],
+    category: 'infra'
+  },
+  {
+    name: 'ResourceDependency',
+    icon: '&#128279;',
+    definition: 'Grafo de dependencias entre recursos do sistema. Mapeia relacoes tipo "depende de" para validacao de integridade e cascade operations.',
+    context: ['Plugin', 'Workflow', 'Admin'],
+    category: 'data'
+  },
+  {
+    name: 'ResourceTag',
+    icon: '&#127991;',
+    definition: 'Associacao polimorfica entre Tag e recurso. Permite aplicar tags a qualquer tipo de recurso (workflow, skill, agent, etc.) via tabela pivot.',
+    context: ['Tag', 'Organizacao', 'Busca'],
+    category: 'data'
+  },
+  {
+    name: 'Rule',
+    icon: '&#128207;',
+    definition: 'Regra de validacao ou formatacao que restringe o comportamento do Claude. Pode ser global ou scoped por step. Aplicada no system prompt.',
+    context: ['Plugin', 'WorkflowStep', 'SystemPrompt'],
+    category: 'core'
+  },
+  {
+    name: 'Sandbox',
+    icon: '&#128737;',
+    definition: 'Isolamento de processo via usuario <code>claude-sandbox</code> + <code>sudo</code>. Garante que execucoes do Claude CLI rodem em contexto restrito sem acesso ao sistema host.',
+    context: ['Execution', 'Claude CLI', 'Seguranca'],
+    category: 'auth'
+  },
+  {
+    name: 'ScheduledExecution',
+    icon: '&#128197;',
+    definition: 'Execucao agendada por um trigger. Tipos de trigger: <code>cron</code>, <code>webhook</code>, <code>event</code>. Registra proxima execucao e historico.',
+    context: ['Trigger', 'Execution', 'BullMQ'],
+    category: 'execution'
+  },
+  {
+    name: 'Skill',
+    icon: '&#129504;',
+    definition: 'Modulo de inteligencia customizado em formato markdown ou code. Pode ser anexado a steps para fornecer conhecimento especializado ao Claude.',
+    context: ['WorkflowStep', 'Plugin', 'Agent'],
+    category: 'core'
+  },
+  {
+    name: 'SSE',
+    icon: '&#128225;',
+    definition: 'Server-Sent Events. Canal de comunicacao unidirecional em tempo real. Usado para streaming de output de execucao e atualizacoes de status.',
+    context: ['Execution', 'Frontend', 'Tempo Real'],
+    category: 'integration'
+  },
+  {
+    name: 'StepMemory',
+    icon: '&#128024;',
+    definition: 'Contexto compactado armazenado por combinacao de (conversation, step). Gerencia memoria de longo prazo para manter contexto entre execucoes.',
+    context: ['Conversation', 'WorkflowStep', 'Execution'],
+    category: 'data'
+  },
+  {
+    name: 'StepTemplate',
+    icon: '&#128196;',
+    definition: 'Configuracao reutilizavel de step. Permite criar templates padronizados de steps com prompt, tools e conditions pre-configurados.',
+    context: ['WorkflowStep', 'Workflow', 'Reuso'],
+    category: 'core'
+  },
+  {
+    name: 'SystemPrompt',
+    icon: '&#128203;',
+    definition: 'Prompt base enviado ao Claude, com aproximadamente 33KB. Montado dinamicamente por step, combinando rules, skills e contexto da conversation.',
+    context: ['WorkflowStep', 'Rule', 'Skill', 'Execution'],
+    category: 'execution'
+  },
+  {
+    name: 'Tag',
+    icon: '&#127991;',
+    definition: 'Etiqueta colorida aplicavel a qualquer recurso via ResourceTag. Facilita organizacao, filtragem e busca de workflows, skills, agents, etc.',
+    context: ['ResourceTag', 'Organizacao', 'Frontend'],
+    category: 'data'
+  },
+  {
+    name: 'TaskOrchestrator',
+    icon: '&#127907;',
+    definition: 'Classe central que coordena a execucao de steps (1946 linhas). Gerencia ciclo de vida, retry, conditions, error handling e streaming de output.',
+    context: ['Execution', 'Claude CLI', 'BullMQ', 'Backend'],
+    category: 'execution'
+  },
+  {
+    name: 'TokenBudget',
+    icon: '&#128176;',
+    definition: 'Limites diarios e mensais de tokens configurados por usuario. Controla consumo com overage policy (block, warn, allow).',
+    context: ['Overage Policy', 'Admin', 'Monitoramento'],
+    category: 'auth'
+  },
+  {
+    name: 'Trigger',
+    icon: '&#9200;',
+    definition: 'Gatilho que inicia execucao de workflow. Tipos: <code>manual</code>, <code>cron</code>, <code>webhook_inbound</code>, <code>event</code>, <code>git_push</code>.',
+    context: ['ScheduledExecution', 'Workflow', 'Webhook'],
+    category: 'execution'
+  },
+  {
+    name: 'Validator',
+    icon: '&#9989;',
+    definition: 'Validador de output de um step. Tipos suportados: <code>regex</code>, <code>contains</code>, <code>length</code>, <code>custom</code>. Garante qualidade do resultado.',
+    context: ['WorkflowStep', 'Condition', 'Execution'],
+    category: 'execution'
+  },
+  {
+    name: 'Webhook',
+    icon: '&#128268;',
+    definition: 'Notificacao outbound para sistemas externos. Requisicoes assinadas com HMAC-SHA256 para garantir autenticidade. Suporta retry e dead-letter.',
+    context: ['Trigger', 'Integracao', 'Seguranca'],
+    category: 'integration'
+  },
+  {
+    name: 'Workflow',
+    icon: '&#128203;',
+    definition: 'Template de execucao composto por steps ordenados. Tipos: <code>sequential</code> (passo a passo) e <code>step_by_step</code> (interativo). Versionavel.',
+    context: ['WorkflowStep', 'Conversation', 'Trigger'],
+    category: 'core'
+  },
+  {
+    name: 'WorkflowStep',
+    icon: '&#128204;',
+    definition: 'Passo individual de um workflow. Contem prompt, resources (skills, agents, rules), conditions de transicao, error handler e configuracoes de execucao.',
+    context: ['Workflow', 'Agent', 'Skill', 'Condition'],
+    category: 'core'
+  },
+  {
+    name: 'WorkflowVersion',
+    icon: '&#128195;',
+    definition: 'Snapshot versionado do workflow completo. Permite rollback e auditoria de mudancas. Cada versao armazena a configuracao integral do workflow e seus steps.',
+    context: ['Workflow', 'Versionamento', 'Admin'],
+    category: 'data'
+  },
+  {
+    name: 'Zustand',
+    icon: '&#128301;',
+    definition: 'Biblioteca de estado global no frontend. O sistema utiliza 8+ stores Zustand para gerenciar estado de workflows, conversations, auth, UI e mais.',
+    context: ['Frontend', 'React', 'State Management'],
+    category: 'frontend'
+  }
+];
+
+const CATEGORY_LABELS = {
+  all: 'Todos',
+  core: 'Core',
+  execution: 'Execucao',
+  data: 'Dados',
+  auth: 'Auth & Seguranca',
+  infra: 'Infraestrutura',
+  integration: 'Integracao',
+  frontend: 'Frontend'
+};
+
+const CATEGORY_COLORS = {
+  core: 'badge-teal',
+  execution: 'badge-purple',
+  data: 'badge-blue',
+  auth: 'badge-red',
+  infra: 'badge-amber',
+  integration: 'badge-green',
+  frontend: 'badge-gray'
+};
+
+let activeCategory = 'all';
+let searchQuery = '';
+
+function getLetterGroups(terms) {
+  const groups = {};
+  terms.forEach(t => {
+    const letter = t.name[0].toUpperCase();
+    if (!groups[letter]) groups[letter] = [];
+    groups[letter].push(t);
+  });
+  return groups;
+}
+
+function renderLetterNav() {
+  const nav = document.getElementById('letterNav');
+  const groups = getLetterGroups(TERMS);
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  nav.innerHTML = letters.map(l => {
+    const has = groups[l] && groups[l].length > 0;
+    return `<a href="#letter-${l}" class="${has ? 'has-terms' : 'disabled'}">${l}</a>`;
+  }).join('');
+}
+
+function highlightText(text, query) {
+  if (!query) return text;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escaped})`, 'gi');
+  return text.replace(regex, '<span class="term-highlight">$1</span>');
+}
+
+function renderGlossary() {
+  const container = document.getElementById('glossaryContent');
+  const noResults = document.getElementById('noResults');
+  const q = searchQuery.toLowerCase();
+
+  const filtered = TERMS.filter(t => {
+    const matchesCat = activeCategory === 'all' || t.category === activeCategory;
+    const matchesSearch = !q ||
+      t.name.toLowerCase().includes(q) ||
+      t.definition.toLowerCase().includes(q) ||
+      t.context.some(c => c.toLowerCase().includes(q));
+    return matchesCat && matchesSearch;
+  });
+
+  document.getElementById('visibleCount').textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    container.innerHTML = '';
+    noResults.style.display = 'block';
+    return;
+  }
+  noResults.style.display = 'none';
+
+  const groups = getLetterGroups(filtered);
+  const sortedLetters = Object.keys(groups).sort();
+
+  container.innerHTML = sortedLetters.map(letter => {
+    const terms = groups[letter].sort((a, b) => a.name.localeCompare(b.name));
+    return `
+      <div class="letter-group" id="letter-${letter}">
+        <div class="letter-heading">
+          <div class="letter">${letter}</div>
+          <div>
+            <strong style="font-size:1.1rem">${letter}</strong>
+            <span class="count">${terms.length} termo${terms.length > 1 ? 's' : ''}</span>
+          </div>
+        </div>
+        <div class="glossary-grid">
+          ${terms.map(t => {
+            const nameHtml = highlightText(t.name, searchQuery);
+            const catColor = CATEGORY_COLORS[t.category] || 'badge-gray';
+            const catLabel = CATEGORY_LABELS[t.category] || t.category;
+            return `
+              <div class="term-card" data-category="${t.category}">
+                <div class="term-name">
+                  <span class="term-icon">${t.icon}</span>
+                  ${nameHtml}
+                  <span class="badge ${catColor}" style="margin-left:auto;font-size:0.65rem;">${catLabel}</span>
+                </div>
+                <div class="term-definition">${q ? highlightText(t.definition, searchQuery) : t.definition}</div>
+                <div class="term-context">
+                  ${t.context.map(c => `<span class="ctx-badge">${highlightText(c, searchQuery)}</span>`).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Search
+const searchInput = document.getElementById('glossarySearch');
+const clearBtn = document.getElementById('searchClear');
+
+searchInput.addEventListener('input', () => {
+  searchQuery = searchInput.value.trim();
+  clearBtn.style.display = searchQuery ? 'block' : 'none';
+  renderGlossary();
+});
+
+clearBtn.addEventListener('click', () => {
+  searchInput.value = '';
+  searchQuery = '';
+  clearBtn.style.display = 'none';
+  searchInput.focus();
+  renderGlossary();
+});
+
+// Category filters
+document.querySelectorAll('.cat-filter').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cat-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeCategory = btn.dataset.cat;
+    renderGlossary();
+  });
+});
+
+// Keyboard shortcut: / to focus search
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement !== searchInput) {
+    e.preventDefault();
+    searchInput.focus();
+  }
+  if (e.key === 'Escape' && document.activeElement === searchInput) {
+    searchInput.blur();
+    if (searchQuery) {
+      searchInput.value = '';
+      searchQuery = '';
+      clearBtn.style.display = 'none';
+      renderGlossary();
+    }
+  }
+});
+
+// Init
+renderLetterNav();
+renderGlossary();
+</script>
+</body>
+</html>

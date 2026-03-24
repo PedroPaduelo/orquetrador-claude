@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>15 - Rules & Hooks | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .event-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .event-card:hover {
+      border-color: rgba(13, 148, 136, 0.3);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+    .event-card .event-category {
+      position: absolute;
+      top: 0;
+      right: 0;
+      padding: 0.2rem 0.6rem;
+      border-radius: 0 12px 0 8px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .cat-tools { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .cat-lifecycle { background: rgba(139,92,246,0.15); color: #a78bfa; }
+    .cat-workflow { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .cat-system { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .event-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; margin-top: 0.25rem; }
+    .event-desc { color: var(--text-secondary); font-size: 0.8rem; line-height: 1.5; }
+    .event-meta { display: flex; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
+
+    .template-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      transition: all 0.3s;
+    }
+    .template-card:hover {
+      border-color: rgba(139, 92, 246, 0.3);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+      transform: translateY(-2px);
+    }
+    .template-card .tpl-name { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.3rem; }
+    .template-card .tpl-desc { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 0.6rem; }
+    .template-card .tpl-cmd {
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: #86efac;
+      overflow-x: auto;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+
+    .handler-compare {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+    .handler-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    .handler-box:hover {
+      border-color: rgba(13, 148, 136, 0.3);
+      box-shadow: var(--shadow-glow);
+    }
+    .handler-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin: 0 auto 1rem;
+    }
+    .handler-name { font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .handler-desc { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; }
+
+    .lifecycle-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 2rem;
+      position: relative;
+    }
+    .lifecycle-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .lifecycle-line {
+      width: 2px;
+      height: 32px;
+      background: var(--border-color);
+      margin-left: 1.7rem;
+    }
+    .lifecycle-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid;
+    }
+    .lifecycle-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .lifecycle-hook {
+      font-size: 0.75rem;
+      color: var(--text-accent);
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-accent-subtle);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      margin-left: auto;
+    }
+
+    .model-field-grid {
+      display: grid;
+      grid-template-columns: 180px 120px 1fr;
+      gap: 0;
+      font-size: 0.85rem;
+    }
+    .model-field-grid > div {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .model-field-grid .field-name {
+      font-family: 'JetBrains Mono', monospace;
+      color: #67e8f9;
+      font-weight: 500;
+    }
+    .model-field-grid .field-type {
+      font-family: 'JetBrains Mono', monospace;
+      color: #c084fc;
+    }
+    .model-field-grid .field-desc {
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 900px) {
+      .handler-compare { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .model-field-grid { grid-template-columns: 1fr; }
+      .model-field-grid .field-type { padding-left: 1.5rem; }
+      .model-field-grid .field-desc { padding-left: 1.5rem; padding-bottom: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">System Map</a>
+      <span>></span>
+      <span>15 - Rules & Hooks</span>
+    </div>
+    <h1>Rules & Hooks</h1>
+    <p class="subtitle">Regras de validacao e hooks de automacao que controlam o comportamento do Claude durante execucoes</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4" style="margin-bottom: 2.5rem;">
+    <div class="stat-box">
+      <div class="stat-value" data-count="8">0</div>
+      <div class="stat-label">Endpoints Rules</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="12">0</div>
+      <div class="stat-label">Endpoints Hooks</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="16">0</div>
+      <div class="stat-label">Event Types</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="24">0</div>
+      <div class="stat-label">Templates</div>
+    </div>
+  </div>
+
+  <!-- ========================================= -->
+  <!-- RULES SECTION -->
+  <!-- ========================================= -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--bg-accent-subtle);">&#x1F4D0;</span>
+      Rules
+    </h2>
+
+    <!-- O que sao Rules -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">?</div>
+        <div>
+          <div class="card-title">O que sao Rules</div>
+        </div>
+      </div>
+      <div class="card-desc">
+        Rules sao regras de validacao e formatacao que restringem o comportamento do Claude durante a execucao.
+        Escritas como texto/codigo, sao injetadas no system prompt como constraints. Podem ser globais (aplicadas a tudo)
+        ou vinculadas a Skills/Plugins especificos. Suportam importacao de URLs (ex: GitHub raw) e sincronizacao automatica.
+      </div>
+      <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <span class="badge badge-teal">Validacao</span>
+        <span class="badge badge-purple">Formatacao</span>
+        <span class="badge badge-blue">System Prompt</span>
+        <span class="badge badge-amber">GitHub Sync</span>
+      </div>
+    </div>
+
+    <!-- Rule Model -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(103,232,249,0.1); color: #67e8f9;">&#x1F4CB;</div>
+        <div>
+          <div class="card-title">Modelo: Rule</div>
+          <div class="card-desc" style="margin: 0;">Prisma model &mdash; tabela <code class="mono" style="color: #86efac; font-size: 0.8rem;">rules</code></div>
+        </div>
+      </div>
+      <div class="model-field-grid" style="margin-top: 0.5rem; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+        <div class="field-name" style="background: var(--bg-secondary); font-weight: 700; color: var(--text-secondary);">Campo</div>
+        <div class="field-type" style="background: var(--bg-secondary); font-weight: 700; color: var(--text-secondary);">Tipo</div>
+        <div class="field-desc" style="background: var(--bg-secondary); font-weight: 700; color: var(--text-secondary);">Descricao</div>
+
+        <div class="field-name">id</div><div class="field-type">String (uuid)</div><div class="field-desc">Identificador unico</div>
+        <div class="field-name">name</div><div class="field-type">String</div><div class="field-desc">Nome da rule (unico por usuario)</div>
+        <div class="field-name">description</div><div class="field-type">String?</div><div class="field-desc">Descricao opcional</div>
+        <div class="field-name">body</div><div class="field-type">String</div><div class="field-desc">Conteudo da regra (texto/codigo injetado no prompt)</div>
+        <div class="field-name">enabled</div><div class="field-type">Boolean</div><div class="field-desc">Ativa/desativa a rule</div>
+        <div class="field-name">isGlobal</div><div class="field-type">Boolean</div><div class="field-desc">Se true, aplicada a todos os workflows</div>
+        <div class="field-name">source</div><div class="field-type">String</div><div class="field-desc">"manual" ou "github" (origem da rule)</div>
+        <div class="field-name">repoUrl</div><div class="field-type">String?</div><div class="field-desc">URL do repositorio GitHub</div>
+        <div class="field-name">repoOwner</div><div class="field-type">String?</div><div class="field-desc">Owner do repo (structured tracking)</div>
+        <div class="field-name">repoName</div><div class="field-type">String?</div><div class="field-desc">Nome do repo</div>
+        <div class="field-name">repoBranch</div><div class="field-type">String?</div><div class="field-desc">Branch (default: "main")</div>
+        <div class="field-name">repoPath</div><div class="field-type">String?</div><div class="field-desc">Path do arquivo no repo</div>
+        <div class="field-name">lastSyncedAt</div><div class="field-type">DateTime?</div><div class="field-desc">Ultima sincronizacao com GitHub</div>
+        <div class="field-name">projectPath</div><div class="field-type">String?</div><div class="field-desc">Path do projeto associado</div>
+        <div class="field-name">userId</div><div class="field-type">String (FK)</div><div class="field-desc">Dono da rule (cascade delete)</div>
+        <div class="field-name">skillId</div><div class="field-type">String? (FK)</div><div class="field-desc">Skill associada (SetNull on delete)</div>
+        <div class="field-name">pluginId</div><div class="field-type">String? (FK)</div><div class="field-desc">Plugin associado (SetNull on delete)</div>
+        <div class="field-name">createdAt</div><div class="field-type">DateTime</div><div class="field-desc">Data de criacao</div>
+        <div class="field-name">updatedAt</div><div class="field-type">DateTime</div><div class="field-desc">Ultima atualizacao</div>
+      </div>
+      <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <span class="badge badge-gray">@@unique([name, userId])</span>
+        <span class="badge badge-gray">@@index([userId])</span>
+        <span class="badge badge-gray">@@index([enabled])</span>
+      </div>
+    </div>
+
+    <!-- Rules Endpoints -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x1F517;</div>
+        <div>
+          <div class="card-title">API Endpoints (8)</div>
+          <div class="card-desc" style="margin: 0;">Prefixo: <code class="mono" style="color: #86efac; font-size: 0.8rem;">/api/rules</code></div>
+        </div>
+      </div>
+      <div class="table-container" style="margin-top: 0.75rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Metodo</th>
+              <th>Rota</th>
+              <th>Descricao</th>
+              <th>Response</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/rules</td>
+              <td>Listar todas as rules do usuario</td>
+              <td><span class="badge badge-gray">200 Array</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/rules</td>
+              <td>Criar nova rule</td>
+              <td><span class="badge badge-gray">201 Created</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/rules/:id</td>
+              <td>Buscar rule por ID (inclui body)</td>
+              <td><span class="badge badge-gray">200 Object</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-amber">PUT</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/rules/:id</td>
+              <td>Atualizar rule</td>
+              <td><span class="badge badge-gray">200 Updated</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-red">DELETE</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/rules/:id</td>
+              <td>Deletar rule</td>
+              <td><span class="badge badge-gray">204 No Content</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-purple">PATCH</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/rules/:id/toggle</td>
+              <td>Alternar enabled/disabled</td>
+              <td><span class="badge badge-gray">200 {id, enabled}</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/rules/import</td>
+              <td>Importar de URL (raw .md) ou conteudo colado</td>
+              <td><span class="badge badge-gray">201 Created</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/rules/:id/resync</td>
+              <td>Re-sincronizar rule do GitHub</td>
+              <td><span class="badge badge-gray">200 Synced</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Rules MCP Tools -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1F916;</div>
+        <div>
+          <div class="card-title">MCP Tools (7)</div>
+          <div class="card-desc" style="margin: 0;">Ferramentas expostas via MCP Server</div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top: 0.75rem;">
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">rule_list</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Lista todas as rules</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">rule_get</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Busca rule por ID</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">rule_create</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Cria nova rule</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">rule_update</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Atualiza rule existente</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">rule_delete</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Remove rule</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">rule_toggle</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Ativa/desativa rule</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">rule_import</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Importa de URL ou conteudo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rules em Workflows -->
+    <div class="card" style="margin-bottom: 2.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x26D3;</div>
+        <div>
+          <div class="card-title">Uso em Workflows</div>
+        </div>
+      </div>
+      <div class="card-desc" style="margin-bottom: 1rem;">
+        Rules sao vinculadas a workflow steps via a tabela <code class="mono" style="color: #86efac; font-size: 0.8rem;">WorkflowStepRule</code> (join table).
+        Durante a execucao, o body de cada rule ativa e injetado no system prompt como constraints que o Claude deve seguir.
+      </div>
+      <div class="flow-container" style="background: var(--bg-secondary); border-radius: 10px;">
+        <div class="flow-node" style="border-color: rgba(59,130,246,0.3);">
+          <span>&#x1F4DD;</span> Rule (body)
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color: rgba(245,158,11,0.3);">
+          <span>&#x1F517;</span> WorkflowStepRule
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color: rgba(139,92,246,0.3);">
+          <span>&#x2699;</span> WorkflowStep
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color: rgba(34,197,94,0.3);">
+          <span>&#x1F4AC;</span> System Prompt
+        </div>
+      </div>
+      <div class="code-block" style="margin-top: 1rem; font-size: 0.8rem;">
+<span class="comment">// WorkflowStepRule join table</span>
+<span class="keyword">model</span> <span class="type">WorkflowStepRule</span> {
+  <span class="type">id</span>        <span class="type">String</span>       <span class="comment">@id @default(uuid())</span>
+  <span class="type">stepId</span>    <span class="type">String</span>       <span class="comment">@map("step_id")</span>
+  <span class="type">ruleId</span>    <span class="type">String</span>       <span class="comment">@map("rule_id")</span>
+  <span class="type">order</span>     <span class="type">Int</span>          <span class="comment">@default(0)</span>
+  <span class="type">step</span>      <span class="type">WorkflowStep</span> <span class="comment">@relation(..., onDelete: Cascade)</span>
+  <span class="type">rule</span>      <span class="type">Rule</span>         <span class="comment">@relation(..., onDelete: Cascade)</span>
+
+  <span class="comment">@@unique([stepId, ruleId])</span>
+  <span class="comment">@@index([ruleId])</span>
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================= -->
+  <!-- HOOKS SECTION -->
+  <!-- ========================================= -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(139,92,246,0.1);">&#x1FA9D;</span>
+      Hooks
+    </h2>
+
+    <!-- O que sao Hooks -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">?</div>
+        <div>
+          <div class="card-title">O que sao Hooks</div>
+        </div>
+      </div>
+      <div class="card-desc">
+        Claude Code Hooks permitem executar codigo customizado em pontos especificos do ciclo de vida de um workflow.
+        Sao automacoes event-driven: quando um evento acontece (ex: ferramenta chamada, sessao iniciada, tarefa concluida),
+        o hook e disparado e executa uma acao &mdash; seja um comando shell, um prompt de LLM ou um subagente.
+        Suportam matchers regex para filtrar por ferramenta/contexto, timeouts e execucao assincrona.
+      </div>
+      <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <span class="badge badge-purple">Event-Driven</span>
+        <span class="badge badge-blue">Automacao</span>
+        <span class="badge badge-teal">Claude Code</span>
+        <span class="badge badge-amber">Lifecycle</span>
+      </div>
+    </div>
+
+    <!-- Hook Model -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(103,232,249,0.1); color: #67e8f9;">&#x1F4CB;</div>
+        <div>
+          <div class="card-title">Modelo: Hook</div>
+          <div class="card-desc" style="margin: 0;">Prisma model &mdash; tabela <code class="mono" style="color: #86efac; font-size: 0.8rem;">Hook</code></div>
+        </div>
+      </div>
+      <div class="model-field-grid" style="margin-top: 0.5rem; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+        <div class="field-name" style="background: var(--bg-secondary); font-weight: 700; color: var(--text-secondary);">Campo</div>
+        <div class="field-type" style="background: var(--bg-secondary); font-weight: 700; color: var(--text-secondary);">Tipo</div>
+        <div class="field-desc" style="background: var(--bg-secondary); font-weight: 700; color: var(--text-secondary);">Descricao</div>
+
+        <div class="field-name">id</div><div class="field-type">String (uuid)</div><div class="field-desc">Identificador unico</div>
+        <div class="field-name">name</div><div class="field-type">String</div><div class="field-desc">Nome do hook</div>
+        <div class="field-name">description</div><div class="field-type">String?</div><div class="field-desc">Descricao opcional</div>
+        <div class="field-name">eventType</div><div class="field-type">String</div><div class="field-desc">Tipo de evento (PreToolUse, Stop, etc.)</div>
+        <div class="field-name">matcher</div><div class="field-type">String?</div><div class="field-desc">Regex para filtrar (nome da tool, motivo, etc.)</div>
+        <div class="field-name">handlerType</div><div class="field-type">String</div><div class="field-desc">"command" | "prompt" | "agent"</div>
+        <div class="field-name">command</div><div class="field-type">String?</div><div class="field-desc">Comando shell (para handler command)</div>
+        <div class="field-name">prompt</div><div class="field-type">String?</div><div class="field-desc">Texto do prompt (para handler prompt/agent)</div>
+        <div class="field-name">timeout</div><div class="field-type">Int</div><div class="field-desc">Timeout em ms (default: 60000)</div>
+        <div class="field-name">isAsync</div><div class="field-type">Boolean</div><div class="field-desc">Se true, nao bloqueia a execucao</div>
+        <div class="field-name">statusMessage</div><div class="field-type">String?</div><div class="field-desc">Mensagem exibida durante execucao</div>
+        <div class="field-name">enabled</div><div class="field-type">Boolean</div><div class="field-desc">Ativa/desativa o hook</div>
+        <div class="field-name">isGlobal</div><div class="field-type">Boolean</div><div class="field-desc">Se true, aplica a todos os projetos</div>
+        <div class="field-name">projectPath</div><div class="field-type">String?</div><div class="field-desc">Hook especifico para um projeto</div>
+        <div class="field-name">isTemplate</div><div class="field-type">Boolean</div><div class="field-desc">Se e template do sistema</div>
+        <div class="field-name">templateId</div><div class="field-type">String?</div><div class="field-desc">ID do template de origem</div>
+        <div class="field-name">userId</div><div class="field-type">String (FK)</div><div class="field-desc">Dono do hook (cascade delete)</div>
+        <div class="field-name">createdAt</div><div class="field-type">DateTime</div><div class="field-desc">Data de criacao</div>
+        <div class="field-name">updatedAt</div><div class="field-type">DateTime</div><div class="field-desc">Ultima atualizacao</div>
+      </div>
+      <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <span class="badge badge-gray">@@index([userId])</span>
+        <span class="badge badge-gray">relation: WorkflowStepHook[]</span>
+      </div>
+    </div>
+
+    <!-- Event Lifecycle Diagram -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1F504;</div>
+        <div>
+          <div class="card-title">Ciclo de Vida &mdash; Diagrama de Eventos</div>
+          <div class="card-desc" style="margin: 0;">Ordem tipica de execucao dos hooks durante um workflow</div>
+        </div>
+      </div>
+      <div class="lifecycle-diagram">
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #4ade80; background: rgba(34,197,94,0.2);"></div>
+          <span class="lifecycle-label">Sessao Inicia</span>
+          <span class="lifecycle-hook">SessionStart</span>
+        </div>
+        <div class="lifecycle-line" style="border-left: 2px solid rgba(34,197,94,0.3); margin-left: 6px;"></div>
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #a78bfa; background: rgba(139,92,246,0.2);"></div>
+          <span class="lifecycle-label">Usuario envia prompt</span>
+          <span class="lifecycle-hook">UserPromptSubmit</span>
+        </div>
+        <div class="lifecycle-line" style="border-left: 2px solid rgba(139,92,246,0.3); margin-left: 6px;"></div>
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #60a5fa; background: rgba(59,130,246,0.2);"></div>
+          <span class="lifecycle-label">Ferramenta requisita permissao</span>
+          <span class="lifecycle-hook">PermissionRequest</span>
+        </div>
+        <div class="lifecycle-line" style="border-left: 2px solid rgba(59,130,246,0.3); margin-left: 6px;"></div>
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #fbbf24; background: rgba(245,158,11,0.2);"></div>
+          <span class="lifecycle-label">Antes de executar ferramenta</span>
+          <span class="lifecycle-hook">PreToolUse</span>
+        </div>
+        <div class="lifecycle-line" style="border-left: 2px solid rgba(245,158,11,0.3); margin-left: 6px;"></div>
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #2dd4bf; background: rgba(13,148,136,0.2);"></div>
+          <span class="lifecycle-label">Ferramenta executada com sucesso</span>
+          <span class="lifecycle-hook">PostToolUse</span>
+        </div>
+        <div class="lifecycle-line" style="border-left: 2px solid rgba(13,148,136,0.3); margin-left: 6px;"></div>
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #f87171; background: rgba(239,68,68,0.2);"></div>
+          <span class="lifecycle-label">Ferramenta falhou</span>
+          <span class="lifecycle-hook">PostToolUseFailure</span>
+        </div>
+        <div class="lifecycle-line" style="border-left: 2px solid rgba(239,68,68,0.3); margin-left: 6px;"></div>
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #fbbf24; background: rgba(245,158,11,0.2);"></div>
+          <span class="lifecycle-label">Subagente inicia / para</span>
+          <span class="lifecycle-hook">SubagentStart / SubagentStop</span>
+        </div>
+        <div class="lifecycle-line" style="border-left: 2px solid rgba(245,158,11,0.3); margin-left: 6px;"></div>
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #c084fc; background: rgba(192,132,252,0.2);"></div>
+          <span class="lifecycle-label">Contexto compactado</span>
+          <span class="lifecycle-hook">PreCompact</span>
+        </div>
+        <div class="lifecycle-line" style="border-left: 2px solid rgba(192,132,252,0.3); margin-left: 6px;"></div>
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #60a5fa; background: rgba(59,130,246,0.2);"></div>
+          <span class="lifecycle-label">Tarefa concluida</span>
+          <span class="lifecycle-hook">TaskCompleted</span>
+        </div>
+        <div class="lifecycle-line" style="border-left: 2px solid rgba(59,130,246,0.3); margin-left: 6px;"></div>
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #2dd4bf; background: rgba(13,148,136,0.2);"></div>
+          <span class="lifecycle-label">Claude para de responder</span>
+          <span class="lifecycle-hook">Stop</span>
+        </div>
+        <div class="lifecycle-line" style="border-left: 2px solid rgba(13,148,136,0.3); margin-left: 6px;"></div>
+        <div class="lifecycle-row">
+          <div class="lifecycle-dot" style="border-color: #94a3b8; background: rgba(148,163,184,0.2);"></div>
+          <span class="lifecycle-label">Sessao encerra</span>
+          <span class="lifecycle-hook">SessionEnd</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 16 Event Types -->
+    <div class="card" style="margin-bottom: 1.5rem; padding-bottom: 0.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x26A1;</div>
+        <div>
+          <div class="card-title">16 Event Types</div>
+          <div class="card-desc" style="margin: 0;">Todos os eventos disponiveis no sistema de hooks</div>
+        </div>
+      </div>
+
+      <!-- Filter badges -->
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;" data-filter-group="events-grid">
+        <span class="badge badge-gray" data-filter="all" style="opacity: 1;">Todos</span>
+        <span class="badge badge-blue" data-filter="tools" style="opacity: 0.5;">Tools</span>
+        <span class="badge badge-purple" data-filter="lifecycle" style="opacity: 0.5;">Lifecycle</span>
+        <span class="badge badge-amber" data-filter="workflow" style="opacity: 0.5;">Workflow</span>
+        <span class="badge badge-green" data-filter="system" style="opacity: 0.5;">System</span>
+      </div>
+
+      <div class="grid-2" id="events-grid" style="margin-top: 0.75rem;">
+        <!-- Tools -->
+        <div class="event-card" data-category="tools">
+          <span class="event-category cat-tools">Tools</span>
+          <div class="event-title">PreToolUse</div>
+          <div class="event-desc">Executado ANTES de uma ferramenta ser chamada. Pode bloquear a execucao retornando <code class="mono" style="font-size: 0.75rem;">exit 2</code>.</div>
+          <div class="event-meta">
+            <span class="badge badge-teal">Matcher: nome da tool</span>
+            <span class="badge badge-gray">Bloqueavel</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="tools">
+          <span class="event-category cat-tools">Tools</span>
+          <div class="event-title">PostToolUse</div>
+          <div class="event-desc">Executado DEPOIS de uma ferramenta ser usada com sucesso. Ideal para lint, format, stage.</div>
+          <div class="event-meta">
+            <span class="badge badge-teal">Matcher: nome da tool</span>
+            <span class="badge badge-gray">Pos-processamento</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="tools">
+          <span class="event-category cat-tools">Tools</span>
+          <div class="event-title">PostToolUseFailure</div>
+          <div class="event-desc">Executado quando uma ferramenta falha. Pode logar erro, notificar ou tentar recuperacao.</div>
+          <div class="event-meta">
+            <span class="badge badge-teal">Matcher: nome da tool</span>
+            <span class="badge badge-red">Falha</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="tools">
+          <span class="event-category cat-tools">Tools</span>
+          <div class="event-title">PermissionRequest</div>
+          <div class="event-desc">Executado quando uma ferramenta pede permissao ao usuario. Pode auto-aprovar ou bloquear.</div>
+          <div class="event-meta">
+            <span class="badge badge-teal">Matcher: nome da tool</span>
+            <span class="badge badge-amber">Permissao</span>
+          </div>
+        </div>
+
+        <!-- Lifecycle -->
+        <div class="event-card" data-category="lifecycle">
+          <span class="event-category cat-lifecycle">Lifecycle</span>
+          <div class="event-title">Stop</div>
+          <div class="event-desc">Executado quando o Claude termina de responder. Pode forcar continuacao se parou prematuramente.</div>
+          <div class="event-meta">
+            <span class="badge badge-purple">Matcher: motivo</span>
+            <span class="badge badge-gray">end_turn, max_tokens</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="lifecycle">
+          <span class="event-category cat-lifecycle">Lifecycle</span>
+          <div class="event-title">UserPromptSubmit</div>
+          <div class="event-desc">Executado quando o usuario envia uma mensagem. Pode modificar ou interceptar o prompt.</div>
+          <div class="event-meta">
+            <span class="badge badge-gray">Sem matcher</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="lifecycle">
+          <span class="event-category cat-lifecycle">Lifecycle</span>
+          <div class="event-title">Notification</div>
+          <div class="event-desc">Executado quando o Claude envia uma notificacao ao sistema.</div>
+          <div class="event-meta">
+            <span class="badge badge-gray">Sem matcher</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="lifecycle">
+          <span class="event-category cat-lifecycle">Lifecycle</span>
+          <div class="event-title">SessionStart</div>
+          <div class="event-desc">Executado no inicio de uma sessao Claude. Ideal para setup de ambiente e logging.</div>
+          <div class="event-meta">
+            <span class="badge badge-gray">Sem matcher</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="lifecycle">
+          <span class="event-category cat-lifecycle">Lifecycle</span>
+          <div class="event-title">SessionEnd</div>
+          <div class="event-desc">Executado no final de uma sessao Claude. Ideal para cleanup e relatorios.</div>
+          <div class="event-meta">
+            <span class="badge badge-gray">Sem matcher</span>
+          </div>
+        </div>
+
+        <!-- Workflow -->
+        <div class="event-card" data-category="workflow">
+          <span class="event-category cat-workflow">Workflow</span>
+          <div class="event-title">SubagentStart</div>
+          <div class="event-desc">Executado quando um subagente e iniciado (spawn).</div>
+          <div class="event-meta">
+            <span class="badge badge-amber">Matcher: tipo do subagente</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="workflow">
+          <span class="event-category cat-workflow">Workflow</span>
+          <div class="event-title">SubagentStop</div>
+          <div class="event-desc">Executado quando um subagente termina sua execucao.</div>
+          <div class="event-meta">
+            <span class="badge badge-amber">Matcher: tipo do subagente</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="workflow">
+          <span class="event-category cat-workflow">Workflow</span>
+          <div class="event-title">TeammateIdle</div>
+          <div class="event-desc">Executado quando um teammate fica inativo. Pode reatribuir tarefas.</div>
+          <div class="event-meta">
+            <span class="badge badge-gray">Sem matcher</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="workflow">
+          <span class="event-category cat-workflow">Workflow</span>
+          <div class="event-title">TaskCompleted</div>
+          <div class="event-desc">Executado quando uma tarefa e concluida. Ideal para notificacoes e proximas acoes.</div>
+          <div class="event-meta">
+            <span class="badge badge-gray">Sem matcher</span>
+          </div>
+        </div>
+
+        <!-- System -->
+        <div class="event-card" data-category="system">
+          <span class="event-category cat-system">System</span>
+          <div class="event-title">PreCompact</div>
+          <div class="event-desc">Executado antes da compactacao de contexto. Pode salvar informacoes criticas.</div>
+          <div class="event-meta">
+            <span class="badge badge-gray">Sem matcher</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="system">
+          <span class="event-category cat-system">System</span>
+          <div class="event-title">WorktreeCreate</div>
+          <div class="event-desc">Executado quando um worktree git e criado. Pode configurar o ambiente.</div>
+          <div class="event-meta">
+            <span class="badge badge-gray">Sem matcher</span>
+          </div>
+        </div>
+        <div class="event-card" data-category="system">
+          <span class="event-category cat-system">System</span>
+          <div class="event-title">WorktreeRemove</div>
+          <div class="event-desc">Executado quando um worktree git e removido. Pode fazer cleanup.</div>
+          <div class="event-meta">
+            <span class="badge badge-gray">Sem matcher</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Handler Types Comparison -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(13,148,136,0.1); color: #2dd4bf;">&#x1F50C;</div>
+        <div>
+          <div class="card-title">Handler Types &mdash; Comparacao</div>
+          <div class="card-desc" style="margin: 0;">Tres formas de executar um hook</div>
+        </div>
+      </div>
+      <div class="handler-compare" style="margin-top: 1rem;">
+        <div class="handler-box">
+          <div class="handler-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1F4BB;</div>
+          <div class="handler-name" style="color: #4ade80;">command</div>
+          <div class="handler-desc">Executa um comando shell no sistema. Recebe variaveis de ambiente com contexto da tool (<code class="mono" style="font-size: 0.75rem;">$TOOL_NAME</code>, <code class="mono" style="font-size: 0.75rem;">$TOOL_INPUT</code>). Retorna exit code.</div>
+          <div style="margin-top: 1rem;">
+            <div style="background: var(--bg-secondary); border-radius: 6px; padding: 0.5rem; font-size: 0.75rem; text-align: left;">
+              <code class="mono" style="color: #86efac;">exit 0</code> <span style="color: var(--text-muted);">&rarr; continua</span><br>
+              <code class="mono" style="color: #f87171;">exit 2</code> <span style="color: var(--text-muted);">&rarr; bloqueia</span>
+            </div>
+          </div>
+        </div>
+        <div class="handler-box">
+          <div class="handler-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1F4AC;</div>
+          <div class="handler-name" style="color: #a78bfa;">prompt</div>
+          <div class="handler-desc">Envia um prompt para o LLM processar. O resultado pode influenciar a decisao (bloquear/permitir). Ideal para analise contextual.</div>
+          <div style="margin-top: 1rem;">
+            <div style="background: var(--bg-secondary); border-radius: 6px; padding: 0.5rem; font-size: 0.75rem; text-align: left;">
+              <span style="color: var(--text-muted);">LLM analisa e decide</span><br>
+              <span style="color: var(--text-muted);">Resultado retorna como texto</span>
+            </div>
+          </div>
+        </div>
+        <div class="handler-box">
+          <div class="handler-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x1F916;</div>
+          <div class="handler-name" style="color: #fbbf24;">agent</div>
+          <div class="handler-desc">Cria um subagente Claude completo para executar a tarefa. Mais poderoso, mais custoso. O agente tem acesso a ferramentas.</div>
+          <div style="margin-top: 1rem;">
+            <div style="background: var(--bg-secondary); border-radius: 6px; padding: 0.5rem; font-size: 0.75rem; text-align: left;">
+              <span style="color: var(--text-muted);">Subagente autonomo</span><br>
+              <span style="color: var(--text-muted);">Pode usar tools e decidir</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Template Gallery -->
+    <div class="card" style="margin-bottom: 1.5rem; padding-bottom: 0.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(192,132,252,0.1); color: #c084fc;">&#x1F4E6;</div>
+        <div>
+          <div class="card-title">Galeria de Templates (24)</div>
+          <div class="card-desc" style="margin: 0;">Templates pre-configurados prontos para uso</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs-container" style="margin-top: 1rem;">
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="tpl-security">&#x1F6E1; Seguranca</button>
+          <button class="tab-btn" data-tab="tpl-quality">&#x2728; Qualidade</button>
+          <button class="tab-btn" data-tab="tpl-git">&#x1F4C2; Git</button>
+          <button class="tab-btn" data-tab="tpl-monitoring">&#x1F4CA; Monitoramento</button>
+          <button class="tab-btn" data-tab="tpl-productivity">&#x26A1; Produtividade</button>
+        </div>
+
+        <!-- Security Templates -->
+        <div class="tab-content active" id="tpl-security">
+          <div class="grid-2">
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-red">PreToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">block-rm-rf</div>
+              <div class="tpl-desc">Impede comandos destrutivos como rm -rf</div>
+              <div class="tpl-cmd">grep -qE "rm\s+(-rf|-r\s+-f)..." &rarr; exit 2</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-red">PreToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">block-secrets</div>
+              <div class="tpl-desc">Impede escrita de arquivos com secrets (.env, credentials)</div>
+              <div class="tpl-cmd">grep -qE "\.(env|pem|key)$|credentials" &rarr; exit 2</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-red">PreToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">block-force-push</div>
+              <div class="tpl-desc">Impede git push --force e git push -f</div>
+              <div class="tpl-cmd">grep -qE "git\s+push\s+.*(-f|--force)" &rarr; exit 2</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-red">PreToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">block-drop-table</div>
+              <div class="tpl-desc">Impede DROP TABLE, TRUNCATE, DELETE sem WHERE</div>
+              <div class="tpl-cmd">grep -qiE "(DROP\s+(TABLE|DATABASE)|TRUNCATE)" &rarr; exit 2</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-red">PreToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">block-npm-publish</div>
+              <div class="tpl-desc">Impede publicacao acidental de pacotes no npm</div>
+              <div class="tpl-cmd">grep -qE "npm\s+publish" &rarr; exit 2</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-red">PreToolUse</span>
+                <span class="badge badge-purple">prompt</span>
+              </div>
+              <div class="tpl-name">review-prompt</div>
+              <div class="tpl-desc">Pede ao Claude para revisar comandos Bash antes de executar</div>
+              <div class="tpl-cmd">LLM analisa e decide se o comando e seguro</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quality Templates -->
+        <div class="tab-content" id="tpl-quality">
+          <div class="grid-2">
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">auto-lint</div>
+              <div class="tpl-desc">Roda linter automaticamente apos editar arquivos</div>
+              <div class="tpl-cmd">npx eslint --fix "$TOOL_INPUT_FILE_PATH"</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">auto-format</div>
+              <div class="tpl-desc">Formata o codigo automaticamente apos editar</div>
+              <div class="tpl-cmd">npx prettier --write "$TOOL_INPUT_FILE_PATH"</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">auto-test</div>
+              <div class="tpl-desc">Roda testes apos modificacoes em arquivos de codigo</div>
+              <div class="tpl-cmd">npm test -- --passWithNoTests</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">typecheck-on-edit</div>
+              <div class="tpl-desc">Roda verificacao de tipos TypeScript apos editar .ts/.tsx</div>
+              <div class="tpl-cmd">npx tsc --noEmit 2>&amp;1 | head -20</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">validate-json</div>
+              <div class="tpl-desc">Valida sintaxe de arquivos JSON apos editar</div>
+              <div class="tpl-cmd">python3 -m json.tool "$FILE"</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">enforce-conventions</div>
+              <div class="tpl-desc">Verifica se arquivos novos seguem convencoes de nomenclatura</div>
+              <div class="tpl-cmd">Avisa se .ts/.tsx usa PascalCase ao inves de kebab-case</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">prevent-large-files</div>
+              <div class="tpl-desc">Avisa se um arquivo ultrapassa 500 linhas</div>
+              <div class="tpl-cmd">wc -l &gt; 500 &rarr; AVISO no stderr</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Git Templates -->
+        <div class="tab-content" id="tpl-git">
+          <div class="grid-2">
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">git-auto-stage</div>
+              <div class="tpl-desc">Adiciona arquivos ao staging automaticamente apos editar</div>
+              <div class="tpl-cmd">git add "$TOOL_INPUT_FILE_PATH"</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">git-auto-commit</div>
+              <div class="tpl-desc">Cria commit automatico apos cada edicao com mensagem descritiva</div>
+              <div class="tpl-cmd">git add "$FILE" &amp;&amp; git commit -m "auto: update $(basename $FILE)"</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-red">PreToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">backup-before-edit</div>
+              <div class="tpl-desc">Cria copia de backup do arquivo antes de qualquer edicao</div>
+              <div class="tpl-cmd">cp "$FILE" /tmp/claude-backups/$(basename).bak</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monitoring Templates -->
+        <div class="tab-content" id="tpl-monitoring">
+          <div class="grid-2">
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">log-operations</div>
+              <div class="tpl-desc">Registra todas as operacoes de ferramentas em um log</div>
+              <div class="tpl-cmd">echo "[HH:MM:SS] $TOOL_NAME: $FILE" &gt;&gt; /tmp/claude-hooks.log</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">log-commands</div>
+              <div class="tpl-desc">Registra todos os comandos Bash executados com timestamp</div>
+              <div class="tpl-cmd">echo "[timestamp] BASH: $TOOL_INPUT" &gt;&gt; /tmp/claude-commands.log</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">log-file-changes</div>
+              <div class="tpl-desc">Registra cada arquivo criado ou editado com timestamp e tamanho</div>
+              <div class="tpl-cmd">echo "[ts] $TOOL_NAME: $FILE (SIZE bytes)" &gt;&gt; log</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-green">SessionStart</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">session-start-log</div>
+              <div class="tpl-desc">Registra quando uma sessao Claude inicia com data e diretorio</div>
+              <div class="tpl-cmd">echo "=== Sessao iniciada ===" &gt;&gt; /tmp/claude-sessions.log</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Productivity Templates -->
+        <div class="tab-content" id="tpl-productivity">
+          <div class="grid-2">
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-purple">Stop</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">notify-on-stop</div>
+              <div class="tpl-desc">Toca um beep sonoro quando o Claude termina uma resposta longa</div>
+              <div class="tpl-cmd">echo -e "\a"</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">count-tokens-estimate</div>
+              <div class="tpl-desc">Apos editar, mostra quantas linhas e palavras o arquivo tem</div>
+              <div class="tpl-cmd">echo "$LINES linhas, $WORDS palavras"</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">auto-install-deps</div>
+              <div class="tpl-desc">Roda npm install quando package.json e editado</div>
+              <div class="tpl-cmd">if "package.json" &rarr; npm install</div>
+            </div>
+            <div class="template-card">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge badge-teal">PostToolUse</span>
+                <span class="badge badge-gray">command</span>
+              </div>
+              <div class="tpl-name">auto-prisma-generate</div>
+              <div class="tpl-desc">Roda prisma generate quando schema.prisma e editado</div>
+              <div class="tpl-cmd">if "schema.prisma" &rarr; npx prisma generate</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hooks Endpoints -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x1F517;</div>
+        <div>
+          <div class="card-title">API Endpoints (12)</div>
+          <div class="card-desc" style="margin: 0;">Prefixo: <code class="mono" style="color: #86efac; font-size: 0.8rem;">/api/hooks</code></div>
+        </div>
+      </div>
+      <div class="table-container" style="margin-top: 0.75rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Metodo</th>
+              <th>Rota</th>
+              <th>Descricao</th>
+              <th>Response</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/hooks</td>
+              <td>Listar todos os hooks do usuario</td>
+              <td><span class="badge badge-gray">200 Array</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/hooks</td>
+              <td>Criar novo hook</td>
+              <td><span class="badge badge-gray">201 Created</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/hooks/templates</td>
+              <td>Listar templates disponiveis</td>
+              <td><span class="badge badge-gray">200 Array</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/hooks/events</td>
+              <td>Listar event types com metadata</td>
+              <td><span class="badge badge-gray">200 Array</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/hooks/from-template</td>
+              <td>Criar hook a partir de template</td>
+              <td><span class="badge badge-gray">201 Created</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/hooks/preview</td>
+              <td>Gerar preview do .claude/settings.json</td>
+              <td><span class="badge badge-gray">200 {config}</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/hooks/:id</td>
+              <td>Buscar hook por ID</td>
+              <td><span class="badge badge-gray">200 Object</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-amber">PUT</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/hooks/:id</td>
+              <td>Atualizar hook</td>
+              <td><span class="badge badge-gray">200 Updated</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-red">DELETE</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/hooks/:id</td>
+              <td>Deletar hook</td>
+              <td><span class="badge badge-gray">204 No Content</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-purple">PATCH</span></td>
+              <td class="mono" style="font-size: 0.8rem;">/hooks/:id/toggle</td>
+              <td>Alternar enabled/disabled</td>
+              <td><span class="badge badge-gray">200 {id, enabled}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Hooks MCP Tools -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1F916;</div>
+        <div>
+          <div class="card-title">MCP Tools (10)</div>
+          <div class="card-desc" style="margin: 0;">Ferramentas expostas via MCP Server para hooks</div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top: 0.75rem;">
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">hook_list</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Lista todos os hooks</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">hook_get</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Busca hook por ID</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">hook_create</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Cria novo hook</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">hook_update</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Atualiza hook existente</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">hook_delete</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Remove hook</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">hook_toggle</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Ativa/desativa hook</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">hook_templates</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Lista templates disponiveis</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">hook_create_from_template</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Cria hook a partir de template</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">hook_events</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Lista event types com metadata</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 0.75rem 1rem;">
+          <code class="mono" style="color: #86efac; font-size: 0.8rem;">hook_preview</code>
+          <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Preview do settings.json gerado</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Config Preview Example -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1F4C4;</div>
+        <div>
+          <div class="card-title">Config Preview &mdash; .claude/settings.json</div>
+          <div class="card-desc" style="margin: 0;">Exemplo de output gerado pelo endpoint <code class="mono" style="font-size: 0.8rem;">POST /hooks/preview</code></div>
+        </div>
+      </div>
+      <div class="code-block" style="margin-top: 0.75rem; font-size: 0.8rem;">
+{
+  <span class="string">"hooks"</span>: {
+    <span class="string">"PreToolUse"</span>: [
+      {
+        <span class="string">"matcher"</span>: <span class="string">"Bash"</span>,
+        <span class="string">"hooks"</span>: [
+          {
+            <span class="string">"type"</span>: <span class="string">"command"</span>,
+            <span class="string">"command"</span>: <span class="string">"if echo \"$TOOL_INPUT\" | grep -qE \"rm\\s+(-rf)\"..."</span>,
+            <span class="string">"timeout"</span>: <span class="number">5000</span>,
+            <span class="string">"statusMessage"</span>: <span class="string">"Verificando seguranca..."</span>
+          }
+        ]
+      }
+    ],
+    <span class="string">"PostToolUse"</span>: [
+      {
+        <span class="string">"matcher"</span>: <span class="string">"Write|Edit"</span>,
+        <span class="string">"hooks"</span>: [
+          {
+            <span class="string">"type"</span>: <span class="string">"command"</span>,
+            <span class="string">"command"</span>: <span class="string">"npx eslint --fix \"$TOOL_INPUT_FILE_PATH\""</span>,
+            <span class="string">"timeout"</span>: <span class="number">30000</span>,
+            <span class="string">"isAsync"</span>: <span class="keyword">true</span>,
+            <span class="string">"statusMessage"</span>: <span class="string">"Rodando linter..."</span>
+          }
+        ]
+      }
+    ]
+  }
+}
+      </div>
+    </div>
+
+    <!-- Frontend Components -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x1F5A5;</div>
+        <div>
+          <div class="card-title">Componentes Frontend</div>
+          <div class="card-desc" style="margin: 0;">UI components para gerenciamento de hooks</div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top: 0.75rem;">
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
+          <div style="font-weight: 600; margin-bottom: 0.25rem;">HookCard</div>
+          <div style="color: var(--text-secondary); font-size: 0.8rem;">Card com toggle, event badge, handler type e acoes rapidas</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
+          <div style="font-weight: 600; margin-bottom: 0.25rem;">HookTable</div>
+          <div style="color: var(--text-secondary); font-size: 0.8rem;">Tabela com filtros por event type, handler e status</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
+          <div style="font-weight: 600; margin-bottom: 0.25rem;">HookForm</div>
+          <div style="color: var(--text-secondary); font-size: 0.8rem;">Formulario completo com selecao de evento, matcher e handler</div>
+        </div>
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
+          <div style="font-weight: 600; margin-bottom: 0.25rem;">HookModal</div>
+          <div style="color: var(--text-secondary); font-size: 0.8rem;">Modal para criar/editar com galeria de templates</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================= -->
+  <!-- COMPARISON: RULES vs HOOKS -->
+  <!-- ========================================= -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(245,158,11,0.1);">&#x2696;</span>
+      Rules vs Hooks
+    </h2>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Aspecto</th>
+            <th>Rules</th>
+            <th>Hooks</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight: 600;">Proposito</td>
+            <td>Restringir comportamento via constraints no prompt</td>
+            <td>Automatizar acoes em pontos do ciclo de vida</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Mecanismo</td>
+            <td>Texto injetado no system prompt</td>
+            <td>Codigo executado em resposta a eventos</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Quando atua</td>
+            <td>Durante toda a execucao (prompt-level)</td>
+            <td>Em momentos especificos (event-driven)</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Vinculacao</td>
+            <td>WorkflowStepRule (join table)</td>
+            <td>WorkflowStepHook (join table)</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Pode bloquear</td>
+            <td>Indiretamente (via instrucoes)</td>
+            <td>Diretamente (exit 2 = block)</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Importacao</td>
+            <td>URL / GitHub sync</td>
+            <td>Templates pre-configurados</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Escopo</td>
+            <td>Global, Skill ou Plugin</td>
+            <td>Global ou por Projeto</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Endpoints API</td>
+            <td>8 rotas</td>
+            <td>12 rotas (incl. templates, events, preview)</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">MCP Tools</td>
+            <td>7 tools</td>
+            <td>10 tools</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+</body>
+</html>

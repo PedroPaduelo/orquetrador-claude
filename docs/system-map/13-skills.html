@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>13 - Skills | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .skill-struct-diagram {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 2rem;
+      align-items: start;
+    }
+    .struct-field-list {
+      list-style: none;
+      padding: 0;
+    }
+    .struct-field-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 0.75rem;
+      border-left: 2px solid var(--border-color);
+      margin-bottom: 0.25rem;
+      font-size: 0.85rem;
+      transition: border-color 0.2s;
+    }
+    .struct-field-list li:hover {
+      border-left-color: var(--border-accent);
+      background: var(--bg-accent-subtle);
+    }
+    .struct-field-list .field-name {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-accent);
+      font-weight: 500;
+      min-width: 140px;
+    }
+    .struct-field-list .field-type {
+      font-family: 'JetBrains Mono', monospace;
+      color: #a78bfa;
+      font-size: 0.8rem;
+    }
+    .struct-field-list .field-desc {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      margin-left: auto;
+    }
+
+    .import-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 1.5rem;
+    }
+    .import-flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .import-flow-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 36px;
+    }
+    .import-flow-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--bg-accent);
+      border: 2px solid var(--text-accent);
+      flex-shrink: 0;
+      z-index: 1;
+    }
+    .import-flow-connector {
+      width: 2px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--border-accent), var(--border-color));
+    }
+    .import-flow-content {
+      padding-bottom: 1.5rem;
+    }
+    .import-flow-content h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .import-flow-content p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .workflow-usage-diagram {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      padding: 1.5rem;
+      justify-content: center;
+    }
+    .wu-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      text-align: center;
+      min-width: 120px;
+      transition: all 0.3s;
+    }
+    .wu-box:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+    }
+    .wu-box .wu-icon { font-size: 1.3rem; margin-bottom: 0.3rem; }
+    .wu-box .wu-label { font-size: 0.8rem; font-weight: 600; }
+    .wu-box .wu-sub { font-size: 0.7rem; color: var(--text-muted); }
+    .wu-arrow {
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      padding: 0 0.5rem;
+    }
+    .wu-box.highlight {
+      border-color: var(--border-accent);
+      background: var(--bg-accent-subtle);
+    }
+
+    .endpoint-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      transition: all 0.3s;
+    }
+    .endpoint-card:hover {
+      border-color: rgba(13, 148, 136, 0.3);
+    }
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .method-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      min-width: 56px;
+      text-align: center;
+    }
+    .method-get { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .method-post { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .method-put { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .method-delete { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .method-patch { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+    .endpoint-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+    }
+    .endpoint-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      padding-left: calc(56px + 0.75rem);
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .tool-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1rem;
+      transition: all 0.3s;
+    }
+    .tool-card:hover {
+      border-color: rgba(13, 148, 136, 0.3);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+    .tool-card .tool-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-accent);
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+    .tool-card .tool-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .tool-card .tool-params {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .frontend-comp-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+    .fc-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      transition: all 0.2s;
+    }
+    .fc-item:hover {
+      border-color: rgba(13, 148, 136, 0.3);
+    }
+    .fc-item .fc-icon {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .fc-item .fc-name {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .fc-item .fc-file {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    @media (max-width: 900px) {
+      .skill-struct-diagram {
+        grid-template-columns: 1fr;
+      }
+      .workflow-usage-diagram {
+        flex-direction: column;
+      }
+      .wu-arrow {
+        transform: rotate(90deg);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <h1>Skills</h1>
+    <p class="subtitle">Modulos de inteligencia customizados — definem comportamento, ferramentas permitidas e instrucoes para steps de workflow e agents.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4 section">
+    <div class="stat-box">
+      <div class="stat-value" data-count="8">8</div>
+      <div class="stat-label">API Endpoints</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="7">7</div>
+      <div class="stat-label">MCP Tools</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="6">6</div>
+      <div class="stat-label">Frontend Components</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="2">2</div>
+      <div class="stat-label">Join Tables</div>
+    </div>
+  </div>
+
+  <!-- Section 1: O que sao Skills -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">&#x1f9e0;</span>
+      O que sao Skills
+    </h2>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle);">&#x1f4dd;</div>
+          <div class="card-title">Definicao</div>
+        </div>
+        <div class="card-desc">
+          Skills sao <strong>modulos de inteligencia customizados</strong> que podem ser anexados a steps de workflow ou agents.
+          Sao escritos em <strong>markdown/codigo</strong> e definem instrucoes especificas, ferramentas permitidas (tool whitelist)
+          e comportamentos que o Claude deve seguir ao executar um step.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.1);">&#x2699;&#xfe0f;</div>
+          <div class="card-title">Funcionalidades</div>
+        </div>
+        <div class="card-desc">
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="padding: 0.3rem 0;"><span class="badge badge-teal">CRUD</span> Criar, editar, excluir e listar skills</li>
+            <li style="padding: 0.3rem 0;"><span class="badge badge-purple">Import</span> Importar de repositorios GitHub</li>
+            <li style="padding: 0.3rem 0;"><span class="badge badge-blue">Sync</span> Sincronizar com repos remotos</li>
+            <li style="padding: 0.3rem 0;"><span class="badge badge-amber">Test</span> Testar execucao de skills</li>
+            <li style="padding: 0.3rem 0;"><span class="badge badge-green">Attach</span> Anexar a workflow steps e agents</li>
+            <li style="padding: 0.3rem 0;"><span class="badge badge-gray">Toggle</span> Habilitar/desabilitar via MCP</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Modelo de Dados -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">&#x1f5c4;&#xfe0f;</span>
+      Modelo de Dados
+    </h2>
+
+    <div class="skill-struct-diagram">
+      <div>
+        <div class="card" style="cursor: default;">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(59,130,246,0.1);">&#x1f4ca;</div>
+            <div class="card-title">Skill (Prisma Model)</div>
+          </div>
+          <div class="code-block" style="font-size: 0.8rem; line-height: 1.8;">
+<span class="keyword">model</span> <span class="type">Skill</span> {
+  <span class="comment">// Identidade</span>
+  id          <span class="type">String</span>   <span class="string">@id @default(uuid())</span>
+  name        <span class="type">String</span>
+  description <span class="type">String?</span>
+  body        <span class="type">String</span>   <span class="comment">// markdown/code</span>
+
+  <span class="comment">// Metadata</span>
+  frontmatter  <span class="type">Json?</span>
+  allowedTools <span class="type">String[]</span>
+  model        <span class="type">String?</span>
+  enabled      <span class="type">Boolean</span> <span class="string">@default(true)</span>
+  isGlobal     <span class="type">Boolean</span> <span class="string">@default(false)</span>
+  source       <span class="type">SkillSource</span>
+
+  <span class="comment">// GitHub tracking</span>
+  repoUrl      <span class="type">String?</span>
+  repoOwner    <span class="type">String?</span>
+  repoName     <span class="type">String?</span>
+  repoBranch   <span class="type">String?</span>
+  repoPath     <span class="type">String?</span>
+  fileManifest <span class="type">Json?</span>
+  lastSyncedAt <span class="type">DateTime?</span>
+
+  <span class="comment">// Relations</span>
+  userId  <span class="type">String</span>
+  pluginId <span class="type">String?</span>
+
+  <span class="comment">// Joins</span>
+  workflowSteps <span class="type">WorkflowStepSkill[]</span>
+  agents        <span class="type">AgentSkill[]</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-secondary);">Campos em detalhe</h3>
+        <ul class="struct-field-list">
+          <li>
+            <span class="field-name">id</span>
+            <span class="field-type">String (UUID)</span>
+            <span class="field-desc">Chave primaria</span>
+          </li>
+          <li>
+            <span class="field-name">name</span>
+            <span class="field-type">String</span>
+            <span class="field-desc">Unico por usuario</span>
+          </li>
+          <li>
+            <span class="field-name">description</span>
+            <span class="field-type">String?</span>
+            <span class="field-desc">Descricao curta</span>
+          </li>
+          <li>
+            <span class="field-name">body</span>
+            <span class="field-type">String</span>
+            <span class="field-desc">Conteudo markdown/codigo da skill</span>
+          </li>
+          <li style="border-left-color: #a78bfa;">
+            <span class="field-name">frontmatter</span>
+            <span class="field-type">Json?</span>
+            <span class="field-desc">Metadata JSON (parsed do body)</span>
+          </li>
+          <li style="border-left-color: #a78bfa;">
+            <span class="field-name">allowedTools</span>
+            <span class="field-type">String[]</span>
+            <span class="field-desc">Whitelist de ferramentas permitidas</span>
+          </li>
+          <li style="border-left-color: #a78bfa;">
+            <span class="field-name">model</span>
+            <span class="field-type">String?</span>
+            <span class="field-desc">Modelo AI especifico (opcional)</span>
+          </li>
+          <li style="border-left-color: #4ade80;">
+            <span class="field-name">enabled</span>
+            <span class="field-type">Boolean</span>
+            <span class="field-desc">Skill ativa (default: true)</span>
+          </li>
+          <li style="border-left-color: #4ade80;">
+            <span class="field-name">isGlobal</span>
+            <span class="field-type">Boolean</span>
+            <span class="field-desc">Disponivel para todos os users</span>
+          </li>
+          <li style="border-left-color: #4ade80;">
+            <span class="field-name">source</span>
+            <span class="field-type">SkillSource</span>
+            <span class="field-desc">manual | imported</span>
+          </li>
+          <li style="border-left-color: #60a5fa;">
+            <span class="field-name">repoUrl</span>
+            <span class="field-type">String?</span>
+            <span class="field-desc">URL completa do repo GitHub</span>
+          </li>
+          <li style="border-left-color: #60a5fa;">
+            <span class="field-name">repoOwner</span>
+            <span class="field-type">String?</span>
+            <span class="field-desc">Owner do repo (org/user)</span>
+          </li>
+          <li style="border-left-color: #60a5fa;">
+            <span class="field-name">repoName</span>
+            <span class="field-type">String?</span>
+            <span class="field-desc">Nome do repo</span>
+          </li>
+          <li style="border-left-color: #60a5fa;">
+            <span class="field-name">repoBranch</span>
+            <span class="field-type">String?</span>
+            <span class="field-desc">Branch rastreada</span>
+          </li>
+          <li style="border-left-color: #60a5fa;">
+            <span class="field-name">repoPath</span>
+            <span class="field-type">String?</span>
+            <span class="field-desc">Caminho dentro do repo</span>
+          </li>
+          <li style="border-left-color: #60a5fa;">
+            <span class="field-name">fileManifest</span>
+            <span class="field-type">Json?</span>
+            <span class="field-desc">Lista de arquivos rastreados</span>
+          </li>
+          <li style="border-left-color: #60a5fa;">
+            <span class="field-name">lastSyncedAt</span>
+            <span class="field-type">DateTime?</span>
+            <span class="field-desc">Ultimo sync com GitHub</span>
+          </li>
+          <li style="border-left-color: #fbbf24;">
+            <span class="field-name">pluginId</span>
+            <span class="field-type">String?</span>
+            <span class="field-desc">Se veio de um plugin</span>
+          </li>
+        </ul>
+
+        <h3 style="font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: var(--text-secondary);">Join Tables</h3>
+        <div class="grid-2" style="gap: 0.75rem;">
+          <div class="card" style="padding: 1rem; cursor: default;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span class="badge badge-purple">N:M</span>
+              <strong style="font-size: 0.85rem;">WorkflowStepSkill</strong>
+            </div>
+            <div class="code-block" style="font-size: 0.75rem; padding: 0.75rem;">
+workflowStepId <span class="type">String</span> <span class="comment">→ WorkflowStep</span>
+skillId        <span class="type">String</span> <span class="comment">→ Skill</span>
+            </div>
+          </div>
+          <div class="card" style="padding: 1rem; cursor: default;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span class="badge badge-blue">N:M</span>
+              <strong style="font-size: 0.85rem;">AgentSkill</strong>
+            </div>
+            <div class="code-block" style="font-size: 0.75rem; padding: 0.75rem;">
+agentId <span class="type">String</span> <span class="comment">→ Agent</span>
+skillId <span class="type">String</span> <span class="comment">→ Skill</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: var(--text-secondary);">Enum: SkillSource</h3>
+        <div style="display: flex; gap: 0.75rem;">
+          <span class="badge badge-teal">manual</span>
+          <span class="badge badge-purple">imported</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: CRUD Endpoints -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">&#x1f50c;</span>
+      API Endpoints (8)
+    </h2>
+
+    <div class="search-box">
+      <span class="search-icon">&#x1f50d;</span>
+      <input type="text" placeholder="Filtrar endpoints..." data-search-target="endpoints-table">
+    </div>
+
+    <div class="table-container" id="endpoints-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Metodo</th>
+            <th>Rota</th>
+            <th>Descricao</th>
+            <th>Auth</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="method-badge method-get">GET</span></td>
+            <td><code>/api/skills</code></td>
+            <td>Listar skills (paginado, com filtros)</td>
+            <td><span class="badge badge-green">JWT</span></td>
+          </tr>
+          <tr>
+            <td><span class="method-badge method-post">POST</span></td>
+            <td><code>/api/skills</code></td>
+            <td>Criar nova skill</td>
+            <td><span class="badge badge-green">JWT</span></td>
+          </tr>
+          <tr>
+            <td><span class="method-badge method-get">GET</span></td>
+            <td><code>/api/skills/:id</code></td>
+            <td>Obter detalhes de uma skill</td>
+            <td><span class="badge badge-green">JWT</span></td>
+          </tr>
+          <tr>
+            <td><span class="method-badge method-put">PUT</span></td>
+            <td><code>/api/skills/:id</code></td>
+            <td>Atualizar skill existente</td>
+            <td><span class="badge badge-green">JWT</span></td>
+          </tr>
+          <tr>
+            <td><span class="method-badge method-delete">DELETE</span></td>
+            <td><code>/api/skills/:id</code></td>
+            <td>Excluir skill</td>
+            <td><span class="badge badge-green">JWT</span></td>
+          </tr>
+          <tr>
+            <td><span class="method-badge method-patch">PATCH</span></td>
+            <td><code>/api/skills/:id/sync</code></td>
+            <td>Sincronizar skill com GitHub</td>
+            <td><span class="badge badge-green">JWT</span></td>
+          </tr>
+          <tr>
+            <td><span class="method-badge method-post">POST</span></td>
+            <td><code>/api/skills/:id/test</code></td>
+            <td>Testar execucao da skill</td>
+            <td><span class="badge badge-green">JWT</span></td>
+          </tr>
+          <tr>
+            <td><span class="method-badge method-post">POST</span></td>
+            <td><code>/api/skills/bulk-import</code></td>
+            <td>Importar skills em massa de um repo</td>
+            <td><span class="badge badge-green">JWT</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Endpoint Details (Accordion) -->
+    <div style="margin-top: 1.5rem;">
+      <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Detalhes dos Endpoints</h3>
+
+      <div class="accordion-item open">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="method-badge method-get">GET</span>
+            <code>/api/skills</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Listar skills</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <div class="code-block">
+<span class="comment">// Query Parameters</span>
+?page=<span class="number">1</span>&limit=<span class="number">20</span>&search=<span class="string">"deploy"</span>&source=<span class="string">"manual"</span>&enabled=<span class="string">"true"</span>
+
+<span class="comment">// Response 200</span>
+{
+  <span class="string">"data"</span>: [
+    {
+      <span class="string">"id"</span>: <span class="string">"uuid"</span>,
+      <span class="string">"name"</span>: <span class="string">"deploy-vercel"</span>,
+      <span class="string">"description"</span>: <span class="string">"Skill para deploy na Vercel"</span>,
+      <span class="string">"source"</span>: <span class="string">"manual"</span>,
+      <span class="string">"enabled"</span>: <span class="keyword">true</span>,
+      <span class="string">"allowedTools"</span>: [<span class="string">"Bash"</span>, <span class="string">"Read"</span>],
+      <span class="string">"createdAt"</span>: <span class="string">"2026-03-20T10:00:00Z"</span>
+    }
+  ],
+  <span class="string">"total"</span>: <span class="number">15</span>,
+  <span class="string">"page"</span>: <span class="number">1</span>,
+  <span class="string">"limit"</span>: <span class="number">20</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="method-badge method-post">POST</span>
+            <code>/api/skills</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Criar skill</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <div class="code-block">
+<span class="comment">// Request Body</span>
+{
+  <span class="string">"name"</span>: <span class="string">"code-review"</span>,
+  <span class="string">"description"</span>: <span class="string">"Analisa codigo e sugere melhorias"</span>,
+  <span class="string">"body"</span>: <span class="string">"# Code Review\nVoce e um reviewer..."</span>,
+  <span class="string">"allowedTools"</span>: [<span class="string">"Read"</span>, <span class="string">"Grep"</span>, <span class="string">"Glob"</span>],
+  <span class="string">"model"</span>: <span class="string">"claude-sonnet-4-20250514"</span>,
+  <span class="string">"isGlobal"</span>: <span class="keyword">false</span>
+}
+
+<span class="comment">// Response 201</span>
+{
+  <span class="string">"id"</span>: <span class="string">"new-uuid"</span>,
+  <span class="string">"name"</span>: <span class="string">"code-review"</span>,
+  ...
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="method-badge method-patch">PATCH</span>
+            <code>/api/skills/:id/sync</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Sync com GitHub</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <div class="code-block">
+<span class="comment">// Sincroniza o body e fileManifest com o repo GitHub</span>
+<span class="comment">// Requer que a skill tenha repoUrl definido</span>
+
+<span class="comment">// Response 200</span>
+{
+  <span class="string">"id"</span>: <span class="string">"uuid"</span>,
+  <span class="string">"lastSyncedAt"</span>: <span class="string">"2026-03-24T15:30:00Z"</span>,
+  <span class="string">"fileManifest"</span>: [
+    { <span class="string">"path"</span>: <span class="string">"skills/deploy.md"</span>, <span class="string">"sha"</span>: <span class="string">"abc123"</span> }
+  ],
+  <span class="string">"body"</span>: <span class="string">"# Deploy Skill\n..."</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="method-badge method-post">POST</span>
+            <code>/api/skills/:id/test</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Testar skill</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <div class="code-block">
+<span class="comment">// Request Body</span>
+{
+  <span class="string">"input"</span>: <span class="string">"Revise este codigo: function add(a,b){return a+b}"</span>
+}
+
+<span class="comment">// Response 200</span>
+{
+  <span class="string">"success"</span>: <span class="keyword">true</span>,
+  <span class="string">"output"</span>: <span class="string">"Analise: funcao simples, sem tipagem..."</span>,
+  <span class="string">"tokensUsed"</span>: <span class="number">342</span>,
+  <span class="string">"model"</span>: <span class="string">"claude-sonnet-4-20250514"</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="method-badge method-post">POST</span>
+            <code>/api/skills/bulk-import</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Importar em massa</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <div class="code-block">
+<span class="comment">// Request Body</span>
+{
+  <span class="string">"repoUrl"</span>: <span class="string">"https://github.com/user/claude-skills"</span>,
+  <span class="string">"branch"</span>: <span class="string">"main"</span>,
+  <span class="string">"path"</span>: <span class="string">"skills/"</span>
+}
+
+<span class="comment">// Response 201</span>
+{
+  <span class="string">"imported"</span>: <span class="number">5</span>,
+  <span class="string">"skipped"</span>: <span class="number">1</span>,
+  <span class="string">"errors"</span>: [],
+  <span class="string">"skills"</span>: [
+    { <span class="string">"id"</span>: <span class="string">"uuid-1"</span>, <span class="string">"name"</span>: <span class="string">"deploy-vercel"</span> },
+    { <span class="string">"id"</span>: <span class="string">"uuid-2"</span>, <span class="string">"name"</span>: <span class="string">"code-review"</span> },
+    ...
+  ]
+}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: MCP Tools -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">&#x1f916;</span>
+      MCP Tools (7)
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">Ferramentas disponiveis via MCP Server para interacao programatica com skills.</p>
+
+    <div class="tool-grid">
+      <div class="tool-card">
+        <div class="tool-name">skill_list</div>
+        <div class="tool-desc">Lista todas as skills do usuario com paginacao e filtros.</div>
+        <div class="tool-params">params: page?, limit?, search?, source?, enabled?</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">skill_get</div>
+        <div class="tool-desc">Obtem detalhes completos de uma skill incluindo body e metadata.</div>
+        <div class="tool-params">params: skillId</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">skill_create</div>
+        <div class="tool-desc">Cria uma nova skill com nome, body, allowedTools e configuracoes.</div>
+        <div class="tool-params">params: name, body, description?, allowedTools?, model?</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">skill_update</div>
+        <div class="tool-desc">Atualiza campos de uma skill existente (partial update).</div>
+        <div class="tool-params">params: skillId, name?, body?, allowedTools?, ...</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">skill_delete</div>
+        <div class="tool-desc">Remove uma skill permanentemente. Desvincula de steps e agents.</div>
+        <div class="tool-params">params: skillId</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">skill_toggle</div>
+        <div class="tool-desc">Habilita ou desabilita uma skill sem excluir.</div>
+        <div class="tool-params">params: skillId, enabled</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">skill_import</div>
+        <div class="tool-desc">Importa skill(s) de um repositorio GitHub (single ou bulk).</div>
+        <div class="tool-params">params: repoUrl, branch?, path?</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: GitHub Integration -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-3);">&#x1f4c2;</span>
+      GitHub Integration
+    </h2>
+
+    <div class="grid-2">
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(59,130,246,0.1);">&#x1f517;</div>
+          <div class="card-title">Capacidades</div>
+        </div>
+        <div class="card-desc">
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="padding: 0.4rem 0; display: flex; align-items: center; gap: 0.5rem;">
+              <span style="color: var(--text-accent);">&#x2714;</span> Importar skills de qualquer repo GitHub publico ou privado
+            </li>
+            <li style="padding: 0.4rem 0; display: flex; align-items: center; gap: 0.5rem;">
+              <span style="color: var(--text-accent);">&#x2714;</span> Rastrear file manifests (SHA de cada arquivo)
+            </li>
+            <li style="padding: 0.4rem 0; display: flex; align-items: center; gap: 0.5rem;">
+              <span style="color: var(--text-accent);">&#x2714;</span> Sincronizacao manual via PATCH /skills/:id/sync
+            </li>
+            <li style="padding: 0.4rem 0; display: flex; align-items: center; gap: 0.5rem;">
+              <span style="color: var(--text-accent);">&#x2714;</span> Bulk import de todos os .md de um diretorio
+            </li>
+            <li style="padding: 0.4rem 0; display: flex; align-items: center; gap: 0.5rem;">
+              <span style="color: var(--text-accent);">&#x2714;</span> Source tracking: manual vs imported
+            </li>
+            <li style="padding: 0.4rem 0; display: flex; align-items: center; gap: 0.5rem;">
+              <span style="color: var(--text-accent);">&#x2714;</span> lastSyncedAt timestamp para controle
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.1);">&#x1f4e5;</div>
+          <div class="card-title">Fluxo de Import</div>
+        </div>
+        <div class="import-flow">
+          <div class="import-flow-step">
+            <div class="import-flow-line">
+              <div class="import-flow-dot"></div>
+              <div class="import-flow-connector"></div>
+            </div>
+            <div class="import-flow-content">
+              <h4>1. Informar URL do Repositorio</h4>
+              <p>Usuario fornece repoUrl, branch e path (opcional) do diretorio de skills.</p>
+            </div>
+          </div>
+          <div class="import-flow-step">
+            <div class="import-flow-line">
+              <div class="import-flow-dot"></div>
+              <div class="import-flow-connector"></div>
+            </div>
+            <div class="import-flow-content">
+              <h4>2. Fetch do GitHub API</h4>
+              <p>Backend busca lista de arquivos .md no path especificado via GitHub Contents API.</p>
+            </div>
+          </div>
+          <div class="import-flow-step">
+            <div class="import-flow-line">
+              <div class="import-flow-dot"></div>
+              <div class="import-flow-connector"></div>
+            </div>
+            <div class="import-flow-content">
+              <h4>3. Parse e Validacao</h4>
+              <p>Cada arquivo e parseado: extrai frontmatter (YAML/JSON), body, allowedTools. Valida schema.</p>
+            </div>
+          </div>
+          <div class="import-flow-step">
+            <div class="import-flow-line">
+              <div class="import-flow-dot"></div>
+              <div class="import-flow-connector"></div>
+            </div>
+            <div class="import-flow-content">
+              <h4>4. Criacao no Banco</h4>
+              <p>Skills criadas com source: "imported", repoUrl, repoOwner, repoName, repoBranch preenchidos.</p>
+            </div>
+          </div>
+          <div class="import-flow-step">
+            <div class="import-flow-line">
+              <div class="import-flow-dot" style="background: #4ade80; border-color: #4ade80;"></div>
+            </div>
+            <div class="import-flow-content">
+              <h4>5. File Manifest Salvo</h4>
+              <p>Array de {path, sha} gravado para detectar mudancas no proximo sync.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 6: Frontend -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">&#x1f5a5;&#xfe0f;</span>
+      Frontend Components
+    </h2>
+
+    <div class="frontend-comp-list">
+      <div class="fc-item">
+        <div class="fc-icon">&#x1f3b4;</div>
+        <div>
+          <div class="fc-name">SkillCard</div>
+          <div class="fc-file">components/SkillCard.tsx</div>
+        </div>
+      </div>
+      <div class="fc-item">
+        <div class="fc-icon">&#x1f4cb;</div>
+        <div>
+          <div class="fc-name">SkillTable</div>
+          <div class="fc-file">components/SkillTable.tsx</div>
+        </div>
+      </div>
+      <div class="fc-item">
+        <div class="fc-icon">&#x1f4dd;</div>
+        <div>
+          <div class="fc-name">SkillForm</div>
+          <div class="fc-file">components/SkillForm.tsx</div>
+        </div>
+      </div>
+      <div class="fc-item">
+        <div class="fc-icon">&#x1f5d4;&#xfe0f;</div>
+        <div>
+          <div class="fc-name">SkillModal</div>
+          <div class="fc-file">components/SkillModal.tsx</div>
+        </div>
+      </div>
+      <div class="fc-item">
+        <div class="fc-icon">&#x1f4e5;</div>
+        <div>
+          <div class="fc-name">ImportSkillDialog</div>
+          <div class="fc-file">components/ImportSkillDialog.tsx</div>
+        </div>
+      </div>
+      <div class="fc-item">
+        <div class="fc-icon">&#x1f9ea;</div>
+        <div>
+          <div class="fc-name">SkillTestPanel</div>
+          <div class="fc-file">components/SkillTestPanel.tsx</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top: 1.5rem;">
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(59,130,246,0.1);">&#x1fa9d;</div>
+          <div class="card-title">use-skills.ts (React Query)</div>
+        </div>
+        <div class="code-block" style="font-size: 0.8rem;">
+<span class="comment">// Hooks exportados</span>
+<span class="keyword">export</span> <span class="keyword">function</span> <span class="type">useSkills</span>(filters?) { ... }
+<span class="keyword">export</span> <span class="keyword">function</span> <span class="type">useSkill</span>(id) { ... }
+<span class="keyword">export</span> <span class="keyword">function</span> <span class="type">useCreateSkill</span>() { ... }
+<span class="keyword">export</span> <span class="keyword">function</span> <span class="type">useUpdateSkill</span>() { ... }
+<span class="keyword">export</span> <span class="keyword">function</span> <span class="type">useDeleteSkill</span>() { ... }
+<span class="keyword">export</span> <span class="keyword">function</span> <span class="type">useSyncSkill</span>() { ... }
+<span class="keyword">export</span> <span class="keyword">function</span> <span class="type">useTestSkill</span>() { ... }
+<span class="keyword">export</span> <span class="keyword">function</span> <span class="type">useBulkImportSkills</span>() { ... }
+
+<span class="comment">// Query keys: ['skills'], ['skills', id]</span>
+        </div>
+      </div>
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.1);">&#x1f4e6;</div>
+          <div class="card-title">Skills Store (Zustand)</div>
+        </div>
+        <div class="code-block" style="font-size: 0.8rem;">
+<span class="comment">// Estado gerenciado pelo Zustand</span>
+<span class="keyword">interface</span> <span class="type">SkillsStore</span> {
+  <span class="comment">// Modal state</span>
+  isModalOpen: <span class="type">boolean</span>
+  modalMode: <span class="string">'create'</span> | <span class="string">'edit'</span> | <span class="string">'view'</span>
+  selectedSkillId: <span class="type">string</span> | <span class="keyword">null</span>
+
+  <span class="comment">// Import dialog</span>
+  isImportOpen: <span class="type">boolean</span>
+
+  <span class="comment">// Actions</span>
+  openModal(mode, skillId?)
+  closeModal()
+  openImport()
+  closeImport()
+}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 7: Uso em Workflows -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">&#x1f504;</span>
+      Uso em Workflows
+    </h2>
+
+    <div class="card" style="cursor: default; margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: var(--bg-accent-subtle);">&#x1f3af;</div>
+        <div class="card-title">Como Skills funcionam em Workflow Steps</div>
+      </div>
+      <div class="card-desc" style="margin-bottom: 1.25rem;">
+        Skills sao anexadas a steps de workflow via a join table <code>WorkflowStepSkill</code>.
+        Quando um step e executado, o motor de execucao injeta o <strong>body</strong> da skill no system prompt
+        do Claude e restringe as ferramentas disponiveis ao <strong>allowedTools</strong> definido na skill.
+      </div>
+
+      <div class="workflow-usage-diagram">
+        <div class="wu-box">
+          <div class="wu-icon">&#x1f4cb;</div>
+          <div class="wu-label">Workflow</div>
+          <div class="wu-sub">Definicao</div>
+        </div>
+        <div class="wu-arrow">&#x27A1;</div>
+        <div class="wu-box">
+          <div class="wu-icon">&#x1f4e6;</div>
+          <div class="wu-label">Step</div>
+          <div class="wu-sub">WorkflowStep</div>
+        </div>
+        <div class="wu-arrow">&#x27A1;</div>
+        <div class="wu-box highlight">
+          <div class="wu-icon">&#x1f9e0;</div>
+          <div class="wu-label">Skill</div>
+          <div class="wu-sub">via WorkflowStepSkill</div>
+        </div>
+        <div class="wu-arrow">&#x27A1;</div>
+        <div class="wu-box">
+          <div class="wu-icon">&#x2699;&#xfe0f;</div>
+          <div class="wu-label">Execution</div>
+          <div class="wu-sub">Claude CLI</div>
+        </div>
+        <div class="wu-arrow">&#x27A1;</div>
+        <div class="wu-box">
+          <div class="wu-icon">&#x2705;</div>
+          <div class="wu-label">Result</div>
+          <div class="wu-sub">Output</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(34,197,94,0.1);">&#x1f4a1;</div>
+          <div class="card-title">Injecao no System Prompt</div>
+        </div>
+        <div class="code-block" style="font-size: 0.8rem;">
+<span class="comment">// No motor de execucao (execution-engine)</span>
+
+<span class="comment">// 1. Busca skills do step</span>
+<span class="keyword">const</span> stepSkills = <span class="keyword">await</span> prisma.workflowStepSkill
+  .findMany({
+    <span class="keyword">where</span>: { workflowStepId: step.id },
+    <span class="keyword">include</span>: { skill: <span class="keyword">true</span> }
+  })
+
+<span class="comment">// 2. Filtra apenas skills habilitadas</span>
+<span class="keyword">const</span> activeSkills = stepSkills
+  .filter(ss => ss.skill.enabled)
+
+<span class="comment">// 3. Monta system prompt com skills</span>
+<span class="keyword">const</span> systemPrompt = [
+  step.prompt,
+  ...activeSkills.map(ss =>
+    <span class="string">`\n--- SKILL: ${ss.skill.name} ---\n`</span>
+    + ss.skill.body
+  )
+].join(<span class="string">'\n'</span>)
+        </div>
+      </div>
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.1);">&#x1f512;</div>
+          <div class="card-title">Restricao de Tools</div>
+        </div>
+        <div class="code-block" style="font-size: 0.8rem;">
+<span class="comment">// allowedTools limita o que o Claude pode usar</span>
+
+<span class="comment">// Exemplo de skill com tools restritas:</span>
+{
+  <span class="string">"name"</span>: <span class="string">"code-review"</span>,
+  <span class="string">"allowedTools"</span>: [
+    <span class="string">"Read"</span>,
+    <span class="string">"Grep"</span>,
+    <span class="string">"Glob"</span>
+  ]
+  <span class="comment">// Bash, Write, Edit: BLOQUEADOS</span>
+  <span class="comment">// Claude so pode LER, nao modificar</span>
+}
+
+<span class="comment">// Exemplo sem restricao:</span>
+{
+  <span class="string">"name"</span>: <span class="string">"full-dev"</span>,
+  <span class="string">"allowedTools"</span>: []
+  <span class="comment">// Array vazio = todas permitidas</span>
+}
+
+<span class="comment">// O motor aplica a intersecao:</span>
+<span class="comment">// finalTools = skill.allowedTools.length > 0</span>
+<span class="comment">//   ? intersect(defaultTools, skill.allowedTools)</span>
+<span class="comment">//   : defaultTools</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 8: Relacao com Agents -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">&#x1f91d;</span>
+      Relacao com Agents
+    </h2>
+
+    <div class="card" style="cursor: default;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(139,92,246,0.1);">&#x1f916;</div>
+        <div class="card-title">AgentSkill — Vinculacao Agent &#x2194; Skill</div>
+      </div>
+      <div class="card-desc" style="margin-bottom: 1.25rem;">
+        Agents podem ter skills associadas via a join table <code>AgentSkill</code>.
+        Quando um agent e invocado, suas skills sao combinadas com as skills do step (se houver)
+        para formar o contexto completo de execucao.
+      </div>
+
+      <div class="grid-3" style="gap: 1rem;">
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; text-align: center;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#x1f916;</div>
+          <div style="font-weight: 600; margin-bottom: 0.25rem;">Agent</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">
+            Possui system prompt proprio,<br>
+            modelo configurado e<br>
+            skills associadas
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">AgentSkill</div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <div style="width: 60px; height: 2px; background: var(--border-accent);"></div>
+            <span style="color: var(--text-accent); font-size: 1.2rem;">&#x2194;</span>
+            <div style="width: 60px; height: 2px; background: var(--border-accent);"></div>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted);">N : M</div>
+        </div>
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; text-align: center;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#x1f9e0;</div>
+          <div style="font-weight: 600; margin-bottom: 0.25rem;">Skill</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">
+            body (instrucoes),<br>
+            allowedTools (whitelist),<br>
+            model (opcional)
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem;">
+        <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.75rem;">Precedencia na execucao</h4>
+        <div class="code-block" style="font-size: 0.8rem;">
+<span class="comment">// Ordem de composicao do system prompt:</span>
+
+<span class="number">1.</span> Agent system prompt       <span class="comment">// Base do agent</span>
+<span class="number">2.</span> Agent skills (via AgentSkill) <span class="comment">// Skills do agent</span>
+<span class="number">3.</span> Step prompt                <span class="comment">// Prompt do step especifico</span>
+<span class="number">4.</span> Step skills (via WorkflowStepSkill) <span class="comment">// Skills do step</span>
+
+<span class="comment">// allowedTools: intersecao de todos os niveis</span>
+<span class="comment">// Se agent tem ["Read","Bash"] e step skill tem ["Read","Grep"]</span>
+<span class="comment">// => finalTools = ["Read"] (intersecao)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visual Architecture Overview -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">&#x1f5fa;&#xfe0f;</span>
+      Visao Geral da Arquitetura
+    </h2>
+
+    <div class="card" style="cursor: default;">
+      <div class="code-block" style="font-size: 0.8rem; line-height: 2;">
+<span class="comment">                    ┌─────────────────────────────────────────────┐</span>
+<span class="comment">                    │              SKILLS SYSTEM                   │</span>
+<span class="comment">                    └─────────────────────────────────────────────┘</span>
+                                        │
+              ┌─────────────────────────┼─────────────────────────┐
+              ▼                         ▼                         ▼
+   <span class="type">┌──────────────────┐</span>  <span class="string">┌──────────────────┐</span>  <span class="keyword">┌──────────────────┐</span>
+   <span class="type">│   REST API (8)   │</span>  <span class="string">│  MCP Tools (7)   │</span>  <span class="keyword">│  Frontend (6)    │</span>
+   <span class="type">│                  │</span>  <span class="string">│                  │</span>  <span class="keyword">│                  │</span>
+   <span class="type">│ GET    /skills   │</span>  <span class="string">│ skill_list       │</span>  <span class="keyword">│ SkillCard        │</span>
+   <span class="type">│ POST   /skills   │</span>  <span class="string">│ skill_get        │</span>  <span class="keyword">│ SkillTable       │</span>
+   <span class="type">│ GET    /:id      │</span>  <span class="string">│ skill_create     │</span>  <span class="keyword">│ SkillForm        │</span>
+   <span class="type">│ PUT    /:id      │</span>  <span class="string">│ skill_update     │</span>  <span class="keyword">│ SkillModal       │</span>
+   <span class="type">│ DELETE /:id      │</span>  <span class="string">│ skill_delete     │</span>  <span class="keyword">│ ImportSkillDialog │</span>
+   <span class="type">│ PATCH  /:id/sync │</span>  <span class="string">│ skill_toggle     │</span>  <span class="keyword">│ SkillTestPanel   │</span>
+   <span class="type">│ POST   /:id/test │</span>  <span class="string">│ skill_import     │</span>  <span class="keyword">│                  │</span>
+   <span class="type">│ POST   /bulk     │</span>  <span class="string">│                  │</span>  <span class="keyword">│                  │</span>
+   <span class="type">└────────┬─────────┘</span>  <span class="string">└────────┬─────────┘</span>  <span class="keyword">└────────┬─────────┘</span>
+            │                         │                         │
+            └─────────────────────────┼─────────────────────────┘
+                                      ▼
+                        <span class="type">┌──────────────────────┐</span>
+                        <span class="type">│     Prisma / DB      │</span>
+                        <span class="type">│                      │</span>
+                        <span class="type">│  Skill               │</span>
+                        <span class="type">│  WorkflowStepSkill   │</span>
+                        <span class="type">│  AgentSkill           │</span>
+                        <span class="type">└──────────┬───────────┘</span>
+                                   │
+                     ┌─────────────┼─────────────┐
+                     ▼                           ▼
+          <span class="string">┌──────────────────┐</span>     <span class="keyword">┌──────────────────┐</span>
+          <span class="string">│  Workflow Steps   │</span>     <span class="keyword">│     Agents       │</span>
+          <span class="string">│                  │</span>     <span class="keyword">│                  │</span>
+          <span class="string">│ System prompt    │</span>     <span class="keyword">│ System prompt    │</span>
+          <span class="string">│ + skill.body     │</span>     <span class="keyword">│ + skill.body     │</span>
+          <span class="string">│ + allowedTools   │</span>     <span class="keyword">│ + allowedTools   │</span>
+          <span class="string">└──────────────────┘</span>     <span class="keyword">└──────────────────┘</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lifecycle / State Diagram -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-3);">&#x1f501;</span>
+      Ciclo de Vida de uma Skill
+    </h2>
+
+    <div class="flow-container" style="justify-content: center;">
+      <div class="flow-node" style="border-color: rgba(34,197,94,0.5);">
+        <span>&#x2795;</span> Criacao
+      </div>
+      <span class="flow-arrow">&#x27A1;</span>
+      <div class="flow-node" style="border-color: rgba(59,130,246,0.5);">
+        <span>&#x270f;&#xfe0f;</span> Edicao
+      </div>
+      <span class="flow-arrow">&#x27A1;</span>
+      <div class="flow-node" style="border-color: rgba(139,92,246,0.5);">
+        <span>&#x1f9ea;</span> Teste
+      </div>
+      <span class="flow-arrow">&#x27A1;</span>
+      <div class="flow-node" style="border-color: rgba(13,148,136,0.5);">
+        <span>&#x1f517;</span> Vinculacao
+      </div>
+      <span class="flow-arrow">&#x27A1;</span>
+      <div class="flow-node" style="border-color: rgba(245,158,11,0.5);">
+        <span>&#x2699;&#xfe0f;</span> Execucao
+      </div>
+      <span class="flow-arrow">&#x27A1;</span>
+      <div class="flow-node" style="border-color: rgba(100,116,139,0.5);">
+        <span>&#x1f504;</span> Sync / Update
+      </div>
+    </div>
+
+    <div class="grid-3" style="margin-top: 1rem;">
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(34,197,94,0.1);">&#x2795;</div>
+          <div>
+            <div class="card-title">Criacao</div>
+          </div>
+        </div>
+        <div class="card-desc">
+          Manual (form/MCP) ou importada do GitHub. Define body, allowedTools, metadata.
+          Pode ser global ou por usuario.
+        </div>
+      </div>
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.1);">&#x1f517;</div>
+          <div>
+            <div class="card-title">Vinculacao</div>
+          </div>
+        </div>
+        <div class="card-desc">
+          Anexada a workflow steps (WorkflowStepSkill) ou agents (AgentSkill).
+          Uma skill pode estar em multiplos steps e agents.
+        </div>
+      </div>
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.1);">&#x1f504;</div>
+          <div>
+            <div class="card-title">Sync</div>
+          </div>
+        </div>
+        <div class="card-desc">
+          Skills importadas podem ser sincronizadas manualmente.
+          Compara fileManifest (SHA) para detectar mudancas no repo.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="shared.js"></script>
+<script>
+  renderBreadcrumb(document.getElementById('breadcrumb'), [
+    { label: 'System Map', href: 'index.html' },
+    { label: '13 - Skills' }
+  ]);
+</script>
+</body>
+</html>

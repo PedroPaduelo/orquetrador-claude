@@ -1,1177 +1,1356 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Integracoes — Orquetrador Claude</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            primary: { DEFAULT: '#6366f1', 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81' },
-            dark: { 850: '#0f1117', 950: '#080a10' },
-          },
-          animation: {
-            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            'spin-slow': 'spin 8s linear infinite',
-          },
-        },
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Integracoes — Orquetrador Claude System Map</title>
+<link rel="stylesheet" href="shared.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        surface: { 50:'#f8fafc', 100:'#1e1e2e', 200:'#181825', 300:'#11111b', 400:'#0a0a14' },
+        accent: { 400:'#89b4fa', 500:'#74c7ec', 600:'#94e2d5' },
+      },
+      fontFamily: {
+        sans: ['Inter','system-ui','sans-serif'],
+        mono: ['"JetBrains Mono"','Fira Code','monospace'],
       },
     }
-  </script>
-  <style>
-    * { box-sizing: border-box; }
-    body { background: #080a10; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #1e293b; }
-    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+  }
+}
+</script>
+<style>
+html { scroll-behavior: smooth; }
+body { -webkit-font-smoothing: antialiased; }
 
-    .card {
-      background: #111827;
-      border: 1px solid #1f2937;
-      border-radius: 12px;
-      overflow: hidden;
-      transition: all 0.3s ease;
-    }
-    .card:hover { border-color: #374151; }
-    .card.expanded { border-color: #4b5563; box-shadow: 0 0 30px rgba(99, 102, 241, 0.08); }
+/* Central diagram */
+.hub-diagram {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  height: 520px;
+  margin: 0 auto;
+}
+.hub-center {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px; height: 140px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  box-shadow: 0 0 60px rgba(99,102,241,0.3), 0 0 120px rgba(99,102,241,0.1);
+  z-index: 10;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+  line-height: 1.3;
+}
+.hub-center .hub-icon { font-size: 2rem; margin-bottom: 4px; }
+.hub-node {
+  position: absolute;
+  width: 120px; height: 120px;
+  border-radius: 16px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  font-size: 0.75rem; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  z-index: 5;
+}
+.hub-node:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 30px rgba(99,102,241,0.2);
+  border-color: #6366f1;
+}
+.hub-node .node-icon { font-size: 1.8rem; margin-bottom: 6px; }
+.hub-node .node-label { color: var(--text-secondary); font-size: 0.7rem; font-weight: 400; margin-top: 2px; }
 
-    .card-header {
-      padding: 16px 20px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      user-select: none;
-      transition: background 0.2s;
-    }
-    .card-header:hover { background: rgba(255,255,255,0.02); }
+/* SVG lines */
+.hub-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+.hub-line { stroke: #334155; stroke-width: 2; stroke-dasharray: 6 4; }
+.hub-line.active { stroke: #6366f1; stroke-width: 2.5; stroke-dasharray: none; filter: drop-shadow(0 0 4px rgba(99,102,241,0.4)); }
 
-    .card-body {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.4s ease, padding 0.3s ease;
-      padding: 0 20px;
-    }
-    .card.expanded .card-body {
-      max-height: 2000px;
-      padding: 0 20px 20px;
-    }
+/* Integration cards */
+.int-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+.int-card:hover {
+  border-color: rgba(99,102,241,0.4);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+  transform: translateY(-3px);
+}
+.int-card-header {
+  padding: 20px 24px;
+  display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  user-select: none;
+}
+.int-card-header:hover { background: rgba(255,255,255,0.02); }
+.int-card-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+.int-card-title { font-size: 1.15rem; font-weight: 700; }
+.int-card-subtitle { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+.int-card-chevron {
+  margin-left: auto;
+  color: var(--text-muted);
+  transition: transform 0.3s;
+  font-size: 1.2rem;
+}
+.int-card.open .int-card-chevron { transform: rotate(180deg); }
+.int-card-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.5s ease;
+}
+.int-card.open .int-card-body { max-height: 5000px; }
+.int-card-content { padding: 24px; }
 
-    .chevron {
-      transition: transform 0.3s ease;
-      flex-shrink: 0;
-    }
-    .card.expanded .chevron { transform: rotate(180deg); }
+/* Flow row */
+.flow-row {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; padding: 12px 0;
+}
+.flow-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+}
+.flow-arrow { color: var(--text-muted); font-size: 1rem; }
 
-    .code-block {
-      background: #0d1117;
-      border: 1px solid #21262d;
-      border-radius: 8px;
-      padding: 14px 16px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12.5px;
-      line-height: 1.7;
-      overflow-x: auto;
-      white-space: pre;
-    }
-    .code-block .k { color: #ff7b72; }
-    .code-block .s { color: #a5d6ff; }
-    .code-block .c { color: #8b949e; font-style: italic; }
-    .code-block .fn { color: #d2a8ff; }
-    .code-block .v { color: #79c0ff; }
-    .code-block .n { color: #ffa657; }
-    .code-block .b { color: #7ee787; }
-    .code-block .m { color: #f0883e; }
+/* Detail grid */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.detail-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+}
+.detail-item-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.detail-item-value {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 3px 10px;
-      border-radius: 9999px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-      text-transform: uppercase;
-    }
+/* Endpoint row */
+.endpoint-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+.endpoint-method {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.method-get { background: rgba(34,197,94,0.15); color: #4ade80; }
+.method-post { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.method-put { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.method-delete { background: rgba(239,68,68,0.15); color: #f87171; }
+.endpoint-path { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--text-accent); }
+.endpoint-desc { color: var(--text-secondary); font-size: 0.8rem; margin-left: auto; }
 
-    .integration-map {
-      position: relative;
-      background: radial-gradient(ellipse at center, #111827 0%, #080a10 70%);
-      border: 1px solid #1f2937;
-      border-radius: 16px;
-      overflow: hidden;
-    }
+/* Event badge */
+.event-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem; font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(139,92,246,0.1);
+  color: #a78bfa;
+  border: 1px solid rgba(139,92,246,0.2);
+  margin: 3px;
+}
 
-    .map-center {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 160px;
-      height: 160px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(99,102,241,0.05) 50%, transparent 70%);
-      border: 2px solid rgba(99,102,241,0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      box-shadow: 0 0 40px rgba(99,102,241,0.2), inset 0 0 30px rgba(99,102,241,0.05);
-    }
+/* Stats bar */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 2rem;
+}
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.stat-number {
+  font-size: 2rem; font-weight: 800;
+  background: linear-gradient(135deg, #6366f1, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat-text { color: var(--text-secondary); font-size: 0.8rem; margin-top: 4px; }
 
-    .map-node {
-      position: absolute;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
-      border-radius: 9999px;
-      font-size: 12px;
-      font-weight: 600;
-      white-space: nowrap;
-      border: 1px solid;
-      transition: all 0.2s;
-      z-index: 5;
-    }
-    .map-node:hover { transform: scale(1.05); }
+/* Transport badge */
+.transport-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 6px;
+  font-size: 0.75rem; font-weight: 600;
+  margin: 2px;
+}
+.transport-http { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+.transport-sse { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+.transport-stdio { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
 
-    .map-line {
-      position: absolute;
-      height: 2px;
-      transform-origin: left center;
-      z-index: 1;
-    }
-    .map-line::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent, currentColor, transparent);
-      opacity: 0.3;
-    }
-    .map-line.inbound::after {
-      content: '';
-      position: absolute;
-      right: -4px;
-      top: -3px;
-      border: 4px solid transparent;
-      border-left-color: currentColor;
-      opacity: 0.5;
-    }
-    .map-line.outbound::after {
-      content: '';
-      position: absolute;
-      left: -4px;
-      top: -3px;
-      border: 4px solid transparent;
-      border-right-color: currentColor;
-      opacity: 0.5;
-    }
+@keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+.anim-in { animation: fadeInUp 0.5s ease forwards; opacity: 0; }
+.anim-d1 { animation-delay: 0.05s; }
+.anim-d2 { animation-delay: 0.1s; }
+.anim-d3 { animation-delay: 0.15s; }
+.anim-d4 { animation-delay: 0.2s; }
+.anim-d5 { animation-delay: 0.25s; }
+.anim-d6 { animation-delay: 0.3s; }
+.anim-d7 { animation-delay: 0.35s; }
+.anim-d8 { animation-delay: 0.4s; }
 
-    .pulse-ring {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 160px;
-      height: 160px;
-      border-radius: 50%;
-      border: 1px solid rgba(99,102,241,0.2);
-      animation: expandRing 4s ease-out infinite;
-    }
-    .pulse-ring:nth-child(2) { animation-delay: 1.3s; }
-    .pulse-ring:nth-child(3) { animation-delay: 2.6s; }
+@keyframes orbitPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.2); }
+  50% { box-shadow: 0 0 20px 6px rgba(99,102,241,0.15); }
+}
+.hub-center { animation: orbitPulse 3s ease-in-out infinite; }
 
-    @keyframes expandRing {
-      0% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
-      100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
-    }
-
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; }
-    th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; border-bottom: 1px solid #1f2937; }
-    td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #111827; vertical-align: top; }
-    tr:hover td { background: rgba(255,255,255,0.01); }
-
-    .tag {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 500;
-    }
-
-    .flow-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
-    .flow-indicator svg { flex-shrink: 0; }
-
-    .section-divider {
-      height: 1px;
-      background: linear-gradient(90deg, transparent, #1f2937, transparent);
-      margin: 32px 0;
-    }
-
-    .legend-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-  </style>
+@media (max-width: 768px) {
+  .hub-diagram { height: auto; min-height: 900px; }
+  .hub-node { width: 100px; height: 100px; font-size: 0.7rem; }
+  .hub-node .node-icon { font-size: 1.4rem; }
+  .endpoint-desc { display: none; }
+}
+</style>
 </head>
-<body class="min-h-screen">
+<body class="bg-surface-400 text-gray-200 font-sans min-h-screen antialiased">
 
-<nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);border-bottom:1px solid rgba(148,163,184,0.1)">
-  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-    <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-blue-400 transition">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
-      Orquetrador Claude
-    </a>
-    <div class="hidden lg:flex items-center gap-1 text-xs">
-      <a href="01-visao-geral.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visão Geral</a>
-      <a href="02-fluxo-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
-      <a href="03-banco-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">03 DB</a>
-      <a href="04-api-endpoints.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">04 API</a>
-      <a href="05-motor-execucao.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">05 Execução</a>
-      <a href="06-frontend.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">06 Frontend</a>
-      <a href="07-seguranca.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav07">07 Segurança</a>
-      <a href="08-integracoes.html" class="px-2.5 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 font-semibold" id="nav08">08 Integrações</a>
-      <a href="09-mcp-server.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">09 MCP</a>
-      <a href="10-tempo-real-filas.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">10 Real-time</a>
-        <a href="11-db-scan-melhorias.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav11">11 DB Scan</a>
-        <a href="12-estrutura-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav12">12 Estrutura</a>
+<!-- Page container -->
+<div class="page-container" style="max-width:1400px;margin:0 auto;padding:2rem;">
+
+<!-- Header -->
+<header class="page-header" style="margin-bottom:2.5rem;padding-bottom:2rem;border-bottom:1px solid var(--border-color);">
+  <div class="breadcrumb" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;font-size:0.875rem;color:var(--text-muted);">
+    <a href="index.html" style="color:var(--text-accent);text-decoration:none;">System Map</a>
+    <span>›</span>
+    <span>Integracoes</span>
+  </div>
+  <h1 style="font-size:2.5rem;font-weight:800;background:linear-gradient(135deg,#6366f1,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0.5rem;">
+    Integracoes
+  </h1>
+  <p style="color:var(--text-secondary);font-size:1.1rem;max-width:700px;">
+    Mapa completo das integracoes do Orquetrador Claude — como cada sistema externo se conecta, qual protocolo usa e como os dados fluem entre eles.
+  </p>
+</header>
+
+<!-- Stats Bar -->
+<div class="stats-bar anim-in">
+  <div class="stat-card">
+    <div class="stat-number">7</div>
+    <div class="stat-text">Integracoes</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">3</div>
+    <div class="stat-text">Protocolos MCP</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">45</div>
+    <div class="stat-text">Tabelas Prisma</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">3</div>
+    <div class="stat-text">Redis Pools</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">6+</div>
+    <div class="stat-text">Webhook Events</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">SSE</div>
+    <div class="stat-text">Streaming</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 1: MAPA DE INTEGRACOES (Hub Diagram) -->
+<!-- ============================================================ -->
+<section class="section anim-in anim-d1" style="margin-bottom:3rem;">
+  <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+    <span style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;">🗺️</span>
+    Mapa de Integracoes
+  </h2>
+
+  <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:24px;overflow:hidden;">
+    <div class="hub-diagram">
+      <!-- SVG connection lines -->
+      <svg class="hub-lines" viewBox="0 0 700 520" preserveAspectRatio="xMidYMid meet">
+        <!-- Center is at 350,260 -->
+        <!-- Claude CLI - top -->
+        <line class="hub-line active" x1="350" y1="200" x2="350" y2="60" />
+        <!-- GitHub - top-right -->
+        <line class="hub-line" x1="395" y1="210" x2="560" y2="60" />
+        <!-- MCP Servers - right -->
+        <line class="hub-line" x1="420" y1="260" x2="590" y2="220" />
+        <!-- PostgreSQL - bottom-right -->
+        <line class="hub-line" x1="395" y1="310" x2="560" y2="430" />
+        <!-- Redis - bottom -->
+        <line class="hub-line" x1="350" y1="330" x2="350" y2="460" />
+        <!-- Webhooks - bottom-left -->
+        <line class="hub-line" x1="305" y1="310" x2="140" y2="430" />
+        <!-- Browser - left -->
+        <line class="hub-line" x1="280" y1="260" x2="110" y2="220" />
+      </svg>
+
+      <!-- Hub center -->
+      <div class="hub-center">
+        <div class="hub-icon">⚡</div>
+        Orquetrador<br>Claude
+      </div>
+
+      <!-- Claude CLI (top center) -->
+      <div class="hub-node" style="top:0;left:50%;transform:translateX(-50%);" onclick="scrollToCard('claude-cli')">
+        <div class="node-icon">🤖</div>
+        <div>Claude CLI</div>
+        <div class="node-label">Execution Engine</div>
+      </div>
+
+      <!-- GitHub (top right) -->
+      <div class="hub-node" style="top:0;right:20px;" onclick="scrollToCard('github')">
+        <div class="node-icon">📂</div>
+        <div>GitHub</div>
+        <div class="node-label">Sync & Import</div>
+      </div>
+
+      <!-- MCP Servers (right) -->
+      <div class="hub-node" style="top:50%;right:0;transform:translateY(-70%);" onclick="scrollToCard('mcp')">
+        <div class="node-icon">🔧</div>
+        <div>MCP Servers</div>
+        <div class="node-label">External Tools</div>
+      </div>
+
+      <!-- PostgreSQL (bottom right) -->
+      <div class="hub-node" style="bottom:10px;right:40px;" onclick="scrollToCard('postgresql')">
+        <div class="node-icon">🗄️</div>
+        <div>PostgreSQL</div>
+        <div class="node-label">Persistence</div>
+      </div>
+
+      <!-- Redis (bottom center) -->
+      <div class="hub-node" style="bottom:0;left:50%;transform:translateX(-50%);" onclick="scrollToCard('redis')">
+        <div class="node-icon">⚡</div>
+        <div>Redis</div>
+        <div class="node-label">Cache / Queues</div>
+      </div>
+
+      <!-- Webhooks (bottom left) -->
+      <div class="hub-node" style="bottom:10px;left:40px;" onclick="scrollToCard('webhooks')">
+        <div class="node-icon">🪝</div>
+        <div>Webhooks</div>
+        <div class="node-label">Notifications</div>
+      </div>
+
+      <!-- Browser (left) -->
+      <div class="hub-node" style="top:50%;left:0;transform:translateY(-70%);" onclick="scrollToCard('frontend-backend')">
+        <div class="node-icon">🌐</div>
+        <div>Browser</div>
+        <div class="node-label">Frontend HTTPS</div>
+      </div>
+    </div>
+
+    <p style="text-align:center;color:var(--text-muted);font-size:0.8rem;margin-top:16px;">
+      Clique em qualquer no para navegar ate a integracao correspondente
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION 2: CLAUDE CLI INTEGRATION -->
+<!-- ============================================================ -->
+<div id="claude-cli" class="int-card anim-in anim-d2" style="margin-bottom:1.5rem;">
+  <div class="int-card-header" onclick="toggleCard(this)">
+    <div class="int-card-icon" style="background:linear-gradient(135deg,#6366f1,#818cf8);">🤖</div>
+    <div>
+      <div class="int-card-title">Claude CLI Integration</div>
+      <div class="int-card-subtitle">Motor de execucao via subprocess — JSON stream, resume tokens, sandbox</div>
+    </div>
+    <span class="badge" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size:0.7rem;font-weight:600;padding:3px 10px;border-radius:6px;margin-left:8px;">Core</span>
+    <div class="int-card-chevron">▼</div>
+  </div>
+  <div class="int-card-body">
+    <div class="int-card-content">
+
+      <!-- Data Flow -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Fluxo de Dados</h3>
+      <div class="flow-row" style="margin-bottom:20px;">
+        <div class="flow-box">📋 TaskStep</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">⚙️ ClaudeCodeEngine</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box" style="border-color:rgba(99,102,241,0.3);">🚀 spawn(claude)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">📡 JSON Stream</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">📝 Parse Output</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">💾 Save Result</div>
+      </div>
+
+      <!-- Details Grid -->
+      <div class="detail-grid" style="margin-bottom:20px;">
+        <div class="detail-item">
+          <div class="detail-item-label">Processo</div>
+          <div class="detail-item-value">
+            <code style="color:#a78bfa;">ClaudeCodeEngine</code> faz <code style="color:#86efac;">spawn()</code> de um subprocess <code>claude</code> CLI com flags <code>--json</code> e <code>--model</code>.
+            Roda como usuario <code style="color:#fbbf24;">claude-sandbox</code> via <code>sudo -u</code> para isolamento.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">JSON Stream Output</div>
+          <div class="detail-item-value">
+            Cada linha do stdout e um objeto JSON. Tipos: <code style="color:#60a5fa;">assistant</code> (texto), <code style="color:#60a5fa;">tool_use</code> (chamada de ferramenta), <code style="color:#60a5fa;">tool_result</code>, <code style="color:#60a5fa;">system</code>.
+            Parseado em real-time e enviado via SSE ao frontend.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Resume Tokens</div>
+          <div class="detail-item-value">
+            Apos cada execucao, o CLI retorna um <code style="color:#fbbf24;">resume_token</code>. Armazenado no banco no campo <code>Execution.resumeSessionId</code>.
+            Usado para manter contexto entre steps sem reenviar historico completo.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Selecao de Modelo</div>
+          <div class="detail-item-value">
+            Configuravel por step via <code style="color:#60a5fa;">--model</code> flag. Modelos disponiveis: <code>claude-sonnet-4-20250514</code>, <code>claude-opus-4-0-20250514</code>, <code>claude-haiku</code>.
+            Default do projeto ou override por execucao.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Tool Calls</div>
+          <div class="detail-item-value">
+            Extraidos do stream JSON como eventos <code style="color:#a78bfa;">tool_use</code>. Cada tool call registrado em <code>StepToolCall</code> com nome, input, output e duracao. Permite auditoria completa.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Sandbox Isolation</div>
+          <div class="detail-item-value">
+            Controlado por env <code style="color:#fbbf24;">SANDBOX_ENABLED</code>. Quando ativo, execucoes rodam como <code>claude-sandbox</code> (sem login shell, permissoes restritas). Script <code>setup-sandbox.sh</code> configura usuario e sudoers.
+          </div>
+        </div>
+      </div>
+
+      <!-- Code Example -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Exemplo de Spawn</h3>
+      <div class="code-block" style="background:#0a0a14;border:1px solid #1e293b;border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;line-height:1.7;overflow-x:auto;margin-bottom:16px;">
+<span style="color:#64748b;">// ClaudeCodeEngine.execute()</span>
+<span style="color:#c084fc;">const</span> args = [
+  <span style="color:#86efac;">'--json'</span>,
+  <span style="color:#86efac;">'--model'</span>, step.model || <span style="color:#86efac;">'claude-sonnet-4-20250514'</span>,
+  <span style="color:#86efac;">'--max-turns'</span>, <span style="color:#fbbf24;">25</span>,
+];
+<span style="color:#c084fc;">if</span> (resumeToken) args.push(<span style="color:#86efac;">'--resume'</span>, resumeToken);
+
+<span style="color:#c084fc;">const</span> proc = spawn(<span style="color:#86efac;">'sudo'</span>, [<span style="color:#86efac;">'-u'</span>, <span style="color:#86efac;">'claude-sandbox'</span>, <span style="color:#86efac;">'claude'</span>, ...args]);
+
+proc.stdout.on(<span style="color:#86efac;">'data'</span>, (chunk) => {
+  <span style="color:#c084fc;">const</span> lines = chunk.toString().split(<span style="color:#86efac;">'\n'</span>);
+  <span style="color:#c084fc;">for</span> (<span style="color:#c084fc;">const</span> line <span style="color:#c084fc;">of</span> lines) {
+    <span style="color:#c084fc;">const</span> event = JSON.parse(line);
+    <span style="color:#64748b;">// Envia via SSE + salva no banco</span>
+    handleStreamEvent(event);
+  }
+});
+      </div>
+
+      <!-- Architecture Note -->
+      <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:1rem;">💡</span>
+          <span style="font-weight:600;font-size:0.9rem;">Arquitetura</span>
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;">
+          O engine nao usa a API REST do Claude diretamente — ele opera via CLI binary, que gerencia contexto, rate limits e tool permissions internamente. Isso permite usar features exclusivas do CLI como <code>resume</code>, <code>MCP tool passthrough</code> e <code>file system access</code>.
+        </p>
+      </div>
     </div>
   </div>
-</nav>
+</div>
 
-  <!-- Header -->
-  <header class="border-b border-gray-800 bg-[#0a0d14]/80 backdrop-blur-sm">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-primary/20 border border-primary/30 flex items-center justify-center">
-          <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-          </svg>
+<!-- ============================================================ -->
+<!-- SECTION 3: GITHUB INTEGRATION -->
+<!-- ============================================================ -->
+<div id="github" class="int-card anim-in anim-d3" style="margin-bottom:1.5rem;">
+  <div class="int-card-header" onclick="toggleCard(this)">
+    <div class="int-card-icon" style="background:linear-gradient(135deg,#2ea043,#3fb950);">📂</div>
+    <div>
+      <div class="int-card-title">GitHub Integration</div>
+      <div class="int-card-subtitle">OAuth, multi-conta, import de skills/agents/rules, sync de repositorios</div>
+    </div>
+    <span class="badge" style="background:rgba(46,160,67,0.12);color:#3fb950;border:1px solid rgba(46,160,67,0.25);font-size:0.7rem;font-weight:600;padding:3px 10px;border-radius:6px;margin-left:8px;">Import</span>
+    <div class="int-card-chevron">▼</div>
+  </div>
+  <div class="int-card-body">
+    <div class="int-card-content">
+
+      <!-- Data Flow -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Fluxo de Import</h3>
+      <div class="flow-row" style="margin-bottom:20px;">
+        <div class="flow-box">👤 GitAccount</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">🔑 OAuth Token</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">📡 GitHub API</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">📁 List Files</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">💾 Import Resource</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">📋 File Manifest</div>
+      </div>
+
+      <!-- Details -->
+      <div class="detail-grid" style="margin-bottom:20px;">
+        <div class="detail-item">
+          <div class="detail-item-label">Multi-conta</div>
+          <div class="detail-item-value">
+            Cada usuario pode vincular multiplas contas GitHub via <code style="color:#3fb950;">GitAccount</code>.
+            Cada conta tem um label descritivo (ex: <strong>"Pessoal"</strong>, <strong>"Trabalho"</strong>) e token OAuth encriptado.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Token Storage</div>
+          <div class="detail-item-value">
+            Token OAuth armazenado em <code style="color:#fbbf24;">GitAccount.accessToken</code> com encriptacao AES-256.
+            Scopes necessarios: <code>repo</code>, <code>read:org</code>. Refresh automatico quando suportado.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Import Types</div>
+          <div class="detail-item-value">
+            Importa 3 tipos de recurso de repos: <span style="color:#a78bfa;font-weight:600;">Skills</span> (prompts/templates), <span style="color:#60a5fa;font-weight:600;">Agents</span> (configuracoes de agente), <span style="color:#4ade80;font-weight:600;">Rules</span> (regras e hooks).
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">File Manifest</div>
+          <div class="detail-item-value">
+            Cada recurso importado tem um <code style="color:#60a5fa;">fileManifest</code> JSON que rastreia: path, SHA, tamanho e ultima sincronizacao de cada arquivo. Permite diff incremental.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Sync Modes</div>
+          <div class="detail-item-value">
+            <strong>Manual:</strong> usuario clica "Sync" na UI.<br>
+            <strong>Auto:</strong> via triggers/webhooks do GitHub (push events). Compara manifests e importa apenas o que mudou.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Branch Selection</div>
+          <div class="detail-item-value">
+            O usuario seleciona a branch de onde importar. Default: branch principal do repo. Listada via endpoint <code>/branches</code>.
+          </div>
+        </div>
+      </div>
+
+      <!-- API Endpoints -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Endpoints da API</h3>
+      <div style="margin-bottom:16px;">
+        <div class="endpoint-row">
+          <span class="endpoint-method method-get">GET</span>
+          <span class="endpoint-path">/api/git-accounts/:id/repos</span>
+          <span class="endpoint-desc">Lista repositorios da conta GitHub</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="endpoint-method method-get">GET</span>
+          <span class="endpoint-path">/api/git-accounts/:id/repos/:owner/:name/branches</span>
+          <span class="endpoint-desc">Lista branches do repositorio</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="endpoint-method method-get">GET</span>
+          <span class="endpoint-path">/api/git-accounts/:id/repos/:owner/:name/files</span>
+          <span class="endpoint-desc">Lista arvore de arquivos (branch + path)</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="endpoint-method method-post">POST</span>
+          <span class="endpoint-path">/api/git-accounts</span>
+          <span class="endpoint-desc">Registra nova conta Git (label + token)</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="endpoint-method method-post">POST</span>
+          <span class="endpoint-path">/api/skills/import-github</span>
+          <span class="endpoint-desc">Importa skill de um repo + branch</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="endpoint-method method-post">POST</span>
+          <span class="endpoint-path">/api/agents/import-github</span>
+          <span class="endpoint-desc">Importa agent de um repo + branch</span>
+        </div>
+      </div>
+
+      <!-- Architecture diagram -->
+      <div style="background:rgba(46,160,67,0.06);border:1px solid rgba(46,160,67,0.2);border-radius:10px;padding:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:1rem;">🔗</span>
+          <span style="font-weight:600;font-size:0.9rem;">Modelo de Dados</span>
+        </div>
+        <div class="code-block" style="background:#0a0a14;border:1px solid #1e293b;border-radius:8px;padding:14px;font-size:0.78rem;line-height:1.7;">
+User ──1:N──▸ GitAccount {id, label, provider, accessToken, username}
+                   │
+                   ├──▸ repos (via GitHub API, not stored)
+                   │
+Skill ◂── gitRepoUrl, gitBranch, fileManifest (JSON)
+Agent ◂── gitRepoUrl, gitBranch, fileManifest (JSON)
+Rule  ◂── gitRepoUrl, gitBranch, fileManifest (JSON)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 4: MCP SERVER INTEGRATION -->
+<!-- ============================================================ -->
+<div id="mcp" class="int-card anim-in anim-d4" style="margin-bottom:1.5rem;">
+  <div class="int-card-header" onclick="toggleCard(this)">
+    <div class="int-card-icon" style="background:linear-gradient(135deg,#f59e0b,#f97316);">🔧</div>
+    <div>
+      <div class="int-card-title">MCP Server Integration</div>
+      <div class="int-card-subtitle">3 transportes, tool discovery, caching e passthrough para Claude CLI</div>
+    </div>
+    <span class="badge" style="background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.25);font-size:0.7rem;font-weight:600;padding:3px 10px;border-radius:6px;margin-left:8px;">Tools</span>
+    <div class="int-card-chevron">▼</div>
+  </div>
+  <div class="int-card-body">
+    <div class="int-card-content">
+
+      <!-- Transport Types -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Tipos de Transporte</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px;">
+        <div style="background:var(--bg-secondary);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:16px;text-align:center;">
+          <div class="transport-badge transport-http" style="font-size:0.9rem;padding:6px 14px;margin-bottom:10px;">HTTP</div>
+          <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;">
+            Conecta via URL HTTP/HTTPS. Request-response padrao. Ideal para MCP servers remotos.
+          </p>
+          <div style="margin-top:10px;font-size:0.75rem;color:var(--text-muted);">
+            Config: <code style="color:#60a5fa;">url</code>
+          </div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:16px;text-align:center;">
+          <div class="transport-badge transport-sse" style="font-size:0.9rem;padding:6px 14px;margin-bottom:10px;">SSE</div>
+          <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;">
+            Server-Sent Events para streaming bidirecional. Mantem conexao aberta para respostas longas.
+          </p>
+          <div style="margin-top:10px;font-size:0.75rem;color:var(--text-muted);">
+            Config: <code style="color:#4ade80;">url</code>
+          </div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:16px;text-align:center;">
+          <div class="transport-badge transport-stdio" style="font-size:0.9rem;padding:6px 14px;margin-bottom:10px;">STDIO</div>
+          <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;">
+            Processo local via stdin/stdout. Para MCP servers que rodam como binario no mesmo host.
+          </p>
+          <div style="margin-top:10px;font-size:0.75rem;color:var(--text-muted);">
+            Config: <code style="color:#fbbf24;">command</code> + <code style="color:#fbbf24;">args</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flow -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Fluxo de Integracao</h3>
+      <div class="flow-row" style="margin-bottom:20px;">
+        <div class="flow-box">📦 McpServer (DB)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">🔌 Connect</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">🔍 Discover Tools</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">💾 Cache Tools</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">🔗 Attach to Plugin</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">🤖 Pass to Claude</div>
+      </div>
+
+      <!-- Details -->
+      <div class="detail-grid" style="margin-bottom:20px;">
+        <div class="detail-item">
+          <div class="detail-item-label">Tool Discovery</div>
+          <div class="detail-item-value">
+            Ao conectar, o Orquetrador chama <code style="color:#fbbf24;">tools/list</code> no MCP server.
+            Retorna nome, descricao, inputSchema (JSON Schema) de cada tool disponivel. Armazenado em <code>McpServer.toolsCache</code>.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Connection Testing</div>
+          <div class="detail-item-value">
+            Endpoint <code style="color:#60a5fa;">POST /api/mcp-servers/:id/test</code> verifica conectividade, faz handshake e valida que tools sao listadas. Retorna status + latencia.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Plugin Association</div>
+          <div class="detail-item-value">
+            MCP servers sao vinculados a <code style="color:#a78bfa;">Plugins</code>. Quando um plugin e ativado em uma execucao, suas tools MCP sao injetadas no system prompt do Claude.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Passthrough ao Claude</div>
+          <div class="detail-item-value">
+            Tools MCP sao formatadas como <code style="color:#86efac;">allowed_tools</code> no prompt. O Claude chama a tool → Orquetrador roteia para o MCP server → resposta volta ao Claude.
+          </div>
+        </div>
+      </div>
+
+      <!-- Modelo de dados -->
+      <div class="code-block" style="background:#0a0a14;border:1px solid #1e293b;border-radius:8px;padding:14px;font-size:0.78rem;line-height:1.7;">
+McpServer {
+  id, name, description,
+  <span style="color:#fbbf24;">transportType</span>: <span style="color:#86efac;">"http"</span> | <span style="color:#86efac;">"sse"</span> | <span style="color:#86efac;">"stdio"</span>,
+  url?,              <span style="color:#64748b;">// para http/sse</span>
+  command?, args?,   <span style="color:#64748b;">// para stdio</span>
+  headers?,          <span style="color:#64748b;">// auth headers</span>
+  <span style="color:#60a5fa;">toolsCache</span>: JSON,  <span style="color:#64748b;">// cached tools/list result</span>
+  isActive, userId
+}
+
+PluginMcpServer {  <span style="color:#64748b;">// N:N junction table</span>
+  pluginId ──▸ Plugin
+  mcpServerId ──▸ McpServer
+}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 5: REDIS INTEGRATION -->
+<!-- ============================================================ -->
+<div id="redis" class="int-card anim-in anim-d5" style="margin-bottom:1.5rem;">
+  <div class="int-card-header" onclick="toggleCard(this)">
+    <div class="int-card-icon" style="background:linear-gradient(135deg,#dc2626,#ef4444);">⚡</div>
+    <div>
+      <div class="int-card-title">Redis Integration</div>
+      <div class="int-card-subtitle">3 connection pools — rate limiting, JWT cache, BullMQ, Pub/Sub com graceful degradation</div>
+    </div>
+    <span class="badge" style="background:rgba(220,38,38,0.12);color:#f87171;border:1px solid rgba(220,38,38,0.25);font-size:0.7rem;font-weight:600;padding:3px 10px;border-radius:6px;margin-left:8px;">Cache</span>
+    <div class="int-card-chevron">▼</div>
+  </div>
+  <div class="int-card-body">
+    <div class="int-card-content">
+
+      <!-- 3 Pools -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">3 Connection Pools</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:24px;">
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-left:3px solid #60a5fa;border-radius:10px;padding:16px;">
+          <div style="font-weight:700;font-size:0.95rem;margin-bottom:6px;color:#60a5fa;">General</div>
+          <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;">
+            Pool principal para operacoes de leitura/escrita: rate limiting counters, JWT blocklist, cache geral, session data.
+          </p>
+          <div style="margin-top:10px;">
+            <span class="badge" style="background:rgba(59,130,246,0.1);color:#60a5fa;border:1px solid rgba(59,130,246,0.2);font-size:0.7rem;padding:2px 8px;border-radius:4px;">GET/SET/INCR</span>
+          </div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-left:3px solid #4ade80;border-radius:10px;padding:16px;">
+          <div style="font-weight:700;font-size:0.95rem;margin-bottom:6px;color:#4ade80;">Subscriber</div>
+          <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;">
+            Pool dedicada a subscricoes Pub/Sub. Recebe eventos de execucao (progress, completion) e distribui para conexoes SSE ativas.
+          </p>
+          <div style="margin-top:10px;">
+            <span class="badge" style="background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.2);font-size:0.7rem;padding:2px 8px;border-radius:4px;">SUBSCRIBE</span>
+          </div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-left:3px solid #a78bfa;border-radius:10px;padding:16px;">
+          <div style="font-weight:700;font-size:0.95rem;margin-bottom:6px;color:#a78bfa;">Publisher</div>
+          <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;">
+            Pool dedicada a publicacao de eventos. O engine publica progress de execucao, o backend publica notificacoes.
+          </p>
+          <div style="margin-top:10px;">
+            <span class="badge" style="background:rgba(139,92,246,0.1);color:#a78bfa;border:1px solid rgba(139,92,246,0.2);font-size:0.7rem;padding:2px 8px;border-radius:4px;">PUBLISH</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Use cases -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Casos de Uso</h3>
+      <div class="detail-grid" style="margin-bottom:20px;">
+        <div class="detail-item">
+          <div class="detail-item-label">Rate Limiting</div>
+          <div class="detail-item-value">
+            Contadores por IP e por usuario com TTL. Keys: <code style="color:#60a5fa;">rl:{ip}:{window}</code>.
+            Usa <code>INCR</code> + <code>EXPIRE</code> atomicos. Configuravel por rota via <code>@fastify/rate-limit</code>.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">JWT Cache / Blocklist</div>
+          <div class="detail-item-value">
+            Tokens revogados armazenados em <code style="color:#f87171;">jwt:blocked:{jti}</code> com TTL igual ao tempo restante do token.
+            Verificacao em cada request autenticado.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">BullMQ Queue</div>
+          <div class="detail-item-value">
+            Fila de jobs para execucoes assincronas. Queue name: <code style="color:#fbbf24;">execution-queue</code>.
+            Usa Redis como broker. Workers consomem e processam via <code>ClaudeCodeEngine</code>.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Pub/Sub</div>
+          <div class="detail-item-value">
+            Canais: <code style="color:#a78bfa;">execution:{id}:progress</code>, <code style="color:#a78bfa;">execution:{id}:complete</code>.
+            Frontend conecta via SSE, backend subscribe no canal Redis e faz bridge.
+          </div>
+        </div>
+      </div>
+
+      <!-- Graceful degradation -->
+      <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:1rem;">⚠️</span>
+          <span style="font-weight:600;font-size:0.9rem;">Graceful Degradation</span>
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;">
+          O sistema funciona <strong>sem Redis</strong>. Quando a conexao falha: rate limiting usa fallback in-memory, BullMQ nao processa jobs (execucoes ficam pendentes), Pub/Sub desabilita streaming em tempo real (frontend faz polling). O backend loga warning mas nao crash. Redis e optional para dev local.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 6: POSTGRESQL INTEGRATION -->
+<!-- ============================================================ -->
+<div id="postgresql" class="int-card anim-in anim-d6" style="margin-bottom:1.5rem;">
+  <div class="int-card-header" onclick="toggleCard(this)">
+    <div class="int-card-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">🗄️</div>
+    <div>
+      <div class="int-card-title">PostgreSQL Integration</div>
+      <div class="int-card-subtitle">Prisma 6 ORM, 45 tabelas, relacoes complexas, connection pool</div>
+    </div>
+    <span class="badge" style="background:rgba(59,130,246,0.12);color:#60a5fa;border:1px solid rgba(59,130,246,0.25);font-size:0.7rem;font-weight:600;padding:3px 10px;border-radius:6px;margin-left:8px;">Storage</span>
+    <div class="int-card-chevron">▼</div>
+  </div>
+  <div class="int-card-body">
+    <div class="int-card-content">
+
+      <!-- Connection -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Conexao</h3>
+      <div class="detail-grid" style="margin-bottom:20px;">
+        <div class="detail-item">
+          <div class="detail-item-label">Host</div>
+          <div class="detail-item-value"><code style="color:#60a5fa;">217.216.81.188:54321</code></div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">ORM</div>
+          <div class="detail-item-value"><code style="color:#a78bfa;">Prisma 6</code> com TypeScript type-safe queries</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Tabelas</div>
+          <div class="detail-item-value"><strong style="color:#fbbf24;">45 tabelas</strong> com relacoes complexas (N:N, 1:N, self-referencing)</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Connection Pool</div>
+          <div class="detail-item-value">Gerenciado pelo Prisma engine. Default: <code style="color:#4ade80;">connection_limit=10</code> via DATABASE_URL params.</div>
+        </div>
+      </div>
+
+      <!-- Schema overview -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Dominios do Schema</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:20px;">
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.5rem;margin-bottom:4px;">👤</div>
+          <div style="font-weight:600;font-size:0.85rem;">Auth & Users</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">User, Session, ApiKey</div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.5rem;margin-bottom:4px;">⚡</div>
+          <div style="font-weight:600;font-size:0.85rem;">Execucao</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">Execution, Step, StepToolCall</div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.5rem;margin-bottom:4px;">📋</div>
+          <div style="font-weight:600;font-size:0.85rem;">Workflows</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">Task, TaskStep, DAGEdge</div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.5rem;margin-bottom:4px;">🧠</div>
+          <div style="font-weight:600;font-size:0.85rem;">Skills & Agents</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">Skill, Agent, AgentSkill</div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.5rem;margin-bottom:4px;">🔧</div>
+          <div style="font-weight:600;font-size:0.85rem;">Plugins & MCP</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">Plugin, McpServer, PluginMcpServer</div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.5rem;margin-bottom:4px;">🪝</div>
+          <div style="font-weight:600;font-size:0.85rem;">Webhooks</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">Webhook, WebhookDelivery</div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.5rem;margin-bottom:4px;">📂</div>
+          <div style="font-weight:600;font-size:0.85rem;">Git</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">GitAccount, fileManifest</div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:12px;text-align:center;">
+          <div style="font-size:1.5rem;margin-bottom:4px;">💬</div>
+          <div style="font-weight:600;font-size:0.85rem;">Conversations</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">Conversation, Message</div>
+        </div>
+      </div>
+
+      <!-- Prisma usage -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Uso do Prisma</h3>
+      <div class="code-block" style="background:#0a0a14;border:1px solid #1e293b;border-radius:8px;padding:14px;font-size:0.78rem;line-height:1.7;">
+<span style="color:#64748b;">// Singleton instance</span>
+<span style="color:#c084fc;">import</span> { PrismaClient } <span style="color:#c084fc;">from</span> <span style="color:#86efac;">'@prisma/client'</span>;
+<span style="color:#c084fc;">export const</span> prisma = <span style="color:#c084fc;">new</span> PrismaClient({
+  log: [<span style="color:#86efac;">'warn'</span>, <span style="color:#86efac;">'error'</span>],
+});
+
+<span style="color:#64748b;">// Type-safe queries with relations</span>
+<span style="color:#c084fc;">const</span> execution = <span style="color:#c084fc;">await</span> prisma.execution.findUnique({
+  where: { id },
+  include: {
+    steps: { include: { toolCalls: <span style="color:#fbbf24;">true</span> } },
+    task: <span style="color:#fbbf24;">true</span>,
+    user: { select: { id: <span style="color:#fbbf24;">true</span>, name: <span style="color:#fbbf24;">true</span> } },
+  },
+});
+      </div>
+
+      <div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:16px;margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:1rem;">📊</span>
+          <span style="font-weight:600;font-size:0.9rem;">Migrations</span>
+        </div>
+        <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;">
+          Gerenciadas via <code>prisma migrate deploy</code> em producao e <code>prisma migrate dev</code> em desenvolvimento. Schema definido em <code>prisma/schema.prisma</code>. Migracao incremental — nunca drop tables em producao.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 7: WEBHOOK INTEGRATION -->
+<!-- ============================================================ -->
+<div id="webhooks" class="int-card anim-in anim-d7" style="margin-bottom:1.5rem;">
+  <div class="int-card-header" onclick="toggleCard(this)">
+    <div class="int-card-icon" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);">🪝</div>
+    <div>
+      <div class="int-card-title">Webhook Integration</div>
+      <div class="int-card-subtitle">Notificacoes outbound, HMAC-SHA256, delivery tracking com retry</div>
+    </div>
+    <span class="badge" style="background:rgba(139,92,246,0.12);color:#a78bfa;border:1px solid rgba(139,92,246,0.25);font-size:0.7rem;font-weight:600;padding:3px 10px;border-radius:6px;margin-left:8px;">Events</span>
+    <div class="int-card-chevron">▼</div>
+  </div>
+  <div class="int-card-body">
+    <div class="int-card-content">
+
+      <!-- Flow -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Fluxo de Delivery</h3>
+      <div class="flow-row" style="margin-bottom:20px;">
+        <div class="flow-box">⚡ Event Emitido</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">🔍 Match Webhooks</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">🔐 HMAC Sign</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">📡 POST to URL</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">📝 Log Delivery</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">🔄 Retry (se falha)</div>
+      </div>
+
+      <!-- Events -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Eventos Suportados</h3>
+      <div style="margin-bottom:20px;">
+        <span class="event-badge">execution_started</span>
+        <span class="event-badge">execution_completed</span>
+        <span class="event-badge">execution_failed</span>
+        <span class="event-badge">step_started</span>
+        <span class="event-badge">step_completed</span>
+        <span class="event-badge">step_failed</span>
+        <span class="event-badge">task_created</span>
+        <span class="event-badge">task_completed</span>
+      </div>
+
+      <!-- Details -->
+      <div class="detail-grid" style="margin-bottom:20px;">
+        <div class="detail-item">
+          <div class="detail-item-label">HMAC-SHA256 Signing</div>
+          <div class="detail-item-value">
+            Cada webhook tem um <code style="color:#a78bfa;">secret</code>. O payload e assinado com HMAC-SHA256 e enviado no header <code style="color:#60a5fa;">X-Webhook-Signature</code>.
+            O receptor valida: <code>hmac(secret, body) === signature</code>.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Delivery Tracking</div>
+          <div class="detail-item-value">
+            Cada envio gera um <code style="color:#fbbf24;">WebhookDelivery</code> com: status HTTP, response body, latencia, timestamp. Historico completo para debug.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Retry Policy</div>
+          <div class="detail-item-value">
+            Se o endpoint retorna status >= 400 ou timeout, o sistema faz retry com backoff exponencial.
+            Maximo de <strong>3 tentativas</strong> com delays de 10s, 60s, 300s.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Test Endpoint</div>
+          <div class="detail-item-value">
+            <code style="color:#60a5fa;">POST /api/webhooks/:id/test</code> envia um evento de teste para o URL configurado. Valida conectividade e signature sem gerar dados reais.
+          </div>
+        </div>
+      </div>
+
+      <!-- Payload example -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Payload de Exemplo</h3>
+      <div class="code-block" style="background:#0a0a14;border:1px solid #1e293b;border-radius:8px;padding:14px;font-size:0.78rem;line-height:1.7;">
+<span style="color:#64748b;">// POST https://seu-server.com/webhook</span>
+<span style="color:#64748b;">// Headers:</span>
+<span style="color:#64748b;">//   Content-Type: application/json</span>
+<span style="color:#64748b;">//   X-Webhook-Signature: sha256=a1b2c3d4...</span>
+<span style="color:#64748b;">//   X-Webhook-Event: execution_completed</span>
+<span style="color:#64748b;">//   X-Webhook-Id: wh_abc123</span>
+
+{
+  <span style="color:#60a5fa;">"event"</span>: <span style="color:#86efac;">"execution_completed"</span>,
+  <span style="color:#60a5fa;">"timestamp"</span>: <span style="color:#86efac;">"2026-03-24T10:30:00Z"</span>,
+  <span style="color:#60a5fa;">"data"</span>: {
+    <span style="color:#60a5fa;">"executionId"</span>: <span style="color:#86efac;">"exec_xyz789"</span>,
+    <span style="color:#60a5fa;">"taskId"</span>: <span style="color:#86efac;">"task_abc123"</span>,
+    <span style="color:#60a5fa;">"status"</span>: <span style="color:#86efac;">"completed"</span>,
+    <span style="color:#60a5fa;">"duration"</span>: <span style="color:#fbbf24;">45200</span>,
+    <span style="color:#60a5fa;">"stepsCompleted"</span>: <span style="color:#fbbf24;">5</span>,
+    <span style="color:#60a5fa;">"tokensUsed"</span>: <span style="color:#fbbf24;">12450</span>
+  }
+}
+      </div>
+
+      <!-- Data model -->
+      <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:10px;padding:16px;margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:1rem;">🔗</span>
+          <span style="font-weight:600;font-size:0.9rem;">Modelo de Dados</span>
+        </div>
+        <div class="code-block" style="background:#0a0a14;border:1px solid #1e293b;border-radius:8px;padding:14px;font-size:0.78rem;line-height:1.7;">
+Webhook {
+  id, url, secret (encrypted),
+  events: String[]  <span style="color:#64748b;">// ["execution_completed", "step_failed"]</span>
+  isActive, userId
+}
+  │
+  └──1:N──▸ WebhookDelivery {
+               id, webhookId, event, payload,
+               statusCode, responseBody,
+               duration, attempt, success,
+               createdAt
+             }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 8: FRONTEND-BACKEND INTEGRATION -->
+<!-- ============================================================ -->
+<div id="frontend-backend" class="int-card anim-in anim-d8" style="margin-bottom:1.5rem;">
+  <div class="int-card-header" onclick="toggleCard(this)">
+    <div class="int-card-icon" style="background:linear-gradient(135deg,#0ea5e9,#06b6d4);">🌐</div>
+    <div>
+      <div class="int-card-title">Frontend-Backend Integration</div>
+      <div class="int-card-subtitle">REST API via Axios, SSE Streaming, JWT auth, React Query caching</div>
+    </div>
+    <span class="badge" style="background:rgba(14,165,233,0.12);color:#38bdf8;border:1px solid rgba(14,165,233,0.25);font-size:0.7rem;font-weight:600;padding:3px 10px;border-radius:6px;margin-left:8px;">UI</span>
+    <div class="int-card-chevron">▼</div>
+  </div>
+  <div class="int-card-body">
+    <div class="int-card-content">
+
+      <!-- Communication channels -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Canais de Comunicacao</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:24px;">
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-top:3px solid #60a5fa;border-radius:10px;padding:20px;">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:8px;color:#60a5fa;">REST API (Axios)</div>
+          <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;">
+            Todas as operacoes CRUD usam REST. Axios configurado com <code>baseURL</code>, interceptors para JWT e error handling global.
+          </p>
+          <div class="flow-row" style="padding:0;">
+            <div class="flow-box" style="font-size:0.75rem;">React Component</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box" style="font-size:0.75rem;">React Query</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box" style="font-size:0.75rem;">Axios</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box" style="font-size:0.75rem;">Fastify</div>
+          </div>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-top:3px solid #4ade80;border-radius:10px;padding:20px;">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:8px;color:#4ade80;">SSE Streaming</div>
+          <p style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6;margin-bottom:12px;">
+            Execucoes em real-time usam Server-Sent Events. O frontend abre conexao SSE, backend envia chunks de output do Claude conforme chegam.
+          </p>
+          <div class="flow-row" style="padding:0;">
+            <div class="flow-box" style="font-size:0.75rem;">EventSource</div>
+            <div class="flow-arrow">←</div>
+            <div class="flow-box" style="font-size:0.75rem;">SSE Endpoint</div>
+            <div class="flow-arrow">←</div>
+            <div class="flow-box" style="font-size:0.75rem;">Redis PubSub</div>
+            <div class="flow-arrow">←</div>
+            <div class="flow-box" style="font-size:0.75rem;">Engine</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Auth details -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Autenticacao JWT</h3>
+      <div class="detail-grid" style="margin-bottom:20px;">
+        <div class="detail-item">
+          <div class="detail-item-label">Token Flow</div>
+          <div class="detail-item-value">
+            Login → backend gera JWT (access + refresh) → frontend armazena em memory (Zustand store) → Axios interceptor injeta <code style="color:#60a5fa;">Authorization: Bearer {token}</code> em cada request.
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Token Refresh</div>
+          <div class="detail-item-value">
+            Quando access token expira (401), interceptor Axios faz request automatico de refresh. Se refresh falha, redireciona para login. Sem localStorage para tokens (security).
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">React Query Cache</div>
+          <div class="detail-item-value">
+            Todas as queries usam <code style="color:#a78bfa;">TanStack React Query</code>. Cache com staleTime configuravel por recurso. Invalidacao automatica apos mutations (create/update/delete).
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-item-label">Error Handling</div>
+          <div class="detail-item-value">
+            Interceptor global trata erros: 401 → refresh/redirect, 403 → toast "sem permissao", 500 → toast generico.
+            React Query retry: 3x com backoff para network errors.
+          </div>
+        </div>
+      </div>
+
+      <!-- Code examples -->
+      <h3 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-accent);">Exemplos de Codigo</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;">
+        <div>
+          <div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;">Axios Setup</div>
+          <div class="code-block" style="background:#0a0a14;border:1px solid #1e293b;border-radius:8px;padding:14px;font-size:0.75rem;line-height:1.7;">
+<span style="color:#c084fc;">const</span> api = axios.create({
+  baseURL: <span style="color:#86efac;">'/api'</span>,
+  timeout: <span style="color:#fbbf24;">30000</span>,
+});
+
+api.interceptors.request.use((config) => {
+  <span style="color:#c084fc;">const</span> token = useAuthStore
+    .getState().accessToken;
+  <span style="color:#c084fc;">if</span> (token)
+    config.headers.Authorization
+      = <span style="color:#86efac;">`Bearer ${token}`</span>;
+  <span style="color:#c084fc;">return</span> config;
+});
+          </div>
         </div>
         <div>
-          <h1 class="text-base font-bold text-white tracking-tight">Integracoes</h1>
-          <p class="text-xs text-gray-500">Quem Entra e Quem Sai</p>
-        </div>
-      </div>
-      <a href="index.html" class="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        Voltar ao Indice
-      </a>
-    </div>
-  </header>
+          <div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);margin-bottom:6px;">SSE Connection</div>
+          <div class="code-block" style="background:#0a0a14;border:1px solid #1e293b;border-radius:8px;padding:14px;font-size:0.75rem;line-height:1.7;">
+<span style="color:#c084fc;">const</span> source = <span style="color:#c084fc;">new</span> EventSource(
+  <span style="color:#86efac;">`/api/executions/${id}/stream`</span>
+);
 
-  <main class="max-w-7xl mx-auto px-6 py-10">
-
-    <!-- Integration Map -->
-    <section class="mb-10">
-      <h2 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
-        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-        Mapa de Integracoes
-      </h2>
-      <p class="text-sm text-gray-500 mb-6">Fluxo de dados entre o Orquetrador e sistemas externos</p>
-
-      <!-- Legend -->
-      <div class="flex flex-wrap gap-4 mb-4">
-        <div class="flex items-center gap-2 text-xs text-gray-400">
-          <span class="legend-dot bg-emerald-500/60"></span> Bidirecional
-        </div>
-        <div class="flex items-center gap-2 text-xs text-gray-400">
-          <span class="legend-dot bg-orange-500/60"></span> Outbound (envia)
-        </div>
-        <div class="flex items-center gap-2 text-xs text-gray-400">
-          <span class="legend-dot bg-blue-500/60"></span> Inbound (recebe)
-        </div>
-      </div>
-
-      <div class="integration-map" style="min-height: 520px;" id="integrationMap">
-        <div class="pulse-ring"></div>
-        <div class="pulse-ring"></div>
-        <div class="pulse-ring"></div>
-
-        <!-- Center: Orquetrador Claude -->
-        <div class="map-center">
-          <div class="text-center">
-            <div class="text-2xl font-black text-white tracking-tight">ORQ</div>
-            <div class="text-[10px] text-primary/80 font-medium mt-0.5">Claude</div>
-          </div>
-        </div>
-
-        <!-- Nodes and lines will be injected by JS -->
-      </div>
-    </section>
-
-    <div class="section-divider"></div>
-
-    <!-- Detail Cards -->
-    <div class="space-y-4" id="detailCards">
-
-      <!-- 1. Claude CLI -->
-      <div class="card" data-card="claude-cli">
-        <div class="card-header" onclick="toggleCard(this)">
-          <span class="badge" style="background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.2);">Outbound</span>
-          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style="background:rgba(251,146,60,0.1);">
-            <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-semibold text-white">Claude CLI</h3>
-            <p class="text-xs text-gray-500 mt-0.5">Execucao de agentes Claude Code em sandbox</p>
-          </div>
-          <svg class="w-4 h-4 text-gray-600 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="card-body">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Binary Resolution</h4>
-              <div class="code-block text-xs">
-<span class="c">// Resolution order</span>
-<span class="fn">which</span> <span class="s">'claude'</span>           <span class="c">// via PATH</span>
-<span class="c">// Fallback paths:</span>
-<span class="v">/home/dev/.npm-global/bin/claude</span>
-<span class="v">/usr/local/bin/claude</span>
-<span class="v">/usr/bin/claude</span>
-<span class="c">// Environment override:</span>
-<span class="v">CLAUDE_BIN</span>
-              </div>
-            </div>
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sandbox Execution</h4>
-              <div class="code-block text-xs">
-<span class="fn">sudo</span> <span class="v">-n</span> <span class="v">-u</span> claude-sandbox
-    <span class="v">-g</span> dev
-    <span class="v">--preserve-env</span>
-    <span class="v">--</span> claude [args]
-
-<span class="c">// Env blocklist (sensitive vars)</span>
-<span class="k">DATABASE_URL</span>, <span class="k">JWT_SECRET</span>
-<span class="k">GROQ_API_KEY</span>, <span class="k">CLAUDECODE</span>
-<span class="k">CLAUDE_CODE_ENTRYPOINT</span>
-<span class="k">npm_lifecycle_*</span>, <span class="k">npm_package_*</span>
-              </div>
-            </div>
-          </div>
-          <div class="mt-4">
-            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">CLI Arguments</h4>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-              <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-                <code class="text-xs font-mono text-orange-300">--print</code>
-                <p class="text-[11px] text-gray-500 mt-1">Output plain text to stdout</p>
-              </div>
-              <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-                <code class="text-xs font-mono text-orange-300">--output-format stream-json</code>
-                <p class="text-[11px] text-gray-500 mt-1">JSON-stream events for parsing</p>
-              </div>
-              <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-                <code class="text-xs font-mono text-orange-300">--verbose</code>
-                <p class="text-[11px] text-gray-500 mt-1">Verbose stderr output</p>
-              </div>
-              <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-                <code class="text-xs font-mono text-orange-300">--dangerously-skip-permissions</code>
-                <p class="text-[11px] text-gray-500 mt-1">Skip all permission prompts</p>
-              </div>
-              <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-                <code class="text-xs font-mono text-orange-300">--resume &lt;token&gt;</code>
-                <p class="text-[11px] text-gray-500 mt-1">Resume from session token</p>
-              </div>
-              <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-                <code class="text-xs font-mono text-orange-300">--model &lt;model&gt;</code>
-                <p class="text-[11px] text-gray-500 mt-1">Override default model</p>
-              </div>
-            </div>
-          </div>
-          <div class="mt-4">
-            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Session Continuity & Output</h4>
-            <div class="code-block text-xs">
-<span class="c">// Resume token extracted from stream-json event:</span>
-<span class="k">type:</span> <span class="s">"session"</span>
-<span class="k">sessionId:</span> <span class="s">"session_..."</span>
-
-<span class="c">// StreamParser handles:</span>
-<span class="v">type: "content"</span>    <span class="c">// text chunks</span>
-<span class="v">type: "action"</span>     <span class="c">// tool_use, tool_result, etc.</span>
-<span class="v">type: "error"</span>     <span class="c">// error events</span>
-<span class="v">type: "session"</span>    <span class="c">// resume token</span>
-            </div>
-          </div>
-          <div class="mt-4 p-3 rounded-lg" style="background:rgba(251,146,60,0.06);border:1px solid rgba(251,146,60,0.12);">
-            <p class="text-xs text-orange-200/80">
-              <strong>Isolamento:</strong> Cada execucao roda como <code class="font-mono text-orange-300">claude-sandbox</code> via <code class="font-mono text-orange-300">sudo</code>.
-              Arquivos e diretorios do projeto sao configurados com <code class="font-mono text-orange-300">mode 0o775</code> para permitir escrita pelo sandbox.
-              Variaveis sensiveis sao removidas do ambiente via blocklist.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. Anthropic API (SDK) -->
-      <div class="card" data-card="anthropic">
-        <div class="card-header" onclick="toggleCard(this)">
-          <span class="badge" style="background:rgba(168,85,247,0.12);color:#c084fc;border:1px solid rgba(168,85,247,0.2);">Outbound</span>
-          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style="background:rgba(168,85,247,0.1);">
-            <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-semibold text-white">Anthropic API (SDK)</h3>
-            <p class="text-xs text-gray-500 mt-0.5">LLM Judge + Memory Manager</p>
-          </div>
-          <svg class="w-4 h-4 text-gray-600 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="card-body">
-          <div class="mt-4">
-            <div class="inline-flex items-center gap-2 mb-4">
-              <span class="tag bg-purple-500/10 text-purple-300 border border-purple-500/20">@anthropic-ai/sdk</span>
-              <span class="text-xs text-gray-500">via <code class="text-purple-300">loadbalance-back.ddw1sl.easypanel.host</code></span>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">1. LLM Judge Validator</h4>
-              <div class="bg-dark-850 rounded-lg p-4 border border-gray-800 space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-gray-400">Model</span>
-                  <code class="tag bg-purple-500/10 text-purple-300">claude-haiku-4-5-20251001</code>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-gray-400">Max Tokens</span>
-                  <code class="tag bg-gray-800 text-gray-300">200</code>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-gray-400">Output</span>
-                  <code class="tag bg-emerald-500/10 text-emerald-300">PASS / FAIL</code>
-                </div>
-                <div class="mt-3 pt-3 border-t border-gray-800">
-                  <p class="text-[11px] text-gray-500 leading-relaxed">
-                    Avalia saida de steps contra criterios customizados. Retorna
-                    <code class="text-purple-300">valid: true/false</code> com detalhes.
-                    Se falhar, nao bloqueia a execucao (fail-open).
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">2. Memory Manager</h4>
-              <div class="bg-dark-850 rounded-lg p-4 border border-gray-800 space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-gray-400">Model</span>
-                  <code class="tag bg-purple-500/10 text-purple-300">claude-haiku-4-5-20251001</code>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-gray-400">Max Tokens</span>
-                  <code class="tag bg-gray-800 text-gray-300">4000</code>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs text-gray-400">Storage</span>
-                  <code class="tag bg-blue-500/10 text-blue-300">StepMemory (Prisma)</code>
-                </div>
-                <div class="mt-3 pt-3 border-t border-gray-800">
-                  <p class="text-[11px] text-gray-500 leading-relaxed">
-                    Resume contexto acumulado de conversas longas. Extrai:
-                    <strong class="text-gray-400">pedidos, implementacoes, estado, arquivos, decisoes</strong>.
-                    Persiste em <code class="text-purple-300">step_memories</code> table.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="mt-4">
-            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">SDK Configuration</h4>
-            <div class="code-block text-xs">
-<span class="k">ANTHROPIC_API_KEY</span>=sk-placeholder      <span class="c"># atual: proxied via load balancer</span>
-<span class="k">ANTHROPIC_BASE_URL</span>=https://<span class="m">loadbalance-back.ddw1sl.easypanel.host/serende</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. GitHub API -->
-      <div class="card" data-card="github">
-        <div class="card-header" onclick="toggleCard(this)">
-          <span class="badge" style="background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.2);">Outbound</span>
-          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style="background:rgba(251,146,60,0.1);">
-            <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-semibold text-white">GitHub API</h3>
-            <p class="text-xs text-gray-500 mt-0.5">Import repos, raw content, API trees</p>
-          </div>
-          <svg class="w-4 h-4 text-gray-600 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="card-body">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Content Fetching</h4>
-              <div class="code-block text-xs">
-<span class="c">// Raw content URLs (no auth needed for public)</span>
-<span class="fn">toRawUrl</span>(<span class="s">'github.com/user/repo/blob/branch/path'</span>)
-<span class="c">// =</span>
-<span class="s">'raw.githubusercontent.com/user/repo/branch/path'</span>
-
-<span class="c">// GitHub API (auth for private + higher rate limit)</span>
-<span class="k">Accept:</span> <span class="s">application/vnd.github+json</span>
-<span class="k">Authorization:</span> <span class="s">Bearer {token}</span>
-<span class="k">User-Agent:</span> <span class="s">Execut-Orchestrator</span>
-              </div>
-            </div>
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Repo Tree API</h4>
-              <div class="code-block text-xs">
-<span class="c">// List all files in a branch recursively</span>
-GET /repos/<span class="v">{owner}</span>/<span class="v">{repo}</span>/git/trees/<span class="v">{branch}</span>
-    ?recursive=<span class="b">1</span>
-
-<span class="c">// Used to discover:</span>
-<span class="v">skills/</span>    <span class="c">// directories with SKILL.md</span>
-<span class="v">agents/</span>    <span class="c">// .md files in agents/ dirs</span>
-<span class="v">rules/</span>     <span class="c">// .md files in rules/ dirs</span>
-              </div>
-            </div>
-          </div>
-          <div class="mt-4">
-            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Multi-Account Support</h4>
-            <div class="code-block text-xs">
-<span class="c">// GitAccount model: multiple tokens per user</span>
-<span class="fn">getTokenForProject</span>(userId, projectPath):
-  <span class="c">// 1. Check ProjectGitMapping (project -> account)</span>
-  <span class="c">// 2. Fall back to user.githubToken (legacy)</span>
-
-<span class="c">// Token format for git clone</span>
-<span class="fn">buildCloneUrl</span>(<span class="v">repoUrl</span>, <span class="v">token</span>):
-  <span class="c">// https://github.com/user/repo.git</span>
-  <span class="c">// -> https://x-access-token:TOKEN@github.com/...</span>
-              </div>
-          </div>
-          <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2">
-            <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-              <p class="text-xs font-semibold text-orange-300 mb-1">Import de Skills</p>
-              <p class="text-[11px] text-gray-500">Baixa toda estrutura de <code>.claude/skills/{name}/</code></p>
-            </div>
-            <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-              <p class="text-xs font-semibold text-orange-300 mb-1">Import de Agents</p>
-              <p class="text-[11px] text-gray-500">Baixa arquivos de <code>.claude/agents/</code></p>
-            </div>
-            <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-              <p class="text-xs font-semibold text-orange-300 mb-1">Import de Rules</p>
-              <p class="text-[11px] text-gray-500">Baixa arquivos de <code>.claude/rules/</code></p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 4. Database Connections -->
-      <div class="card" data-card="database">
-        <div class="card-header" onclick="toggleCard(this)">
-          <span class="badge" style="background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.2);">Bidirecional</span>
-          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style="background:rgba(52,211,153,0.1);">
-            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-semibold text-white">Database Connections</h3>
-            <p class="text-xs text-gray-500 mt-0.5">PostgreSQL (Prisma) + Redis (ioredis) + BullMQ</p>
-          </div>
-          <svg class="w-4 h-4 text-gray-600 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="card-body">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <!-- PostgreSQL -->
-            <div>
-              <div class="flex items-center gap-2 mb-3">
-                <span class="legend-dot bg-blue-500/70"></span>
-                <h4 class="text-xs font-bold text-blue-300 uppercase tracking-wider">PostgreSQL</h4>
-              </div>
-              <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-[11px] text-gray-500">ORM</span>
-                  <code class="tag bg-blue-500/10 text-blue-300">Prisma 6</code>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-[11px] text-gray-500">Driver</span>
-                  <code class="tag bg-gray-800 text-gray-300">postgres://</code>
-                </div>
-                <div class="mt-2 code-block text-[11px]">
-<span class="k">DATABASE_URL</span>=postgres://<span class="v">postgres</span>:<span class="v">***</span>@<span class="m">217.216.81.188</span>:<span class="m">54321</span>/<span class="v">orquestrador</span>
-                </div>
-                <div class="mt-2 space-y-1">
-                  <p class="text-[11px] text-gray-500">Key models: <code class="text-blue-300">User</code>, <code class="text-blue-300">Workflow</code>, <code class="text-blue-300">Conversation</code>, <code class="text-blue-300">Message</code>, <code class="text-blue-300">ExecutionTrace</code>, <code class="text-blue-300">Webhook</code>, <code class="text-blue-300">GitAccount</code></p>
-                </div>
-              </div>
-            </div>
-            <!-- Redis -->
-            <div>
-              <div class="flex items-center gap-2 mb-3">
-                <span class="legend-dot bg-red-500/70"></span>
-                <h4 class="text-xs font-bold text-red-300 uppercase tracking-wider">Redis</h4>
-              </div>
-              <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-[11px] text-gray-500">Library</span>
-                  <code class="tag bg-red-500/10 text-red-300">ioredis</code>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-[11px] text-gray-500">Connections</span>
-                  <code class="tag bg-gray-800 text-gray-300">3 lazy</code>
-                </div>
-                <div class="code-block text-[11px]">
-<span class="v">getRedis()</span>       <span class="c">// general</span>
-<span class="v">getSubscriber()</span>  <span class="c">// pub/sub</span>
-<span class="v">getPublisher()</span>   <span class="c">// pub/sub</span>
-
-<span class="k">REDIS_URL</span>=redis://<span class="v">default</span>:<span class="v">***</span>@<span class="m">217.216.81.188</span>:<span class="m">63795</span>
-                </div>
-                <p class="text-[11px] text-gray-500 mt-2">Lazy connections: conexao so e estabelecida no primeiro acesso. Cada conexao tem <code class="text-red-300">connectionName</code> unico para identificacao.</p>
-              </div>
-            </div>
-            <!-- BullMQ -->
-            <div>
-              <div class="flex items-center gap-2 mb-3">
-                <span class="legend-dot bg-yellow-500/70"></span>
-                <h4 class="text-xs font-bold text-yellow-300 uppercase tracking-wider">BullMQ</h4>
-              </div>
-              <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-[11px] text-gray-500">Queue</span>
-                  <code class="tag bg-yellow-500/10 text-yellow-300">'execution'</code>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-[11px] text-gray-500">Connection</span>
-                  <code class="tag bg-gray-800 text-gray-300">via getRedis()</code>
-                </div>
-                <div class="code-block text-[11px]">
-<span class="k">Queue</span>(<span class="s">'execution'</span>, {
-  <span class="v">defaultJobOptions</span>: {
-    <span class="v">removeOnComplete</span>: { <span class="v">count</span>: <span class="m">100</span> },
-    <span class="v">removeOnFail</span>: { <span class="v">count</span>: <span class="m">50</span> },
-    <span class="v">attempts</span>: <span class="m">1</span>
+source.onmessage = (e) => {
+  <span style="color:#c084fc;">const</span> data = JSON.parse(e.data);
+  <span style="color:#c084fc;">switch</span> (data.type) {
+    <span style="color:#c084fc;">case</span> <span style="color:#86efac;">'output'</span>:
+      appendOutput(data.content);
+      <span style="color:#c084fc;">break</span>;
+    <span style="color:#c084fc;">case</span> <span style="color:#86efac;">'complete'</span>:
+      setStatus(<span style="color:#86efac;">'done'</span>);
+      source.close();
+      <span style="color:#c084fc;">break</span>;
   }
-})
-                </div>
-                <p class="text-[11px] text-gray-500 mt-2">Execution queue: jobs enfileirados para processamento assincrono. Cada job contem: <code class="text-yellow-300">conversationId</code>, <code class="text-yellow-300">workflowId</code>, <code class="text-yellow-300">projectPath</code>.</p>
-              </div>
-            </div>
+};
           </div>
         </div>
       </div>
 
-      <!-- 5. SSE Real-time -->
-      <div class="card" data-card="sse">
-        <div class="card-header" onclick="toggleCard(this)">
-          <span class="badge" style="background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.2);">Bidirecional</span>
-          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style="background:rgba(52,211,153,0.1);">
-            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-semibold text-white">SSE Real-time</h3>
-            <p class="text-xs text-gray-500 mt-0.5">15+ event types, heartbeat 15s, auto-reconnect</p>
-          </div>
-          <svg class="w-4 h-4 text-gray-600 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      <!-- CORS note -->
+      <div style="background:rgba(14,165,233,0.06);border:1px solid rgba(14,165,233,0.2);border-radius:10px;padding:16px;margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:1rem;">🔒</span>
+          <span style="font-weight:600;font-size:0.9rem;">CORS & Security</span>
         </div>
-        <div class="card-body">
-          <div class="mt-4">
-            <div class="flex flex-wrap gap-2 mb-4">
-              <span class="tag bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">text/event-stream</span>
-              <span class="tag bg-gray-800 text-gray-300">Cache-Control: no-cache</span>
-              <span class="tag bg-gray-800 text-gray-300">X-Accel-Buffering: no</span>
-            </div>
-            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">15 Event Types</h4>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-1.5 mb-4">
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">step_start</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">stream</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">step_complete</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">step_error</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">message_saved</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">condition_retry</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">condition_jump</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">context_reset</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">cancelled</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">complete</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">dag_batch_start</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">validation_failed</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">execution_paused</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">execution_resumed</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">user_interrupt</span>
-              <span class="tag bg-dark-850 text-[11px] text-gray-400 border border-gray-800">:heartbeat (15s)</span>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Endpoints</h4>
-              <div class="code-block text-xs">
-<span class="fn">POST</span> /conversations/<span class="v">{id}</span>/messages/stream
-  <span class="c">// Envia mensagem + recebe SSE</span>
-
-<span class="fn">GET</span> /conversations/<span class="v">{id}</span>/watch
-  <span class="c">// Observa execucao ativa (read-only)</span>
-
-<span class="fn">GET</span> /conversations/<span class="v">{id}</span>/execution-status
-  <span class="c">// Check: running/paused/inactive</span>
-              </div>
-            </div>
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Pause/Resume</h4>
-              <div class="code-block text-xs">
-<span class="c">// Paused on AskUserQuestion tool</span>
-<span class="k">execution_paused</span>: {
-  <span class="v">resumeToken</span>: <span class="s">"session_..."</span>,
-  <span class="v">askUserQuestion</span>: {
-    <span class="v">question</span>: <span class="s">"..."</span>,
-    <span class="v">options</span>: [...]
-  }
-}
-
-<span class="c">// Resume: POST new message</span>
-<span class="c">// -> picks up paused execution</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.7;">
+          Backend configura CORS via <code>@fastify/cors</code> com origin whitelist. Apenas o dominio do frontend (<code>orquestrador.ddw1sl.easypanel.host</code>) e permitido. Credentials: true para cookies de refresh token.
+          CSP headers configurados para prevenir XSS.
+        </p>
       </div>
-
-      <!-- 6. Webhook System -->
-      <div class="card" data-card="webhooks">
-        <div class="card-header" onclick="toggleCard(this)">
-          <span class="badge" style="background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.2);">Outbound</span>
-          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style="background:rgba(251,146,60,0.1);">
-            <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-semibold text-white">Webhook System</h3>
-            <p class="text-xs text-gray-500 mt-0.5">HMAC-SHA256, exponential backoff, delivery tracking</p>
-          </div>
-          <svg class="w-4 h-4 text-gray-600 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="card-body">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Security & Payload</h4>
-              <div class="code-block text-xs">
-<span class="k">X-Webhook-Signature:</span> <span class="s">sha256={hmac}</span>
-<span class="k">X-Webhook-Event:</span> <span class="s">execution</span>
-<span class="k">Content-Type:</span> <span class="s">application/json</span>
-
-<span class="c">// Payload shape</span>
-{
-  <span class="v">event</span>: <span class="s">"execution.complete"</span>,
-  <span class="v">data</span>: { ... },
-  <span class="v">timestamp</span>: <span class="s">"2026-03-22T..."</span>
-}
-              </div>
-            </div>
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Retry Strategy</h4>
-              <div class="code-block text-xs">
-<span class="c">// Exponential backoff: 1s, 4s, 9s</span>
-<span class="fn">setTimeout</span>(<span class="v">resolve</span>,
-  <span class="v">attempt</span> * <span class="v">attempt</span> * <span class="m">1000</span>)
-
-<span class="c">// Max attempts: 3</span>
-<span class="c">// Timeout per attempt: 10s</span>
-
-<span class="c">// Status tracking in DB:</span>
-<span class="v">pending</span> | <span class="v">success</span> | <span class="v">failed</span>
-              </div>
-            </div>
-          </div>
-          <div class="mt-4">
-            <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Database Tables</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-                <code class="text-xs text-orange-300">webhooks</code>
-                <p class="text-[11px] text-gray-500 mt-1">url, events[], secret, enabled</p>
-              </div>
-              <div class="bg-dark-850 rounded-lg p-3 border border-gray-800">
-                <code class="text-xs text-orange-300">webhook_deliveries</code>
-                <p class="text-[11px] text-gray-500 mt-1">payload, responseCode, responseBody, attempts, status</p>
-              </div>
-            </div>
-          </div>
-          <div class="mt-4 p-3 rounded-lg" style="background:rgba(251,146,60,0.06);border:1px solid rgba(251,146,60,0.12);">
-            <p class="text-xs text-orange-200/80">
-              <strong>HMAC-SHA256:</strong> <code class="font-mono text-orange-300">webhooksService.signPayload(payload, secret)</code>
-              gera a assinatura. O recipient pode verificar com <code class="font-mono text-orange-300">crypto.createHmac('sha256', secret).update(payload).digest('hex')</code>.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- 7. File System -->
-      <div class="card" data-card="filesystem">
-        <div class="card-header" onclick="toggleCard(this)">
-          <span class="badge" style="background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.2);">Outbound</span>
-          <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style="background:rgba(251,146,60,0.1);">
-            <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-sm font-semibold text-white">File System</h3>
-            <p class="text-xs text-gray-500 mt-0.5">Upload, project sync, .mcp.json, .claude/</p>
-          </div>
-          <svg class="w-4 h-4 text-gray-600 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="card-body">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Image Upload</h4>
-              <div class="code-block text-xs">
-<span class="c">// Upload endpoint: POST /attachments</span>
-<span class="c">// Allowed: PNG, JPG, GIF, WebP</span>
-<span class="c">// Max size: 10MB</span>
-
-<span class="v">uploads/images/{conversationId}/</span>
-  {timestamp}_{uuid8}.{ext}
-
-<span class="c">// Also copied to project:</span>
-<span class="v">{projectPath}/.claude-images/</span>
-              </div>
-            </div>
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Project Sync</h4>
-              <div class="code-block text-xs">
-<span class="c">// FileSyncService.syncForStep()</span>
-
-<span class="v">.mcp.json</span>          <span class="c">// MCP servers config</span>
-<span class="v">.claude/settings.json</span> <span class="c">// hooks + isolation</span>
-<span class="v">.claude/hooks/</span>     <span class="c">// restrict-directory.sh</span>
-<span class="v">.claude/skills/</span>    <span class="c">// SKILL.md files</span>
-<span class="v">.claude/agents/</span>     <span class="c">// agent.md files</span>
-<span class="v">.claude/rules/</span>     <span class="c">// rule.md files</span>
-              </div>
-            </div>
-            <div>
-              <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Isolation</h4>
-              <div class="code-block text-xs">
-<span class="c">// Directory isolation hook</span>
-<span class="c">// Blocks: Read, Write, Edit, Glob,</span>
-<span class="c">//         Grep, Bash outside project</span>
-
-<span class="k">ALLOWED_DIR</span>=<span class="v">{projectPath}</span>
-
-<span class="c">// Permitted exceptions:</span>
-<span class="v">/tmp</span>, <span class="v">/dev/null</span>, <span class="v">/proc</span>
-<span class="v">/usr</span>, <span class="v">/bin</span>, <span class="v">/etc</span>
-<span class="v">/home</span>
-              </div>
-            </div>
-          </div>
-          <div class="mt-4 p-3 rounded-lg" style="background:rgba(251,146,60,0.06);border:1px solid rgba(251,146,60,0.12);">
-            <p class="text-xs text-orange-200/80">
-              <strong>Project isolation:</strong> Cada projeto tem <code class="font-mono text-orange-300">projectPath</code> unico. O sistema sincroniza apenas recursos do DB para o FS. Arquivos criticos (<code class="font-mono text-orange-300">.mcp.json</code>, <code class="font-mono text-orange-300">settings.json</code>) sao regravados a cada execucao. Recursos globales sao mesclados com os do step.
-            </p>
-          </div>
-        </div>
-      </div>
-
     </div>
-
-    <div class="section-divider"></div>
-
-    <!-- Environment Variables Table -->
-    <section>
-      <h2 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
-        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        Variaveis de Ambiente
-      </h2>
-      <p class="text-sm text-gray-500 mb-6">Todas as variaveis de ambiente configuradas no backend</p>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Variavel</th>
-              <th>Default</th>
-              <th>Integracao</th>
-              <th>Descricao</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><code class="font-mono text-sm text-orange-300">PORT</code></td>
-              <td><code class="font-mono text-xs text-gray-500">3333</code></td>
-              <td><span class="badge bg-gray-800 text-gray-300">Server</span></td>
-              <td class="text-gray-400 text-xs">Porta TCP do servidor Fastify</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-orange-300">HOST</code></td>
-              <td><code class="font-mono text-xs text-gray-500">0.0.0.0</code></td>
-              <td><span class="badge bg-gray-800 text-gray-300">Server</span></td>
-              <td class="text-gray-400 text-xs">Interface de bind do servidor</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-orange-300">NODE_ENV</code></td>
-              <td><code class="font-mono text-xs text-gray-500">development</code></td>
-              <td><span class="badge bg-gray-800 text-gray-300">Server</span></td>
-              <td class="text-gray-400 text-xs">Ambiente de execucao</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-emerald-300">DATABASE_URL</code></td>
-              <td><code class="font-mono text-xs text-gray-500">postgres://...</code></td>
-              <td><span class="badge bg-blue-500/10 text-blue-300">PostgreSQL</span></td>
-              <td class="text-gray-400 text-xs">Connection string do banco PostgreSQL</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-emerald-300">JWT_SECRET</code></td>
-              <td><code class="font-mono text-xs text-gray-500">development-secret-...</code></td>
-              <td><span class="badge bg-gray-800 text-gray-300">Auth</span></td>
-              <td class="text-gray-400 text-xs">Chave secreta para assinatura JWT (alterar em producao)</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-purple-300">ANTHROPIC_API_KEY</code></td>
-              <td><code class="font-mono text-xs text-gray-500">sk-placeholder</code></td>
-              <td><span class="badge bg-purple-500/10 text-purple-300">Anthropic SDK</span></td>
-              <td class="text-gray-400 text-xs">Chave da API Anthropic (proxied via load balancer)</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-purple-300">ANTHROPIC_BASE_URL</code></td>
-              <td><code class="font-mono text-xs text-gray-500">loadbalance-back...</code></td>
-              <td><span class="badge bg-purple-500/10 text-purple-300">Anthropic SDK</span></td>
-              <td class="text-gray-400 text-xs">URL base proxied (load balancer para LLM)</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-red-300">REDIS_URL</code></td>
-              <td><code class="font-mono text-xs text-gray-500">redis://localhost:6379</code></td>
-              <td><span class="badge bg-red-500/10 text-red-300">Redis</span></td>
-              <td class="text-gray-400 text-xs">URL de conexao Redis (ioredis)</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-yellow-300">GROQ_API_KEY</code></td>
-              <td><code class="font-mono text-xs text-gray-500">—</code></td>
-              <td><span class="badge bg-yellow-500/10 text-yellow-300">Groq</span></td>
-              <td class="text-gray-400 text-xs">Chave da API Groq (transcricao de audio)</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-orange-300">MAX_FILE_SIZE</code></td>
-              <td><code class="font-mono text-xs text-gray-500">26214400 (25MB)</code></td>
-              <td><span class="badge bg-orange-500/10 text-orange-300">Upload</span></td>
-              <td class="text-gray-400 text-xs">Tamanho maximo de arquivo para upload</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-blue-300">PROJECT_BASE_PATH</code></td>
-              <td><code class="font-mono text-xs text-gray-500">/workspace/temp-orquestrador</code></td>
-              <td><span class="badge bg-blue-500/10 text-blue-300">FileSystem</span></td>
-              <td class="text-gray-400 text-xs">Base path para pastas de projetos dos usuarios</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-cyan-300">SANDBOX_ENABLED</code></td>
-              <td><code class="font-mono text-xs text-gray-500">true</code></td>
-              <td><span class="badge bg-orange-500/10 text-orange-300">Claude CLI</span></td>
-              <td class="text-gray-400 text-xs">Habilita execucao em sandbox (claude-sandbox)</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-cyan-300">SANDBOX_USER</code></td>
-              <td><code class="font-mono text-xs text-gray-500">claude-sandbox</code></td>
-              <td><span class="badge bg-orange-500/10 text-orange-300">Claude CLI</span></td>
-              <td class="text-gray-400 text-xs">Usuario Linux para execucao em sandbox</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-cyan-300">SANDBOX_GROUP</code></td>
-              <td><code class="font-mono text-xs text-gray-500">dev</code></td>
-              <td><span class="badge bg-orange-500/10 text-orange-300">Claude CLI</span></td>
-              <td class="text-gray-400 text-xs">Grupo Linux para execucao em sandbox</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-cyan-300">CLAUDE_BIN</code></td>
-              <td><code class="font-mono text-xs text-gray-500">auto-resolve</code></td>
-              <td><span class="badge bg-orange-500/10 text-orange-300">Claude CLI</span></td>
-              <td class="text-gray-400 text-xs">Path customizado para o binario claude</td>
-            </tr>
-            <tr>
-              <td><code class="font-mono text-sm text-gray-300">CORS_ORIGIN</code></td>
-              <td><code class="font-mono text-xs text-gray-500">*</code></td>
-              <td><span class="badge bg-gray-800 text-gray-300">Server</span></td>
-              <td class="text-gray-400 text-xs">Origem CORS permitida para SSE</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-  </main>
-
-<footer class="border-t border-slate-800 py-6 mt-10">
-  <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-slate-500">
-    <a href="07-seguranca.html" class="hover:text-white transition">&larr; 07 Segurança</a>
-    <span class="text-slate-600">Orquetrador Claude</span>
-    <a href="09-mcp-server.html" class="hover:text-white transition">09 MCP Server &rarr;</a>
   </div>
-</footer>
+</div>
 
-  <script>
-    // Toggle card expand/collapse
-    function toggleCard(header) {
-      const card = header.closest('.card')
-      card.classList.toggle('expanded')
-    }
+<!-- ============================================================ -->
+<!-- SUMMARY TABLE -->
+<!-- ============================================================ -->
+<section class="section anim-in" style="margin-top:3rem;">
+  <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+    <span style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:linear-gradient(135deg,#0d9488,#06b6d4);color:#fff;">📊</span>
+    Resumo das Integracoes
+  </h2>
 
-    // Integration map — draw nodes and lines with JS
-    document.addEventListener('DOMContentLoaded', () => {
-      const map = document.getElementById('integrationMap')
-      if (!map) return
+  <div style="border-radius:12px;border:1px solid var(--border-color);overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead style="background:var(--bg-secondary);">
+        <tr>
+          <th style="padding:12px 16px;text-align:left;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Integracao</th>
+          <th style="padding:12px 16px;text-align:left;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Protocolo</th>
+          <th style="padding:12px 16px;text-align:left;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Direcao</th>
+          <th style="padding:12px 16px;text-align:left;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Fallback</th>
+          <th style="padding:12px 16px;text-align:left;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);border-bottom:1px solid var(--border-color);">Critico</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border-color);">
+          <td style="padding:12px 16px;font-size:0.9rem;">🤖 Claude CLI</td>
+          <td style="padding:12px 16px;font-size:0.85rem;"><code style="color:#a78bfa;">Subprocess + JSON stream</code></td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Bidirecional</td>
+          <td style="padding:12px 16px;font-size:0.85rem;color:#f87171;">Nenhum</td>
+          <td style="padding:12px 16px;font-size:0.85rem;"><span style="color:#f87171;font-weight:700;">Sim</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-color);">
+          <td style="padding:12px 16px;font-size:0.9rem;">📂 GitHub</td>
+          <td style="padding:12px 16px;font-size:0.85rem;"><code style="color:#4ade80;">REST API (HTTPS)</code></td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Outbound</td>
+          <td style="padding:12px 16px;font-size:0.85rem;color:#4ade80;">Import manual</td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Nao</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-color);">
+          <td style="padding:12px 16px;font-size:0.9rem;">🔧 MCP Servers</td>
+          <td style="padding:12px 16px;font-size:0.85rem;"><code style="color:#fbbf24;">HTTP / SSE / STDIO</code></td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Bidirecional</td>
+          <td style="padding:12px 16px;font-size:0.85rem;color:#4ade80;">Sem tools (funciona)</td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Nao</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-color);">
+          <td style="padding:12px 16px;font-size:0.9rem;">🗄️ PostgreSQL</td>
+          <td style="padding:12px 16px;font-size:0.85rem;"><code style="color:#60a5fa;">TCP (Prisma)</code></td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Bidirecional</td>
+          <td style="padding:12px 16px;font-size:0.85rem;color:#f87171;">Nenhum</td>
+          <td style="padding:12px 16px;font-size:0.85rem;"><span style="color:#f87171;font-weight:700;">Sim</span></td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-color);">
+          <td style="padding:12px 16px;font-size:0.9rem;">⚡ Redis</td>
+          <td style="padding:12px 16px;font-size:0.85rem;"><code style="color:#f87171;">TCP (ioredis)</code></td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Bidirecional</td>
+          <td style="padding:12px 16px;font-size:0.85rem;color:#4ade80;">In-memory fallback</td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Nao</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-color);">
+          <td style="padding:12px 16px;font-size:0.9rem;">🪝 Webhooks</td>
+          <td style="padding:12px 16px;font-size:0.85rem;"><code style="color:#a78bfa;">HTTPS POST</code></td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Outbound</td>
+          <td style="padding:12px 16px;font-size:0.85rem;color:#4ade80;">Retry 3x</td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Nao</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 16px;font-size:0.9rem;">🌐 Browser</td>
+          <td style="padding:12px 16px;font-size:0.85rem;"><code style="color:#38bdf8;">REST + SSE (HTTPS)</code></td>
+          <td style="padding:12px 16px;font-size:0.85rem;">Bidirecional</td>
+          <td style="padding:12px 16px;font-size:0.85rem;color:#4ade80;">Polling</td>
+          <td style="padding:12px 16px;font-size:0.85rem;"><span style="color:#f87171;font-weight:700;">Sim</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
 
-      const W = map.offsetWidth
-      const H = map.offsetHeight
-      const cx = W / 2
-      const cy = H / 2
-      const radius = Math.min(W, H) * 0.34
+<!-- Navigation -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border-color);">
+  <a href="07-seguranca.html" style="display:flex;align-items:center;gap:8px;color:var(--text-accent);text-decoration:none;font-size:0.9rem;font-weight:500;">
+    ← Seguranca
+  </a>
+  <a href="index.html" style="color:var(--text-muted);text-decoration:none;font-size:0.85rem;">
+    System Map Home
+  </a>
+  <a href="09-mcp-server.html" style="display:flex;align-items:center;gap:8px;color:var(--text-accent);text-decoration:none;font-size:0.9rem;font-weight:500;">
+    MCP Server →
+  </a>
+</div>
 
-      const nodes = [
-        {
-          id: 'claude-cli',
-          label: 'Claude CLI',
-          color: '#fb923c',
-          bg: 'rgba(251,146,60,0.12)',
-          border: 'rgba(251,146,60,0.3)',
-          direction: 'outbound',
-          angle: -90,
-        },
-        {
-          id: 'anthropic',
-          label: 'Anthropic API',
-          color: '#c084fc',
-          bg: 'rgba(168,85,247,0.12)',
-          border: 'rgba(168,85,247,0.3)',
-          direction: 'outbound',
-          angle: -30,
-        },
-        {
-          id: 'github',
-          label: 'GitHub API',
-          color: '#fb923c',
-          bg: 'rgba(251,146,60,0.12)',
-          border: 'rgba(251,146,60,0.3)',
-          direction: 'outbound',
-          angle: 30,
-        },
-        {
-          id: 'postgresql',
-          label: 'PostgreSQL',
-          color: '#60a5fa',
-          bg: 'rgba(96,165,250,0.12)',
-          border: 'rgba(96,165,250,0.3)',
-          direction: 'bidirectional',
-          angle: 90,
-        },
-        {
-          id: 'redis',
-          label: 'Redis',
-          color: '#f87171',
-          bg: 'rgba(248,113,113,0.12)',
-          border: 'rgba(248,113,113,0.3)',
-          direction: 'bidirectional',
-          angle: 150,
-        },
-        {
-          id: 'easypanel',
-          label: 'EasyPanel MCP',
-          color: '#34d399',
-          bg: 'rgba(52,211,153,0.12)',
-          border: 'rgba(52,211,153,0.3)',
-          direction: 'outbound',
-          angle: 210,
-        },
-        {
-          id: 'webhooks',
-          label: 'Webhooks',
-          color: '#fb923c',
-          bg: 'rgba(251,146,60,0.12)',
-          border: 'rgba(251,146,60,0.3)',
-          direction: 'outbound',
-          angle: 270,
-        },
-        {
-          id: 'browser',
-          label: 'Browser/Client',
-          color: '#60a5fa',
-          bg: 'rgba(96,165,250,0.12)',
-          border: 'rgba(96,165,250,0.3)',
-          direction: 'bidirectional',
-          angle: 330,
-        },
-      ]
+</div><!-- /page-container -->
 
-      // Draw lines
-      nodes.forEach(node => {
-        const line = document.createElement('div')
-        line.className = 'map-line'
+<script src="shared.js"></script>
+<script>
+function toggleCard(header) {
+  const card = header.closest('.int-card');
+  card.classList.toggle('open');
+}
 
-        const angleRad = (node.angle * Math.PI) / 180
-        const lineLength = radius - 80
-        const startX = cx
-        const startY = cy
+function scrollToCard(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => {
+      if (!el.classList.contains('open')) {
+        el.classList.add('open');
+      }
+    }, 400);
+  }
+}
 
-        line.style.left = startX + 'px'
-        line.style.top = startY + 'px'
-        line.style.width = lineLength + 'px'
-        line.style.transform = `rotate(${node.angle}deg)`
-        line.style.color = node.color
-
-        if (node.direction === 'bidirectional') {
-          line.classList.add('inbound')
-        } else {
-          line.classList.add('outbound')
-        }
-
-        line.style.opacity = '0.5'
-        map.appendChild(line)
-      })
-
-      // Draw nodes
-      nodes.forEach(node => {
-        const angleRad = (node.angle * Math.PI) / 180
-        const dist = radius + 80
-
-        const nodeEl = document.createElement('div')
-        nodeEl.className = 'map-node'
-        nodeEl.style.background = node.bg
-        nodeEl.style.borderColor = node.border
-        nodeEl.style.color = node.color
-
-        // Icon per node type
-        const icons = {
-          'claude-cli': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>',
-          'anthropic': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>',
-          'github': '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>',
-          'postgresql': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>',
-          'redis': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>',
-          'easypanel': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>',
-          'webhooks': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>',
-          'browser': '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>',
-        }
-
-        const flowBadge = node.direction === 'bidirectional'
-          ? '<span class="flow-indicator text-[9px]" style="color:' + node.color + '"><svg viewBox="0 0 16 16" width="8" height="8" fill="currentColor"><path d="M8 2L3 8l5 6M8 2l5 6-5 6M3 8h10"/></svg></span>'
-          : '<span class="flow-indicator text-[9px]" style="color:' + node.color + '"><svg viewBox="0 0 16 16" width="8" height="8" fill="currentColor"><path d="M2 8h12M10 4l4 4-4 4"/></svg></span>'
-
-        nodeEl.innerHTML = '<span style="color:' + node.color + '">' + (icons[node.id] || '') + '</span>' + '<span>' + node.label + '</span>' + flowBadge
-
-        const nodeX = cx + dist * Math.cos(angleRad) - nodeEl.offsetWidth / 2
-        const nodeY = cy + dist * Math.sin(angleRad) - 16
-
-        nodeEl.style.left = (cx + dist * Math.cos(angleRad)) + 'px'
-        nodeEl.style.top = (cy + dist * Math.sin(angleRad)) + 'px'
-        nodeEl.style.transform = 'translate(-50%, -50%)'
-
-        map.appendChild(nodeEl)
-      })
-    })
-  </script>
+// Open first card by default
+document.addEventListener('DOMContentLoaded', () => {
+  const firstCard = document.querySelector('.int-card');
+  if (firstCard) firstCard.classList.add('open');
+});
+</script>
 </body>
 </html>
