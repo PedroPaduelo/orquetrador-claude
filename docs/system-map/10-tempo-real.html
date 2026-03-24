@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tempo Real | Orquetrador Claude — System Map</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* State Machine Diagram */
+.state-machine {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.state-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.state-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 24px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 2px solid;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.state-node:hover {
+  transform: scale(1.05);
+}
+
+.state-preparing {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+.state-connecting {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.state-thinking {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: #8b5cf6;
+  color: #a78bfa;
+}
+
+.state-streaming {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: #22c55e;
+  color: #4ade80;
+}
+
+.state-idle {
+  background: rgba(100, 116, 139, 0.15);
+  border-color: #64748b;
+  color: #94a3b8;
+}
+
+.state-paused {
+  background: rgba(236, 72, 153, 0.15);
+  border-color: #ec4899;
+  color: #f472b6;
+}
+
+.state-arrow {
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.state-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: -0.25rem;
+}
+
+/* Flow Diagram */
+.sse-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.flow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  position: relative;
+}
+
+.flow-step:not(:last-child) {
+  padding-bottom: 1.5rem;
+}
+
+.flow-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 40px;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--border-accent), transparent);
+}
+
+.flow-marker {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  border: 2px solid;
+  z-index: 1;
+}
+
+.flow-marker.frontend { background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; }
+.flow-marker.backend { background: rgba(139, 92, 246, 0.15); border-color: #8b5cf6; }
+.flow-marker.engine { background: rgba(34, 197, 94, 0.15); border-color: #22c55e; }
+.flow-marker.events { background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; }
+
+.flow-detail {
+  flex: 1;
+  padding-top: 0.4rem;
+}
+
+.flow-detail h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.flow-detail p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Event Table Enhancements */
+.event-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.src-orchestrator { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+.src-engine { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+.src-dag { background: rgba(6, 182, 212, 0.15); color: #67e8f9; }
+.src-memory { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.src-validator { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+.src-frontend { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.src-user { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+
+/* Architecture Blocks */
+.arch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 1200px) { .arch-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px) { .arch-grid { grid-template-columns: 1fr; } }
+
+.arch-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.arch-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.arch-block:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-glow);
+  border-color: rgba(13, 148, 136, 0.3);
+}
+
+.arch-block .arch-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.arch-block h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.arch-block p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.arch-block.sse::before { background: var(--gradient-1); }
+.arch-block.bullmq::before { background: var(--gradient-2); }
+.arch-block.redis::before { background: var(--gradient-3); }
+.arch-block.emitter::before { background: var(--gradient-4); }
+
+/* Pulse animation for live indicator */
+.live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4ade80;
+  display: inline-block;
+  animation: livePulse 1.5s ease-in-out infinite;
+  margin-right: 0.4rem;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+}
+
+/* Timeline diagram */
+.timeline-swim {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+.swim-label {
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.swim-content {
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  min-height: 48px;
+}
+
+.swim-event {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.swim-event.teal { background: rgba(13, 148, 136, 0.2); color: #2dd4bf; }
+.swim-event.purple { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+.swim-event.blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.swim-event.green { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.swim-event.amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.swim-event.pink { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+.swim-event.red { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.swim-event.cyan { background: rgba(6, 182, 212, 0.2); color: #67e8f9; }
+.swim-event.gray { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+
+.swim-arrow {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Data shape box */
+.data-shape {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: #e2e8f0;
+  overflow-x: auto;
+}
+
+.data-shape .key { color: #67e8f9; }
+.data-shape .type { color: #c084fc; }
+.data-shape .comment { color: #64748b; }
+
+/* Connection pool visual */
+.pool-visual {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.pool-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pool-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  border: 3px solid;
+  transition: transform 0.3s;
+}
+
+.pool-circle:hover { transform: scale(1.1); }
+
+.pool-circle.general { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+.pool-circle.subscriber { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+.pool-circle.publisher { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+
+.pool-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pool-desc {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 120px;
+}
+
+/* Timeout visual */
+.timeout-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.timeout-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 160px;
+}
+
+.timeout-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.timeout-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.6s ease;
+}
+
+.timeout-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-width: 100px;
+  text-align: right;
+}
+
+/* Reconnect flow visual */
+.reconnect-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.reconnect-step {
+  display: flex;
+  gap: 1rem;
+  position: relative;
+  padding-bottom: 1.25rem;
+}
+
+.reconnect-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: 0;
+  width: 2px;
+  background: var(--border-color);
+}
+
+.reconnect-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.reconnect-body {
+  padding-top: 0.3rem;
+}
+
+.reconnect-body h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.reconnect-body p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.reconnect-body code {
+  background: var(--bg-card);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+</style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">System Map</a>
+      <span>&rsaquo;</span>
+      <span>Tempo Real</span>
+    </div>
+    <h1>Tempo Real</h1>
+    <p class="subtitle">
+      <span class="live-dot"></span>
+      SSE, EventEmitter, BullMQ e Redis Pub/Sub &mdash; como os dados fluem em tempo real do backend para o frontend
+    </p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4" style="margin-bottom: 3rem;">
+    <div class="stat-box">
+      <div class="stat-value" data-count="16">0</div>
+      <div class="stat-label">SSE Events</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="5">0</div>
+      <div class="stat-label">Streaming Phases</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="3">0</div>
+      <div class="stat-label">Redis Connections</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="15">0</div>
+      <div class="stat-label">Heartbeat (seg)</div>
+    </div>
+  </div>
+
+  <!-- Section 1: Tecnologias -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">&#9889;</span>
+      Stack de Tempo Real
+    </h2>
+
+    <div class="arch-grid">
+      <div class="arch-block sse">
+        <div class="arch-icon">&#128225;</div>
+        <h3>SSE</h3>
+        <p>Server-Sent Events sobre HTTP. O frontend faz POST para iniciar e recebe um stream unidirecional de eventos do backend.</p>
+        <div style="margin-top: 0.75rem;">
+          <span class="badge badge-teal">text/event-stream</span>
+        </div>
+      </div>
+
+      <div class="arch-block bullmq">
+        <div class="arch-icon">&#128230;</div>
+        <h3>BullMQ</h3>
+        <p>Fila de execucao com concorrencia configuravel. Processa jobs de execucao de forma assincrona via Redis.</p>
+        <div style="margin-top: 0.75rem;">
+          <span class="badge badge-purple">Queue: 'execution'</span>
+        </div>
+      </div>
+
+      <div class="arch-block redis">
+        <div class="arch-icon">&#128293;</div>
+        <h3>Redis</h3>
+        <p>3 connection pools dedicadas: general (cache/rate-limit), subscriber (Pub/Sub listen), publisher (Pub/Sub emit).</p>
+        <div style="margin-top: 0.75rem;">
+          <span class="badge badge-amber">ioredis</span>
+        </div>
+      </div>
+
+      <div class="arch-block emitter">
+        <div class="arch-icon">&#128264;</div>
+        <h3>EventEmitter</h3>
+        <p>OrchestratorEvents estende EventEmitter nativo. Bridge entre orchestrator/engine e a camada SSE de resposta HTTP.</p>
+        <div style="margin-top: 0.75rem;">
+          <span class="badge badge-blue">16 event types</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: SSE Connection Flow -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">&#128279;</span>
+      Fluxo de Conexao SSE
+    </h2>
+
+    <div class="sse-flow">
+      <div class="flow-step">
+        <div class="flow-marker frontend">&#127912;</div>
+        <div class="flow-detail">
+          <h4>1. Frontend envia mensagem</h4>
+          <p><code>POST /conversations/:id/messages/stream</code> com <code>{ content, stepIndex?, attachments? }</code>. AbortController criado para permitir cancelamento.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-marker backend">&#9881;</div>
+        <div class="flow-detail">
+          <h4>2. Backend valida e abre SSE</h4>
+          <p>Verifica autenticacao, budget de tokens, projectPath. Seta headers SSE: <code>Content-Type: text/event-stream</code>, <code>Cache-Control: no-cache</code>, <code>X-Accel-Buffering: no</code>.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-marker backend">&#128275;</div>
+        <div class="flow-detail">
+          <h4>3. Registra listeners no EventEmitter</h4>
+          <p>15 event handlers registrados em <code>orchestratorEvents</code>. Cada handler filtra por <code>conversationId</code> e escreve no raw response via <code>sendEvent(name, data)</code>.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-marker engine">&#129302;</div>
+        <div class="flow-detail">
+          <h4>4. Orchestrator executa workflow</h4>
+          <p>TaskOrchestrator chama o engine (Claude CLI). O engine emite eventos via <code>orchestratorEvents.emit*()</code> conforme progride pelos steps.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-marker events">&#128225;</div>
+        <div class="flow-detail">
+          <h4>5. Eventos fluem para o frontend</h4>
+          <p>Cada evento e serializado como <code>event: name\ndata: JSON\n\n</code>. O frontend le via <code>ReadableStream</code> e processa no <code>handleEvent()</code>.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-marker frontend">&#10004;</div>
+        <div class="flow-detail">
+          <h4>6. Conexao encerrada</h4>
+          <p>Ao receber <code>complete</code> ou <code>error</code>, o backend faz cleanup dos listeners, libera lock do projectPath e chama <code>reply.raw.end()</code>. Frontend invalida queries do React Query.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Heartbeat note -->
+    <div class="card" style="margin-top: 1rem; border-left: 3px solid #22c55e;">
+      <div class="card-header">
+        <span style="font-size: 1.2rem;">&#128147;</span>
+        <span class="card-title">Heartbeat</span>
+      </div>
+      <div class="card-desc">
+        A cada <strong>15 segundos</strong>, o backend envia <code>:heartbeat\n\n</code> (SSE comment) para manter a conexao viva atraves de proxies e load balancers. O frontend nao precisa processar este evento.
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: 16 SSE Events Table -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">&#128196;</span>
+      16 SSE Events
+    </h2>
+
+    <div class="search-box">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" placeholder="Filtrar eventos..." data-search-target="events-table">
+    </div>
+
+    <div class="table-container">
+      <table id="events-table">
+        <thead>
+          <tr>
+            <th style="width: 15%;">Evento SSE</th>
+            <th style="width: 10%;">Evento Interno</th>
+            <th style="width: 12%;">Origem</th>
+            <th style="width: 10%;">Consumidor</th>
+            <th style="width: 53%;">Dados (payload)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code style="color: #2dd4bf; font-weight: 600;">step_start</code></td>
+            <td><code style="font-size: 0.75rem;">step:start</code></td>
+            <td><span class="event-source src-orchestrator">Orchestrator</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">executionId</span>: <span class="type">string</span>, <span class="key">conversationId</span>: <span class="type">string</span>, <span class="key">stepId</span>: <span class="type">string</span>, <span class="key">stepName</span>: <span class="type">string</span>, <span class="key">stepOrder</span>: <span class="type">number</span>, <span class="key">totalSteps</span>: <span class="type">number</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #4ade80; font-weight: 600;">stream</code></td>
+            <td><code style="font-size: 0.75rem;">step:stream</code></td>
+            <td><span class="event-source src-engine">Engine</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">type</span>: <span class="type">'content' | 'action'</span>, <span class="key">content</span>?: <span class="type">string</span>, <span class="key">action</span>?: { <span class="key">type</span>, <span class="key">name</span>?, <span class="key">input</span>?, <span class="key">output</span>?, <span class="key">id</span>? } }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #2dd4bf; font-weight: 600;">step_complete</code></td>
+            <td><code style="font-size: 0.75rem;">step:complete</code></td>
+            <td><span class="event-source src-orchestrator">Orchestrator</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">stepId</span>: <span class="type">string</span>, <span class="key">stepName</span>: <span class="type">string</span>, <span class="key">stepOrder</span>: <span class="type">number</span>, <span class="key">content</span>: <span class="type">string</span>, <span class="key">finished</span>: <span class="type">boolean</span>, <span class="key">needsUserInput</span>?: <span class="type">boolean</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #f87171; font-weight: 600;">step_error</code></td>
+            <td><code style="font-size: 0.75rem;">step:error</code></td>
+            <td><span class="event-source src-orchestrator">Orchestrator</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">stepId</span>: <span class="type">string</span>, <span class="key">stepName</span>: <span class="type">string</span>, <span class="key">error</span>: <span class="type">string</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #60a5fa; font-weight: 600;">message_saved</code></td>
+            <td><code style="font-size: 0.75rem;">message:saved</code></td>
+            <td><span class="event-source src-orchestrator">Orchestrator</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">messageId</span>: <span class="type">string</span>, <span class="key">role</span>: <span class="type">'user' | 'assistant'</span>, <span class="key">content</span>: <span class="type">string</span>, <span class="key">stepId</span>?: <span class="type">string</span>, <span class="key">metadata</span>?: <span class="type">Record</span>, <span class="key">attachments</span>?: <span class="type">Array</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #fbbf24; font-weight: 600;">condition_retry</code></td>
+            <td><code style="font-size: 0.75rem;">condition:retry</code></td>
+            <td><span class="event-source src-orchestrator">Orchestrator</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">stepId</span>: <span class="type">string</span>, <span class="key">retryCount</span>: <span class="type">number</span>, <span class="key">maxRetries</span>: <span class="type">number</span>, <span class="key">retryMessage</span>: <span class="type">string</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #fbbf24; font-weight: 600;">condition_jump</code></td>
+            <td><code style="font-size: 0.75rem;">condition:jump</code></td>
+            <td><span class="event-source src-orchestrator">Orchestrator</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">fromStepId</span>: <span class="type">string</span>, <span class="key">toStepId</span>: <span class="type">string</span>, <span class="key">toStepIndex</span>: <span class="type">number</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #fbbf24; font-weight: 600;">context_reset</code></td>
+            <td><code style="font-size: 0.75rem;">context:reset</code></td>
+            <td><span class="event-source src-memory">Memory</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">stepId</span>: <span class="type">string</span>, <span class="key">stepName</span>: <span class="type">string</span>, <span class="key">reason</span>: <span class="type">string</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #f472b6; font-weight: 600;">execution_paused</code></td>
+            <td><code style="font-size: 0.75rem;">execution:paused</code></td>
+            <td><span class="event-source src-orchestrator">Orchestrator</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">stepId</span>: <span class="type">string</span>, <span class="key">stepName</span>: <span class="type">string</span>, <span class="key">stepOrder</span>: <span class="type">number</span>, <span class="key">resumeToken</span>: <span class="type">string | null</span>, <span class="key">askUserQuestion</span>?: { <span class="key">question</span>: <span class="type">string</span>, <span class="key">options</span>?: <span class="type">Array</span> } }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #4ade80; font-weight: 600;">execution_resumed</code></td>
+            <td><code style="font-size: 0.75rem;">execution:resumed</code></td>
+            <td><span class="event-source src-orchestrator">Orchestrator</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">stepId</span>: <span class="type">string</span>, <span class="key">stepName</span>: <span class="type">string</span>, <span class="key">stepOrder</span>: <span class="type">number</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #60a5fa; font-weight: 600;">user_interrupt</code></td>
+            <td><code style="font-size: 0.75rem;">user:interrupt</code></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">stepId</span>: <span class="type">string</span>, <span class="key">stepName</span>: <span class="type">string</span>, <span class="key">userMessage</span>: <span class="type">string</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #67e8f9; font-weight: 600;">dag_batch_start</code></td>
+            <td><code style="font-size: 0.75rem;">dag:batch_start</code></td>
+            <td><span class="event-source src-dag">DAG</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">stepIds</span>: <span class="type">string[]</span>, <span class="key">batchIndex</span>: <span class="type">number</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #67e8f9; font-weight: 600;">step_blocked</code></td>
+            <td><code style="font-size: 0.75rem;">&mdash;</code></td>
+            <td><span class="event-source src-dag">DAG</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">stepId</span>: <span class="type">string</span>, <span class="key">stepName</span>: <span class="type">string</span>, <span class="key">blockedBy</span>: <span class="type">string[]</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #f472b6; font-weight: 600;">validation_failed</code></td>
+            <td><code style="font-size: 0.75rem;">validation:failed</code></td>
+            <td><span class="event-source src-validator">Validator</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">stepId</span>: <span class="type">string</span>, <span class="key">stepName</span>: <span class="type">string</span>, <span class="key">validatorType</span>: <span class="type">string</span>, <span class="key">feedback</span>: <span class="type">string</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #f87171; font-weight: 600;">cancelled</code></td>
+            <td><code style="font-size: 0.75rem;">execution:cancelled</code></td>
+            <td><span class="event-source src-user">User/System</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">executionId</span>: <span class="type">string</span>, <span class="key">conversationId</span>: <span class="type">string</span> }
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><code style="color: #4ade80; font-weight: 600;">complete</code></td>
+            <td><code style="font-size: 0.75rem;">execution:complete</code></td>
+            <td><span class="event-source src-orchestrator">Orchestrator</span></td>
+            <td><span class="event-source src-frontend">Frontend</span></td>
+            <td>
+              <div class="data-shape">
+                { <span class="key">executionId</span>: <span class="type">string</span>, <span class="key">conversationId</span>: <span class="type">string</span>, <span class="key">success</span>: <span class="type">boolean</span> }
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 4: Event Timeline (Swimlane) -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">&#128200;</span>
+      Timeline de Eventos (Execucao Sequencial)
+    </h2>
+
+    <div class="timeline-swim">
+      <div class="swim-label">&#127912; Frontend</div>
+      <div class="swim-content">
+        <span class="swim-event blue">POST /stream</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span style="color: var(--text-muted); font-size: 0.7rem;">aguarda SSE...</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event green">handleEvent()</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event green">UI update</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event gray">invalidateQueries</span>
+      </div>
+
+      <div class="swim-label">&#9881; Backend</div>
+      <div class="swim-content">
+        <span class="swim-event purple">validate</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event purple">SSE headers</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event purple">register listeners</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event purple">execute()</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event purple">cleanup</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event gray">end()</span>
+      </div>
+
+      <div class="swim-label">&#128264; Events</div>
+      <div class="swim-content">
+        <span class="swim-event teal">step_start</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event green">stream</span>
+        <span class="swim-event green">stream</span>
+        <span class="swim-event green">stream</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event blue">message_saved</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event teal">step_complete</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event teal">step_start</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event green">...</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event green">complete</span>
+      </div>
+
+      <div class="swim-label">&#129302; Engine</div>
+      <div class="swim-content">
+        <span class="swim-event amber">spawn CLI</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event amber">parse stdout</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event amber">emit content</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event amber">emit actions</span>
+        <span class="swim-arrow">&rarr;</span>
+        <span class="swim-event gray">exit</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Streaming Phases (State Machine) -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">&#128260;</span>
+      Maquina de Estados &mdash; Streaming Phases (Frontend)
+    </h2>
+
+    <div class="state-machine">
+      <!-- Main flow -->
+      <div class="state-row">
+        <div class="state-node state-idle">&#9898; idle</div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <span class="state-arrow">&rarr;</span>
+          <span class="state-label">sendMessage()</span>
+        </div>
+        <div class="state-node state-preparing">&#9889; preparing</div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <span class="state-arrow">&rarr;</span>
+          <span class="state-label">fetch()</span>
+        </div>
+        <div class="state-node state-connecting">&#128225; connecting</div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <span class="state-arrow">&rarr;</span>
+          <span class="state-label">response.ok</span>
+        </div>
+        <div class="state-node state-thinking">&#129504; ai_thinking</div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <span class="state-arrow">&rarr;</span>
+          <span class="state-label">first content/action</span>
+        </div>
+        <div class="state-node state-streaming">&#9889; streaming</div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <span class="state-arrow">&rarr;</span>
+          <span class="state-label">complete/error</span>
+        </div>
+        <div class="state-node state-idle">&#9898; idle</div>
+      </div>
+
+      <!-- Loopback: new step restarts thinking -->
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-left: 2rem; margin-top: 0.5rem;">
+        <span style="color: var(--text-muted); font-size: 0.8rem;">&#8617;</span>
+        <div class="state-node state-streaming" style="transform: scale(0.85);">streaming</div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <span class="state-arrow">&rarr;</span>
+          <span class="state-label">step_start</span>
+        </div>
+        <div class="state-node state-thinking" style="transform: scale(0.85);">ai_thinking</div>
+        <span style="color: var(--text-muted); font-size: 0.75rem;">(loop por step)</span>
+      </div>
+
+      <!-- Paused state -->
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-left: 2rem; margin-top: 0.5rem;">
+        <span style="color: var(--text-muted); font-size: 0.8rem;">&#8617;</span>
+        <div class="state-node state-thinking" style="transform: scale(0.85);">ai_thinking</div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <span class="state-arrow">&rarr;</span>
+          <span class="state-label">execution_paused</span>
+        </div>
+        <div class="state-node state-paused">&#9208; paused</div>
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          <span class="state-arrow">&rarr;</span>
+          <span class="state-label">execution_resumed</span>
+        </div>
+        <div class="state-node state-thinking" style="transform: scale(0.85);">ai_thinking</div>
+      </div>
+    </div>
+
+    <!-- Phase detail cards -->
+    <div class="grid-3" style="margin-top: 1.5rem;">
+      <div class="card" style="border-top: 3px solid #f59e0b;">
+        <div class="card-header">
+          <span style="font-size: 1.2rem;">&#9889;</span>
+          <span class="card-title">preparing</span>
+        </div>
+        <div class="card-desc">
+          Mensagem sendo enviada ao servidor. <code>clearStreaming()</code> reseta estado. UI mostra "Enviando para o servidor..."
+        </div>
+      </div>
+
+      <div class="card" style="border-top: 3px solid #3b82f6;">
+        <div class="card-header">
+          <span style="font-size: 1.2rem;">&#128225;</span>
+          <span class="card-title">connecting</span>
+        </div>
+        <div class="card-desc">
+          HTTP request em voo. Aguardando response do backend. UI mostra "Conectando com a IA..."
+        </div>
+      </div>
+
+      <div class="card" style="border-top: 3px solid #8b5cf6;">
+        <div class="card-header">
+          <span style="font-size: 1.2rem;">&#129504;</span>
+          <span class="card-title">ai_thinking</span>
+        </div>
+        <div class="card-desc">
+          SSE conectado, aguardando primeiro conteudo/action. Se >10s sem resposta, mostra hint visual. UI mostra "Aguardando resposta da IA..."
+        </div>
+      </div>
+
+      <div class="card" style="border-top: 3px solid #22c55e;">
+        <div class="card-header">
+          <span style="font-size: 1.2rem;">&#9889;</span>
+          <span class="card-title">streaming</span>
+        </div>
+        <div class="card-desc">
+          Conteudo sendo recebido ativamente. Transicao ao receber primeiro <code>stream</code> com content ou action (tool_use/thinking/tool_result). UI mostra "Recebendo resposta..."
+        </div>
+      </div>
+
+      <div class="card" style="border-top: 3px solid #64748b;">
+        <div class="card-header">
+          <span style="font-size: 1.2rem;">&#9898;</span>
+          <span class="card-title">idle</span>
+        </div>
+        <div class="card-desc">
+          Nenhuma execucao ativa. Estado default. Indicador de streaming nao e renderizado (<code>StreamingStatus</code> retorna null).
+        </div>
+      </div>
+
+      <div class="card" style="border-top: 3px solid #ec4899;">
+        <div class="card-header">
+          <span style="font-size: 1.2rem;">&#9208;</span>
+          <span class="card-title">paused (especial)</span>
+        </div>
+        <div class="card-desc">
+          Execucao pausada aguardando input do usuario. <code>isPaused=true</code> com <code>pausedInfo</code> contendo <code>resumeToken</code> e <code>askUserQuestion</code>. User responde e <code>execution_resumed</code> volta para <code>ai_thinking</code>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 6: Auto-reconnect -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-3);">&#128260;</span>
+      Auto-Reconnect
+    </h2>
+
+    <div class="grid-2">
+      <div>
+        <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Fluxo de Reconexao</h3>
+        <div class="reconnect-flow">
+          <div class="reconnect-step">
+            <div class="reconnect-num">1</div>
+            <div class="reconnect-body">
+              <h4>Pagina carrega (mount)</h4>
+              <p><code>useEffect</code> no <code>useSSEStream</code> dispara <code>checkAndReconnect()</code></p>
+            </div>
+          </div>
+          <div class="reconnect-step">
+            <div class="reconnect-num">2</div>
+            <div class="reconnect-body">
+              <h4>Consulta status</h4>
+              <p><code>GET /conversations/:id/execution-status</code> retorna <code>{ active, state, pausedInfo }</code></p>
+            </div>
+          </div>
+          <div class="reconnect-step">
+            <div class="reconnect-num">3</div>
+            <div class="reconnect-body">
+              <h4>Se state === 'running'</h4>
+              <p>Chama <code>watchExecution()</code> que abre <code>GET /conversations/:id/watch</code> (SSE read-only)</p>
+            </div>
+          </div>
+          <div class="reconnect-step">
+            <div class="reconnect-num">4</div>
+            <div class="reconnect-body">
+              <h4>Se state === 'paused'</h4>
+              <p>Restaura <code>setPaused(true, pausedInfo)</code> para mostrar UI de input ao usuario</p>
+            </div>
+          </div>
+          <div class="reconnect-step">
+            <div class="reconnect-num">5</div>
+            <div class="reconnect-body">
+              <h4>Se nao ativo</h4>
+              <p>Watch endpoint retorna <code>no_active_execution</code> e fecha imediatamente. Nenhuma UI de streaming e mostrada.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Endpoints de Suporte</h3>
+
+        <div class="card" style="margin-bottom: 1rem;">
+          <div class="card-header">
+            <span class="badge badge-green">GET</span>
+            <span class="card-title" style="font-size: 0.9rem;">/conversations/:id/execution-status</span>
+          </div>
+          <div class="card-desc">
+            Retorna estado atual da execucao. Checa primeiro in-memory (<code>taskOrchestrator.isExecuting</code>), depois paused state no DB.
+          </div>
+          <div class="data-shape" style="margin-top: 0.75rem;">
+            { <span class="key">active</span>: <span class="type">boolean</span>, <span class="key">state</span>: <span class="type">'running' | 'paused' | null</span>, <span class="key">stepIndex</span>: <span class="type">number | null</span>, <span class="key">pausedInfo</span>: <span class="type">object | null</span> }
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 1rem;">
+          <div class="card-header">
+            <span class="badge badge-green">GET</span>
+            <span class="card-title" style="font-size: 0.9rem;">/conversations/:id/watch</span>
+          </div>
+          <div class="card-desc">
+            SSE read-only: observa execucao em andamento sem iniciar nova. Mesmos 15 handlers que o stream principal. Se nenhuma execucao ativa, retorna <code>no_active_execution</code> e fecha.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="badge badge-red">POST</span>
+            <span class="card-title" style="font-size: 0.9rem;">/conversations/:id/cancel</span>
+          </div>
+          <div class="card-desc">
+            Safety net para cancelamento. Frontend aborta via <code>AbortController</code> (que triggers backend close handler) e tambem chama este endpoint como fallback.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 7: BullMQ Queue -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">&#128230;</span>
+      BullMQ Queue
+    </h2>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-icon" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa;">&#128218;</span>
+          <div>
+            <div class="card-title">Configuracao da Queue</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);">execution-queue.ts</div>
+          </div>
+        </div>
+        <div class="code-block" style="margin-bottom: 1rem;">
+<span class="keyword">const</span> queue = <span class="keyword">new</span> <span class="type">Queue</span>&lt;<span class="type">ExecutionJobData</span>&gt;(<span class="string">'execution'</span>, {
+  <span class="key">connection</span>: getRedis(),
+  <span class="key">defaultJobOptions</span>: {
+    <span class="key">removeOnComplete</span>: { <span class="key">count</span>: <span class="number">100</span> },
+    <span class="key">removeOnFail</span>: { <span class="key">count</span>: <span class="number">50</span> },
+    <span class="key">attempts</span>: <span class="number">1</span>,  <span class="comment">// No auto-retry</span>
+  },
+})
+        </div>
+        <table style="width: 100%; font-size: 0.82rem;">
+          <tr><td style="font-weight: 600; padding: 0.4rem;">Queue name</td><td><code>'execution'</code></td></tr>
+          <tr><td style="font-weight: 600; padding: 0.4rem;">removeOnComplete</td><td>100 jobs mantidos</td></tr>
+          <tr><td style="font-weight: 600; padding: 0.4rem;">removeOnFail</td><td>50 jobs mantidos</td></tr>
+          <tr><td style="font-weight: 600; padding: 0.4rem;">attempts</td><td>1 (sem retry automatico)</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-icon" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">&#9881;</span>
+          <div>
+            <div class="card-title">Worker</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);">execution-worker.ts</div>
+          </div>
+        </div>
+        <div class="code-block" style="margin-bottom: 1rem;">
+<span class="keyword">const</span> CONCURRENCY = parseInt(
+  process.env.<span class="type">EXECUTION_CONCURRENCY</span> || <span class="string">'3'</span>, 10
+)
+
+<span class="keyword">new</span> <span class="type">Worker</span>&lt;<span class="type">ExecutionJobData</span>&gt;(
+  <span class="string">'execution'</span>,
+  processExecutionJob,
+  { <span class="key">connection</span>: getRedis(), <span class="key">concurrency</span>: CONCURRENCY }
+)
+        </div>
+
+        <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem;">Job Data Shape</h4>
+        <div class="data-shape">
+{
+  <span class="key">conversationId</span>: <span class="type">string</span>
+  <span class="key">workflowId</span>: <span class="type">string</span>
+  <span class="key">userId</span>: <span class="type">string</span>
+  <span class="key">content</span>: <span class="type">string</span>
+  <span class="key">stepIndex</span>?: <span class="type">number</span>
+  <span class="key">projectPath</span>: <span class="type">string</span>
+  <span class="key">workflowType</span>: <span class="type">string</span>
+  <span class="key">attachments</span>?: <span class="type">Array&lt;{ id, filename, mimeType, path, projectPath, url, size? }&gt;</span>
+}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 8: Redis Pub/Sub -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-3);">&#128293;</span>
+      Redis Connection Pools
+    </h2>
+
+    <div class="pool-visual">
+      <div class="pool-item">
+        <div class="pool-circle general">&#128268;</div>
+        <div class="pool-name" style="color: #60a5fa;">general</div>
+        <div class="pool-desc">Rate limiting, JWT cache, BullMQ queue operations, general data</div>
+      </div>
+
+      <div class="pool-item">
+        <div class="pool-circle subscriber">&#128227;</div>
+        <div class="pool-name" style="color: #4ade80;">subscriber</div>
+        <div class="pool-desc">Pub/Sub listener. Conexao dedicada (ioredis requer conexao separada para subscribe)</div>
+      </div>
+
+      <div class="pool-item">
+        <div class="pool-circle publisher">&#128226;</div>
+        <div class="pool-name" style="color: #fbbf24;">publisher</div>
+        <div class="pool-desc">Pub/Sub emitter. Publica eventos para outros processos/replicas</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top: 1.5rem;">
+      <div class="card">
+        <div class="card-header">
+          <span style="font-size: 1.1rem;">&#9881;</span>
+          <span class="card-title">Configuracao</span>
+        </div>
+        <div class="code-block">
+<span class="keyword">new</span> <span class="type">Redis</span>(REDIS_URL, {
+  <span class="key">maxRetriesPerRequest</span>: <span class="type">null</span>,
+  <span class="key">lazyConnect</span>: <span class="keyword">true</span>,
+  <span class="key">connectionName</span>: name,
+})
+        </div>
+        <ul style="margin-top: 0.75rem; padding-left: 1.25rem; font-size: 0.82rem; color: var(--text-secondary); line-height: 2;">
+          <li><strong>Lazy singletons</strong> &mdash; conecta apenas no primeiro acesso</li>
+          <li><strong>maxRetriesPerRequest: null</strong> &mdash; necessario para BullMQ</li>
+          <li><strong>connectionName</strong> &mdash; identifica pool em <code>CLIENT LIST</code></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span style="font-size: 1.1rem;">&#128154;</span>
+          <span class="card-title">Graceful Degradation</span>
+        </div>
+        <div class="card-desc" style="margin-bottom: 0.75rem;">
+          Se Redis nao estiver disponivel, o sistema continua operando com funcionalidade reduzida:
+        </div>
+        <ul style="padding-left: 1.25rem; font-size: 0.82rem; color: var(--text-secondary); line-height: 2;">
+          <li><strong>Queue</strong> &mdash; <code>getExecutionQueue()</code> retorna <code>null</code>, execucao direta sem fila</li>
+          <li><strong>Worker</strong> &mdash; <code>startExecutionWorker()</code> loga warning e nao cria worker</li>
+          <li><strong>Cache</strong> &mdash; fallback para operacao sem cache (mais lento)</li>
+          <li><strong>Rate limit</strong> &mdash; desabilitado quando Redis indisponivel</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 9: HTTP Timeout Configuration -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">&#9201;</span>
+      HTTP Timeout Configuration
+    </h2>
+
+    <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+      Configuracoes criticas no <code>server.ts</code> para suportar conexoes SSE de longa duracao. Sem estas configuracoes, o Node.js encerraria conexoes SSE prematuramente.
+    </p>
+
+    <div class="timeout-bar">
+      <div class="timeout-name" style="color: #60a5fa;">keepAliveTimeout</div>
+      <div class="timeout-track">
+        <div class="timeout-fill" style="width: 85%; background: var(--gradient-4);"></div>
+      </div>
+      <div class="timeout-value" style="color: #60a5fa;">10 min</div>
+    </div>
+
+    <div class="timeout-bar">
+      <div class="timeout-name" style="color: #a78bfa;">headersTimeout</div>
+      <div class="timeout-track">
+        <div class="timeout-fill" style="width: 86%; background: var(--gradient-2);"></div>
+      </div>
+      <div class="timeout-value" style="color: #a78bfa;">10 min + 1s</div>
+    </div>
+
+    <div class="timeout-bar">
+      <div class="timeout-name" style="color: #4ade80;">requestTimeout</div>
+      <div class="timeout-track">
+        <div class="timeout-fill" style="width: 100%; background: var(--gradient-1);"></div>
+      </div>
+      <div class="timeout-value" style="color: #4ade80;">0 (ilimitado)</div>
+    </div>
+
+    <div class="timeout-bar">
+      <div class="timeout-name" style="color: #fbbf24;">socketTimeout</div>
+      <div class="timeout-track">
+        <div class="timeout-fill" style="width: 100%; background: var(--gradient-3);"></div>
+      </div>
+      <div class="timeout-value" style="color: #fbbf24;">0 (ilimitado)</div>
+    </div>
+
+    <div class="code-block" style="margin-top: 1.5rem;">
+<span class="comment">// server.ts - HTTP Server timeouts for SSE</span>
+httpServer.<span class="key">keepAliveTimeout</span> = <span class="number">10</span> * <span class="number">60</span> * <span class="number">1000</span>  <span class="comment">// 10 min</span>
+httpServer.<span class="key">headersTimeout</span>  = <span class="number">10</span> * <span class="number">60</span> * <span class="number">1000</span> + <span class="number">1000</span>  <span class="comment">// must be > keepAliveTimeout</span>
+httpServer.<span class="key">requestTimeout</span>  = <span class="number">0</span>  <span class="comment">// no limit for SSE streams</span>
+    </div>
+
+    <div class="card" style="margin-top: 1rem; border-left: 3px solid #f59e0b;">
+      <div class="card-header">
+        <span style="font-size: 1rem;">&#9888;</span>
+        <span class="card-title">Por que headersTimeout > keepAliveTimeout?</span>
+      </div>
+      <div class="card-desc">
+        O Node.js exige que <code>headersTimeout</code> seja maior que <code>keepAliveTimeout</code>. Se nao for, o servidor pode fechar conexoes keep-alive antes do timeout de headers, causando erros intermitentes em SSE.
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 10: SSE Headers -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">&#128221;</span>
+      SSE Headers
+    </h2>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 0.75rem;">Headers de Response</div>
+        <div class="code-block">
+{
+  <span class="string">'Content-Type'</span>: <span class="string">'text/event-stream'</span>,
+  <span class="string">'Cache-Control'</span>: <span class="string">'no-cache'</span>,
+  <span class="string">'Connection'</span>: <span class="string">'keep-alive'</span>,
+  <span class="string">'Access-Control-Allow-Origin'</span>: CORS_ORIGIN || <span class="string">'*'</span>,
+  <span class="string">'X-Accel-Buffering'</span>: <span class="string">'no'</span>,
+}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom: 0.75rem;">Formato de Evento SSE</div>
+        <div class="code-block">
+<span class="comment">// Formato padrao SSE</span>
+event: step_start
+data: {"stepName":"Analise","stepOrder":1,"totalSteps":3}
+
+<span class="comment">// Heartbeat (comment - ignorado pelo parser)</span>
+:heartbeat
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: EventEmitter Architecture -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">&#128264;</span>
+      OrchestratorEvents &mdash; Bridge Architecture
+    </h2>
+
+    <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+      <code>OrchestratorEvents</code> estende <code>EventEmitter</code> do Node.js e serve como bridge entre o orchestrator (que executa) e a camada HTTP (que transmite via SSE). E um singleton exportado como <code>orchestratorEvents</code>.
+    </p>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Metodo Typed</th>
+            <th>Evento Interno</th>
+            <th>Interface TypeScript</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>emitStepStart()</code></td><td><code>step:start</code></td><td><code>StepStartEvent</code></td></tr>
+          <tr><td><code>emitStepStream()</code></td><td><code>step:stream</code></td><td><code>StepStreamEvent</code></td></tr>
+          <tr><td><code>emitStepComplete()</code></td><td><code>step:complete</code></td><td><code>StepCompleteEvent</code></td></tr>
+          <tr><td><code>emitStepError()</code></td><td><code>step:error</code></td><td><code>StepErrorEvent</code></td></tr>
+          <tr><td><code>emitMessageSaved()</code></td><td><code>message:saved</code></td><td><code>MessageSavedEvent</code></td></tr>
+          <tr><td><code>emitConditionRetry()</code></td><td><code>condition:retry</code></td><td><code>ConditionRetryEvent</code></td></tr>
+          <tr><td><code>emitConditionJump()</code></td><td><code>condition:jump</code></td><td><code>ConditionJumpEvent</code></td></tr>
+          <tr><td><code>emitContextReset()</code></td><td><code>context:reset</code></td><td><code>ContextResetEvent</code></td></tr>
+          <tr><td><code>emitExecutionPaused()</code></td><td><code>execution:paused</code></td><td><code>ExecutionPausedEvent</code></td></tr>
+          <tr><td><code>emitExecutionResumed()</code></td><td><code>execution:resumed</code></td><td><code>ExecutionResumedEvent</code></td></tr>
+          <tr><td><code>emitUserInterrupt()</code></td><td><code>user:interrupt</code></td><td><code>UserInterruptEvent</code></td></tr>
+          <tr><td><code>emitDagBatchStart()</code></td><td><code>dag:batch_start</code></td><td><code>DagBatchStartEvent</code></td></tr>
+          <tr><td><code>emitValidationFailed()</code></td><td><code>validation:failed</code></td><td><code>ValidationFailedEvent</code></td></tr>
+          <tr><td><code>emitExecutionCancelled()</code></td><td><code>execution:cancelled</code></td><td><code>ExecutionCancelledEvent</code></td></tr>
+          <tr><td><code>emitExecutionComplete()</code></td><td><code>execution:complete</code></td><td><code>ExecutionCompleteEvent</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top: 1rem; border-left: 3px solid #06b6d4;">
+      <div class="card-header">
+        <span style="font-size: 1rem;">&#128161;</span>
+        <span class="card-title">Arquivos-chave</span>
+      </div>
+      <div class="card-desc">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.82rem;">
+          <div><code>backend/src/domains/execution/orchestrator/events.ts</code></div>
+          <div style="color: var(--text-muted);">Definicao de interfaces e OrchestratorEvents</div>
+          <div><code>backend/src/domains/execution/execution.routes.ts</code></div>
+          <div style="color: var(--text-muted);">SSE endpoints e handler registration</div>
+          <div><code>frontend/src/features/conversations/hooks/use-sse-stream.ts</code></div>
+          <div style="color: var(--text-muted);">Hook de SSE com state machine</div>
+          <div><code>frontend/src/features/conversations/components/streaming-status.tsx</code></div>
+          <div style="color: var(--text-muted);">UI visual de fase de streaming</div>
+          <div><code>backend/src/domains/execution/queue/execution-queue.ts</code></div>
+          <div style="color: var(--text-muted);">BullMQ queue setup</div>
+          <div><code>backend/src/domains/execution/queue/execution-worker.ts</code></div>
+          <div style="color: var(--text-muted);">BullMQ worker com concurrency</div>
+          <div><code>backend/src/lib/redis.ts</code></div>
+          <div style="color: var(--text-muted);">3 connection pools Redis</div>
+          <div><code>backend/src/server.ts</code></div>
+          <div style="color: var(--text-muted);">HTTP timeout configuration</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="shared.js"></script>
+</body>
+</html>
