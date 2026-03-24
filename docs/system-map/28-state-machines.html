@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>State Machines | Orquetrador Claude - System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* ===== State Machine Diagram Styles ===== */
+    .sm-diagram {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      position: relative;
+      overflow: visible;
+    }
+    .sm-diagram::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+
+    /* State nodes */
+    .state-node {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: 24px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 2px solid;
+      position: relative;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+    .state-node:hover {
+      transform: scale(1.05);
+      z-index: 2;
+    }
+    .state-node .state-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* State colors */
+    .state-draft {
+      background: rgba(100, 116, 139, 0.15);
+      border-color: rgba(100, 116, 139, 0.4);
+      color: #94a3b8;
+    }
+    .state-draft .state-dot { background: #94a3b8; }
+
+    .state-queued, .state-pending, .state-idle {
+      background: rgba(100, 116, 139, 0.15);
+      border-color: rgba(100, 116, 139, 0.4);
+      color: #cbd5e1;
+    }
+    .state-queued .state-dot, .state-pending .state-dot, .state-idle .state-dot { background: #94a3b8; }
+
+    .state-active, .state-running, .state-streaming {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: #60a5fa;
+    }
+    .state-active .state-dot, .state-running .state-dot, .state-streaming .state-dot {
+      background: #3b82f6;
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    .state-completed, .state-success {
+      background: rgba(34, 197, 94, 0.15);
+      border-color: rgba(34, 197, 94, 0.5);
+      color: #4ade80;
+    }
+    .state-completed .state-dot, .state-success .state-dot {
+      background: #22c55e;
+      box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+    }
+
+    .state-failed, .state-error {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #f87171;
+    }
+    .state-failed .state-dot, .state-error .state-dot {
+      background: #ef4444;
+      box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+    }
+
+    .state-paused, .state-needs-input {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.5);
+      color: #fbbf24;
+    }
+    .state-paused .state-dot, .state-needs-input .state-dot {
+      background: #f59e0b;
+      box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+    }
+
+    .state-cancelled {
+      background: rgba(168, 85, 247, 0.15);
+      border-color: rgba(168, 85, 247, 0.5);
+      color: #c084fc;
+    }
+    .state-cancelled .state-dot { background: #a855f7; }
+
+    .state-archived, .state-timeout {
+      background: rgba(100, 116, 139, 0.1);
+      border-color: rgba(100, 116, 139, 0.3);
+      color: #64748b;
+    }
+    .state-archived .state-dot, .state-timeout .state-dot { background: #64748b; }
+
+    .state-forked {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: rgba(6, 182, 212, 0.5);
+      color: #22d3ee;
+    }
+    .state-forked .state-dot { background: #06b6d4; box-shadow: 0 0 6px rgba(6, 182, 212, 0.5); }
+
+    .state-preparing, .state-connecting, .state-ai-thinking {
+      background: rgba(139, 92, 246, 0.15);
+      border-color: rgba(139, 92, 246, 0.5);
+      color: #a78bfa;
+    }
+    .state-preparing .state-dot, .state-connecting .state-dot, .state-ai-thinking .state-dot {
+      background: #8b5cf6;
+      box-shadow: 0 0 6px rgba(139, 92, 246, 0.5);
+    }
+
+    .state-interrupted {
+      background: rgba(249, 115, 22, 0.15);
+      border-color: rgba(249, 115, 22, 0.5);
+      color: #fb923c;
+    }
+    .state-interrupted .state-dot { background: #f97316; }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Transition arrow between states */
+    .sm-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .sm-row:last-child { margin-bottom: 0; }
+
+    .sm-arrow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 0 0.25rem;
+      position: relative;
+    }
+    .sm-arrow-line {
+      width: 50px;
+      height: 2px;
+      background: var(--border-color);
+      position: relative;
+    }
+    .sm-arrow-line::after {
+      content: '';
+      position: absolute;
+      right: -1px;
+      top: -4px;
+      border: 5px solid transparent;
+      border-left-color: var(--border-color);
+    }
+    .sm-arrow-label {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
+      background: var(--bg-secondary);
+      padding: 0 4px;
+    }
+
+    /* Full state diagram layout */
+    .state-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      padding: 1.5rem 0;
+    }
+    .state-diagram-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Complex diagram - grid-based */
+    .sm-grid {
+      display: grid;
+      gap: 1rem;
+      padding: 1.5rem;
+    }
+    .sm-grid-node {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Vertical connector */
+    .sm-vert-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+    .sm-vert-line {
+      width: 2px;
+      height: 30px;
+      background: var(--border-color);
+      position: relative;
+    }
+    .sm-vert-line::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: -4px;
+      border: 5px solid transparent;
+      border-top-color: var(--border-color);
+    }
+    .sm-vert-label {
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      padding: 2px 6px;
+      background: var(--bg-secondary);
+    }
+
+    /* Horizontal path with label */
+    .sm-path {
+      display: flex;
+      align-items: center;
+      margin: 0.75rem 0;
+    }
+    .sm-path-from, .sm-path-to { flex-shrink: 0; }
+    .sm-path-line {
+      flex: 1;
+      min-width: 40px;
+      height: 2px;
+      background: var(--border-color);
+      position: relative;
+      margin: 0 4px;
+    }
+    .sm-path-line::after {
+      content: '';
+      position: absolute;
+      right: -1px;
+      top: -4px;
+      border: 5px solid transparent;
+      border-left-color: var(--border-color);
+    }
+    .sm-path-trigger {
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 1px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .trigger-user {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+    .trigger-system {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+    .trigger-error {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+    .trigger-auto {
+      background: rgba(139, 92, 246, 0.2);
+      color: #a78bfa;
+    }
+
+    /* Bidirectional arrow */
+    .sm-path-line.bidirectional::before {
+      content: '';
+      position: absolute;
+      left: -1px;
+      top: -4px;
+      border: 5px solid transparent;
+      border-right-color: var(--border-color);
+    }
+
+    /* Overview cards */
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .overview-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      transition: all 0.3s;
+      cursor: default;
+    }
+    .overview-card:hover {
+      border-color: rgba(13, 148, 136, 0.4);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+    .overview-card .oc-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 0.75rem;
+    }
+    .overview-card .oc-title {
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.35rem;
+    }
+    .overview-card .oc-states {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+    .overview-card .oc-meta {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    /* Transition table */
+    .trans-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .trans-table th {
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .trans-table td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+    .trans-table tr:last-child td { border-bottom: none; }
+    .trans-table tr:hover td { background: var(--bg-card-hover); }
+
+    .mono-sm {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+    }
+
+    /* Section divider */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+      margin: 2.5rem 0;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 0.78rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Result tags */
+    .result-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.25rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin: 0.2rem;
+    }
+
+    /* Persistence diagram */
+    .persist-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .persist-field {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+    }
+    .persist-field:last-child { border-bottom: none; }
+    .persist-field-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: #67e8f9;
+      min-width: 160px;
+    }
+    .persist-field-type {
+      font-size: 0.75rem;
+      color: #c084fc;
+      background: rgba(139, 92, 246, 0.1);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .persist-field-desc {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    /* Concurrency visualization */
+    .conc-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      height: 32px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+    }
+    .conc-slot {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+      border-right: 1px solid rgba(30, 41, 59, 0.5);
+      transition: all 0.3s;
+    }
+    .conc-slot:last-child { border-right: none; }
+    .conc-slot.occupied {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+    .conc-slot.free {
+      background: rgba(100, 116, 139, 0.05);
+      color: #475569;
+    }
+
+    @media (max-width: 768px) {
+      .sm-path { flex-wrap: wrap; justify-content: center; }
+      .sm-path-line { min-width: 30px; }
+      .state-node { font-size: 0.75rem; padding: 0.4rem 0.8rem; }
+      .overview-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">System Map</a>
+      <span>&rsaquo;</span>
+      <span>28 &mdash; State Machines</span>
+    </div>
+    <h1>State Machines</h1>
+    <p class="subtitle">Diagramas completos das 8 maquinas de estado, transicoes, triggers e persistencia do Orquetrador Claude.</p>
+  </div>
+
+  <!-- ============================== -->
+  <!-- SECTION 1 - OVERVIEW           -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--bg-accent-subtle);">&#9881;</div>
+      5 State Machines no Sistema
+    </div>
+    <p class="card-desc" style="margin-bottom:1.25rem;">O Orquetrador Claude possui 5 maquinas de estado principais que controlam o ciclo de vida de workflows, conversas, execucoes, schedulers e webhooks. Alem disso, o frontend gerencia fases de streaming e o sistema de traces tem seus proprios status de resultado.</p>
+
+    <div class="overview-grid">
+      <div class="overview-card">
+        <div class="oc-icon" style="background: rgba(59,130,246,0.15);">&#128466;</div>
+        <div class="oc-title">Workflow Status</div>
+        <div class="oc-states">3 estados, 3 transicoes</div>
+        <div class="oc-meta">
+          <span class="badge badge-gray">draft</span>
+          <span class="badge badge-blue">active</span>
+          <span class="badge badge-gray">archived</span>
+        </div>
+      </div>
+      <div class="overview-card">
+        <div class="oc-icon" style="background: rgba(6,182,212,0.15);">&#128172;</div>
+        <div class="oc-title">Conversation Status</div>
+        <div class="oc-states">5 estados, 4 transicoes</div>
+        <div class="oc-meta">
+          <span class="badge badge-blue">active</span>
+          <span class="badge badge-green">completed</span>
+          <span class="badge badge-red">failed</span>
+          <span class="badge badge-teal">forked</span>
+        </div>
+      </div>
+      <div class="overview-card">
+        <div class="oc-icon" style="background: rgba(245,158,11,0.15);">&#9889;</div>
+        <div class="oc-title">Execution State</div>
+        <div class="oc-states">6 estados, 8 transicoes</div>
+        <div class="oc-meta">
+          <span class="badge badge-gray">queued</span>
+          <span class="badge badge-blue">running</span>
+          <span class="badge badge-amber">paused</span>
+          <span class="badge badge-green">completed</span>
+          <span class="badge badge-red">failed</span>
+          <span class="badge badge-purple">cancelled</span>
+        </div>
+      </div>
+      <div class="overview-card">
+        <div class="oc-icon" style="background: rgba(139,92,246,0.15);">&#9200;</div>
+        <div class="oc-title">Scheduled Execution</div>
+        <div class="oc-states">4 estados, 4 transicoes</div>
+        <div class="oc-meta">
+          <span class="badge badge-gray">pending</span>
+          <span class="badge badge-blue">running</span>
+          <span class="badge badge-green">completed</span>
+          <span class="badge badge-red">failed</span>
+        </div>
+      </div>
+      <div class="overview-card">
+        <div class="oc-icon" style="background: rgba(34,197,94,0.15);">&#128268;</div>
+        <div class="oc-title">Webhook Delivery</div>
+        <div class="oc-states">3 estados, 2 transicoes</div>
+        <div class="oc-meta">
+          <span class="badge badge-gray">pending</span>
+          <span class="badge badge-green">success</span>
+          <span class="badge badge-red">failed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- SECTION 2 - WORKFLOW STATUS     -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: rgba(59,130,246,0.15);">&#128466;</div>
+      Workflow Status
+    </div>
+    <p class="card-desc" style="margin-bottom:1.25rem;">Controla o ciclo de vida de um workflow: da criacao (draft) ate a publicacao (active) e o arquivamento. Workflows arquivados podem ser reativados.</p>
+
+    <div class="sm-diagram" style="text-align:center;">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient-4);border-radius:16px 16px 0 0;"></div>
+
+      <!-- draft -> active -->
+      <div class="sm-path" style="justify-content:center;">
+        <div class="sm-path-from">
+          <span class="state-node state-draft"><span class="state-dot"></span>draft</span>
+        </div>
+        <div class="sm-path-line" style="flex:0;width:120px;">
+          <span class="sm-path-trigger trigger-user">publish</span>
+        </div>
+        <div class="sm-path-to">
+          <span class="state-node state-active"><span class="state-dot"></span>active</span>
+        </div>
+      </div>
+
+      <!-- active -> archived -->
+      <div class="sm-path" style="justify-content:center;">
+        <div class="sm-path-from">
+          <span class="state-node state-active"><span class="state-dot"></span>active</span>
+        </div>
+        <div class="sm-path-line" style="flex:0;width:120px;">
+          <span class="sm-path-trigger trigger-user">archive</span>
+        </div>
+        <div class="sm-path-to">
+          <span class="state-node state-archived"><span class="state-dot"></span>archived</span>
+        </div>
+      </div>
+
+      <!-- archived -> active -->
+      <div class="sm-path" style="justify-content:center;">
+        <div class="sm-path-from">
+          <span class="state-node state-archived"><span class="state-dot"></span>archived</span>
+        </div>
+        <div class="sm-path-line" style="flex:0;width:120px;">
+          <span class="sm-path-trigger trigger-user">reactivate</span>
+        </div>
+        <div class="sm-path-to">
+          <span class="state-node state-active"><span class="state-dot"></span>active</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transition table -->
+    <div class="table-container" style="margin-top:1.25rem;">
+      <table class="trans-table">
+        <thead>
+          <tr><th>De</th><th>Para</th><th>Trigger</th><th>Descricao</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-gray">draft</span></td>
+            <td><span class="badge badge-blue">active</span></td>
+            <td class="mono-sm">publish</td>
+            <td>Usuario publica o workflow. Validacao de steps obrigatoria.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">active</span></td>
+            <td><span class="badge badge-gray">archived</span></td>
+            <td class="mono-sm">archive</td>
+            <td>Usuario arquiva. Execucoes em andamento nao sao afetadas.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-gray">archived</span></td>
+            <td><span class="badge badge-blue">active</span></td>
+            <td class="mono-sm">reactivate</td>
+            <td>Usuario reativa o workflow arquivado.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- SECTION 3 - CONVERSATION STATUS -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: rgba(6,182,212,0.15);">&#128172;</div>
+      Conversation Status
+    </div>
+    <p class="card-desc" style="margin-bottom:1.25rem;">Ciclo de vida de conversas. Uma conversa ativa pode terminar com sucesso, erro ou ser arquivada. O fork cria uma nova conversa com parentId referenciando a original.</p>
+
+    <div class="sm-diagram">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient-1);border-radius:16px 16px 0 0;"></div>
+
+      <!-- active is the center -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1.5rem;">
+
+        <!-- active -> completed -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-active"><span class="state-dot"></span>active</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:140px;">
+            <span class="sm-path-trigger trigger-system">all steps done</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-completed"><span class="state-dot"></span>completed</span>
+          </div>
+        </div>
+
+        <!-- active -> failed -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-active"><span class="state-dot"></span>active</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:140px;">
+            <span class="sm-path-trigger trigger-error">terminal error</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-failed"><span class="state-dot"></span>failed</span>
+          </div>
+        </div>
+
+        <!-- active -> archived -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-active"><span class="state-dot"></span>active</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:140px;">
+            <span class="sm-path-trigger trigger-user">user archives</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-archived"><span class="state-dot"></span>archived</span>
+          </div>
+        </div>
+
+        <!-- any -> forked -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node" style="background:rgba(100,116,139,0.1);border-color:rgba(100,116,139,0.3);color:#94a3b8;border-style:dashed;">
+              <span class="state-dot" style="background:#64748b;"></span>any state
+            </span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:140px;">
+            <span class="sm-path-trigger trigger-auto">fork (parentId)</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-forked"><span class="state-dot"></span>forked</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container" style="margin-top:1.25rem;">
+      <table class="trans-table">
+        <thead>
+          <tr><th>De</th><th>Para</th><th>Trigger</th><th>Descricao</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-blue">active</span></td>
+            <td><span class="badge badge-green">completed</span></td>
+            <td class="mono-sm">all steps done</td>
+            <td>Todos os steps do workflow foram executados com sucesso.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">active</span></td>
+            <td><span class="badge badge-red">failed</span></td>
+            <td class="mono-sm">terminal error</td>
+            <td>Erro irrecuperavel durante a execucao (max retries atingido).</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">active</span></td>
+            <td><span class="badge badge-gray">archived</span></td>
+            <td class="mono-sm">user archives</td>
+            <td>Usuario arquiva a conversa manualmente.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-gray">any</span></td>
+            <td><span class="badge badge-teal">forked</span></td>
+            <td class="mono-sm">fork</td>
+            <td>Cria nova conversa com parentId. Herda contexto parcial.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- SECTION 4 - EXECUTION STATE     -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: rgba(245,158,11,0.15);">&#9889;</div>
+      Execution State
+    </div>
+    <p class="card-desc" style="margin-bottom:1.25rem;">A maquina de estado mais complexa do sistema. Controla cada execucao individual com suporte a pause/resume, cancelamento e recovery apos restart do servidor.</p>
+
+    <div class="sm-diagram">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient-3);border-radius:16px 16px 0 0;"></div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1.5rem;">
+
+        <!-- queued -> running -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-queued"><span class="state-dot"></span>queued</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-system">worker picks up</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-running"><span class="state-dot"></span>running</span>
+          </div>
+        </div>
+
+        <!-- running -> paused -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-running"><span class="state-dot"></span>running</span>
+          </div>
+          <div class="sm-path-line bidirectional" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-user">pause / needs_input</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-paused"><span class="state-dot"></span>paused</span>
+          </div>
+        </div>
+
+        <!-- paused -> running -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-paused"><span class="state-dot"></span>paused</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-user">user resumes</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-running"><span class="state-dot"></span>running</span>
+          </div>
+        </div>
+
+        <!-- running -> completed -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-running"><span class="state-dot"></span>running</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-system">all steps succeed</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-completed"><span class="state-dot"></span>completed</span>
+          </div>
+        </div>
+
+        <!-- running -> failed -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-running"><span class="state-dot"></span>running</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-error">terminal error</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-failed"><span class="state-dot"></span>failed</span>
+          </div>
+        </div>
+
+        <!-- running -> cancelled -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-running"><span class="state-dot"></span>running</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-user">user cancels</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-cancelled"><span class="state-dot"></span>cancelled</span>
+          </div>
+        </div>
+
+        <!-- paused -> cancelled -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-paused"><span class="state-dot"></span>paused</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-user">user cancels</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-cancelled"><span class="state-dot"></span>cancelled</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- All transitions table -->
+    <div class="table-container" style="margin-top:1.25rem;">
+      <table class="trans-table">
+        <thead>
+          <tr><th>De</th><th>Para</th><th>Trigger</th><th>Tipo</th><th>Descricao</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-gray">queued</span></td>
+            <td><span class="badge badge-blue">running</span></td>
+            <td class="mono-sm">worker picks up</td>
+            <td><span class="badge badge-green" style="font-size:0.65rem;">system</span></td>
+            <td>BullMQ worker consome job da fila e inicia execucao.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">running</span></td>
+            <td><span class="badge badge-amber">paused</span></td>
+            <td class="mono-sm">pause / needs_input</td>
+            <td><span class="badge badge-blue" style="font-size:0.65rem;">user/system</span></td>
+            <td>Usuario pausa ou sistema detecta necessidade de input.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-amber">paused</span></td>
+            <td><span class="badge badge-blue">running</span></td>
+            <td class="mono-sm">resume</td>
+            <td><span class="badge badge-blue" style="font-size:0.65rem;">user</span></td>
+            <td>Usuario fornece input ou retoma a execucao.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">running</span></td>
+            <td><span class="badge badge-green">completed</span></td>
+            <td class="mono-sm">all steps succeed</td>
+            <td><span class="badge badge-green" style="font-size:0.65rem;">system</span></td>
+            <td>Todos os steps completaram com sucesso.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">running</span></td>
+            <td><span class="badge badge-red">failed</span></td>
+            <td class="mono-sm">terminal error</td>
+            <td><span class="badge badge-red" style="font-size:0.65rem;">system</span></td>
+            <td>Erro irrecuperavel apos retry exausto.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">running</span></td>
+            <td><span class="badge badge-purple">cancelled</span></td>
+            <td class="mono-sm">cancel</td>
+            <td><span class="badge badge-blue" style="font-size:0.65rem;">user</span></td>
+            <td>Usuario cancela durante execucao ativa.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-amber">paused</span></td>
+            <td><span class="badge badge-purple">cancelled</span></td>
+            <td class="mono-sm">cancel</td>
+            <td><span class="badge badge-blue" style="font-size:0.65rem;">user</span></td>
+            <td>Usuario cancela enquanto execucao esta pausada.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="legend" style="margin-top:1rem;">
+      <div class="legend-item"><div class="legend-color" style="background:#94a3b8;"></div> Queued (aguardando)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#3b82f6;box-shadow:0 0 6px rgba(59,130,246,0.5);"></div> Running (executando)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#f59e0b;box-shadow:0 0 6px rgba(245,158,11,0.5);"></div> Paused (pausado)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,0.5);"></div> Completed (sucesso)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#ef4444;box-shadow:0 0 6px rgba(239,68,68,0.5);"></div> Failed (erro)</div>
+      <div class="legend-item"><div class="legend-color" style="background:#a855f7;"></div> Cancelled (cancelado)</div>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- SECTION 5 - SCHEDULED EXECUTION -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: rgba(139,92,246,0.15);">&#9200;</div>
+      Scheduled Execution Status
+    </div>
+    <p class="card-desc" style="margin-bottom:1.25rem;">Status de execucoes agendadas via triggers (cron, webhook, schedule). O trigger-scheduler.ts BullMQ job verifica a cada 30s por execucoes pendentes.</p>
+
+    <div class="sm-diagram">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient-2);border-radius:16px 16px 0 0;"></div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1.5rem;">
+
+        <!-- pending -> running -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-pending"><span class="state-dot"></span>pending</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-system">scheduler fires</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-running"><span class="state-dot"></span>running</span>
+          </div>
+        </div>
+
+        <!-- running -> completed -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-running"><span class="state-dot"></span>running</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-system">execution finishes</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-completed"><span class="state-dot"></span>completed</span>
+          </div>
+        </div>
+
+        <!-- running -> failed -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-running"><span class="state-dot"></span>running</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-error">execution fails</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-failed"><span class="state-dot"></span>failed</span>
+          </div>
+        </div>
+
+        <!-- pending -> cancelled -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-pending"><span class="state-dot"></span>pending</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-user">trigger disabled</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-cancelled"><span class="state-dot"></span>cancelled</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container" style="margin-top:1.25rem;">
+      <table class="trans-table">
+        <thead>
+          <tr><th>De</th><th>Para</th><th>Trigger</th><th>Descricao</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-gray">pending</span></td>
+            <td><span class="badge badge-blue">running</span></td>
+            <td class="mono-sm">scheduler fires</td>
+            <td>BullMQ repeatable job detecta scheduledAt &le; now. Cria conversation e executa.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">running</span></td>
+            <td><span class="badge badge-green">completed</span></td>
+            <td class="mono-sm">execution finishes</td>
+            <td>TaskOrchestrator completa todos os steps com sucesso.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">running</span></td>
+            <td><span class="badge badge-red">failed</span></td>
+            <td class="mono-sm">execution fails</td>
+            <td>Erro terminal durante a execucao agendada.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-gray">pending</span></td>
+            <td><span class="badge badge-purple">cancelled</span></td>
+            <td class="mono-sm">trigger disabled/deleted</td>
+            <td>Trigger desabilitado ou deletado antes da execucao iniciar.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- SECTION 6 - WEBHOOK DELIVERY    -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: rgba(34,197,94,0.15);">&#128268;</div>
+      Webhook Delivery Status
+    </div>
+    <p class="card-desc" style="margin-bottom:1.25rem;">Controla o status de entrega de notificacoes webhook. Simples: pendente ate obter resposta HTTP 2xx (sucesso) ou erro/timeout (falha).</p>
+
+    <div class="sm-diagram">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(135deg,#22c55e,#4ade80);border-radius:16px 16px 0 0;"></div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1.5rem;">
+
+        <!-- pending -> success -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-pending"><span class="state-dot"></span>pending</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-system">HTTP 2xx</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-success"><span class="state-dot"></span>success</span>
+          </div>
+        </div>
+
+        <!-- pending -> failed -->
+        <div class="sm-path" style="justify-content:center;">
+          <div class="sm-path-from">
+            <span class="state-node state-pending"><span class="state-dot"></span>pending</span>
+          </div>
+          <div class="sm-path-line" style="flex:0;width:160px;">
+            <span class="sm-path-trigger trigger-error">HTTP error/timeout</span>
+          </div>
+          <div class="sm-path-to">
+            <span class="state-node state-failed"><span class="state-dot"></span>failed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- SECTION 7 - STREAMING PHASES    -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: rgba(139,92,246,0.15);">&#128225;</div>
+      Streaming Phases (Frontend)
+    </div>
+    <p class="card-desc" style="margin-bottom:1.25rem;">Fases da conexao SSE no frontend. Gerenciada pelo hook useStreaming. Cada fase tem feedback visual diferente para o usuario.</p>
+
+    <div class="sm-diagram">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);border-radius:16px 16px 0 0;"></div>
+
+      <!-- Linear flow: idle -> preparing -> connecting -> ai_thinking -> streaming -> idle -->
+      <div style="display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0.5rem;padding:1rem 0;">
+        <span class="state-node state-idle"><span class="state-dot"></span>idle</span>
+
+        <div class="sm-arrow">
+          <div class="sm-arrow-line" style="width:36px;">
+            <span class="sm-arrow-label">msg sent</span>
+          </div>
+        </div>
+
+        <span class="state-node state-preparing"><span class="state-dot"></span>preparing</span>
+
+        <div class="sm-arrow">
+          <div class="sm-arrow-line" style="width:36px;">
+            <span class="sm-arrow-label">HTTP req</span>
+          </div>
+        </div>
+
+        <span class="state-node state-connecting"><span class="state-dot"></span>connecting</span>
+
+        <div class="sm-arrow">
+          <div class="sm-arrow-line" style="width:36px;">
+            <span class="sm-arrow-label">SSE open</span>
+          </div>
+        </div>
+
+        <span class="state-node state-ai-thinking"><span class="state-dot"></span>ai_thinking</span>
+
+        <div class="sm-arrow">
+          <div class="sm-arrow-line" style="width:36px;">
+            <span class="sm-arrow-label">1st content</span>
+          </div>
+        </div>
+
+        <span class="state-node state-streaming"><span class="state-dot"></span>streaming</span>
+
+        <div class="sm-arrow">
+          <div class="sm-arrow-line" style="width:36px;">
+            <span class="sm-arrow-label">complete</span>
+          </div>
+        </div>
+
+        <span class="state-node state-idle"><span class="state-dot"></span>idle</span>
+      </div>
+    </div>
+
+    <div class="table-container" style="margin-top:1.25rem;">
+      <table class="trans-table">
+        <thead>
+          <tr><th>Fase</th><th>UI Feedback</th><th>Trigger para proxima</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-gray">idle</span></td>
+            <td>Input habilitado, sem indicadores de loading.</td>
+            <td class="mono-sm">Usuario envia mensagem</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-purple">preparing</span></td>
+            <td>Input desabilitado, spinner aparece.</td>
+            <td class="mono-sm">Request HTTP enviado</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-purple">connecting</span></td>
+            <td>"Conectando..." exibido na area de mensagem.</td>
+            <td class="mono-sm">SSE connection established</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-purple">ai_thinking</span></td>
+            <td>Dots animados "IA pensando...".</td>
+            <td class="mono-sm">Primeiro chunk de conteudo recebido</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">streaming</span></td>
+            <td>Texto aparece progressivamente, cursor piscando.</td>
+            <td class="mono-sm">Evento de completion recebido</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-gray">idle</span></td>
+            <td>Volta ao estado inicial. Input reabilitado.</td>
+            <td>&mdash;</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- SECTION 8 - TRACE RESULT STATUS -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: rgba(245,158,11,0.15);">&#128269;</div>
+      Trace Result Status
+    </div>
+    <p class="card-desc" style="margin-bottom:1.25rem;">Cada trace de execucao (ExecutionTrace) possui um resultStatus que indica o resultado daquele step individual. Nao e uma maquina de estado com transicoes, mas um enum de resultados finais.</p>
+
+    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;">
+      <div class="result-tag" style="background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3);">
+        <span style="font-size:1rem;">&#10003;</span> success
+      </div>
+      <div class="result-tag" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);">
+        <span style="font-size:1rem;">&#10007;</span> error
+      </div>
+      <div class="result-tag" style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);">
+        <span style="font-size:1rem;">&#9201;</span> timeout
+      </div>
+      <div class="result-tag" style="background:rgba(168,85,247,0.15);color:#c084fc;border:1px solid rgba(168,85,247,0.3);">
+        <span style="font-size:1rem;">&#9940;</span> cancelled
+      </div>
+      <div class="result-tag" style="background:rgba(6,182,212,0.15);color:#22d3ee;border:1px solid rgba(6,182,212,0.3);">
+        <span style="font-size:1rem;">&#9997;</span> needs_input
+      </div>
+      <div class="result-tag" style="background:rgba(249,115,22,0.15);color:#fb923c;border:1px solid rgba(249,115,22,0.3);">
+        <span style="font-size:1rem;">&#9888;</span> interrupted
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="trans-table">
+        <thead>
+          <tr><th>Status</th><th>Classificacao</th><th>Descricao</th><th>Proximo passo?</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-green">success</span></td>
+            <td>Terminal</td>
+            <td>Step executou com sucesso. Output disponivel no trace.</td>
+            <td>Avanca para proximo step do workflow.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-red">error</span></td>
+            <td>Terminal</td>
+            <td>Erro durante execucao. classifyError() define errorCategory.</td>
+            <td>Retry se retryCount &lt; maxRetries, senao falha.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-amber">timeout</span></td>
+            <td>Terminal</td>
+            <td>Step excedeu o tempo maximo (timeoutMs).</td>
+            <td>Retry ou falha dependendo da configuracao.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-purple">cancelled</span></td>
+            <td>Terminal</td>
+            <td>Execucao cancelada pelo usuario via API.</td>
+            <td>Nenhum. Execucao inteira e marcada como cancelled.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-teal">needs_input</span></td>
+            <td>Pausavel</td>
+            <td>Claude pede input do usuario (stopReason: needs_input).</td>
+            <td>Execucao pausa. Retoma quando usuario fornece input.</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background:rgba(249,115,22,0.1);color:#fb923c;border:1px solid rgba(249,115,22,0.3);">interrupted</span></td>
+            <td>Terminal</td>
+            <td>Processo interrompido (SIGTERM, crash, server restart).</td>
+            <td>Recovery tenta retomar do ultimo step salvo.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- SECTION 9 - STATE PERSISTENCE   -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: rgba(59,130,246,0.15);">&#128451;</div>
+      State Persistence
+    </div>
+    <p class="card-desc" style="margin-bottom:1.25rem;">O estado de cada execucao e persistido no PostgreSQL via model ExecutionState. Isso permite recovery completo apos restart do servidor.</p>
+
+    <div class="grid-2" style="gap:1.5rem;">
+      <div class="persist-card">
+        <h3 style="font-weight:700;margin-bottom:1rem;color:var(--text-accent);">ExecutionState Model</h3>
+
+        <div class="persist-field">
+          <span class="persist-field-name">id</span>
+          <span class="persist-field-type">String @id</span>
+          <span class="persist-field-desc">UUID da execucao</span>
+        </div>
+        <div class="persist-field">
+          <span class="persist-field-name">status</span>
+          <span class="persist-field-type">ExecutionStatus</span>
+          <span class="persist-field-desc">Estado atual da maquina de estado</span>
+        </div>
+        <div class="persist-field">
+          <span class="persist-field-name">currentStepIndex</span>
+          <span class="persist-field-type">Int</span>
+          <span class="persist-field-desc">Indice do step sendo executado</span>
+        </div>
+        <div class="persist-field">
+          <span class="persist-field-name">retryCounts</span>
+          <span class="persist-field-type">Json</span>
+          <span class="persist-field-desc">Map stepId &rarr; retryCount</span>
+        </div>
+        <div class="persist-field">
+          <span class="persist-field-name">metadata</span>
+          <span class="persist-field-type">Json</span>
+          <span class="persist-field-desc">Contexto adicional (error info, lastOutput)</span>
+        </div>
+        <div class="persist-field">
+          <span class="persist-field-name">startedAt</span>
+          <span class="persist-field-type">DateTime</span>
+          <span class="persist-field-desc">Timestamp de inicio</span>
+        </div>
+        <div class="persist-field">
+          <span class="persist-field-name">completedAt</span>
+          <span class="persist-field-type">DateTime?</span>
+          <span class="persist-field-desc">Timestamp de finalizacao (null se em andamento)</span>
+        </div>
+      </div>
+
+      <div class="persist-card">
+        <h3 style="font-weight:700;margin-bottom:1rem;color:var(--text-accent);">Recovery on Server Restart</h3>
+
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+          <div class="card" style="padding:0.75rem;background:var(--bg-secondary);cursor:default;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
+              <span class="badge badge-blue" style="font-size:0.65rem;">Step 1</span>
+              <span style="font-weight:600;font-size:0.85rem;">Detecta execucoes interrompidas</span>
+            </div>
+            <p style="font-size:0.78rem;color:var(--text-secondary);">Query: status = 'running' no banco. Essas nao terminaram normalmente.</p>
+          </div>
+
+          <div class="card" style="padding:0.75rem;background:var(--bg-secondary);cursor:default;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
+              <span class="badge badge-amber" style="font-size:0.65rem;">Step 2</span>
+              <span style="font-weight:600;font-size:0.85rem;">Merge metadata</span>
+            </div>
+            <p style="font-size:0.78rem;color:var(--text-secondary);">Combina metadata existente com info de recovery (recoverAt, previousStep).</p>
+          </div>
+
+          <div class="card" style="padding:0.75rem;background:var(--bg-secondary);cursor:default;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
+              <span class="badge badge-green" style="font-size:0.65rem;">Step 3</span>
+              <span style="font-weight:600;font-size:0.85rem;">Resume do currentStepIndex</span>
+            </div>
+            <p style="font-size:0.78rem;color:var(--text-secondary);">Re-enfileira no BullMQ a partir do step onde parou. Nao re-executa steps ja completos.</p>
+          </div>
+
+          <div class="card" style="padding:0.75rem;background:var(--bg-secondary);cursor:default;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;">
+              <span class="badge badge-purple" style="font-size:0.65rem;">Step 4</span>
+              <span style="font-weight:600;font-size:0.85rem;">Graceful Shutdown</span>
+            </div>
+            <p style="font-size:0.78rem;color:var(--text-secondary);">30s drain period. SIGTERM salva estado atual antes de encerrar.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-block" style="margin-top:1.25rem;">
+<span class="comment">// Recovery simplificado (server startup)</span>
+<span class="keyword">const</span> stuckExecutions = <span class="keyword">await</span> prisma.executionState.findMany({
+  <span class="keyword">where</span>: { status: <span class="string">'running'</span> }
+});
+
+<span class="keyword">for</span> (<span class="keyword">const</span> exec <span class="keyword">of</span> stuckExecutions) {
+  <span class="keyword">await</span> prisma.executionState.update({
+    <span class="keyword">where</span>: { id: exec.id },
+    <span class="keyword">data</span>: {
+      metadata: {
+        ...exec.metadata,
+        recoveredAt: <span class="keyword">new</span> Date(),
+        previousStep: exec.currentStepIndex
+      }
+    }
+  });
+  <span class="comment">// Re-enqueue from currentStepIndex</span>
+  <span class="keyword">await</span> executionQueue.add(<span class="string">'resume'</span>, {
+    executionId: exec.id,
+    fromStep: exec.currentStepIndex
+  });
+}
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- ============================== -->
+  <!-- SECTION 10 - CONCURRENT STATE   -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: rgba(245,158,11,0.15);">&#9881;</div>
+      Concurrent State Management
+    </div>
+    <p class="card-desc" style="margin-bottom:1.25rem;">O TaskOrchestrator gerencia execucoes concorrentes com limites por usuario e globais. O Map em memoria rastreia execucoes ativas para fast lookups.</p>
+
+    <div class="grid-2" style="gap:1.5rem;">
+      <!-- activeExecutions Map -->
+      <div class="card" style="cursor:default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(59,130,246,0.15);">&#128506;</div>
+          <div>
+            <div class="card-title">activeExecutions Map</div>
+            <div class="card-desc" style="font-size:0.78rem;">Map&lt;string, ExecutionContext&gt; em memoria</div>
+          </div>
+        </div>
+
+        <div class="code-block" style="font-size:0.8rem;">
+<span class="comment">// TaskOrchestrator</span>
+<span class="keyword">private</span> activeExecutions = <span class="keyword">new</span> <span class="type">Map</span>&lt;<span class="type">string</span>, <span class="type">ExecutionContext</span>&gt;();
+
+<span class="comment">// ExecutionContext contém:</span>
+<span class="keyword">interface</span> <span class="type">ExecutionContext</span> {
+  id: <span class="type">string</span>;
+  userId: <span class="type">string</span>;
+  workflowId: <span class="type">string</span>;
+  status: <span class="type">ExecutionStatus</span>;
+  process: <span class="type">ChildProcess</span>;
+  abortController: <span class="type">AbortController</span>;
+}
+        </div>
+      </div>
+
+      <!-- Concurrency Limits -->
+      <div class="card" style="cursor:default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.15);">&#128200;</div>
+          <div>
+            <div class="card-title">Limites de Concorrencia</div>
+            <div class="card-desc" style="font-size:0.78rem;">Controle por usuario e global</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:1rem;margin-top:0.5rem;">
+          <!-- Per-user limit -->
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+              <span style="font-size:0.82rem;font-weight:600;">Por usuario</span>
+              <span class="mono-sm" style="color:var(--text-accent);">maxConcurrentExecutions: 5</span>
+            </div>
+            <div class="conc-bar">
+              <div class="conc-slot occupied" style="flex:1;">Exec 1</div>
+              <div class="conc-slot occupied" style="flex:1;">Exec 2</div>
+              <div class="conc-slot occupied" style="flex:1;">Exec 3</div>
+              <div class="conc-slot free" style="flex:1;">free</div>
+              <div class="conc-slot free" style="flex:1;">free</div>
+            </div>
+            <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">Novas execucoes ficam na fila (queued) ate ter slot disponivel.</p>
+          </div>
+
+          <!-- BullMQ concurrency -->
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+              <span style="font-size:0.82rem;font-weight:600;">BullMQ Worker</span>
+              <span class="mono-sm" style="color:var(--text-accent);">concurrency: 3</span>
+            </div>
+            <div class="conc-bar">
+              <div class="conc-slot occupied" style="flex:1;">Job A</div>
+              <div class="conc-slot occupied" style="flex:1;">Job B</div>
+              <div class="conc-slot occupied" style="flex:1;">Job C</div>
+            </div>
+            <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;">Worker processa ate 3 jobs simultaneamente. Jobs extras aguardam na fila Redis.</p>
+          </div>
+
+          <!-- Interaction -->
+          <div class="card" style="padding:0.75rem;background:var(--bg-secondary);cursor:default;border-left:3px solid var(--bg-accent);">
+            <p style="font-size:0.8rem;color:var(--text-secondary);">
+              <strong style="color:var(--text-accent);">Interacao:</strong> Quando um job e pego pelo BullMQ worker, ele verifica o limite per-user antes de iniciar. Se o usuario ja tem 5 execucoes ativas, o job e re-enfileirado com delay.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="shared.js"></script>
+</body>
+</html>
