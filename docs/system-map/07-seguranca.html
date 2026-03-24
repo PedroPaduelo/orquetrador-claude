@@ -1,1291 +1,1221 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seguranca & Riscos — Orquetrador Claude</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = {
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        surface: { 50: '#f8fafc', 100: '#1e1e2e', 200: '#181825', 300: '#11111b', 400: '#0a0a14' },
-        accent: { 400: '#89b4fa', 500: '#74c7ec', 600: '#94e2d5' },
-        crit: '#f38ba8',
-        high: '#fab387',
-        med: '#f9e2af',
-        good: '#a6e3a1',
-      },
-      fontFamily: { mono: ['"JetBrains Mono"', 'Fira Code', 'monospace'], sans: ['Inter', 'system-ui', 'sans-serif'] },
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>07 - Seguranca | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Security score gauge */
+    .security-gauge {
+      position: relative;
+      width: 200px;
+      height: 100px;
+      margin: 0 auto;
     }
-  }
-}
-</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  * { scrollbar-width: thin; scrollbar-color: #313244 #11111b; }
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #11111b; }
-  ::-webkit-scrollbar-thumb { background: #313244; border-radius: 3px; }
+    .security-gauge svg { overflow: visible; }
+    .gauge-bg { fill: none; stroke: var(--border-color); stroke-width: 12; stroke-linecap: round; }
+    .gauge-fill { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 1.5s ease; }
+    .gauge-score {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 2rem;
+      font-weight: 800;
+      background: var(--gradient-1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .gauge-label {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      margin-top: 0.25rem;
+    }
 
-  @keyframes pulse-crit { 0%, 100% { box-shadow: 0 0 0 0 rgba(243,139,168,0.4); } 50% { box-shadow: 0 0 20px 4px rgba(243,139,168,0.2); } }
-  @keyframes pulse-high { 0%, 100% { box-shadow: 0 0 0 0 rgba(250,179,135,0.4); } 50% { box-shadow: 0 0 20px 4px rgba(250,179,135,0.2); } }
-  @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100vh); } }
-  @keyframes ringPulse { 0% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.03); opacity: 1; } 100% { transform: scale(1); opacity: 0.6; } }
+    /* Risk cards enhanced */
+    .risk-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      transition: all 0.3s;
+    }
+    .risk-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    .risk-card.risk-high { border-left: 4px solid #ef4444; }
+    .risk-card.risk-medium { border-left: 4px solid #f59e0b; }
+    .risk-card.risk-low { border-left: 4px solid #22c55e; }
+    .risk-card .risk-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .risk-tag-high { background: var(--bg-danger); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .risk-tag-medium { background: var(--bg-warning); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .risk-tag-low { background: var(--bg-success); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+    .risk-card .risk-title { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
+    .risk-card .risk-desc { color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6; }
 
-  .animate-fade-in { animation: fadeInUp 0.6s ease-out forwards; opacity: 0; }
-  .delay-1 { animation-delay: 0.1s; }
-  .delay-2 { animation-delay: 0.2s; }
-  .delay-3 { animation-delay: 0.3s; }
-  .delay-4 { animation-delay: 0.4s; }
-  .delay-5 { animation-delay: 0.5s; }
+    /* Auth method cards */
+    .auth-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .auth-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+    .auth-card:hover {
+      border-color: rgba(13,148,136,0.3);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+    .auth-card.jwt::before { background: var(--gradient-1); }
+    .auth-card.apikey::before { background: var(--gradient-4); }
+    .auth-card.session::before { background: var(--gradient-2); }
 
-  .card-crit { animation: pulse-crit 3s ease-in-out infinite; border-left: 4px solid #f38ba8; }
-  .card-high { animation: pulse-high 3.5s ease-in-out infinite; border-left: 4px solid #fab387; }
-  .card-med { border-left: 4px solid #f9e2af; }
-  .card-good { border-left: 4px solid #a6e3a1; }
+    /* RBAC matrix */
+    .rbac-cell {
+      text-align: center;
+      font-size: 1.1rem;
+    }
+    .rbac-yes { color: #4ade80; }
+    .rbac-no { color: #f87171; }
+    .rbac-partial { color: #fbbf24; }
 
-  .severity-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
-  .badge-crit { background: rgba(243,139,168,0.15); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
-  .badge-high { background: rgba(250,179,135,0.15); color: #fab387; border: 1px solid rgba(250,179,135,0.3); }
-  .badge-med { background: rgba(249,226,175,0.15); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
-  .badge-good { background: rgba(166,227,161,0.15); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    /* Scope tags */
+    .scope-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.6rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-accent);
+      margin: 0.15rem;
+    }
 
-  .glow-line { height: 1px; background: linear-gradient(90deg, transparent, #89b4fa, transparent); }
+    /* Layer diagram */
+    .layer-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .layer-item {
+      padding: 1rem 1.5rem;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: 1px solid var(--border-color);
+      position: relative;
+    }
+    .layer-item:first-child { border-radius: 12px 12px 0 0; }
+    .layer-item:last-child { border-radius: 0 0 12px 12px; }
+    .layer-item .layer-sub {
+      font-weight: 400;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+    }
 
-  .matrix-cell { transition: all 0.2s; }
-  .matrix-cell:hover { transform: scale(1.1); }
-
-  .nav-dot { width: 10px; height: 10px; border-radius: 50%; background: #313244; cursor: pointer; transition: all 0.3s; }
-  .nav-dot.active { background: #89b4fa; box-shadow: 0 0 10px rgba(137,180,250,0.5); }
-  .nav-dot:hover { background: #585b70; }
-
-  .score-ring { transition: stroke-dashoffset 1s ease-out; }
-
-  .code-block { background: #0a0a14; border: 1px solid #313244; border-radius: 8px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; overflow-x: auto; }
-  .code-keyword { color: #cba6f7; }
-  .code-string { color: #a6e3a1; }
-  .code-comment { color: #585b70; }
-  .code-fn { color: #89b4fa; }
-  .code-var { color: #f9e2af; }
-  .code-op { color: #89dceb; }
-</style>
+    /* Checklist */
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(30,41,59,0.5);
+      font-size: 0.875rem;
+    }
+    .check-item:last-child { border-bottom: none; }
+    .check-icon { flex-shrink: 0; margin-top: 0.1rem; }
+    .check-icon.pass { color: #4ade80; }
+    .check-icon.warn { color: #fbbf24; }
+    .check-icon.fail { color: #f87171; }
+  </style>
 </head>
-<body class="bg-surface-300 text-gray-200 font-sans min-h-screen antialiased">
-
-<nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);border-bottom:1px solid rgba(148,163,184,0.1)">
-  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-    <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-blue-400 transition">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
-      Orquetrador Claude
-    </a>
-    <div class="hidden lg:flex items-center gap-1 text-xs">
-      <a href="01-visao-geral.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visão Geral</a>
-      <a href="02-fluxo-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
-      <a href="03-banco-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">03 DB</a>
-      <a href="04-api-endpoints.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">04 API</a>
-      <a href="05-motor-execucao.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">05 Execução</a>
-      <a href="06-frontend.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">06 Frontend</a>
-      <a href="07-seguranca.html" class="px-2.5 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 font-semibold" id="nav07">07 Segurança</a>
-      <a href="08-integracoes.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav08">08 Integrações</a>
-      <a href="09-mcp-server.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">09 MCP</a>
-      <a href="10-tempo-real-filas.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">10 Real-time</a>
-        <a href="11-db-scan-melhorias.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav11">11 DB Scan</a>
-        <a href="12-estrutura-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav12">12 Estrutura</a>
-    </div>
-  </div>
-</nav>
-
-<!-- Scanline overlay -->
-<div class="fixed inset-0 pointer-events-none z-50 overflow-hidden opacity-[0.02]">
-  <div class="w-full h-1 bg-accent-400" style="animation: scanline 8s linear infinite;"></div>
-</div>
-
-<!-- Fixed side nav dots -->
-<nav class="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-3" id="sideNav">
-  <div class="nav-dot active" data-section="dashboard" onclick="scrollToSection('dashboard')"></div>
-  <div class="nav-dot" data-section="auth-flow" onclick="scrollToSection('auth-flow')"></div>
-  <div class="nav-dot" data-section="auth-matrix" onclick="scrollToSection('auth-matrix')"></div>
-  <div class="nav-dot" data-section="sandbox" onclick="scrollToSection('sandbox')"></div>
-  <div class="nav-dot" data-section="data-protection" onclick="scrollToSection('data-protection')"></div>
-  <div class="nav-dot" data-section="attack-surface" onclick="scrollToSection('attack-surface')"></div>
-  <div class="nav-dot" data-section="recommendations" onclick="scrollToSection('recommendations')"></div>
-</nav>
-
-<!-- Header -->
-<header class="relative overflow-hidden border-b border-red-900/30 bg-gradient-to-b from-red-950/20 to-surface-300">
-  <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(243,139,168,0.08),transparent_60%)]"></div>
-  <div class="relative max-w-7xl mx-auto px-6 py-16">
-    <div class="flex items-center gap-3 mb-4 animate-fade-in">
-      <span class="text-sm font-mono text-gray-500 tracking-widest uppercase">07</span>
-      <div class="w-12 h-px bg-gradient-to-r from-crit to-transparent"></div>
-      <span class="text-sm font-mono text-crit/80 tracking-wider">SECURITY ANALYSIS</span>
-    </div>
-    <h1 class="text-5xl md:text-6xl font-black text-white mb-4 animate-fade-in delay-1">
-      Seguranca
-    </h1>
-    <p class="text-xl md:text-2xl text-gray-400 font-light animate-fade-in delay-2">
-      Autenticacao, Autorizacao & Riscos
-    </p>
-    <div class="mt-8 flex flex-wrap gap-4 animate-fade-in delay-3">
-      <div class="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-full px-4 py-2">
-        <div class="w-2 h-2 rounded-full bg-crit animate-pulse"></div>
-        <span class="text-sm font-mono text-crit">4 Criticos</span>
+<body>
+  <div class="page-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div class="breadcrumb">
+        <a href="index.html">System Map</a>
+        <span>&#8250;</span>
+        <span>07 - Seguranca</span>
       </div>
-      <div class="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-full px-4 py-2">
-        <div class="w-2 h-2 rounded-full bg-high"></div>
-        <span class="text-sm font-mono text-high">3 Altos</span>
-      </div>
-      <div class="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full px-4 py-2">
-        <div class="w-2 h-2 rounded-full bg-med"></div>
-        <span class="text-sm font-mono text-med">3 Medios</span>
-      </div>
-      <div class="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-full px-4 py-2">
-        <div class="w-2 h-2 rounded-full bg-good"></div>
-        <span class="text-sm font-mono text-good">6 Bem implementados</span>
-      </div>
+      <h1>Seguranca</h1>
+      <p class="subtitle">Autenticacao, autorizacao, isolamento sandbox, riscos mapeados e controles de seguranca do Orquetrador Claude</p>
     </div>
 
-    <!-- Security Score -->
-    <div class="mt-10 animate-fade-in delay-4">
-      <div class="inline-flex items-center gap-6 bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
-        <svg width="80" height="80" viewBox="0 0 80 80" class="transform -rotate-90">
-          <circle cx="40" cy="40" r="34" fill="none" stroke="#1e1e2e" stroke-width="6"/>
-          <circle cx="40" cy="40" r="34" fill="none" stroke="#f38ba8" stroke-width="6" stroke-dasharray="213.6" stroke-dashoffset="128" stroke-linecap="round" class="score-ring"/>
-        </svg>
-        <div>
-          <div class="text-3xl font-black text-crit">40<span class="text-lg text-gray-500">/100</span></div>
-          <div class="text-sm text-gray-500 font-mono">Security Score</div>
-          <div class="text-xs text-crit mt-1 font-semibold">Precisa atencao urgente</div>
+    <!-- Dashboard Stats -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: var(--bg-accent-subtle);">&#128737;</span>
+        Dashboard de Seguranca
+      </h2>
+
+      <div class="grid-4" style="margin-bottom: 2rem;">
+        <div class="stat-box">
+          <div class="stat-value" data-count="6">0</div>
+          <div class="stat-label">Risk Areas Mapeadas</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" data-count="3">0</div>
+          <div class="stat-label">Metodos de Autenticacao</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" data-count="2">0</div>
+          <div class="stat-label">Camadas de Isolamento</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" data-count="3">0</div>
+          <div class="stat-label">Roles RBAC</div>
         </div>
       </div>
-    </div>
-  </div>
-</header>
 
-<main class="max-w-7xl mx-auto px-6 py-12 space-y-20">
-
-  <!-- ============================================================ -->
-  <!-- RISK DASHBOARD -->
-  <!-- ============================================================ -->
-  <section id="dashboard" class="scroll-mt-8">
-    <div class="flex items-center gap-4 mb-10 animate-fade-in">
-      <div class="w-10 h-10 rounded-lg bg-crit/10 border border-crit/20 flex items-center justify-center">
-        <svg class="w-5 h-5 text-crit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+      <!-- Security Score Gauge -->
+      <div class="card" style="text-align: center; padding: 2rem;">
+        <div class="security-gauge">
+          <svg width="200" height="100" viewBox="0 0 200 100">
+            <path d="M 20 100 A 80 80 0 0 1 180 100" class="gauge-bg" />
+            <path d="M 20 100 A 80 80 0 0 1 180 100" class="gauge-fill"
+              stroke="url(#gaugeGrad)"
+              stroke-dasharray="251"
+              stroke-dashoffset="63" />
+            <defs>
+              <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ef4444" />
+                <stop offset="40%" stop-color="#f59e0b" />
+                <stop offset="70%" stop-color="#0d9488" />
+                <stop offset="100%" stop-color="#22c55e" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="gauge-score">75/100</div>
+        </div>
+        <div class="gauge-label">Security Score &mdash; Moderado</div>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.75rem;">
+          1 risco alto, 3 medios, 2 baixos &mdash; Autenticacao solida, sandbox funcional, melhorias pendentes em rate limiting e encryption
+        </p>
       </div>
-      <div>
-        <h2 class="text-3xl font-bold text-white">Risk Dashboard</h2>
-        <p class="text-gray-500 text-sm font-mono mt-1">Analise de vulnerabilidades identificadas</p>
-      </div>
-    </div>
+    </section>
 
-    <!-- CRITICO -->
-    <div class="mb-10 animate-fade-in delay-1">
-      <div class="flex items-center gap-3 mb-5">
-        <span class="severity-badge badge-crit">
-          <span class="w-2 h-2 rounded-full bg-crit animate-pulse"></span>
-          Critico
-        </span>
-        <span class="text-gray-500 text-sm font-mono">4 vulnerabilidades</span>
-      </div>
-      <div class="grid md:grid-cols-2 gap-4">
-        <div class="card-crit bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
-          <div class="flex items-start justify-between mb-3">
-            <h3 class="text-white font-semibold group-hover:text-crit transition-colors">CORS Aberto</h3>
-            <span class="text-xs font-mono bg-crit/10 text-crit px-2 py-1 rounded">CVE-like</span>
-          </div>
-          <p class="text-gray-400 text-sm mb-3"><code class="text-crit/80 bg-crit/5 px-1.5 py-0.5 rounded font-mono text-xs">origin: true</code> — qualquer dominio acessa a API</p>
-          <div class="code-block text-xs">
-            <span class="code-comment">// backend/src/app.ts</span><br>
-            app.<span class="code-fn">register</span>(cors, { <span class="code-var">origin</span>: <span class="code-keyword">true</span> })
-          </div>
-          <div class="mt-3 flex items-center gap-2 text-xs text-gray-600">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            Permite CSRF cross-origin e data exfiltration
-          </div>
-        </div>
+    <!-- Camadas de Autenticacao -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(59,130,246,0.1);">&#128274;</span>
+        Camadas de Autenticacao
+      </h2>
 
-        <div class="card-crit bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
-          <div class="flex items-start justify-between mb-3">
-            <h3 class="text-white font-semibold group-hover:text-crit transition-colors">Rate Limiting Desabilitado</h3>
-            <span class="text-xs font-mono bg-crit/10 text-crit px-2 py-1 rounded">DoS Risk</span>
-          </div>
-          <p class="text-gray-400 text-sm mb-3">Rate limiting registrado mas <strong class="text-crit/80">desabilitado globalmente</strong></p>
-          <div class="code-block text-xs">
-            <span class="code-comment">// @fastify/rate-limit</span><br>
-            <span class="code-var">global</span>: <span class="code-keyword">false</span> <span class="code-comment">// nao aplica a nenhuma rota</span>
-          </div>
-          <div class="mt-3 flex items-center gap-2 text-xs text-gray-600">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            Brute force, credential stuffing, resource exhaustion
-          </div>
-        </div>
-
-        <div class="card-crit bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
-          <div class="flex items-start justify-between mb-3">
-            <h3 class="text-white font-semibold group-hover:text-crit transition-colors">Sem Token Refresh</h3>
-            <span class="text-xs font-mono bg-crit/10 text-crit px-2 py-1 rounded">Auth Gap</span>
-          </div>
-          <p class="text-gray-400 text-sm mb-3">Tokens JWT de <strong class="text-crit/80">7 dias</strong> sem nenhum mecanismo de rotacao</p>
-          <div class="code-block text-xs">
-            <span class="code-comment">// JWT sign options</span><br>
-            { <span class="code-var">expiresIn</span>: <span class="code-string">'7d'</span> } <span class="code-comment">// no refresh, no revocation</span>
-          </div>
-          <div class="mt-3 flex items-center gap-2 text-xs text-gray-600">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            Token roubado = acesso por 7 dias sem possibilidade de revogacao
-          </div>
-        </div>
-
-        <div class="card-crit bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
-          <div class="flex items-start justify-between mb-3">
-            <h3 class="text-white font-semibold group-hover:text-crit transition-colors">GitHub Tokens em Plain Text</h3>
-            <span class="text-xs font-mono bg-crit/10 text-crit px-2 py-1 rounded">Data Leak</span>
-          </div>
-          <p class="text-gray-400 text-sm mb-3">Tokens do GitHub armazenados <strong class="text-crit/80">sem criptografia</strong> no banco de dados</p>
-          <div class="code-block text-xs">
-            <span class="code-comment">// prisma schema</span><br>
-            <span class="code-var">githubToken</span>  String? <span class="code-comment">// plain text in DB!</span>
-          </div>
-          <div class="mt-3 flex items-center gap-2 text-xs text-gray-600">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            DB breach = acesso total aos repos GitHub dos usuarios
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ALTO -->
-    <div class="mb-10 animate-fade-in delay-2">
-      <div class="flex items-center gap-3 mb-5">
-        <span class="severity-badge badge-high">
-          <span class="w-2 h-2 rounded-full bg-high"></span>
-          Alto
-        </span>
-        <span class="text-gray-500 text-sm font-mono">3 vulnerabilidades</span>
-      </div>
-      <div class="grid md:grid-cols-3 gap-4">
-        <div class="card-high bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
-          <h3 class="text-white font-semibold mb-2 group-hover:text-high transition-colors">Sem Security Headers</h3>
-          <p class="text-gray-400 text-sm">Nenhum header de seguranca configurado:</p>
-          <ul class="mt-2 space-y-1 text-xs text-gray-500 font-mono">
-            <li class="flex items-center gap-2"><span class="text-high">x</span> HSTS</li>
-            <li class="flex items-center gap-2"><span class="text-high">x</span> Content-Security-Policy</li>
-            <li class="flex items-center gap-2"><span class="text-high">x</span> X-Frame-Options</li>
-            <li class="flex items-center gap-2"><span class="text-high">x</span> X-Content-Type-Options</li>
-          </ul>
-        </div>
-
-        <div class="card-high bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
-          <h3 class="text-white font-semibold mb-2 group-hover:text-high transition-colors">localStorage para JWT</h3>
-          <p class="text-gray-400 text-sm mb-2">Tokens JWT armazenados em localStorage</p>
-          <div class="code-block text-xs">
-            <span class="code-fn">localStorage</span>.<span class="code-fn">setItem</span>(<span class="code-string">'token'</span>, jwt)
-          </div>
-          <p class="text-xs text-gray-600 mt-2">Vulneravel a XSS — qualquer script injetado rouba o token</p>
-        </div>
-
-        <div class="card-high bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all group">
-          <h3 class="text-white font-semibold mb-2 group-hover:text-high transition-colors">JWT_SECRET Default Fraco</h3>
-          <p class="text-gray-400 text-sm mb-2">Fallback para secret hardcoded quando env nao esta setada</p>
-          <div class="code-block text-xs">
-            <span class="code-var">JWT_SECRET</span> = process.env.JWT_SECRET<br>
-            &nbsp;&nbsp;<span class="code-op">||</span> <span class="code-string">'default-secret'</span>
-          </div>
-          <p class="text-xs text-gray-600 mt-2">Permite forjar tokens se env nao estiver configurada</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- MEDIO -->
-    <div class="mb-10 animate-fade-in delay-3">
-      <div class="flex items-center gap-3 mb-5">
-        <span class="severity-badge badge-med">
-          <span class="w-2 h-2 rounded-full bg-med"></span>
-          Medio
-        </span>
-        <span class="text-gray-500 text-sm font-mono">3 vulnerabilidades</span>
-      </div>
-      <div class="grid md:grid-cols-3 gap-4">
-        <div class="card-med bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all">
-          <h3 class="text-white font-semibold mb-2">Sem HTTPOnly Cookies</h3>
-          <p class="text-gray-400 text-sm">Tokens nunca sao armazenados em cookies HTTPOnly. Toda autenticacao via headers manuais.</p>
-        </div>
-        <div class="card-med bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all">
-          <h3 class="text-white font-semibold mb-2">Sem Protecao CSRF</h3>
-          <p class="text-gray-400 text-sm">Nenhum token CSRF. Combinado com CORS aberto, permite requisicoes forjadas cross-origin.</p>
-        </div>
-        <div class="card-med bg-surface-200/80 backdrop-blur rounded-xl p-5 hover:bg-surface-100/80 transition-all">
-          <h3 class="text-white font-semibold mb-2">API Keys Exibidas Uma Vez</h3>
-          <p class="text-gray-400 text-sm">A key completa e exibida apenas na criacao. Apos isso, apenas o hash fica no banco. Se o usuario perder, precisa gerar outra.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- BEM IMPLEMENTADO -->
-    <div class="animate-fade-in delay-4">
-      <div class="flex items-center gap-3 mb-5">
-        <span class="severity-badge badge-good">
-          <span class="w-2 h-2 rounded-full bg-good"></span>
-          Bem Implementado
-        </span>
-        <span class="text-gray-500 text-sm font-mono">6 itens</span>
-      </div>
-      <div class="grid md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
-          <div class="text-2xl mb-2">🔒</div>
-          <h3 class="text-good text-sm font-semibold">Bcrypt</h3>
-          <p class="text-gray-500 text-xs mt-1">Salt rounds: 10</p>
-        </div>
-        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
-          <div class="text-2xl mb-2">👥</div>
-          <h3 class="text-good text-sm font-semibold">RBAC</h3>
-          <p class="text-gray-500 text-xs mt-1">admin / dev / viewer</p>
-        </div>
-        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
-          <div class="text-2xl mb-2">✅</div>
-          <h3 class="text-good text-sm font-semibold">Zod Validation</h3>
-          <p class="text-gray-500 text-xs mt-1">Todos endpoints</p>
-        </div>
-        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
-          <div class="text-2xl mb-2">🛡️</div>
-          <h3 class="text-good text-sm font-semibold">Error Handling</h3>
-          <p class="text-gray-500 text-xs mt-1">Centralizado</p>
-        </div>
-        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
-          <div class="text-2xl mb-2">🔐</div>
-          <h3 class="text-good text-sm font-semibold">Data Isolation</h3>
-          <p class="text-gray-500 text-xs mt-1">Filtro por userId</p>
-        </div>
-        <div class="card-good bg-surface-200/80 backdrop-blur rounded-xl p-4 text-center hover:bg-surface-100/80 transition-all">
-          <div class="text-2xl mb-2">#️⃣</div>
-          <h3 class="text-good text-sm font-semibold">API Key Hash</h3>
-          <p class="text-gray-500 text-xs mt-1">SHA-256</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="glow-line my-4"></div>
-
-  <!-- ============================================================ -->
-  <!-- AUTHENTICATION FLOW -->
-  <!-- ============================================================ -->
-  <section id="auth-flow" class="scroll-mt-8">
-    <div class="flex items-center gap-4 mb-10 animate-fade-in">
-      <div class="w-10 h-10 rounded-lg bg-accent-400/10 border border-accent-400/20 flex items-center justify-center">
-        <svg class="w-5 h-5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-      </div>
-      <div>
-        <h2 class="text-3xl font-bold text-white">Authentication Flow</h2>
-        <p class="text-gray-500 text-sm font-mono mt-1">Fluxos de autenticacao do sistema</p>
-      </div>
-    </div>
-
-    <!-- Login Flow -->
-    <div class="mb-8">
-      <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <span class="w-6 h-6 rounded bg-accent-400/20 text-accent-400 text-xs flex items-center justify-center font-mono">1</span>
-        Login Flow — JWT
-      </h3>
-      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-8 overflow-x-auto">
-        <div class="flex items-center gap-3 min-w-[700px]">
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[120px]">
-            <div class="text-2xl mb-1">👤</div>
-            <div class="text-xs font-mono text-gray-400">Client</div>
-            <div class="text-xs text-accent-400 mt-1 font-semibold">email + password</div>
-          </div>
-          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[120px]">
-            <div class="text-2xl mb-1">🔍</div>
-            <div class="text-xs font-mono text-gray-400">POST /auth/login</div>
-            <div class="text-xs text-med mt-1 font-semibold">Zod validate</div>
-          </div>
-          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[120px]">
-            <div class="text-2xl mb-1">🔒</div>
-            <div class="text-xs font-mono text-gray-400">bcrypt</div>
-            <div class="text-xs text-good mt-1 font-semibold">compare()</div>
-          </div>
-          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[120px]">
-            <div class="text-2xl mb-1">🎫</div>
-            <div class="text-xs font-mono text-gray-400">JWT sign</div>
-            <div class="text-xs text-high mt-1 font-semibold">expiresIn: 7d</div>
-          </div>
-          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
-          <div class="flex-shrink-0 bg-surface-300 border border-crit/30 rounded-xl p-4 text-center min-w-[120px]">
-            <div class="text-2xl mb-1">💾</div>
-            <div class="text-xs font-mono text-gray-400">Client</div>
-            <div class="text-xs text-crit mt-1 font-semibold">localStorage</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- API Key Flow -->
-    <div class="mb-8">
-      <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <span class="w-6 h-6 rounded bg-accent-400/20 text-accent-400 text-xs flex items-center justify-center font-mono">2</span>
-        API Key Flow
-      </h3>
-      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-8 overflow-x-auto">
-        <div class="flex items-center gap-3 min-w-[700px]">
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[140px]">
-            <div class="text-2xl mb-1">🔑</div>
-            <div class="text-xs font-mono text-gray-400">Bearer</div>
-            <div class="text-xs text-accent-400 mt-1 font-mono font-semibold">exk_*</div>
-          </div>
-          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[140px]">
-            <div class="text-2xl mb-1">#️⃣</div>
-            <div class="text-xs font-mono text-gray-400">Hash</div>
-            <div class="text-xs text-good mt-1 font-semibold">SHA-256</div>
-          </div>
-          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[140px]">
-            <div class="text-2xl mb-1">🗄️</div>
-            <div class="text-xs font-mono text-gray-400">Database</div>
-            <div class="text-xs text-accent-400 mt-1 font-semibold">Lookup by hash</div>
-          </div>
-          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[140px]">
-            <div class="text-2xl mb-1">✅</div>
-            <div class="text-xs font-mono text-gray-400">Resolve</div>
-            <div class="text-xs text-good mt-1 font-semibold">userId</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Auth Middleware -->
-    <div>
-      <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <span class="w-6 h-6 rounded bg-accent-400/20 text-accent-400 text-xs flex items-center justify-center font-mono">3</span>
-        Auth Middleware Pipeline
-      </h3>
-      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-8 overflow-x-auto">
-        <div class="flex items-center gap-3 min-w-[800px]">
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[150px]">
-            <div class="text-xs font-mono text-gray-500 mb-2">Step 1</div>
-            <div class="text-sm text-white font-semibold">Extract Token</div>
-            <div class="text-xs text-gray-500 mt-1">Authorization header<br/>ou query param</div>
-          </div>
-          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[150px]">
-            <div class="text-xs font-mono text-gray-500 mb-2">Step 2</div>
-            <div class="text-sm text-white font-semibold">Detect Type</div>
-            <div class="text-xs text-gray-500 mt-1">JWT token ou<br/><code class="text-accent-400">exk_</code> API key</div>
-          </div>
-          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[150px]">
-            <div class="text-xs font-mono text-gray-500 mb-2">Step 3</div>
-            <div class="text-sm text-white font-semibold">Verify</div>
-            <div class="text-xs text-gray-500 mt-1">JWT: verify signature<br/>Key: SHA-256 + DB lookup</div>
-          </div>
-          <div class="flex-shrink-0 text-accent-400 font-mono text-lg">→</div>
-          <div class="flex-shrink-0 bg-surface-300 border border-gray-700 rounded-xl p-4 text-center min-w-[150px]">
-            <div class="text-xs font-mono text-gray-500 mb-2">Step 4</div>
-            <div class="text-sm text-white font-semibold">getCurrentUserId()</div>
-            <div class="text-xs text-good mt-1">request.user = { id, role }</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="glow-line my-4"></div>
-
-  <!-- ============================================================ -->
-  <!-- AUTHORIZATION MATRIX -->
-  <!-- ============================================================ -->
-  <section id="auth-matrix" class="scroll-mt-8">
-    <div class="flex items-center gap-4 mb-10 animate-fade-in">
-      <div class="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-      </div>
-      <div>
-        <h2 class="text-3xl font-bold text-white">Authorization Matrix</h2>
-        <p class="text-gray-500 text-sm font-mono mt-1">RBAC — Role-Based Access Control</p>
-      </div>
-    </div>
-
-    <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl overflow-hidden">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-800">
-            <th class="text-left px-6 py-4 text-gray-400 font-mono text-xs uppercase tracking-wider">Resource / Action</th>
-            <th class="text-center px-6 py-4">
-              <div class="flex flex-col items-center gap-1">
-                <span class="w-8 h-8 rounded-lg bg-crit/10 border border-crit/20 flex items-center justify-center text-crit text-lg">👑</span>
-                <span class="text-xs font-mono text-crit">Admin</span>
-              </div>
-            </th>
-            <th class="text-center px-6 py-4">
-              <div class="flex flex-col items-center gap-1">
-                <span class="w-8 h-8 rounded-lg bg-accent-400/10 border border-accent-400/20 flex items-center justify-center text-accent-400 text-lg">💻</span>
-                <span class="text-xs font-mono text-accent-400">Developer</span>
-              </div>
-            </th>
-            <th class="text-center px-6 py-4">
-              <div class="flex flex-col items-center gap-1">
-                <span class="w-8 h-8 rounded-lg bg-gray-500/10 border border-gray-500/20 flex items-center justify-center text-gray-400 text-lg">👁️</span>
-                <span class="text-xs font-mono text-gray-400">Viewer</span>
-              </div>
-            </th>
-          </tr>
-        </thead>
-        <tbody id="authMatrix">
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Roles Legend -->
-    <div class="mt-6 grid md:grid-cols-3 gap-4">
-      <div class="bg-surface-200/40 border border-crit/10 rounded-xl p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-crit font-semibold text-sm">Admin</span>
-        </div>
-        <p class="text-gray-500 text-xs">Acesso total. Gerencia usuarios, workflows, execucoes e configuracoes do sistema.</p>
-      </div>
-      <div class="bg-surface-200/40 border border-accent-400/10 rounded-xl p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-accent-400 font-semibold text-sm">Developer</span>
-        </div>
-        <p class="text-gray-500 text-xs">Cria e executa workflows. Pode ver e editar seus proprios recursos.</p>
-      </div>
-      <div class="bg-surface-200/40 border border-gray-500/10 rounded-xl p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-gray-400 font-semibold text-sm">Viewer</span>
-        </div>
-        <p class="text-gray-500 text-xs">Apenas leitura. Pode visualizar workflows e resultados de execucoes.</p>
-      </div>
-    </div>
-  </section>
-
-  <div class="glow-line my-4"></div>
-
-  <!-- ============================================================ -->
-  <!-- SANDBOX SECURITY -->
-  <!-- ============================================================ -->
-  <section id="sandbox" class="scroll-mt-8">
-    <div class="flex items-center gap-4 mb-10 animate-fade-in">
-      <div class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-      </div>
-      <div>
-        <h2 class="text-3xl font-bold text-white">Sandbox Security</h2>
-        <p class="text-gray-500 text-sm font-mono mt-1">Isolamento de processos Claude CLI</p>
-      </div>
-    </div>
-
-    <div class="grid md:grid-cols-2 gap-6">
-      <!-- Process Isolation -->
-      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
-        <div class="flex items-center gap-3 mb-5">
-          <div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
-          </div>
-          <h3 class="text-white font-semibold">Process Isolation</h3>
-        </div>
-        <div class="space-y-3">
-          <div class="flex items-start gap-3 bg-surface-300/50 rounded-lg p-3">
-            <span class="text-good text-sm mt-0.5">✓</span>
+      <div class="grid-3">
+        <!-- JWT -->
+        <div class="auth-card jwt">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent); font-size: 1.3rem;">&#128273;</div>
             <div>
-              <div class="text-sm text-white font-medium">claude-sandbox user</div>
-              <div class="text-xs text-gray-500">Processos rodam sob usuario separado via <code class="text-cyan-400 bg-cyan-400/5 px-1 rounded">sudo -u claude-sandbox</code></div>
+              <div class="card-title">JWT Token</div>
+              <span class="badge badge-teal">Primario</span>
             </div>
           </div>
-          <div class="flex items-start gap-3 bg-surface-300/50 rounded-lg p-3">
-            <span class="text-good text-sm mt-0.5">✓</span>
+          <div class="card-desc">
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Assinado com <code class="mono" style="color: var(--text-accent); font-size: 0.8rem;">JWT_SECRET</code> (env var)</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Expiracao: <strong>7 dias</strong></span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Payload: userId, email, role</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Validacao de user ativo no middleware</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Implementado via <code class="mono" style="color: var(--text-accent); font-size: 0.8rem;">@fastify/jwt</code></span>
+            </div>
+          </div>
+          <div class="code-block" style="margin-top: 1rem; font-size: 0.78rem;">
+<span class="comment">// Middleware de autenticacao</span>
+<span class="keyword">const</span> decoded = request.jwtVerify()
+<span class="comment">// Verifica se user existe e nao esta suspenso</span>
+<span class="keyword">const</span> user = <span class="keyword">await</span> redis.get(<span class="string">`user:${decoded.id}`</span>)
+  || <span class="keyword">await</span> prisma.user.findUnique({ id })
+          </div>
+        </div>
+
+        <!-- API Keys -->
+        <div class="auth-card apikey">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa; font-size: 1.3rem;">&#128477;</div>
             <div>
-              <div class="text-sm text-white font-medium">Process Group Kill</div>
-              <div class="text-xs text-gray-500">Cancelamento mata todo o grupo de processos (<code class="text-cyan-400 bg-cyan-400/5 px-1 rounded">kill -TERM -pgid</code>)</div>
+              <div class="card-title">API Keys</div>
+              <span class="badge badge-blue">Programatico</span>
             </div>
           </div>
-          <div class="flex items-start gap-3 bg-surface-300/50 rounded-lg p-3">
-            <span class="text-good text-sm mt-0.5">✓</span>
+          <div class="card-desc">
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Prefixo <code class="mono" style="color: #60a5fa; font-size: 0.8rem;">exk_</code> para identificacao</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Hash SHA256 &mdash; nunca armazenada em plain text</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Escopos granulares (<code class="mono" style="font-size: 0.75rem;">resource:action</code>)</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Rate limit por chave via Redis</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Suporte a expiracao e revogacao</span>
+            </div>
+          </div>
+          <div style="margin-top: 1rem;">
+            <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-secondary);">Escopos disponiveis:</div>
             <div>
-              <div class="text-sm text-white font-medium">Configurable Toggle</div>
-              <div class="text-xs text-gray-500">Env <code class="text-cyan-400 bg-cyan-400/5 px-1 rounded">SANDBOX_ENABLED</code> controla ativacao</div>
+              <span class="scope-tag">workflows:read</span>
+              <span class="scope-tag">workflows:write</span>
+              <span class="scope-tag">executions:read</span>
+              <span class="scope-tag">executions:write</span>
+              <span class="scope-tag">workflows:*</span>
+              <span class="scope-tag">*</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Sessions -->
+        <div class="auth-card session">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+            <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa; font-size: 1.3rem;">&#128100;</div>
+            <div>
+              <div class="card-title">User Sessions</div>
+              <span class="badge badge-purple">Cache</span>
+            </div>
+          </div>
+          <div class="card-desc">
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Cache Redis com TTL de <strong>5 minutos</strong></span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Fallback para banco PostgreSQL</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Verifica status do usuario (suspenso/ativo)</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Invalidacao automatica ao suspender</span>
+            </div>
+          </div>
+          <div class="code-block" style="margin-top: 1rem; font-size: 0.78rem;">
+<span class="comment">// Redis session cache</span>
+<span class="keyword">const</span> key = <span class="string">`user:session:${userId}`</span>
+<span class="keyword">await</span> redis.set(key, JSON.stringify(user), <span class="string">'EX'</span>, <span class="number">300</span>)
+<span class="comment">// 300s = 5min TTL</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Auth Flow Diagram -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: var(--bg-accent-subtle);">&#128260;</span>
+        Fluxo de Autenticacao
+      </h2>
+      <div class="card">
+        <div class="flow-container" style="justify-content: center;">
+          <div class="flow-node" style="border-color: var(--border-accent);">&#128274; Request</div>
+          <span class="flow-arrow">&#8594;</span>
+          <div class="flow-node">&#128270; Extract Token / API Key</div>
+          <span class="flow-arrow">&#8594;</span>
+          <div class="flow-node">&#128273; JWT Verify / SHA256 Match</div>
+          <span class="flow-arrow">&#8594;</span>
+          <div class="flow-node" style="border-color: rgba(139,92,246,0.5);">&#9889; Redis Cache Check</div>
+          <span class="flow-arrow">&#8594;</span>
+          <div class="flow-node">&#128451; DB Fallback</div>
+          <span class="flow-arrow">&#8594;</span>
+          <div class="flow-node" style="border-color: rgba(34,197,94,0.5);">&#9989; Authorized</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RBAC -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(139,92,246,0.1);">&#128101;</span>
+        RBAC &mdash; Role-Based Access Control
+      </h2>
+
+      <div class="grid-3" style="margin-bottom: 2rem;">
+        <div class="card" style="border-top: 3px solid #ef4444;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div class="card-icon" style="background: var(--bg-danger); font-size: 1.2rem;">&#128081;</div>
+            <div>
+              <div class="card-title">admin</div>
+              <span class="badge badge-red">Full Access</span>
+            </div>
+          </div>
+          <div class="card-desc">
+            <ul style="list-style: none; padding: 0;">
+              <li style="padding: 0.3rem 0;">&#9679; Acesso total ao sistema</li>
+              <li style="padding: 0.3rem 0;">&#9679; Gerenciamento de usuarios</li>
+              <li style="padding: 0.3rem 0;">&#9679; Visualizacao de audit logs</li>
+              <li style="padding: 0.3rem 0;">&#9679; Configuracoes globais</li>
+              <li style="padding: 0.3rem 0;">&#9679; Criacao/revogacao de API keys</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="border-top: 3px solid #3b82f6;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div class="card-icon" style="background: var(--bg-info); font-size: 1.2rem;">&#128187;</div>
+            <div>
+              <div class="card-title">developer</div>
+              <span class="badge badge-blue">Read + Write</span>
+            </div>
+          </div>
+          <div class="card-desc">
+            <ul style="list-style: none; padding: 0;">
+              <li style="padding: 0.3rem 0;">&#9679; Criar/editar workflows</li>
+              <li style="padding: 0.3rem 0;">&#9679; Executar workflows</li>
+              <li style="padding: 0.3rem 0;">&#9679; Gerenciar resources proprios</li>
+              <li style="padding: 0.3rem 0;">&#9679; Ver execucoes e metricas</li>
+              <li style="padding: 0.3rem 0;">&#9679; Sem acesso a admin panel</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="border-top: 3px solid #22c55e;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <div class="card-icon" style="background: var(--bg-success); font-size: 1.2rem;">&#128065;</div>
+            <div>
+              <div class="card-title">viewer</div>
+              <span class="badge badge-green">Read-Only</span>
+            </div>
+          </div>
+          <div class="card-desc">
+            <ul style="list-style: none; padding: 0;">
+              <li style="padding: 0.3rem 0;">&#9679; Visualizar workflows</li>
+              <li style="padding: 0.3rem 0;">&#9679; Ver execucoes (somente leitura)</li>
+              <li style="padding: 0.3rem 0;">&#9679; Ver metricas e dashboards</li>
+              <li style="padding: 0.3rem 0;">&#9679; Sem criar/editar/executar</li>
+              <li style="padding: 0.3rem 0;">&#9679; Sem acesso a configuracoes</li>
+            </ul>
           </div>
         </div>
       </div>
 
-      <!-- Environment Blocklist -->
-      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
-        <div class="flex items-center gap-3 mb-5">
-          <div class="w-8 h-8 rounded-lg bg-crit/10 flex items-center justify-center">
-            <svg class="w-4 h-4 text-crit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-          </div>
-          <h3 class="text-white font-semibold">Environment Variable Blocklist</h3>
+      <!-- RBAC Permission Matrix -->
+      <div class="card">
+        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 1rem;">Matriz de Permissoes</div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Recurso / Acao</th>
+                <th style="text-align: center;">admin</th>
+                <th style="text-align: center;">developer</th>
+                <th style="text-align: center;">viewer</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Workflows &mdash; Criar/Editar</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+              </tr>
+              <tr>
+                <td>Workflows &mdash; Executar</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+              </tr>
+              <tr>
+                <td>Workflows &mdash; Visualizar</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+              </tr>
+              <tr>
+                <td>Execucoes &mdash; Visualizar</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+              </tr>
+              <tr>
+                <td>Execucoes &mdash; Cancelar</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-partial">&#9711;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+              </tr>
+              <tr>
+                <td>Resources &mdash; Gerenciar</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-partial">&#9711;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+              </tr>
+              <tr>
+                <td>API Keys &mdash; Criar/Revogar</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+              </tr>
+              <tr>
+                <td>Usuarios &mdash; Gerenciar</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+              </tr>
+              <tr>
+                <td>Audit Logs &mdash; Visualizar</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+              </tr>
+              <tr>
+                <td>Configuracoes Globais</td>
+                <td class="rbac-cell rbac-yes">&#10004;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+                <td class="rbac-cell rbac-no">&#10008;</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <div class="code-block space-y-1">
-          <div class="text-gray-500 text-xs font-mono mb-2">// Variaveis bloqueadas para o sandbox</div>
-          <div class="flex flex-wrap gap-2">
-            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">DATABASE_URL</span>
-            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">JWT_SECRET</span>
-            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">REDIS_URL</span>
-            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">GITHUB_TOKEN</span>
-            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">ANTHROPIC_API_KEY</span>
-            <span class="inline-block bg-crit/10 text-crit text-xs font-mono px-2 py-1 rounded border border-crit/20">WEBHOOK_SECRET</span>
-          </div>
+        <div style="margin-top: 0.75rem; display: flex; gap: 1.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+          <span><span class="rbac-yes">&#10004;</span> Acesso total</span>
+          <span><span class="rbac-partial">&#9711;</span> Apenas proprios</span>
+          <span><span class="rbac-no">&#10008;</span> Sem acesso</span>
         </div>
-        <div class="mt-4 text-xs text-gray-500">Estas variaveis sao removidas do ambiente antes de invocar o Claude CLI no modo sandbox.</div>
       </div>
+    </section>
 
-      <!-- Filesystem Access -->
-      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
-        <div class="flex items-center gap-3 mb-5">
-          <div class="w-8 h-8 rounded-lg bg-med/10 flex items-center justify-center">
-            <svg class="w-4 h-4 text-med" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-          </div>
-          <h3 class="text-white font-semibold">Filesystem Access Restrictions</h3>
-        </div>
-        <div class="space-y-2">
-          <div class="flex items-center justify-between bg-surface-300/50 rounded-lg p-3">
-            <span class="text-sm text-gray-300 font-mono">/workspace/orquetrador-claude/</span>
-            <span class="text-xs font-mono bg-crit/10 text-crit px-2 py-0.5 rounded">owner-only</span>
-          </div>
-          <div class="flex items-center justify-between bg-surface-300/50 rounded-lg p-3">
-            <span class="text-sm text-gray-300 font-mono">/home/dev/.claude/</span>
-            <span class="text-xs font-mono bg-good/10 text-good px-2 py-0.5 rounded">copied to sandbox</span>
-          </div>
-          <div class="flex items-center justify-between bg-surface-300/50 rounded-lg p-3">
-            <span class="text-sm text-gray-300 font-mono">project working dir</span>
-            <span class="text-xs font-mono bg-good/10 text-good px-2 py-0.5 rounded">read+write via group</span>
-          </div>
-        </div>
-      </div>
+    <!-- API Key Security -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(59,130,246,0.1);">&#128477;</span>
+        API Key Security
+      </h2>
 
-      <!-- Sandbox Architecture Diagram -->
-      <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
-        <div class="flex items-center gap-3 mb-5">
-          <div class="w-8 h-8 rounded-lg bg-accent-400/10 flex items-center justify-center">
-            <svg class="w-4 h-4 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#128272;</div>
+            <div class="card-title">Armazenamento Seguro</div>
           </div>
-          <h3 class="text-white font-semibold">Sandbox Architecture</h3>
-        </div>
-        <div class="space-y-4">
-          <div class="relative">
-            <div class="border-2 border-accent-400/30 rounded-xl p-4 bg-accent-400/5">
-              <div class="text-xs font-mono text-accent-400 mb-3">Fastify Backend (dev user)</div>
-              <div class="border-2 border-cyan-400/30 rounded-lg p-4 bg-cyan-400/5">
-                <div class="text-xs font-mono text-cyan-400 mb-3">Sandbox Boundary</div>
-                <div class="border border-gray-700 rounded-lg p-3 bg-surface-300/80">
-                  <div class="text-xs font-mono text-gray-400 mb-1">claude-sandbox user</div>
-                  <div class="flex items-center gap-2">
-                    <span class="bg-purple-500/10 text-purple-400 text-xs font-mono px-2 py-0.5 rounded">claude CLI</span>
-                    <span class="text-gray-600">→</span>
-                    <span class="bg-gray-700/50 text-gray-400 text-xs font-mono px-2 py-0.5 rounded">project files</span>
-                  </div>
-                </div>
-              </div>
+          <div class="card-desc">
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Chave nunca armazenada em plain text</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Apenas hash SHA256 salvo no banco</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Chave original exibida apenas na criacao</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Prefixo <code class="mono" style="color: #60a5fa;">exk_</code> para identificacao rapida</span>
             </div>
           </div>
-          <div class="text-xs text-gray-600 text-center">O processo Claude CLI roda isolado do backend principal</div>
+          <div class="code-block" style="margin-top: 1rem; font-size: 0.78rem;">
+<span class="comment">// Geracao da API Key</span>
+<span class="keyword">const</span> rawKey = <span class="string">`exk_${randomBytes(32).toString('hex')}`</span>
+<span class="keyword">const</span> hashed = createHash(<span class="string">'sha256'</span>)
+  .update(rawKey).digest(<span class="string">'hex'</span>)
+
+<span class="comment">// Salva apenas o hash</span>
+<span class="keyword">await</span> prisma.apiKey.create({
+  data: { keyHash: hashed, prefix: rawKey.slice(<span class="number">0</span>, <span class="number">8</span>) }
+})
+          </div>
         </div>
-      </div>
-    </div>
-  </section>
 
-  <div class="glow-line my-4"></div>
-
-  <!-- ============================================================ -->
-  <!-- DATA PROTECTION -->
-  <!-- ============================================================ -->
-  <section id="data-protection" class="scroll-mt-8">
-    <div class="flex items-center gap-4 mb-10 animate-fade-in">
-      <div class="w-10 h-10 rounded-lg bg-good/10 border border-good/20 flex items-center justify-center">
-        <svg class="w-5 h-5 text-good" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-      </div>
-      <div>
-        <h2 class="text-3xl font-bold text-white">Data Protection</h2>
-        <p class="text-gray-500 text-sm font-mono mt-1">Como os dados sensiveis sao tratados</p>
-      </div>
-    </div>
-
-    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      <!-- Hashed -->
-      <div class="bg-surface-200/60 backdrop-blur border border-good/20 rounded-2xl p-6">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-3 h-3 rounded-full bg-good"></div>
-          <h3 class="text-good font-semibold text-sm uppercase tracking-wider">Hashed</h3>
-        </div>
-        <div class="space-y-3">
-          <div class="bg-surface-300/50 rounded-lg p-3">
-            <div class="text-white text-sm font-medium">Passwords</div>
-            <div class="text-xs text-gray-500 font-mono mt-1">bcrypt (salt 10)</div>
-            <div class="mt-2 w-full h-1.5 bg-surface-400 rounded-full overflow-hidden">
-              <div class="h-full bg-good rounded-full" style="width: 95%"></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#127919;</div>
+            <div class="card-title">Escopos e Controles</div>
+          </div>
+          <div class="card-desc">
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Formato <code class="mono" style="font-size: 0.75rem;">resource:action</code> granular</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Wildcards suportados: <code class="mono" style="font-size: 0.75rem;">*</code>, <code class="mono" style="font-size: 0.75rem;">workflows:*</code></span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>IP Whitelist enforcement</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Rate limiting per-minute via Redis</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Data de expiracao configuravel</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Revogacao instantanea</span>
             </div>
           </div>
-          <div class="bg-surface-300/50 rounded-lg p-3">
-            <div class="text-white text-sm font-medium">API Keys</div>
-            <div class="text-xs text-gray-500 font-mono mt-1">SHA-256</div>
-            <div class="mt-2 w-full h-1.5 bg-surface-400 rounded-full overflow-hidden">
-              <div class="h-full bg-good rounded-full" style="width: 90%"></div>
+
+          <div class="table-container" style="margin-top: 1rem;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Escopo</th>
+                  <th>Descricao</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="scope-tag">workflows:read</span></td>
+                  <td>Listar e visualizar workflows</td>
+                </tr>
+                <tr>
+                  <td><span class="scope-tag">workflows:write</span></td>
+                  <td>Criar, editar e deletar workflows</td>
+                </tr>
+                <tr>
+                  <td><span class="scope-tag">executions:read</span></td>
+                  <td>Visualizar execucoes e logs</td>
+                </tr>
+                <tr>
+                  <td><span class="scope-tag">executions:write</span></td>
+                  <td>Iniciar e cancelar execucoes</td>
+                </tr>
+                <tr>
+                  <td><span class="scope-tag">workflows:*</span></td>
+                  <td>Todas as acoes em workflows</td>
+                </tr>
+                <tr>
+                  <td><span class="scope-tag">*</span></td>
+                  <td>Acesso total (equivalente a admin)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sandbox Isolation -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(245,158,11,0.1);">&#128737;</span>
+        Sandbox Isolation
+      </h2>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128032;</div>
+            <div class="card-title">Camada 1 &mdash; User Isolation</div>
+          </div>
+          <div class="card-desc">
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>User de sistema <code class="mono" style="color: #fbbf24;">claude-sandbox</code></span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Sem shell de login (nologin)</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Adicionado ao grupo <code class="mono" style="font-size: 0.75rem;">dev</code> para acesso ao projeto</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Credenciais Claude CLI copiadas de <code class="mono" style="font-size: 0.75rem;">/home/dev/.claude/</code></span>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Encrypted -->
-      <div class="bg-surface-200/60 backdrop-blur border border-crit/20 rounded-2xl p-6">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-3 h-3 rounded-full bg-crit animate-pulse"></div>
-          <h3 class="text-crit font-semibold text-sm uppercase tracking-wider">Encrypted</h3>
-        </div>
-        <div class="flex flex-col items-center justify-center h-[calc(100%-3rem)] text-center">
-          <div class="text-4xl mb-3 opacity-30">🚫</div>
-          <div class="text-crit font-semibold text-lg">Nothing!</div>
-          <div class="text-xs text-gray-600 mt-2">Nenhum dado e criptografado at-rest. Este e um gap significativo de seguranca.</div>
-        </div>
-      </div>
-
-      <!-- Plain Text -->
-      <div class="bg-surface-200/60 backdrop-blur border border-high/20 rounded-2xl p-6">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-3 h-3 rounded-full bg-high"></div>
-          <h3 class="text-high font-semibold text-sm uppercase tracking-wider">Plain Text</h3>
-        </div>
-        <div class="space-y-3">
-          <div class="bg-surface-300/50 rounded-lg p-3">
-            <div class="text-white text-sm font-medium">GitHub Tokens</div>
-            <div class="text-xs text-crit/80 mt-1">Armazenado em texto no DB</div>
-          </div>
-          <div class="bg-surface-300/50 rounded-lg p-3">
-            <div class="text-white text-sm font-medium">Webhook Secrets</div>
-            <div class="text-xs text-crit/80 mt-1">Armazenado em texto no DB</div>
+          <div class="code-block" style="margin-top: 1rem; font-size: 0.78rem;">
+<span class="comment"># Execucao isolada via sudo</span>
+sudo -u claude-sandbox claude \
+  --task <span class="string">"Execute workflow steps"</span> \
+  --project /workspace/orquetrador-claude
           </div>
         </div>
-      </div>
 
-      <!-- Token Budget -->
-      <div class="bg-surface-200/60 backdrop-blur border border-accent-400/20 rounded-2xl p-6">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-3 h-3 rounded-full bg-accent-400"></div>
-          <h3 class="text-accent-400 font-semibold text-sm uppercase tracking-wider">Token Limits</h3>
-        </div>
-        <div class="space-y-3">
-          <div class="bg-surface-300/50 rounded-lg p-3">
-            <div class="text-white text-sm font-medium">Daily Limit</div>
-            <div class="text-xs text-accent-400 font-mono mt-1">5,000,000 tokens</div>
-            <div class="mt-2 w-full h-1.5 bg-surface-400 rounded-full overflow-hidden">
-              <div class="h-full bg-accent-400 rounded-full" style="width: 40%"></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#128736;</div>
+            <div class="card-title">Camada 2 &mdash; Process Isolation</div>
+          </div>
+          <div class="card-desc">
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Processos executados via <code class="mono" style="font-size: 0.75rem;">sudo -u claude-sandbox</code></span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Diretorio do projeto com permissoes restritas (owner-only)</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Sudoers configurado para <code class="mono" style="font-size: 0.75rem;">dev</code> executar como sandbox</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon warn">&#9888;</span>
+              <span>Controlado por <code class="mono" style="color: #fbbf24;">SANDBOX_ENABLED</code> env var (pode ser desabilitado)</span>
             </div>
           </div>
-          <div class="bg-surface-300/50 rounded-lg p-3">
-            <div class="text-white text-sm font-medium">Monthly Limit</div>
-            <div class="text-xs text-accent-400 font-mono mt-1">100,000,000 tokens</div>
-            <div class="mt-2 w-full h-1.5 bg-surface-400 rounded-full overflow-hidden">
-              <div class="h-full bg-accent-400 rounded-full" style="width: 25%"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Data Flow Table -->
-    <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-6">
-      <h3 class="text-white font-semibold mb-4 flex items-center gap-2">
-        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        Data Sensitivity Flow
-      </h3>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-gray-800">
-              <th class="text-left px-4 py-3 text-gray-500 font-mono text-xs">Dado</th>
-              <th class="text-center px-4 py-3 text-gray-500 font-mono text-xs">Em transito</th>
-              <th class="text-center px-4 py-3 text-gray-500 font-mono text-xs">Em repouso</th>
-              <th class="text-center px-4 py-3 text-gray-500 font-mono text-xs">Protecao</th>
-              <th class="text-center px-4 py-3 text-gray-500 font-mono text-xs">Risco</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-800/50">
-            <tr class="hover:bg-surface-100/30 transition-colors">
-              <td class="px-4 py-3 text-white">Passwords</td>
-              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">HTTPS</span></td>
-              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">bcrypt hash</span></td>
-              <td class="px-4 py-3 text-center"><span class="severity-badge badge-good text-xs">Forte</span></td>
-              <td class="px-4 py-3 text-center"><span class="text-good">Baixo</span></td>
-            </tr>
-            <tr class="hover:bg-surface-100/30 transition-colors">
-              <td class="px-4 py-3 text-white">API Keys</td>
-              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">HTTPS</span></td>
-              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">SHA-256 hash</span></td>
-              <td class="px-4 py-3 text-center"><span class="severity-badge badge-good text-xs">Forte</span></td>
-              <td class="px-4 py-3 text-center"><span class="text-good">Baixo</span></td>
-            </tr>
-            <tr class="hover:bg-surface-100/30 transition-colors">
-              <td class="px-4 py-3 text-white">JWT Tokens</td>
-              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">HTTPS</span></td>
-              <td class="px-4 py-3 text-center"><span class="text-high text-xs font-mono">localStorage</span></td>
-              <td class="px-4 py-3 text-center"><span class="severity-badge badge-high text-xs">Fraca</span></td>
-              <td class="px-4 py-3 text-center"><span class="text-high">Alto</span></td>
-            </tr>
-            <tr class="hover:bg-surface-100/30 transition-colors">
-              <td class="px-4 py-3 text-white">GitHub Tokens</td>
-              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">HTTPS</span></td>
-              <td class="px-4 py-3 text-center"><span class="text-crit text-xs font-mono">plain text DB</span></td>
-              <td class="px-4 py-3 text-center"><span class="severity-badge badge-crit text-xs">Nenhuma</span></td>
-              <td class="px-4 py-3 text-center"><span class="text-crit">Critico</span></td>
-            </tr>
-            <tr class="hover:bg-surface-100/30 transition-colors">
-              <td class="px-4 py-3 text-white">Webhook Secrets</td>
-              <td class="px-4 py-3 text-center"><span class="text-good text-xs font-mono">HTTPS</span></td>
-              <td class="px-4 py-3 text-center"><span class="text-crit text-xs font-mono">plain text DB</span></td>
-              <td class="px-4 py-3 text-center"><span class="severity-badge badge-crit text-xs">Nenhuma</span></td>
-              <td class="px-4 py-3 text-center"><span class="text-crit">Critico</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <div class="glow-line my-4"></div>
-
-  <!-- ============================================================ -->
-  <!-- ATTACK SURFACE MAP -->
-  <!-- ============================================================ -->
-  <section id="attack-surface" class="scroll-mt-8">
-    <div class="flex items-center gap-4 mb-10 animate-fade-in">
-      <div class="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-        <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      </div>
-      <div>
-        <h2 class="text-3xl font-bold text-white">Attack Surface Map</h2>
-        <p class="text-gray-500 text-sm font-mono mt-1">Vetores de ataque identificados</p>
-      </div>
-    </div>
-
-    <!-- Concentric Rings Visualization -->
-    <div class="bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-8 mb-8">
-      <div class="relative mx-auto" style="width: 100%; max-width: 700px; height: 500px;">
-        <!-- Outer ring - External -->
-        <div class="absolute inset-0 rounded-full border-2 border-crit/30 bg-crit/5 flex items-start justify-center pt-6" style="animation: ringPulse 4s ease-in-out infinite;">
-          <span class="text-xs font-mono text-crit uppercase tracking-widest bg-surface-200/90 px-3 py-1 rounded-full">External Attack Surface</span>
-        </div>
-        <!-- Middle ring - Internal -->
-        <div class="absolute rounded-full border-2 border-high/30 bg-high/5 flex items-start justify-center pt-5" style="top: 15%; left: 15%; right: 15%; bottom: 15%; animation: ringPulse 4.5s ease-in-out infinite 0.5s;">
-          <span class="text-xs font-mono text-high uppercase tracking-widest bg-surface-200/90 px-3 py-1 rounded-full">Internal Systems</span>
-        </div>
-        <!-- Inner ring - User Input -->
-        <div class="absolute rounded-full border-2 border-med/30 bg-med/5 flex items-start justify-center pt-4" style="top: 30%; left: 30%; right: 30%; bottom: 30%; animation: ringPulse 5s ease-in-out infinite 1s;">
-          <span class="text-xs font-mono text-med uppercase tracking-widest bg-surface-200/90 px-3 py-1 rounded-full">User Input</span>
-        </div>
-        <!-- Core -->
-        <div class="absolute rounded-full border-2 border-good/30 bg-good/10 flex items-center justify-center" style="top: 43%; left: 43%; right: 43%; bottom: 43%;">
-          <span class="text-xs font-mono text-good font-bold">CORE</span>
-        </div>
-
-        <!-- External Labels -->
-        <div class="absolute text-xs text-crit/80 font-mono" style="top: 18%; left: 5%;">HTTPS endpoints</div>
-        <div class="absolute text-xs text-crit/80 font-mono" style="top: 35%; right: 3%;">SSE connections</div>
-        <div class="absolute text-xs text-crit/80 font-mono" style="bottom: 20%; left: 5%;">Webhook callbacks</div>
-
-        <!-- Internal Labels -->
-        <div class="absolute text-xs text-high/80 font-mono" style="top: 28%; left: 20%;">Claude CLI</div>
-        <div class="absolute text-xs text-high/80 font-mono" style="bottom: 30%; right: 18%;">Redis</div>
-        <div class="absolute text-xs text-high/80 font-mono" style="bottom: 22%; left: 22%;">PostgreSQL</div>
-        <div class="absolute text-xs text-high/80 font-mono" style="top: 25%; right: 18%;">Filesystem</div>
-
-        <!-- User Input Labels -->
-        <div class="absolute text-xs text-med/80 font-mono text-center" style="top: 42%; left: 33%;">Chat msgs</div>
-        <div class="absolute text-xs text-med/80 font-mono text-center" style="bottom: 35%; right: 32%;">Workflows</div>
-        <div class="absolute text-xs text-med/80 font-mono text-center" style="bottom: 38%; left: 33%;">Skills</div>
-      </div>
-    </div>
-
-    <!-- Detailed Attack Vectors -->
-    <div class="grid md:grid-cols-3 gap-6">
-      <!-- External -->
-      <div class="bg-surface-200/60 backdrop-blur border border-crit/20 rounded-2xl p-6">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-3 h-3 rounded-full bg-crit"></div>
-          <h3 class="text-crit font-semibold text-sm uppercase tracking-wider">External</h3>
-        </div>
-        <div class="space-y-3">
-          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-crit/30">
-            <div class="text-sm text-white font-medium">HTTPS Endpoints</div>
-            <div class="text-xs text-gray-500 mt-1">REST API, Swagger UI, auth routes</div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span class="text-xs bg-crit/10 text-crit px-1.5 py-0.5 rounded">CORS open</span>
-              <span class="text-xs bg-crit/10 text-crit px-1.5 py-0.5 rounded">no rate limit</span>
-            </div>
-          </div>
-          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-crit/30">
-            <div class="text-sm text-white font-medium">SSE Connections</div>
-            <div class="text-xs text-gray-500 mt-1">Server-Sent Events para execucoes em tempo real</div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span class="text-xs bg-high/10 text-high px-1.5 py-0.5 rounded">long-lived</span>
-            </div>
-          </div>
-          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-crit/30">
-            <div class="text-sm text-white font-medium">Webhook Callbacks</div>
-            <div class="text-xs text-gray-500 mt-1">GitHub webhooks, notificacoes externas</div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span class="text-xs bg-high/10 text-high px-1.5 py-0.5 rounded">secret in plaintext</span>
-            </div>
+          <div class="code-block" style="margin-top: 1rem; font-size: 0.78rem;">
+<span class="comment"># setup-sandbox.sh</span>
+useradd --system --no-create-home \
+  --shell /usr/sbin/nologin claude-sandbox
+usermod -aG dev claude-sandbox
+chmod <span class="number">700</span> /workspace/orquetrador-claude/
           </div>
         </div>
       </div>
 
-      <!-- Internal -->
-      <div class="bg-surface-200/60 backdrop-blur border border-high/20 rounded-2xl p-6">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-3 h-3 rounded-full bg-high"></div>
-          <h3 class="text-high font-semibold text-sm uppercase tracking-wider">Internal</h3>
-        </div>
-        <div class="space-y-3">
-          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-high/30">
-            <div class="text-sm text-white font-medium">Claude CLI Subprocess</div>
-            <div class="text-xs text-gray-500 mt-1">Executa comandos via claude-sandbox</div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span class="text-xs bg-good/10 text-good px-1.5 py-0.5 rounded">sandboxed</span>
-            </div>
+      <!-- Layer Stack Diagram -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <div style="font-weight: 600; margin-bottom: 1rem; text-align: center;">Diagrama de Camadas de Isolamento</div>
+        <div class="layer-stack">
+          <div class="layer-item" style="background: rgba(59,130,246,0.1); color: #60a5fa;">
+            &#127760; HTTP Request (Fastify)
+            <div class="layer-sub">JWT / API Key Authentication</div>
           </div>
-          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-high/30">
-            <div class="text-sm text-white font-medium">File System Writes</div>
-            <div class="text-xs text-gray-500 mt-1">Execucoes produzem artefatos no disco</div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span class="text-xs bg-med/10 text-med px-1.5 py-0.5 rounded">scoped to project</span>
-            </div>
+          <div class="layer-item" style="background: rgba(139,92,246,0.1); color: #a78bfa;">
+            &#128101; RBAC Authorization
+            <div class="layer-sub">Role check: admin / developer / viewer</div>
           </div>
-          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-high/30">
-            <div class="text-sm text-white font-medium">Redis & PostgreSQL</div>
-            <div class="text-xs text-gray-500 mt-1">Cache, filas (BullMQ), dados persistentes</div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span class="text-xs bg-med/10 text-med px-1.5 py-0.5 rounded">password auth</span>
-            </div>
+          <div class="layer-item" style="background: rgba(245,158,11,0.1); color: #fbbf24;">
+            &#128737; Sandbox Layer
+            <div class="layer-sub">sudo -u claude-sandbox (process isolation)</div>
+          </div>
+          <div class="layer-item" style="background: rgba(13,148,136,0.1); color: var(--text-accent);">
+            &#9881; Claude CLI Execution
+            <div class="layer-sub">Restricted permissions, project-scoped</div>
           </div>
         </div>
       </div>
+    </section>
 
-      <!-- User Input -->
-      <div class="bg-surface-200/60 backdrop-blur border border-med/20 rounded-2xl p-6">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-3 h-3 rounded-full bg-med"></div>
-          <h3 class="text-med font-semibold text-sm uppercase tracking-wider">User Input</h3>
+    <!-- Riscos Mapeados -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: var(--bg-danger);">&#9888;</span>
+        6 Riscos Mapeados
+      </h2>
+
+      <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;" data-filter-group="risk-grid">
+        <span class="badge badge-gray" data-filter="all" style="cursor: pointer;">Todos (6)</span>
+        <span class="badge badge-red" data-filter="high" style="cursor: pointer;">&#9679; Alto (1)</span>
+        <span class="badge badge-amber" data-filter="medium" style="cursor: pointer;">&#9679; Medio (3)</span>
+        <span class="badge badge-green" data-filter="low" style="cursor: pointer;">&#9679; Baixo (2)</span>
+      </div>
+
+      <div class="grid-2" id="risk-grid">
+        <!-- Risk 1: HIGH -->
+        <div class="risk-card risk-high" data-category="high">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="risk-tag risk-tag-high">&#9679; Alto</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Risk #1</span>
+          </div>
+          <div class="risk-title">Exposicao de Tokens/Secrets em Traces</div>
+          <div class="risk-desc">
+            stdout e stderr de execucoes podem conter tokens, API keys e secrets. Os dados de trace sao armazenados no banco e ficam acessiveis via API de execucoes.
+          </div>
+          <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: #f87171; margin-bottom: 0.4rem;">Impacto</div>
+            <div style="color: var(--text-secondary);">Vazamento de credenciais em logs de execucao pode comprometer sistemas externos integrados.</div>
+          </div>
+          <div style="margin-top: 0.5rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: var(--text-accent); margin-bottom: 0.4rem;">Mitigacao sugerida</div>
+            <div style="color: var(--text-secondary);">Implementar sanitizacao de output com regex para padroes de secrets (tokens, passwords, API keys) antes de persistir traces.</div>
+          </div>
         </div>
-        <div class="space-y-3">
-          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-med/30">
-            <div class="text-sm text-white font-medium">Chat Messages</div>
-            <div class="text-xs text-gray-500 mt-1">Enviadas diretamente ao Claude CLI</div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span class="text-xs bg-med/10 text-med px-1.5 py-0.5 rounded">prompt injection</span>
-            </div>
+
+        <!-- Risk 2: MEDIUM -->
+        <div class="risk-card risk-medium" data-category="medium">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="risk-tag risk-tag-medium">&#9679; Medio</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Risk #2</span>
           </div>
-          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-med/30">
-            <div class="text-sm text-white font-medium">Workflow Definitions</div>
-            <div class="text-xs text-gray-500 mt-1">YAML/JSON com steps, condicoes, loops</div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span class="text-xs bg-good/10 text-good px-1.5 py-0.5 rounded">Zod validated</span>
-            </div>
+          <div class="risk-title">Sandbox Escape</div>
+          <div class="risk-desc">
+            O Claude CLI tem acesso ao sistema como usuario sandbox. Um prompt injection ou uso criativo do CLI pode escapar do isolamento previsto.
           </div>
-          <div class="bg-surface-300/50 rounded-lg p-3 border-l-2 border-med/30">
-            <div class="text-sm text-white font-medium">Skills & System Prompts</div>
-            <div class="text-xs text-gray-500 mt-1">Conteudo customizado injetado no contexto</div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span class="text-xs bg-med/10 text-med px-1.5 py-0.5 rounded">indirect injection</span>
-            </div>
+          <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: #fbbf24; margin-bottom: 0.4rem;">Impacto</div>
+            <div style="color: var(--text-secondary);">Execucao de comandos arbitrarios no container com permissoes do sandbox user.</div>
+          </div>
+          <div style="margin-top: 0.5rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: var(--text-accent); margin-bottom: 0.4rem;">Mitigacao sugerida</div>
+            <div style="color: var(--text-secondary);">Aplicar cgroups, namespaces ou containers adicionais para limitar recursos e acesso a filesystem.</div>
+          </div>
+        </div>
+
+        <!-- Risk 3: MEDIUM -->
+        <div class="risk-card risk-medium" data-category="medium">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="risk-tag risk-tag-medium">&#9679; Medio</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Risk #3</span>
+          </div>
+          <div class="risk-title">API Key Leakage</div>
+          <div class="risk-desc">
+            API keys podem estar expostas em variaveis de ambiente, memoria do processo ou logs de debug. Embora o hash SHA256 proteja o armazenamento, a chave original transita em runtime.
+          </div>
+          <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: #fbbf24; margin-bottom: 0.4rem;">Impacto</div>
+            <div style="color: var(--text-secondary);">Acesso nao autorizado a API se a chave for capturada em transito ou via memory dump.</div>
+          </div>
+          <div style="margin-top: 0.5rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: var(--text-accent); margin-bottom: 0.4rem;">Mitigacao sugerida</div>
+            <div style="color: var(--text-secondary);">Implementar rotacao automatica de keys, reduzir TTL, usar HMAC em vez de comparacao direta.</div>
+          </div>
+        </div>
+
+        <!-- Risk 4: LOW -->
+        <div class="risk-card risk-low" data-category="low">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="risk-tag risk-tag-low">&#9679; Baixo</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Risk #4</span>
+          </div>
+          <div class="risk-title">CORS Misconfiguration</div>
+          <div class="risk-desc">
+            Configuracao atual usa CORS_ORIGINS com fallback para dominios do projeto. Anteriormente era <code class="mono" style="font-size: 0.75rem;">origin: true</code> (permissivo). Ja corrigido, mas requer monitoramento.
+          </div>
+          <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: #4ade80; margin-bottom: 0.4rem;">Impacto</div>
+            <div style="color: var(--text-secondary);">CSRF ou acesso cross-origin indesejado se a lista de origens permitidas ficar desatualizada.</div>
+          </div>
+          <div style="margin-top: 0.5rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: var(--text-accent); margin-bottom: 0.4rem;">Status</div>
+            <div style="color: var(--text-secondary);">Corrigido &mdash; CORS_ORIGINS env var com lista explicita de dominios permitidos.</div>
+          </div>
+        </div>
+
+        <!-- Risk 5: MEDIUM -->
+        <div class="risk-card risk-medium" data-category="medium">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="risk-tag risk-tag-medium">&#9679; Medio</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Risk #5</span>
+          </div>
+          <div class="risk-title">Rate Limiting Desabilitado</div>
+          <div class="risk-desc">
+            O rate limit global (<code class="mono" style="font-size: 0.75rem;">@fastify/rate-limit</code>) esta configurado mas desabilitado por padrao. APIs ficam vulneraveis a brute-force e DDoS.
+          </div>
+          <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: #fbbf24; margin-bottom: 0.4rem;">Impacto</div>
+            <div style="color: var(--text-secondary);">Ataques de forca bruta em login, abuse de API keys, consumo excessivo de recursos.</div>
+          </div>
+          <div style="margin-top: 0.5rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: var(--text-accent); margin-bottom: 0.4rem;">Mitigacao sugerida</div>
+            <div style="color: var(--text-secondary);">Habilitar rate limit global com config adequada (ex: 100 req/min geral, 10 req/min em /auth/login).</div>
+          </div>
+        </div>
+
+        <!-- Risk 6: LOW -->
+        <div class="risk-card risk-low" data-category="low">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="risk-tag risk-tag-low">&#9679; Baixo</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Risk #6</span>
+          </div>
+          <div class="risk-title">Webhook Secret Management</div>
+          <div class="risk-desc">
+            Webhook secrets eram armazenados como plain text no banco. Agora utilizam <code class="mono" style="font-size: 0.75rem;">encrypt()</code> via ENCRYPTION_KEY, mas a feature e opcional (fallback sem criptografia).
+          </div>
+          <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: #4ade80; margin-bottom: 0.4rem;">Impacto</div>
+            <div style="color: var(--text-secondary);">Secrets visiveis em banco se ENCRYPTION_KEY nao estiver configurada.</div>
+          </div>
+          <div style="margin-top: 0.5rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.8rem;">
+            <div style="font-weight: 600; color: var(--text-accent); margin-bottom: 0.4rem;">Status</div>
+            <div style="color: var(--text-secondary);">Parcialmente corrigido &mdash; encrypt/decrypt implementados, mas ENCRYPTION_KEY deve ser obrigatoria.</div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <div class="glow-line my-4"></div>
+    <!-- Input Validation -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(34,197,94,0.1);">&#128221;</span>
+        Input Validation
+      </h2>
 
-  <!-- ============================================================ -->
-  <!-- RECOMMENDATIONS -->
-  <!-- ============================================================ -->
-  <section id="recommendations" class="scroll-mt-8">
-    <div class="flex items-center gap-4 mb-10 animate-fade-in">
-      <div class="w-10 h-10 rounded-lg bg-good/10 border border-good/20 flex items-center justify-center">
-        <svg class="w-5 h-5 text-good" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      </div>
-      <div>
-        <h2 class="text-3xl font-bold text-white">Recommendations</h2>
-        <p class="text-gray-500 text-sm font-mono mt-1">Acoes recomendadas por prioridade</p>
-      </div>
-    </div>
-
-    <div class="space-y-4" id="recommendations-list">
-    </div>
-
-    <!-- Security Roadmap -->
-    <div class="mt-12 bg-surface-200/60 backdrop-blur border border-gray-800 rounded-2xl p-8">
-      <h3 class="text-white font-semibold text-lg mb-6 flex items-center gap-2">
-        <svg class="w-5 h-5 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        Security Improvement Roadmap
-      </h3>
-      <div class="relative">
-        <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-crit via-high to-good"></div>
-
-        <div class="space-y-8 relative">
-          <!-- Sprint 1 -->
-          <div class="flex gap-6">
-            <div class="flex-shrink-0 w-12 h-12 rounded-full bg-crit/10 border-2 border-crit flex items-center justify-center z-10">
-              <span class="text-crit font-bold text-sm">S1</span>
-            </div>
-            <div class="flex-1 bg-surface-300/50 rounded-xl p-5 border border-crit/10">
-              <div class="flex items-center justify-between mb-3">
-                <h4 class="text-white font-semibold">Sprint 1 — Urgente</h4>
-                <span class="text-xs font-mono text-crit bg-crit/10 px-2 py-0.5 rounded">~2 dias</span>
-              </div>
-              <div class="space-y-2 text-sm text-gray-400">
-                <div class="flex items-center gap-2"><span class="text-crit">1.</span> Restringir CORS para origens conhecidas</div>
-                <div class="flex items-center gap-2"><span class="text-crit">2.</span> Habilitar rate limiting global</div>
-                <div class="flex items-center gap-2"><span class="text-crit">3.</span> Randomizar JWT_SECRET em producao</div>
-              </div>
-              <div class="mt-3 text-xs text-gray-600">Score estimado apos sprint: <span class="text-med font-semibold">55/100</span></div>
-            </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-success); color: #4ade80;">&#9989;</div>
+            <div class="card-title">Zod Schemas</div>
           </div>
-
-          <!-- Sprint 2 -->
-          <div class="flex gap-6">
-            <div class="flex-shrink-0 w-12 h-12 rounded-full bg-high/10 border-2 border-high flex items-center justify-center z-10">
-              <span class="text-high font-bold text-sm">S2</span>
-            </div>
-            <div class="flex-1 bg-surface-300/50 rounded-xl p-5 border border-high/10">
-              <div class="flex items-center justify-between mb-3">
-                <h4 class="text-white font-semibold">Sprint 2 — Importante</h4>
-                <span class="text-xs font-mono text-high bg-high/10 px-2 py-0.5 rounded">~3 dias</span>
-              </div>
-              <div class="space-y-2 text-sm text-gray-400">
-                <div class="flex items-center gap-2"><span class="text-high">4.</span> Implementar token refresh (access 15min + refresh 7d)</div>
-                <div class="flex items-center gap-2"><span class="text-high">5.</span> Criptografar GitHub tokens at-rest (AES-256-GCM)</div>
-                <div class="flex items-center gap-2"><span class="text-high">6.</span> Adicionar security headers via @fastify/helmet</div>
-              </div>
-              <div class="mt-3 text-xs text-gray-600">Score estimado apos sprint: <span class="text-med font-semibold">72/100</span></div>
-            </div>
+          <div class="card-desc">
+            Todos os endpoints utilizam Zod para validacao de input via <code class="mono" style="font-size: 0.8rem; color: var(--text-accent);">fastify-type-provider-zod</code>.
           </div>
-
-          <!-- Sprint 3 -->
-          <div class="flex gap-6">
-            <div class="flex-shrink-0 w-12 h-12 rounded-full bg-good/10 border-2 border-good flex items-center justify-center z-10">
-              <span class="text-good font-bold text-sm">S3</span>
-            </div>
-            <div class="flex-1 bg-surface-300/50 rounded-xl p-5 border border-good/10">
-              <div class="flex items-center justify-between mb-3">
-                <h4 class="text-white font-semibold">Sprint 3 — Hardening</h4>
-                <span class="text-xs font-mono text-good bg-good/10 px-2 py-0.5 rounded">~3 dias</span>
-              </div>
-              <div class="space-y-2 text-sm text-gray-400">
-                <div class="flex items-center gap-2"><span class="text-good">7.</span> Migrar JWT para HttpOnly cookies</div>
-                <div class="flex items-center gap-2"><span class="text-good">8.</span> Implementar CSRF tokens</div>
-                <div class="flex items-center gap-2"><span class="text-good">9.</span> Audit logging para acoes sensiveis</div>
-              </div>
-              <div class="mt-3 text-xs text-gray-600">Score estimado apos sprint: <span class="text-good font-semibold">90/100</span></div>
-            </div>
+          <div class="check-item">
+            <span class="check-icon pass">&#10003;</span>
+            <span>Body validation em todas as rotas POST/PUT/PATCH</span>
+          </div>
+          <div class="check-item">
+            <span class="check-icon pass">&#10003;</span>
+            <span>Query params validados com schemas tipados</span>
+          </div>
+          <div class="check-item">
+            <span class="check-icon pass">&#10003;</span>
+            <span>Path params com UUIDs validados</span>
+          </div>
+          <div class="check-item">
+            <span class="check-icon pass">&#10003;</span>
+            <span>Respostas tipadas para Swagger auto-generation</span>
+          </div>
+          <div class="code-block" style="margin-top: 1rem; font-size: 0.78rem;">
+<span class="keyword">const</span> createWorkflowSchema = z.object({
+  name: z.string().min(<span class="number">1</span>).max(<span class="number">255</span>),
+  description: z.string().optional(),
+  steps: z.array(stepSchema).min(<span class="number">1</span>),
+  tags: z.array(z.string()).optional(),
+})
           </div>
         </div>
-      </div>
-    </div>
-  </section>
 
-</main>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#128736;</div>
+            <div class="card-title">Type Provider Integration</div>
+          </div>
+          <div class="card-desc">
+            O Fastify usa <code class="mono" style="font-size: 0.8rem; color: var(--text-accent);">ZodTypeProvider</code> para garantir type-safety end-to-end entre validacao e handlers.
+          </div>
+          <div class="code-block" style="margin-top: 1rem; font-size: 0.78rem;">
+<span class="keyword">import</span> { ZodTypeProvider } <span class="keyword">from</span> <span class="string">'fastify-type-provider-zod'</span>
 
-
-<script>
-// ==================================================
-// Authorization Matrix
-// ==================================================
-const matrixData = [
-  { resource: 'Manage Users', admin: true, developer: false, viewer: false, icon: '👥' },
-  { resource: 'System Settings', admin: true, developer: false, viewer: false, icon: '⚙️' },
-  { resource: 'Create Workflows', admin: true, developer: true, viewer: false, icon: '🔄' },
-  { resource: 'Edit Workflows', admin: true, developer: true, viewer: false, icon: '✏️' },
-  { resource: 'Execute Workflows', admin: true, developer: true, viewer: false, icon: '▶️' },
-  { resource: 'Create Skills', admin: true, developer: true, viewer: false, icon: '🧩' },
-  { resource: 'Manage API Keys', admin: true, developer: true, viewer: false, icon: '🔑' },
-  { resource: 'View Results', admin: true, developer: true, viewer: true, icon: '📊' },
-  { resource: 'View Workflows', admin: true, developer: true, viewer: true, icon: '👁️' },
-  { resource: 'View Dashboard', admin: true, developer: true, viewer: true, icon: '📈' },
-];
-
-function renderMatrix() {
-  const tbody = document.getElementById('authMatrix');
-  tbody.innerHTML = matrixData.map((row, i) => `
-    <tr class="border-b border-gray-800/30 hover:bg-surface-100/20 transition-colors" style="animation: fadeInUp 0.4s ease-out ${i * 0.05}s forwards; opacity: 0;">
-      <td class="px-6 py-3">
-        <div class="flex items-center gap-3">
-          <span class="text-lg">${row.icon}</span>
-          <span class="text-white text-sm font-medium">${row.resource}</span>
-        </div>
-      </td>
-      <td class="text-center px-6 py-3">
-        <span class="matrix-cell inline-block text-lg cursor-default ${row.admin ? '' : 'opacity-30'}">${row.admin ? '✅' : '❌'}</span>
-      </td>
-      <td class="text-center px-6 py-3">
-        <span class="matrix-cell inline-block text-lg cursor-default ${row.developer ? '' : 'opacity-30'}">${row.developer ? '✅' : '❌'}</span>
-      </td>
-      <td class="text-center px-6 py-3">
-        <span class="matrix-cell inline-block text-lg cursor-default ${row.viewer ? '' : 'opacity-30'}">${row.viewer ? '✅' : '❌'}</span>
-      </td>
-    </tr>
-  `).join('');
-}
-
-// ==================================================
-// Recommendations
-// ==================================================
-const recommendations = [
-  {
-    severity: 'crit',
-    title: 'Restringir CORS para origens conhecidas',
-    description: 'Substituir origin: true por lista explicita de dominios permitidos.',
-    code: `app.register(cors, {\n  origin: [\n    'https://orquestrador.ddw1sl.easypanel.host',\n    'https://loadbalance.ddw1sl.easypanel.host'\n  ]\n})`,
-    effort: 'Baixo',
-    impact: 'Alto'
+app.withTypeProvider&lt;ZodTypeProvider&gt;().route({
+  method: <span class="string">'POST'</span>,
+  url: <span class="string">'/workflows'</span>,
+  schema: {
+    body: createWorkflowSchema,
+    response: { <span class="number">201</span>: workflowResponseSchema }
   },
-  {
-    severity: 'crit',
-    title: 'Habilitar rate limiting global',
-    description: 'Ativar rate limit em todas as rotas, com limites customizados para auth.',
-    code: `app.register(rateLimit, {\n  global: true,\n  max: 100,\n  timeWindow: '1 minute'\n})`,
-    effort: 'Baixo',
-    impact: 'Alto'
-  },
-  {
-    severity: 'crit',
-    title: 'Implementar token refresh',
-    description: 'Access token curto (15min) + refresh token (7d) com rotacao automatica.',
-    code: `// Access: expiresIn '15m'\n// Refresh: expiresIn '7d', stored HttpOnly cookie\n// POST /auth/refresh rotates both`,
-    effort: 'Medio',
-    impact: 'Alto'
-  },
-  {
-    severity: 'crit',
-    title: 'Criptografar GitHub tokens at-rest',
-    description: 'Usar AES-256-GCM para criptografar tokens antes de salvar no banco.',
-    code: `import { createCipheriv, createDecipheriv } from 'crypto'\n// Encrypt before DB write, decrypt on read\n// Key from env: ENCRYPTION_KEY`,
-    effort: 'Medio',
-    impact: 'Alto'
-  },
-  {
-    severity: 'high',
-    title: 'Adicionar security headers',
-    description: 'Instalar @fastify/helmet para HSTS, CSP, X-Frame-Options e mais.',
-    code: `app.register(helmet, {\n  contentSecurityPolicy: { ... },\n  hsts: { maxAge: 31536000 }\n})`,
-    effort: 'Baixo',
-    impact: 'Medio'
-  },
-  {
-    severity: 'high',
-    title: 'Migrar JWT para HttpOnly cookies',
-    description: 'Eliminar uso de localStorage para tokens. Protege contra XSS.',
-    code: `reply.setCookie('token', jwt, {\n  httpOnly: true,\n  secure: true,\n  sameSite: 'strict',\n  path: '/'\n})`,
-    effort: 'Medio',
-    impact: 'Alto'
-  },
-  {
-    severity: 'high',
-    title: 'Randomizar JWT_SECRET em producao',
-    description: 'Remover default fraco e exigir JWT_SECRET forte via env.',
-    code: `const JWT_SECRET = process.env.JWT_SECRET\nif (!JWT_SECRET) throw new Error('JWT_SECRET required')`,
-    effort: 'Baixo',
-    impact: 'Alto'
+  handler: <span class="keyword">async</span> (request, reply) => {
+    <span class="comment">// request.body is fully typed</span>
+    <span class="keyword">const</span> { name, steps } = request.body
   }
-];
-
-function renderRecommendations() {
-  const container = document.getElementById('recommendations-list');
-  container.innerHTML = recommendations.map((rec, i) => {
-    const colors = {
-      crit: { bg: 'bg-crit/5', border: 'border-crit/20', text: 'text-crit', badge: 'badge-crit', label: 'Critico' },
-      high: { bg: 'bg-high/5', border: 'border-high/20', text: 'text-high', badge: 'badge-high', label: 'Alto' },
-      med: { bg: 'bg-med/5', border: 'border-med/20', text: 'text-med', badge: 'badge-med', label: 'Medio' }
-    };
-    const c = colors[rec.severity];
-    return `
-      <div class="${c.bg} border ${c.border} rounded-2xl p-6 hover:bg-surface-200/40 transition-all cursor-pointer group"
-           onclick="toggleRec(this)"
-           style="animation: fadeInUp 0.5s ease-out ${i * 0.08}s forwards; opacity: 0;">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex items-start gap-4 flex-1">
-            <div class="flex-shrink-0 w-8 h-8 rounded-lg ${c.bg} border ${c.border} flex items-center justify-center ${c.text} font-bold text-sm mt-0.5">
-              ${i + 1}
-            </div>
-            <div class="flex-1">
-              <div class="flex items-center gap-3 mb-1 flex-wrap">
-                <h3 class="text-white font-semibold group-hover:${c.text} transition-colors">${rec.title}</h3>
-                <span class="severity-badge ${c.badge}">${c.label}</span>
-              </div>
-              <p class="text-gray-400 text-sm">${rec.description}</p>
-              <div class="rec-detail hidden mt-4">
-                <div class="code-block text-xs mb-3"><pre class="whitespace-pre-wrap">${rec.code}</pre></div>
-                <div class="flex gap-4 text-xs">
-                  <span class="text-gray-500">Esforco: <span class="${c.text}">${rec.effort}</span></span>
-                  <span class="text-gray-500">Impacto: <span class="${c.text}">${rec.impact}</span></span>
-                </div>
-              </div>
-            </div>
+})
           </div>
-          <svg class="w-5 h-5 text-gray-600 flex-shrink-0 mt-1 transition-transform rec-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </div>
       </div>
-    `;
-  }).join('');
-}
+    </section>
 
-function toggleRec(el) {
-  const detail = el.querySelector('.rec-detail');
-  const chevron = el.querySelector('.rec-chevron');
-  detail.classList.toggle('hidden');
-  chevron.style.transform = detail.classList.contains('hidden') ? '' : 'rotate(180deg)';
-}
+    <!-- Error Handling Security -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: var(--bg-danger);">&#128680;</span>
+        Error Handling Security
+      </h2>
 
-// ==================================================
-// Scroll Spy
-// ==================================================
-function scrollToSection(id) {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-}
+      <div class="card">
+        <div class="grid-3" style="margin-bottom: 1.5rem;">
+          <div style="text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#128683;</div>
+            <div style="font-weight: 600; font-size: 0.9rem;">No Stack Traces</div>
+            <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Stack traces nunca expostos em producao. Erros retornam apenas mensagem generica + code.</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#128204;</div>
+            <div style="font-weight: 600; font-size: 0.9rem;">Custom Error Classes</div>
+            <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">AppError, ValidationError, NotFoundError, UnauthorizedError com status codes padronizados.</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">&#128451;</div>
+            <div style="font-weight: 600; font-size: 0.9rem;">Prisma Error Mapping</div>
+            <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.25rem;">Erros Prisma (P2002, P2025, etc.) mapeados para HTTP status codes sem expor detalhes internos.</div>
+          </div>
+        </div>
 
-function updateScrollSpy() {
-  const sections = ['dashboard', 'auth-flow', 'auth-matrix', 'sandbox', 'data-protection', 'attack-surface', 'recommendations'];
-  const scrollY = window.scrollY + 200;
-  let activeSection = sections[0];
-  for (const id of sections) {
-    const el = document.getElementById(id);
-    if (el && el.offsetTop <= scrollY) activeSection = id;
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Error Class</th>
+                <th>HTTP Status</th>
+                <th>Quando usar</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">ValidationError</code></td>
+                <td><span class="badge badge-amber">400</span></td>
+                <td>Input invalido, campos faltando, formato incorreto</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">UnauthorizedError</code></td>
+                <td><span class="badge badge-red">401</span></td>
+                <td>Token invalido/expirado, API key revogada</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">ForbiddenError</code></td>
+                <td><span class="badge badge-red">403</span></td>
+                <td>Role sem permissao para a acao</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">NotFoundError</code></td>
+                <td><span class="badge badge-amber">404</span></td>
+                <td>Recurso nao existe ou nao pertence ao usuario</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">ConflictError</code></td>
+                <td><span class="badge badge-amber">409</span></td>
+                <td>Prisma P2002 &mdash; unique constraint violation</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">AppError</code></td>
+                <td><span class="badge badge-red">500</span></td>
+                <td>Erro interno generico (sem detalhes ao cliente)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block" style="margin-top: 1rem; font-size: 0.78rem;">
+<span class="comment">// Error handler global</span>
+app.setErrorHandler(<span class="keyword">async</span> (error, request, reply) => {
+  <span class="keyword">if</span> (error <span class="keyword">instanceof</span> AppError) {
+    <span class="keyword">return</span> reply.status(error.statusCode).send({
+      error: error.code,
+      message: error.message
+    })
   }
-  document.querySelectorAll('.nav-dot').forEach(dot => {
-    dot.classList.toggle('active', dot.dataset.section === activeSection);
-  });
+  <span class="comment">// Prisma errors mapping</span>
+  <span class="keyword">if</span> (error.code === <span class="string">'P2002'</span>) {
+    <span class="keyword">return</span> reply.status(<span class="number">409</span>).send({ error: <span class="string">'CONFLICT'</span> })
+  }
+  <span class="comment">// Generic 500 — NO stack trace</span>
+  reply.status(<span class="number">500</span>).send({ error: <span class="string">'INTERNAL_ERROR'</span> })
+})
+        </div>
+      </div>
+    </section>
+
+    <!-- Encryption -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(139,92,246,0.1);">&#128272;</span>
+        Encryption
+      </h2>
+
+      <div class="card">
+        <div class="grid-2" style="margin-bottom: 1.5rem;">
+          <div>
+            <div style="font-weight: 600; margin-bottom: 0.75rem;">Dados criptografados (AES)</div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Git tokens (via <code class="mono" style="font-size: 0.75rem;">encrypt()</code> em git.routes)</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Webhook secrets (via <code class="mono" style="font-size: 0.75rem;">encrypt()</code> em webhooks.repository)</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Trigger webhook secrets (via <code class="mono" style="font-size: 0.75rem;">encrypt()</code> em triggers.repository)</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Decriptacao transparente ao ler (<code class="mono" style="font-size: 0.75rem;">decrypt()</code>)</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-weight: 600; margin-bottom: 0.75rem;">Configuracao</div>
+            <div class="check-item">
+              <span class="check-icon warn">&#9888;</span>
+              <span><code class="mono" style="color: #fbbf24;">ENCRYPTION_KEY</code> env var &mdash; opcional (deveria ser obrigatoria)</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon warn">&#9888;</span>
+              <span>GitHub tokens armazenados como TEXT no schema (campo <code class="mono" style="font-size: 0.75rem;">String</code> no Prisma)</span>
+            </div>
+            <div class="check-item">
+              <span class="check-icon pass">&#10003;</span>
+              <span>Fallback sem criptografia se ENCRYPTION_KEY ausente</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="code-block" style="font-size: 0.78rem;">
+<span class="keyword">import</span> { createCipheriv, createDecipheriv, randomBytes } <span class="keyword">from</span> <span class="string">'crypto'</span>
+
+<span class="keyword">export function</span> <span class="type">encrypt</span>(text: <span class="type">string</span>): <span class="type">string</span> {
+  <span class="keyword">const</span> key = process.env.ENCRYPTION_KEY
+  <span class="keyword">if</span> (!key) <span class="keyword">return</span> text <span class="comment">// fallback: sem criptografia</span>
+  <span class="keyword">const</span> iv = randomBytes(<span class="number">16</span>)
+  <span class="keyword">const</span> cipher = createCipheriv(<span class="string">'aes-256-cbc'</span>, Buffer.from(key, <span class="string">'hex'</span>), iv)
+  <span class="keyword">const</span> encrypted = Buffer.concat([cipher.update(text), cipher.final()])
+  <span class="keyword">return</span> iv.toString(<span class="string">'hex'</span>) + <span class="string">':'</span> + encrypted.toString(<span class="string">'hex'</span>)
 }
+        </div>
+      </div>
+    </section>
 
-window.addEventListener('scroll', updateScrollSpy, { passive: true });
+    <!-- Audit Trail -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(245,158,11,0.1);">&#128209;</span>
+        Audit Trail
+      </h2>
 
-// ==================================================
-// Footer Date
-// ==================================================
-document.getElementById('footerDate').textContent = `Generated: ${new Date().toLocaleDateString('pt-BR')}`;
+      <div class="card">
+        <div class="card-desc" style="margin-bottom: 1.25rem;">
+          Toda acao relevante no sistema e registrada na tabela <code class="mono" style="color: var(--text-accent);">AuditLog</code>, permitindo rastreabilidade completa de operacoes administrativas e de seguranca.
+        </div>
 
-// ==================================================
-// Init
-// ==================================================
-renderMatrix();
-renderRecommendations();
-updateScrollSpy();
-</script>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Tipo</th>
+                <th>Descricao</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">id</code></td>
+                <td><span class="badge badge-gray">UUID</span></td>
+                <td>Identificador unico do log</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">action</code></td>
+                <td><span class="badge badge-blue">String</span></td>
+                <td>Acao realizada (ex: <code class="mono" style="font-size: 0.75rem;">user.create</code>, <code class="mono" style="font-size: 0.75rem;">workflow.delete</code>)</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">resourceType</code></td>
+                <td><span class="badge badge-purple">String</span></td>
+                <td>Tipo do recurso (User, Workflow, Execution, ApiKey, etc.)</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">resourceId</code></td>
+                <td><span class="badge badge-gray">UUID</span></td>
+                <td>ID do recurso afetado</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">diff</code></td>
+                <td><span class="badge badge-teal">JSON</span></td>
+                <td>Diff das alteracoes (before/after)</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">ipAddress</code></td>
+                <td><span class="badge badge-amber">String</span></td>
+                <td>IP de origem da requisicao</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">userId</code></td>
+                <td><span class="badge badge-gray">UUID</span></td>
+                <td>Usuario que executou a acao</td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color: var(--text-accent);">createdAt</code></td>
+                <td><span class="badge badge-gray">DateTime</span></td>
+                <td>Timestamp da acao</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-<footer class="border-t border-slate-800 py-6 mt-10">
-  <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-slate-500">
-    <a href="06-frontend.html" class="hover:text-white transition">&larr; 06 Frontend</a>
-    <span class="text-slate-600">Orquetrador Claude</span>
-    <a href="08-integracoes.html" class="hover:text-white transition">08 Integrações &rarr;</a>
+        <div class="code-block" style="margin-top: 1rem; font-size: 0.78rem;">
+<span class="comment">// Registrar audit log</span>
+<span class="keyword">await</span> prisma.auditLog.create({
+  data: {
+    action: <span class="string">'apikey.revoke'</span>,
+    resourceType: <span class="string">'ApiKey'</span>,
+    resourceId: apiKeyId,
+    diff: { status: { before: <span class="string">'active'</span>, after: <span class="string">'revoked'</span> } },
+    ipAddress: request.ip,
+    userId: request.user.id,
+  }
+})
+        </div>
+      </div>
+    </section>
+
+    <!-- Security Checklist Summary -->
+    <section class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: var(--bg-accent-subtle);">&#128203;</span>
+        Checklist de Seguranca
+      </h2>
+
+      <div class="grid-2">
+        <div class="card">
+          <div style="font-weight: 600; margin-bottom: 0.75rem; color: #4ade80;">Implementado</div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>JWT authentication com validacao de user</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>API Keys com hash SHA256</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>RBAC com 3 roles</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>Session cache Redis (5min TTL)</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>Sandbox isolation (claude-sandbox user)</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>Zod validation em todos endpoints</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>Error handling sem stack traces</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>Prisma error mapping</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>CORS com dominios especificos</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>Audit trail (AuditLog table)</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>AES encrypt para secrets</span></div>
+          <div class="check-item"><span class="check-icon pass">&#10003;</span><span>API key scopes e IP whitelist</span></div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight: 600; margin-bottom: 0.75rem; color: #fbbf24;">Pendente / Parcial</div>
+          <div class="check-item"><span class="check-icon warn">&#9888;</span><span>Rate limit global desabilitado</span></div>
+          <div class="check-item"><span class="check-icon warn">&#9888;</span><span>ENCRYPTION_KEY opcional (deveria ser obrigatoria)</span></div>
+          <div class="check-item"><span class="check-icon warn">&#9888;</span><span>GitHub tokens como TEXT (deveria ser encrypted column)</span></div>
+          <div class="check-item"><span class="check-icon warn">&#9888;</span><span>Trace sanitization (secrets em stdout/stderr)</span></div>
+          <div class="check-item"><span class="check-icon warn">&#9888;</span><span>Sandbox reforco (cgroups/namespaces)</span></div>
+          <div class="check-item"><span class="check-icon warn">&#9888;</span><span>API key rotation automatica</span></div>
+        </div>
+      </div>
+    </section>
   </div>
-</footer>
 
+  <script src="shared.js"></script>
 </body>
 </html>
