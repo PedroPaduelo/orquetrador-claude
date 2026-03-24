@@ -75,45 +75,38 @@
         </div>
       </div>
       <p class="text-slate-400 max-w-3xl text-sm leading-relaxed mb-2">
-        Terceira validacao (23/03/2026) &mdash; apos correcoes do dev. Verificacao completa de cada problema contra o codigo fonte atual.
+        4a validacao (24/03/2026) &mdash; Todos os bugs criticos foram corrigidos. Schema com FKs, enums e indexes completos. 14/14 ghosts com implementacao. Restam apenas 2 pontos de maturidade.
       </p>
-      <p class="text-slate-500 text-xs">47 modelos Prisma | 11/14 ghosts implementados | Schema com FKs, enums e indexes corrigidos</p>
     </div>
   </header>
 
   <main class="max-w-7xl mx-auto px-6 pb-20">
 
     <!-- Score Cards -->
-    <section class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10 fade-in">
-      <div class="glass rounded-xl p-4 text-center">
-        <div class="text-3xl font-black text-green-400">12</div>
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 fade-in">
+      <div class="glass rounded-xl p-4 text-center border border-green-500/20">
+        <div class="text-3xl font-black text-green-400">18</div>
         <div class="text-xs text-slate-500">Corrigidos</div>
       </div>
-      <div class="glass rounded-xl p-4 text-center">
-        <div class="text-3xl font-black text-amber-400">2</div>
-        <div class="text-xs text-slate-500">Parciais</div>
-      </div>
-      <div class="glass rounded-xl p-4 text-center">
-        <div class="text-3xl font-black text-red-400">2</div>
-        <div class="text-xs text-slate-500">Pendentes</div>
-      </div>
-      <div class="glass rounded-xl p-4 text-center">
-        <div class="text-3xl font-black text-violet-400">3</div>
-        <div class="text-xs text-slate-500">Ghosts (schema-only)</div>
+      <div class="glass rounded-xl p-4 text-center border border-amber-500/20">
+        <div class="text-3xl font-black text-amber-400">1</div>
+        <div class="text-xs text-slate-500">Parcial</div>
       </div>
       <div class="glass rounded-xl p-4 text-center">
         <div class="text-3xl font-black text-indigo-400">47</div>
-        <div class="text-xs text-slate-500">Modelos no Schema</div>
+        <div class="text-xs text-slate-500">Modelos Prisma</div>
+      </div>
+      <div class="glass rounded-xl p-4 text-center">
+        <div class="text-3xl font-black text-violet-400">14/14</div>
+        <div class="text-xs text-slate-500">Ghosts Ativos</div>
       </div>
     </section>
 
     <!-- Filter Tabs -->
     <div class="flex flex-wrap gap-2 mb-8 fade-in">
-      <button class="tab-btn active" onclick="filterCards('all')">Todos (19)</button>
-      <button class="tab-btn" onclick="filterCards('fixed')">Corrigidos (12)</button>
-      <button class="tab-btn" onclick="filterCards('partial')">Parciais (2)</button>
-      <button class="tab-btn" onclick="filterCards('open')">Pendentes (2)</button>
-      <button class="tab-btn" onclick="filterCards('ghost')">Ghosts (3)</button>
+      <button class="tab-btn active" onclick="filterCards('all')">Todos</button>
+      <button class="tab-btn" onclick="filterCards('fixed')">Corrigidos (18)</button>
+      <button class="tab-btn" onclick="filterCards('partial')">Parcial (1)</button>
     </div>
 
     <!-- ============================================ -->
@@ -121,261 +114,132 @@
     <!-- ============================================ -->
     <h2 class="text-lg font-bold text-green-400 mb-4 flex items-center gap-2 fade-in">
       <span class="w-3 h-3 rounded-full bg-green-400"></span>
-      Corrigidos (12)
+      Corrigidos (18)
     </h2>
 
     <div class="grid gap-3 mb-10">
 
+      <!-- Row template for fixed items -->
       <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Full Table Scans em Metrics</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Full Table Scans em Metrics</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">/metrics/daily usa DailyExecutionMetrics. /metrics/by-workflow usa groupBy(). /metrics/alerts usa aggregate()+count().</div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">$transaction Workflows + Plugins + Conversations</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
         <div class="detail mt-3 text-xs text-slate-400">
-          <code>/metrics/daily</code> usa DailyExecutionMetrics pre-agregada. <code>/metrics/by-workflow</code> usa groupBy(). <code>/metrics/alerts</code> usa aggregate()+count(). Zero full scans.
+          <strong>Workflows:</strong> 7 operacoes atomicas em $transaction.<br>
+          <strong>Plugins:</strong> 4 deletes em $transaction.<br>
+          <strong>Conversations:</strong> create() e clone() em $transaction.
         </div>
       </div>
 
       <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">$transaction Workflows (update steps)</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400">7 operacoes (delete join tables + delete steps + create novos) agora atomicas em <code>prisma.$transaction(async (tx) => ...)</code></div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">$transaction Plugins (delete cascata)</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400">4 deletes (mcpServer → skill → agent → plugin) envolvidos em <code>prisma.$transaction([...])</code></div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Race Condition Token Budget</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400">recordUsage() em $transaction atomica. Reset + increment atomicos. dailyLimit e monthlyLimit verificados.</div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">errorCategory Populada</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400">classifyError() analisa resultStatus, exitCode, errorMessage, stopReason. Chamada no flush().</div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Git N+1 Corrigido</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400">Promise.all() para validacao paralela. Campo username cacheado evita re-validacao.</div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">JWT Valida User no BD</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400">JWT agora verifica se user existe e nao esta suspenso. Cache Redis com TTL 5min. Fallback para BD se Redis indisponivel. <span class="font-mono text-green-400/60">auth.ts:73-106</span></div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Race Condition Step Navigation</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400">advanceStep(), goBack(), jumpToStep() agora usam <code>prisma.$transaction({ isolationLevel: 'Serializable' })</code>. <span class="font-mono text-green-400/60">conversations.service.ts</span></div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">$transaction Conversations (create/clone)</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400">create() e clone() envolvidos em $transaction. <span class="font-mono text-green-400/60">conversations.repository.ts:129-229</span></div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Prisma Migrations Criadas</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400">Diretorio <code>prisma/migrations/</code> existe com migration <code>0_init</code>.</div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Trace Persistence com Retry</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400">flush() agora tem 3 retries com backoff exponencial (1s, 4s, 9s). <span class="font-mono text-green-400/60">execution-monitor.ts:234-249</span></div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Graceful Shutdown + Recovery Metadata</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Race Conditions (Budget + Steps)</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
         <div class="detail mt-3 text-xs text-slate-400">
-          <strong>Shutdown:</strong> Drena execucoes ativas com timeout de 30s antes de exit.<br>
-          <strong>Recovery:</strong> Usa spread operator para merge de metadata existente com dados de recuperacao.
+          <strong>Budget:</strong> recordUsage() em $transaction. dailyLimit/monthlyLimit verificados.<br>
+          <strong>Steps:</strong> advanceStep/goBack/jumpToStep usam Serializable isolation level.
+        </div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">errorCategory + classifyError()</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">classifyError() analisa resultStatus, exitCode, errorMessage, stopReason. Chamada automaticamente no flush().</div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Git N+1 &rarr; Promise.all()</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">Validacao paralela com Promise.all(). Campo username cacheado.</div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">JWT Valida User + Redis Cache</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">Verifica existencia + status (suspenso). Cache Redis TTL 5min. Fallback BD.</div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Tokens Criptografados (encrypt/decrypt)</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">
+          <code>encrypt()</code> usado em: git.routes.ts (salvar token), webhooks.repository.ts (salvar secret), triggers.repository.ts (webhookSecret).<br>
+          <code>decrypt()</code> usado ao ler em todos os mesmos arquivos.
+        </div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Webhook Ownership em Transacao</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">findFirst({ where: { id, userId } }) dentro da transacao. update/delete usa existing.id como garantia.</div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Paginacao em 9/9 Repositories</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">Todos os repos (conversations, workflows, skills, agents, mcp-servers, plugins, hooks, rules, webhooks) com findAllPaginated() + take/skip + count.</div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">CORS com Dominios Especificos</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">Usa CORS_ORIGINS env var. Fallback para array de dominios do projeto (nao mais <code>true</code>).</div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Prisma Migrations + Trace Retry + Graceful Shutdown + Recovery</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">
+          <strong>Migrations:</strong> prisma/migrations/0_init criada.<br>
+          <strong>Trace:</strong> flush() com 3 retries + backoff exponencial.<br>
+          <strong>Shutdown:</strong> Drena execucoes ativas (max 30s) antes de exit.<br>
+          <strong>Recovery:</strong> Merge metadata com spread operator.
+        </div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Schema: 13 FKs + 6 Enums + Indexes em Join Tables</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">
+          67 @relation no total. ExecutionState.state, ExecutionAggregate.finalStatus, ScheduledExecution.status, WebhookDelivery.status, ExecutionTrace.resultStatus convertidos para enums. Todas join tables com indexes nas FKs.
+        </div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">Dashboard Rich Data + Token Budget + Tool Analytics</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400">p50/p95 latencia, error/model breakdown, TokenBudgetBar, ToolAnalytics (top 10 tools). Execution timeline component.</div>
+      </div>
+
+      <div class="card glass rounded-xl p-4 fade-in" data-status="fixed" onclick="this.classList.toggle('open')">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-fixed">OK</span><h3 class="font-semibold text-sm">14 Ghosts Implementados (11 full + 3 com API)</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
+        <div class="detail mt-3 text-xs text-slate-400 space-y-1">
+          <div><span class="text-green-400">Full:</span> ResourcePerformanceMetric, Tags, AuditLog, MessageFeedback, ExecutionRating, WorkflowVersion, ExecutionAggregate, DailyExecutionMetrics, HourlyTokenUsage, ExecutionToolCall, GitSource</div>
+          <div><span class="text-green-400">API+Service:</span> WorkflowTrigger (CRUD+service), ScheduledExecution (CRUD), ResourceDependency (validacao+sync)</div>
         </div>
       </div>
     </div>
 
     <!-- ============================================ -->
-    <!-- PARCIAIS -->
+    <!-- PARCIAL -->
     <!-- ============================================ -->
     <h2 class="text-lg font-bold text-amber-400 mb-4 flex items-center gap-2 fade-in">
       <span class="w-3 h-3 rounded-full bg-amber-400"></span>
-      Parciais (2)
+      Parcial (1)
     </h2>
 
     <div class="grid gap-3 mb-10">
-
       <div class="card glass rounded-xl p-4 fade-in" data-status="partial" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-partial">PARCIAL</span><h3 class="font-semibold text-sm">Paginacao: 8/9 repos (falta webhooks)</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
+        <div class="flex items-center justify-between"><div class="flex items-center gap-3"><span class="tag tag-partial">PARCIAL</span><h3 class="font-semibold text-sm">Trigger Scheduler (processamento automatico)</h3></div><svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></div>
         <div class="detail mt-3 text-xs text-slate-400 space-y-2">
-          <p>8 repositories agora tem <code>take: 100</code> no findAll() e metodo <code>findAllPaginated()</code> com take/skip + count.</p>
-          <p><span class="text-amber-300">Falta:</span> <code class="text-amber-400">webhooks.repository.ts</code> &mdash; findAll() ainda sem paginacao.</p>
-        </div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="partial" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-partial">PARCIAL</span><h3 class="font-semibold text-sm">CORS: env var, mas fallback true</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400 space-y-2">
-          <p>Agora usa <code>env.CORS_ORIGINS</code> (split por virgula). Porem se a env var estiver vazia, faz fallback para <code>origin: true</code> (aceita tudo).</p>
-          <p><span class="text-amber-300">Fix:</span> Definir CORS_ORIGINS no .env ou trocar fallback para array de dominios conhecidos.</p>
+          <p><span class="text-green-400">Existe:</span> CRUD de triggers, service com <code>scheduleCron()</code>, <code>processScheduledExecutions()</code>, <code>fireNow()</code>, repository com <code>findDueScheduled()</code>.</p>
+          <p><span class="text-amber-300">Falta:</span></p>
+          <ul class="list-disc list-inside ml-2 space-y-1">
+            <li>Nenhum worker/daemon chamando <code>processScheduledExecutions()</code> periodicamente (nao tem setInterval, cron job, nem BullMQ worker)</li>
+            <li><code>processScheduledExecutions()</code> tem <code>// TODO: integrate with actual workflow execution engine</code> &mdash; marca como completed sem realmente executar o workflow</li>
+          </ul>
+          <p><span class="text-amber-300">Fix:</span> Criar um scheduler (setInterval ou BullMQ repeatable job) que chame <code>processScheduledExecutions()</code> e integre com <code>TaskOrchestrator</code> para execucao real.</p>
         </div>
       </div>
     </div>
 
     <!-- ============================================ -->
-    <!-- PENDENTES -->
-    <!-- ============================================ -->
-    <h2 class="text-lg font-bold text-red-400 mb-4 flex items-center gap-2 fade-in">
-      <span class="w-3 h-3 rounded-full bg-red-400"></span>
-      Pendentes (2)
-    </h2>
-
-    <div class="grid gap-3 mb-10">
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="open" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-open">PENDENTE</span><h3 class="font-semibold text-sm">Tokens Sensiveis em Plaintext</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400 space-y-2">
-          <p><code class="text-red-400">GitAccount.token</code> e <code class="text-red-400">Webhook.secret</code> armazenados sem criptografia.</p>
-          <p>O arquivo <code>crypto.ts</code> com <code>encrypt()</code> e <code>decrypt()</code> ja existe, mas <strong>nao e importado nem usado em nenhum lugar</strong>.</p>
-          <p><span class="text-red-300">Fix:</span> Chamar encrypt() ao salvar e decrypt() ao ler em git.routes.ts e webhooks.repository.ts.</p>
-        </div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="open" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-open">PENDENTE</span><h3 class="font-semibold text-sm">Webhook Ownership (update/delete)</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400 space-y-2">
-          <p>Faz <code>findFirst({ where: { id, userId } })</code> para checar, mas o <code>update()</code>/<code>delete()</code> subsequente usa apenas <code>where: { id }</code>.</p>
-          <p><span class="text-red-300">Fix:</span> Usar <code>where: { id, userId }</code> na operacao final, ou tudo dentro de $transaction isolada.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- GHOSTS -->
-    <!-- ============================================ -->
-    <h2 class="text-lg font-bold text-violet-400 mb-4 flex items-center gap-2 fade-in">
-      <span class="w-3 h-3 rounded-full bg-violet-400"></span>
-      Modelos Fantasma: 11 implementados, 3 restantes
-    </h2>
-
-    <div class="grid md:grid-cols-2 gap-4 mb-10">
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="ghost" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-fixed">11 ATIVOS</span><h3 class="font-semibold text-sm">Ghosts Implementados</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400 space-y-1">
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> ResourcePerformanceMetric &mdash; agregador + endpoint</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> Tag / ResourceTag &mdash; CRUD completo</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> AuditLog &mdash; fire-and-forget em todas ops + admin</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> MessageFeedback &mdash; rating 1-5 por mensagem</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> ExecutionRating &mdash; rating por execucao</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> WorkflowVersion &mdash; snapshots + diffs + rollback</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> ExecutionAggregate &mdash; totais por execucao</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> DailyExecutionMetrics &mdash; p50/p95 + breakdowns</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> HourlyTokenUsage &mdash; por hora/user/model</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> ExecutionToolCall &mdash; extracao + analytics</div>
-          <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> GitSource &mdash; CRUD generico</div>
-        </div>
-      </div>
-
-      <div class="card glass rounded-xl p-4 fade-in" data-status="ghost" onclick="this.classList.toggle('open')">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3"><span class="tag tag-ghost">3 SCHEMA-ONLY</span><h3 class="font-semibold text-sm">Ghosts Restantes</h3></div>
-          <svg class="chevron w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-        <div class="detail mt-3 text-xs text-slate-400 space-y-3">
-          <div>
-            <strong class="text-violet-300">WorkflowTrigger</strong>
-            <p>Schema com TriggerType enum (cron, webhook_inbound, event, git_push). Nenhum runtime: sem cron scheduler, sem webhook handler, sem event listener.</p>
-          </div>
-          <div>
-            <strong class="text-violet-300">ScheduledExecution</strong>
-            <p>Schema com ScheduledExecutionStatus enum. Nenhum job runner processa execucoes agendadas.</p>
-          </div>
-          <div>
-            <strong class="text-violet-300">ResourceDependency</strong>
-            <p>Schema com constraints. Nenhum codigo cria ou valida dependencias.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- SCHEMA QUALITY -->
+    <!-- EVOLUTION TABLE -->
     <!-- ============================================ -->
     <h2 class="text-lg font-bold text-slate-300 mb-4 flex items-center gap-2 fade-in">
       <span class="w-3 h-3 rounded-full bg-slate-400"></span>
-      Schema: Debt Tecnico Resolvido
-    </h2>
-
-    <div class="grid md:grid-cols-3 gap-4 mb-10">
-      <div class="glass rounded-xl p-4 fade-in">
-        <h4 class="font-semibold text-xs text-green-400 mb-2">13 FKs @relation</h4>
-        <p class="text-xs text-slate-500">Todas as 13 FKs ausentes agora tem @relation com onDelete correto. 67 @relation no total.</p>
-      </div>
-      <div class="glass rounded-xl p-4 fade-in">
-        <h4 class="font-semibold text-xs text-green-400 mb-2">6 String &rarr; Enum</h4>
-        <p class="text-xs text-slate-500">ExecutionState.state, ExecutionAggregate.finalStatus, ScheduledExecution.status, WebhookDelivery.status, ExecutionTrace.resultStatus todos convertidos.</p>
-      </div>
-      <div class="glass rounded-xl p-4 fade-in">
-        <h4 class="font-semibold text-xs text-green-400 mb-2">Indexes em Join Tables</h4>
-        <p class="text-xs text-slate-500">Todas join tables (StepMcpServer, StepSkill, StepAgent, StepRule, StepHook, ResourceTag, ResourceDependency) com indexes nas FKs.</p>
-      </div>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- SUMMARY TABLE -->
-    <!-- ============================================ -->
-    <h2 class="text-lg font-bold text-slate-300 mb-4 flex items-center gap-2 fade-in">
-      <span class="w-3 h-3 rounded-full bg-slate-400"></span>
-      Tabela Resumo
+      Evolucao Completa (4 validacoes)
     </h2>
 
     <div class="glass rounded-xl overflow-hidden mb-10 fade-in">
@@ -384,76 +248,46 @@
           <thead class="bg-slate-800/50">
             <tr>
               <th class="text-left p-3 text-slate-400 font-medium">Problema</th>
-              <th class="text-center p-3 text-slate-400 font-medium">Analise 1</th>
-              <th class="text-center p-3 text-slate-400 font-medium">Analise 2</th>
-              <th class="text-center p-3 text-slate-400 font-medium">Agora</th>
+              <th class="text-center p-2 text-slate-400 font-medium">v1</th>
+              <th class="text-center p-2 text-slate-400 font-medium">v2</th>
+              <th class="text-center p-2 text-slate-400 font-medium">v3</th>
+              <th class="text-center p-2 text-slate-400 font-medium">v4 (agora)</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-700/50">
-            <tr><td class="p-3">Full table scans metrics</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">$transaction workflows</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">$transaction plugins</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">Race condition budget</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">errorCategory populada</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">Git N+1</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">JWT valida user</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">Race condition steps</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">$transaction conversations</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">Prisma migrations</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">Trace retry</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-partial">PARCIAL</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">Graceful shutdown</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">Recovery metadata</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">Dashboard rich data</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr><td class="p-3">Schema FKs + Enums + Indexes</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-fixed">OK</span></td></tr>
-            <tr class="bg-slate-800/20"><td class="p-3">Paginacao repos</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-partial">8/9</span></td></tr>
-            <tr class="bg-slate-800/20"><td class="p-3">CORS</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-partial">PARCIAL</span></td></tr>
-            <tr class="bg-red-500/5"><td class="p-3 text-red-300">Tokens plaintext</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td></tr>
-            <tr class="bg-red-500/5"><td class="p-3 text-red-300">Webhook ownership</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-partial">PARCIAL</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td></tr>
-            <tr class="bg-violet-500/5"><td class="p-3 text-violet-300">3 Ghosts (Trigger/Sched/Dep)</td><td class="p-3 text-center"><span class="tag tag-ghost">GHOST</span></td><td class="p-3 text-center"><span class="tag tag-ghost">GHOST</span></td><td class="p-3 text-center"><span class="tag tag-ghost">GHOST</span></td></tr>
-            <tr class="bg-violet-500/5"><td class="p-3 text-violet-300">Execution timeline UI</td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td><td class="p-3 text-center"><span class="tag tag-open">ABERTO</span></td></tr>
+            <tr><td class="p-2.5">Full table scans metrics</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">$transaction workflows</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">$transaction plugins</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Race condition budget</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">errorCategory populada</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Git N+1</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">JWT valida user</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Race condition steps</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">$transaction conversations</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Prisma migrations</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Trace retry</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-partial">~</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Graceful shutdown</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Recovery metadata</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Tokens criptografados</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Webhook ownership</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-partial">~</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Paginacao 9 repos</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-partial">8/9</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">CORS</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-partial">~</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Schema (FKs+Enums+Indexes)</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">Dashboard + Timeline UI</td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-partial">~</span></td><td class="p-2 text-center"><span class="tag tag-open">!</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr><td class="p-2.5">14 Ghost Models</td><td class="p-2 text-center"><span class="tag tag-ghost">14</span></td><td class="p-2 text-center"><span class="tag tag-partial">11</span></td><td class="p-2 text-center"><span class="tag tag-partial">11</span></td><td class="p-2 text-center"><span class="tag tag-fixed">14</span></td></tr>
+            <tr><td class="p-2.5">ResourceDependency enforcement</td><td class="p-2 text-center"><span class="tag tag-ghost">G</span></td><td class="p-2 text-center"><span class="tag tag-ghost">G</span></td><td class="p-2 text-center"><span class="tag tag-ghost">G</span></td><td class="p-2 text-center"><span class="tag tag-fixed">OK</span></td></tr>
+            <tr class="bg-amber-500/5"><td class="p-2.5 text-amber-300">Trigger Scheduler (auto-exec)</td><td class="p-2 text-center"><span class="tag tag-ghost">G</span></td><td class="p-2 text-center"><span class="tag tag-ghost">G</span></td><td class="p-2 text-center"><span class="tag tag-ghost">G</span></td><td class="p-2 text-center"><span class="tag tag-partial">~</span></td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- ============================================ -->
-    <!-- REMAINING ACTIONS -->
-    <!-- ============================================ -->
-    <h2 class="text-lg font-bold text-slate-300 mb-4 flex items-center gap-2 fade-in">
-      <span class="w-3 h-3 rounded-full bg-slate-400"></span>
-      Acoes Restantes (7 itens)
-    </h2>
-
-    <div class="glass rounded-xl p-5 mb-10 fade-in">
-      <div class="text-xs text-slate-400 space-y-3">
-        <div class="flex items-start gap-3">
-          <span class="tag tag-open shrink-0">1</span>
-          <div><strong class="text-red-300">Encrypt tokens:</strong> Usar crypto.ts (ja existe) em git.routes.ts e webhooks.repository.ts para encrypt() ao salvar e decrypt() ao ler GitAccount.token e Webhook.secret.</div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="tag tag-open shrink-0">2</span>
-          <div><strong class="text-red-300">Webhook ownership:</strong> Trocar <code>where: { id }</code> para <code>where: { id, userId }</code> no update() e delete() de webhooks.repository.ts.</div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="tag tag-partial shrink-0">3</span>
-          <div><strong class="text-amber-300">Webhooks pagination:</strong> Adicionar take/skip + findAllPaginated() em webhooks.repository.ts (unico repo sem paginacao).</div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="tag tag-partial shrink-0">4</span>
-          <div><strong class="text-amber-300">CORS fallback:</strong> Definir CORS_ORIGINS no .env ou trocar fallback de <code>true</code> para array de dominios do projeto.</div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="tag tag-ghost shrink-0">5</span>
-          <div><strong class="text-violet-300">Trigger runtime:</strong> Implementar cron scheduler + webhook inbound handler para WorkflowTrigger + ScheduledExecution.</div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="tag tag-ghost shrink-0">6</span>
-          <div><strong class="text-violet-300">ResourceDependency:</strong> Implementar validacao de dependencias ao deletar recursos.</div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="tag tag-ghost shrink-0">7</span>
-          <div><strong class="text-violet-300">Execution timeline UI:</strong> Componente waterfall/flame-chart no frontend usando parsedEvents.</div>
-        </div>
+    <!-- SINGLE REMAINING ACTION -->
+    <div class="glass rounded-xl p-5 mb-10 fade-in border border-amber-500/20">
+      <h3 class="font-bold text-sm text-amber-400 mb-3">Unica acao restante</h3>
+      <div class="text-xs text-slate-400">
+        <strong class="text-amber-300">Trigger Scheduler:</strong> O CRUD, service e repository de triggers estao prontos. <code>processScheduledExecutions()</code> existe mas (1) nao tem worker chamando periodicamente e (2) tem TODO para integrar com TaskOrchestrator &mdash; atualmente marca como completed sem executar o workflow de verdade.
+        <div class="mt-2 text-slate-500">Fix: Criar BullMQ repeatable job ou setInterval que chame processScheduledExecutions() e integre com o motor de execucao.</div>
       </div>
     </div>
 
@@ -463,48 +297,50 @@
       <div class="flex items-center justify-center gap-10">
         <div class="text-center">
           <div class="progress-ring mb-2">
-            <svg width="80" height="80">
-              <circle cx="40" cy="40" r="35" fill="none" stroke="#1e293b" stroke-width="6"/>
-              <circle cx="40" cy="40" r="35" fill="none" stroke="#22c55e" stroke-width="6"
-                stroke-dasharray="220" stroke-dashoffset="37" stroke-linecap="round"/>
+            <svg width="90" height="90">
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#1e293b" stroke-width="6"/>
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#22c55e" stroke-width="6"
+                stroke-dasharray="239" stroke-dashoffset="12" stroke-linecap="round"/>
             </svg>
-            <span class="absolute inset-0 flex items-center justify-center text-lg font-bold text-green-400">83%</span>
+            <span class="absolute inset-0 flex items-center justify-center text-xl font-bold text-green-400">95%</span>
           </div>
-          <div class="text-xs text-slate-500">Bugs (15/18)</div>
+          <div class="text-xs text-slate-500">Bugs & Issues</div>
+          <div class="text-[10px] text-slate-600">18/19 corrigidos</div>
         </div>
         <div class="text-center">
           <div class="progress-ring mb-2">
-            <svg width="80" height="80">
-              <circle cx="40" cy="40" r="35" fill="none" stroke="#1e293b" stroke-width="6"/>
-              <circle cx="40" cy="40" r="35" fill="none" stroke="#a78bfa" stroke-width="6"
-                stroke-dasharray="220" stroke-dashoffset="47" stroke-linecap="round"/>
+            <svg width="90" height="90">
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#1e293b" stroke-width="6"/>
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#a78bfa" stroke-width="6"
+                stroke-dasharray="239" stroke-dashoffset="0" stroke-linecap="round"/>
             </svg>
-            <span class="absolute inset-0 flex items-center justify-center text-lg font-bold text-violet-400">79%</span>
+            <span class="absolute inset-0 flex items-center justify-center text-xl font-bold text-violet-400">100%</span>
           </div>
-          <div class="text-xs text-slate-500">Ghosts (11/14)</div>
+          <div class="text-xs text-slate-500">Ghost Models</div>
+          <div class="text-[10px] text-slate-600">14/14 com impl</div>
         </div>
         <div class="text-center">
           <div class="progress-ring mb-2">
-            <svg width="80" height="80">
-              <circle cx="40" cy="40" r="35" fill="none" stroke="#1e293b" stroke-width="6"/>
-              <circle cx="40" cy="40" r="35" fill="none" stroke="#06b6d4" stroke-width="6"
-                stroke-dasharray="220" stroke-dashoffset="0" stroke-linecap="round"/>
+            <svg width="90" height="90">
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#1e293b" stroke-width="6"/>
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#06b6d4" stroke-width="6"
+                stroke-dasharray="239" stroke-dashoffset="0" stroke-linecap="round"/>
             </svg>
-            <span class="absolute inset-0 flex items-center justify-center text-lg font-bold text-cyan-400">100%</span>
+            <span class="absolute inset-0 flex items-center justify-center text-xl font-bold text-cyan-400">100%</span>
           </div>
-          <div class="text-xs text-slate-500">Schema (FKs+Enums+Idx)</div>
+          <div class="text-xs text-slate-500">Schema Quality</div>
+          <div class="text-[10px] text-slate-600">FKs+Enums+Idx</div>
         </div>
       </div>
-      <p class="text-xs text-slate-600 mt-4">3a validacao &mdash; 23/03/2026 &mdash; 7 itens restantes</p>
+      <p class="text-xs text-slate-600 mt-4">4a validacao &mdash; 24/03/2026</p>
     </div>
 
   </main>
 
-  <!-- Footer -->
   <footer class="border-t border-slate-800 py-6 mt-10">
     <div class="max-w-7xl mx-auto px-6 flex items-center justify-between text-xs text-slate-600">
       <span>Orquetrador Claude &mdash; Estrutura de Dados</span>
-      <span>3a validacao: 23/03/2026 | 47 modelos | 7 itens restantes</span>
+      <span>4a validacao: 24/03/2026 | 47 modelos | 95% completo</span>
     </div>
   </footer>
 
