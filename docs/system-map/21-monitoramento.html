@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitoramento | Orquetrador Claude — System Map</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Layer diagram */
+.layer-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.layer-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 80px;
+  transition: all 0.3s;
+}
+
+.layer-row:hover {
+  filter: brightness(1.15);
+}
+
+.layer-label {
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0.75rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.layer-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  flex-wrap: wrap;
+  border-left: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.layer-realtime .layer-label { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.layer-logging .layer-label { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.layer-hourly .layer-label  { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.layer-daily .layer-label   { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+
+.layer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.layer-chip:hover {
+  border-color: var(--border-accent);
+}
+
+/* Trace anatomy */
+.trace-anatomy {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.trace-section {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.trace-section:last-child {
+  border-bottom: none;
+}
+
+.trace-section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.trace-section-body {
+  flex: 1;
+}
+
+.trace-section-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+}
+
+.trace-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.trace-field {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+/* Dashboard mockup */
+.dashboard-mock {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.dashboard-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.mock-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dashboard-body {
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.mock-kpi {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.mock-kpi-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.mock-kpi-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.mock-chart {
+  grid-column: span 2;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1rem;
+  min-height: 140px;
+  position: relative;
+  overflow: hidden;
+}
+
+.mock-chart-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 80px;
+  padding-top: 0.5rem;
+}
+
+.chart-bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  min-width: 12px;
+  transition: height 0.6s ease;
+}
+
+.chart-line {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  height: 80px;
+}
+
+.chart-line svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Timeline mockup */
+.timeline-mock {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.timeline-event {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  position: relative;
+}
+
+.timeline-event:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 40px;
+  bottom: -8px;
+  width: 2px;
+  background: var(--border-color);
+}
+
+.timeline-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.timeline-body {
+  flex: 1;
+}
+
+.timeline-body-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.timeline-body-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+/* Service cards */
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.service-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: all 0.3s;
+}
+
+.service-card:hover {
+  border-color: rgba(13, 148, 136, 0.3);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.service-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.service-card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.service-card-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.service-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.service-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+/* Endpoint table custom */
+.endpoint-method {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.method-get { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+.method-post { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+
+/* Feedback section */
+.feedback-flow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.feedback-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 100px;
+  transition: all 0.3s;
+}
+
+.feedback-node:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-glow);
+}
+
+.feedback-node-icon {
+  font-size: 1.4rem;
+  margin-bottom: 0.2rem;
+}
+
+.feedback-arrow {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+  .layer-row { flex-direction: column; }
+  .layer-label { width: 100%; flex-direction: row; gap: 0.5rem; padding: 0.75rem 1rem; }
+  .layer-content { border-left: none; border-top: 1px solid var(--border-color); }
+  .dashboard-body { grid-template-columns: repeat(2, 1fr); }
+  .mock-chart { grid-column: span 2; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-container">
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">System Map</a>
+      <span>&rsaquo;</span>
+      <span>21 &mdash; Monitoramento</span>
+    </div>
+    <h1>Monitoramento</h1>
+    <p class="subtitle">4 camadas de observabilidade: traces em tempo real, logs estruturados, agregacoes horarias e metricas diarias. Do segundo-a-segundo ao resumo mensal.</p>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- STATS -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <div class="grid-4">
+      <div class="stat-box">
+        <div class="stat-value" data-count="4">0</div>
+        <div class="stat-label">Camadas de Observabilidade</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="12">0</div>
+        <div class="stat-label">Event Types (Log)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="10">0</div>
+        <div class="stat-label">Endpoints de Metricas</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="5">0</div>
+        <div class="stat-label">Servicos de Monitoring</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 1. CAMADAS DE OBSERVABILIDADE -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x1F4CA;</span>
+      4 Camadas de Observabilidade
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      O sistema de monitoramento opera em 4 granularidades distintas. Cada camada captura dados em uma frequencia diferente e serve a casos de uso especificos, desde debug em tempo real ate analytics de longo prazo.
+    </p>
+
+    <div class="layer-stack">
+      <!-- Real-time -->
+      <div class="layer-row layer-realtime">
+        <div class="layer-label">
+          <span>Real-time</span>
+          <span style="font-size:0.65rem; font-weight:400; opacity:0.7;">segundo a segundo</span>
+        </div>
+        <div class="layer-content">
+          <div class="layer-chip" style="border-color: rgba(239,68,68,0.3);">
+            <span style="color:#f87171;">&#x23F1;</span> ExecutionTrace
+          </div>
+          <div class="layer-chip" style="border-color: rgba(239,68,68,0.3);">
+            <span style="color:#f87171;">&#x1F527;</span> ExecutionToolCall
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Cada step de execucao gera um trace com timing, tokens, custo e tool calls extraidas</span>
+        </div>
+      </div>
+
+      <!-- Logging -->
+      <div class="layer-row layer-logging">
+        <div class="layer-label">
+          <span>Logging</span>
+          <span style="font-size:0.65rem; font-weight:400; opacity:0.7;">eventos estruturados</span>
+        </div>
+        <div class="layer-content">
+          <div class="layer-chip" style="border-color: rgba(245,158,11,0.3);">
+            <span style="color:#fbbf24;">&#x1F4DD;</span> ExecutionLog
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">12 event types: step_start, step_complete, step_fail, workflow_start, retry, cancel, etc.</span>
+        </div>
+      </div>
+
+      <!-- Hourly -->
+      <div class="layer-row layer-hourly">
+        <div class="layer-label">
+          <span>Hourly</span>
+          <span style="font-size:0.65rem; font-weight:400; opacity:0.7;">agregacao horaria</span>
+        </div>
+        <div class="layer-content">
+          <div class="layer-chip" style="border-color: rgba(59,130,246,0.3);">
+            <span style="color:#60a5fa;">&#x1F4B0;</span> HourlyTokenUsage
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Rollup horario de tokens e custo por modelo e usuario</span>
+        </div>
+      </div>
+
+      <!-- Daily -->
+      <div class="layer-row layer-daily">
+        <div class="layer-label">
+          <span>Daily</span>
+          <span style="font-size:0.65rem; font-weight:400; opacity:0.7;">resumo diario</span>
+        </div>
+        <div class="layer-content">
+          <div class="layer-chip" style="border-color: rgba(34,197,94,0.3);">
+            <span style="color:#4ade80;">&#x1F4C5;</span> DailyExecutionMetrics
+          </div>
+          <div class="layer-chip" style="border-color: rgba(34,197,94,0.3);">
+            <span style="color:#4ade80;">&#x1F4CA;</span> ExecutionAggregate
+          </div>
+          <div class="layer-chip" style="border-color: rgba(34,197,94,0.3);">
+            <span style="color:#4ade80;">&#x2B50;</span> ResourcePerformanceMetric
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Metricas pre-agregadas para dashboards e analytics rapidos</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 2. EXECUTION TRACE (Anatomy) -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(239,68,68,0.1); color: #f87171;">&#x23F1;</span>
+      ExecutionTrace &mdash; Anatomia do Trace
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      Cada step de execucao gera um <strong>ExecutionTrace</strong> detalhado. Ele captura desde o comando executado ate o resultado final, com timeline de eventos parseados.
+    </p>
+
+    <div class="trace-anatomy">
+      <!-- Command -->
+      <div class="trace-section" style="background: rgba(139,92,246,0.05);">
+        <div class="trace-section-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1F4BB;</div>
+        <div class="trace-section-body">
+          <div class="trace-section-title">Command &amp; Environment</div>
+          <div class="trace-fields">
+            <span class="trace-field">commandLine</span>
+            <span class="trace-field">envSnapshot</span>
+            <span class="trace-field">systemPrompt</span>
+            <span class="trace-field">model</span>
+            <span class="trace-field">projectPath</span>
+            <span class="trace-field">messageLength</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Output -->
+      <div class="trace-section" style="background: rgba(245,158,11,0.05);">
+        <div class="trace-section-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x1F4E4;</div>
+        <div class="trace-section-body">
+          <div class="trace-section-title">Output &amp; Events</div>
+          <div class="trace-fields">
+            <span class="trace-field">stdoutRaw</span>
+            <span class="trace-field">stderrRaw</span>
+            <span class="trace-field">parsedEvents[]</span>
+          </div>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.4rem;">
+            parsedEvents contem a timeline completa: cada evento JSON emitido pelo Claude CLI e parseado em sequencia
+          </p>
+        </div>
+      </div>
+
+      <!-- Timing -->
+      <div class="trace-section" style="background: rgba(59,130,246,0.05);">
+        <div class="trace-section-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x23F0;</div>
+        <div class="trace-section-body">
+          <div class="trace-section-title">Timing</div>
+          <div class="trace-fields">
+            <span class="trace-field">startedAt</span>
+            <span class="trace-field">firstByteAt</span>
+            <span class="trace-field">firstContentAt</span>
+            <span class="trace-field">completedAt</span>
+            <span class="trace-field">durationMs</span>
+          </div>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.4rem;">
+            4 timestamps permitem medir latencia de conexao (startedAt &rarr; firstByteAt), time-to-first-content, e duracao total
+          </p>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="trace-section" style="background: rgba(239,68,68,0.05);">
+        <div class="trace-section-icon" style="background: rgba(239,68,68,0.15); color: #f87171;">&#x2705;</div>
+        <div class="trace-section-body">
+          <div class="trace-section-title">Result</div>
+          <div class="trace-fields">
+            <span class="trace-field">exitCode</span>
+            <span class="trace-field">signal</span>
+            <span class="trace-field">resultStatus</span>
+            <span class="trace-field">errorMessage</span>
+            <span class="trace-field">errorCategory</span>
+            <span class="trace-field">errorCode</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tokens -->
+      <div class="trace-section" style="background: rgba(34,197,94,0.05);">
+        <div class="trace-section-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1F4B0;</div>
+        <div class="trace-section-body">
+          <div class="trace-section-title">Tokens &amp; Cost</div>
+          <div class="trace-fields">
+            <span class="trace-field">inputTokens</span>
+            <span class="trace-field">outputTokens</span>
+            <span class="trace-field">cacheCreationInputTokens</span>
+            <span class="trace-field">cacheReadInputTokens</span>
+            <span class="trace-field">totalCostUsd</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance -->
+      <div class="trace-section" style="background: rgba(13,148,136,0.05);">
+        <div class="trace-section-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x26A1;</div>
+        <div class="trace-section-body">
+          <div class="trace-section-title">Performance</div>
+          <div class="trace-fields">
+            <span class="trace-field">durationApiMs</span>
+            <span class="trace-field">numTurns</span>
+            <span class="trace-field">stopReason</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 3. EXECUTION TOOL CALL -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1F527;</span>
+      ExecutionToolCall
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      Tool calls sao extraidas de cada trace pelo <strong>ToolCallExtractor</strong>. Cada chamada de ferramenta feita pelo Claude e registrada individualmente com input, output, duracao e status.
+    </p>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Tipo</th>
+            <th>Descricao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">toolName</code></td>
+            <td><span class="badge badge-blue">String</span></td>
+            <td>Nome da ferramenta (ex: Read, Write, Bash, Grep)</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">input</code></td>
+            <td><span class="badge badge-purple">JSON</span></td>
+            <td>Parametros enviados para a ferramenta</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">output</code></td>
+            <td><span class="badge badge-purple">JSON</span></td>
+            <td>Resultado retornado pela ferramenta</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">durationMs</code></td>
+            <td><span class="badge badge-amber">Int</span></td>
+            <td>Tempo de execucao em milissegundos</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">success</code></td>
+            <td><span class="badge badge-green">Boolean</span></td>
+            <td>Se a chamada foi bem-sucedida</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">errorMessage</code></td>
+            <td><span class="badge badge-red">String?</span></td>
+            <td>Mensagem de erro (se falhou)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 4. EXECUTION LOG -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x1F4DD;</span>
+      ExecutionLog &mdash; Audit Trail
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      Cada evento significativo durante uma execucao e registrado como um <strong>ExecutionLog</strong>. Funciona como audit trail completo do ciclo de vida de workflows e steps.
+    </p>
+
+    <div class="tabs-container">
+      <div class="tabs-header">
+        <button class="tab-btn active" data-tab="tab-log-events">Event Types</button>
+        <button class="tab-btn" data-tab="tab-log-structure">Estrutura</button>
+        <button class="tab-btn" data-tab="tab-log-timeline">Timeline Exemplo</button>
+      </div>
+
+      <!-- Event Types Tab -->
+      <div class="tab-content active" id="tab-log-events">
+        <div class="grid-3">
+          <div class="card" style="border-left: 3px solid #4ade80;">
+            <div class="card-header">
+              <span class="badge badge-green">Lifecycle</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:0.35rem;">
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">workflow_start</code>
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">workflow_complete</code>
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">workflow_fail</code>
+            </div>
+          </div>
+
+          <div class="card" style="border-left: 3px solid #60a5fa;">
+            <div class="card-header">
+              <span class="badge badge-blue">Steps</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:0.35rem;">
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">step_start</code>
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">step_complete</code>
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">step_fail</code>
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">step_error</code>
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">step_skip</code>
+            </div>
+          </div>
+
+          <div class="card" style="border-left: 3px solid #fbbf24;">
+            <div class="card-header">
+              <span class="badge badge-amber">Control</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:0.35rem;">
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">retry</code>
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">pause</code>
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">resume</code>
+              <code class="mono" style="font-size:0.8rem; color:var(--text-accent);">cancel</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Structure Tab -->
+      <div class="tab-content" id="tab-log-structure">
+        <div class="code-block">
+<span class="comment">// ExecutionLog schema</span>
+{
+  <span class="string">"id"</span>:          <span class="type">String</span>     <span class="comment">// UUID</span>
+  <span class="string">"executionId"</span>: <span class="type">String</span>     <span class="comment">// FK para Execution</span>
+  <span class="string">"stepId"</span>:      <span class="type">String?</span>    <span class="comment">// FK para ExecutionStep (opcional)</span>
+  <span class="string">"eventType"</span>:   <span class="type">String</span>     <span class="comment">// step_start | step_complete | ...</span>
+  <span class="string">"data"</span>:        <span class="type">Json</span>       <span class="comment">// Contexto do evento (free-form)</span>
+  <span class="string">"createdAt"</span>:   <span class="type">DateTime</span>   <span class="comment">// Timestamp do evento</span>
+}
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.75rem;">
+          O campo <code style="color:var(--text-accent);">data</code> e JSON livre e contem contexto especifico do evento. Ex: para <code>step_fail</code>, contem errorMessage e errorCategory. Para <code>retry</code>, contem attempt number e backoff delay.
+        </p>
+      </div>
+
+      <!-- Timeline Tab -->
+      <div class="tab-content" id="tab-log-timeline">
+        <div class="card" style="padding: 1.5rem;">
+          <div class="timeline-mock">
+            <div class="timeline-event">
+              <div class="timeline-dot" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x25B6;</div>
+              <div class="timeline-body">
+                <div class="timeline-body-title">workflow_start</div>
+                <div class="timeline-body-meta">10:00:00.000 &mdash; Workflow "Deploy API" iniciado com 4 steps</div>
+              </div>
+            </div>
+            <div class="timeline-event">
+              <div class="timeline-dot" style="background: rgba(59,130,246,0.15); color: #60a5fa;">1</div>
+              <div class="timeline-body">
+                <div class="timeline-body-title">step_start</div>
+                <div class="timeline-body-meta">10:00:00.050 &mdash; Step 1: "Rodar testes"</div>
+              </div>
+            </div>
+            <div class="timeline-event">
+              <div class="timeline-dot" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x2713;</div>
+              <div class="timeline-body">
+                <div class="timeline-body-title">step_complete</div>
+                <div class="timeline-body-meta">10:00:45.230 &mdash; Step 1 completo (45.2s, 1,200 tokens, $0.003)</div>
+              </div>
+            </div>
+            <div class="timeline-event">
+              <div class="timeline-dot" style="background: rgba(59,130,246,0.15); color: #60a5fa;">2</div>
+              <div class="timeline-body">
+                <div class="timeline-body-title">step_start</div>
+                <div class="timeline-body-meta">10:00:45.280 &mdash; Step 2: "Build Docker image"</div>
+              </div>
+            </div>
+            <div class="timeline-event">
+              <div class="timeline-dot" style="background: rgba(239,68,68,0.15); color: #f87171;">&#x2717;</div>
+              <div class="timeline-body">
+                <div class="timeline-body-title">step_fail</div>
+                <div class="timeline-body-meta">10:01:20.100 &mdash; Step 2 falhou: "Dockerfile not found" (category: config_error)</div>
+              </div>
+            </div>
+            <div class="timeline-event">
+              <div class="timeline-dot" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x21BB;</div>
+              <div class="timeline-body">
+                <div class="timeline-body-title">retry</div>
+                <div class="timeline-body-meta">10:01:20.150 &mdash; Tentativa 2/3, backoff 2s</div>
+              </div>
+            </div>
+            <div class="timeline-event">
+              <div class="timeline-dot" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x2713;</div>
+              <div class="timeline-body">
+                <div class="timeline-body-title">step_complete</div>
+                <div class="timeline-body-meta">10:01:55.400 &mdash; Step 2 completo na retry (35.3s)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 5. EXECUTION AGGREGATE -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(13,148,136,0.1); color: var(--text-accent);">&#x1F4CA;</span>
+      ExecutionAggregate
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      Resumo cross-step de uma execucao completa. Gerado pelo <strong>MetricsAggregator</strong> apos a finalizacao do workflow.
+    </p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1F522;</div>
+          <div class="card-title">Contadores</div>
+        </div>
+        <div class="trace-fields" style="gap: 0.5rem;">
+          <span class="trace-field">totalSteps</span>
+          <span class="trace-field">completedSteps</span>
+          <span class="trace-field">failedSteps</span>
+          <span class="trace-field">skippedSteps</span>
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.75rem;">
+          Contagem por status de cada step. <code style="color:var(--text-accent);">totalSteps = completedSteps + failedSteps + skippedSteps</code>
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1F4B0;</div>
+          <div class="card-title">Tokens &amp; Custo</div>
+        </div>
+        <div class="trace-fields" style="gap: 0.5rem;">
+          <span class="trace-field">totalInputTokens</span>
+          <span class="trace-field">totalOutputTokens</span>
+          <span class="trace-field">totalCostUsd</span>
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.75rem;">
+          Soma de todos os traces. Custo calculado com pricing table por modelo.
+        </p>
+      </div>
+
+      <div class="card" style="grid-column: span 2;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1F3AF;</div>
+          <div class="card-title">Final Status</div>
+        </div>
+        <p class="card-desc">
+          O campo <code style="color:var(--text-accent);">finalStatus</code> reflete o resultado geral da execucao:
+        </p>
+        <div style="display:flex; gap:0.5rem; margin-top:0.75rem; flex-wrap:wrap;">
+          <span class="badge badge-green">completed</span>
+          <span class="badge badge-red">failed</span>
+          <span class="badge badge-amber">partial</span>
+          <span class="badge badge-gray">cancelled</span>
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">
+          <code>partial</code> = pelo menos 1 step completou mas houve falhas. <code>cancelled</code> = interrompido pelo usuario ou timeout.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 6. DAILY EXECUTION METRICS -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1F4C5;</span>
+      DailyExecutionMetrics
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      Metricas pre-agregadas por dia. Geradas pelo <strong>MetricsAggregator</strong> e consumidas pelos dashboards sem necessidade de queries pesadas.
+    </p>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Tipo</th>
+            <th>Descricao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">date</code></td>
+            <td><span class="badge badge-blue">DateTime</span></td>
+            <td>Data de referencia (dia)</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">totalExecutions</code></td>
+            <td><span class="badge badge-teal">Int</span></td>
+            <td>Total de execucoes no dia</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">successCount</code></td>
+            <td><span class="badge badge-green">Int</span></td>
+            <td>Execucoes com sucesso</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">failureCount</code></td>
+            <td><span class="badge badge-red">Int</span></td>
+            <td>Execucoes com falha</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">avgDurationMs</code></td>
+            <td><span class="badge badge-amber">Float</span></td>
+            <td>Duracao media das execucoes</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">p50DurationMs</code></td>
+            <td><span class="badge badge-amber">Float</span></td>
+            <td>Percentil 50 (mediana) de duracao</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">p95DurationMs</code></td>
+            <td><span class="badge badge-amber">Float</span></td>
+            <td>Percentil 95 de duracao (tail latency)</td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">errorBreakdown</code></td>
+            <td><span class="badge badge-purple">JSON</span></td>
+            <td>Contagem por errorCategory <code>{ "timeout": 3, "config_error": 1 }</code></td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="color:var(--text-accent);">modelBreakdown</code></td>
+            <td><span class="badge badge-purple">JSON</span></td>
+            <td>Contagem por modelo usado <code>{ "opus-4": 12, "sonnet-4": 8 }</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 7. RESOURCE PERFORMANCE METRIC -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1F3AF;</span>
+      ResourcePerformanceMetric
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      Tracking de performance por recurso individual (skill, agent ou rule). Permite identificar quais recursos sao mais eficientes, mais caros ou mais propensos a falhas.
+    </p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x1F4CA;</div>
+          <div class="card-title">Campos</div>
+        </div>
+        <div class="trace-fields" style="gap: 0.5rem;">
+          <span class="trace-field">resourceId</span>
+          <span class="trace-field">resourceType</span>
+          <span class="trace-field">executionCount</span>
+          <span class="trace-field">successCount</span>
+          <span class="trace-field">avgDurationMs</span>
+          <span class="trace-field">p95DurationMs</span>
+          <span class="trace-field">totalCostUsd</span>
+          <span class="trace-field">avgQualityScore</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x1F4A1;</div>
+          <div class="card-title">Uso</div>
+        </div>
+        <div class="card-desc">
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+            <li style="display:flex; gap:0.5rem; align-items:flex-start;">
+              <span style="color:#4ade80;">&#x2022;</span>
+              <span>Identificar skills lentas (p95 alto)</span>
+            </li>
+            <li style="display:flex; gap:0.5rem; align-items:flex-start;">
+              <span style="color:#f87171;">&#x2022;</span>
+              <span>Detectar agents com baixa taxa de sucesso</span>
+            </li>
+            <li style="display:flex; gap:0.5rem; align-items:flex-start;">
+              <span style="color:#fbbf24;">&#x2022;</span>
+              <span>Comparar custo entre recursos similares</span>
+            </li>
+            <li style="display:flex; gap:0.5rem; align-items:flex-start;">
+              <span style="color:#a78bfa;">&#x2022;</span>
+              <span>Ranquear por qualidade (avgQualityScore)</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 8. MONITORING SERVICES -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x2699;</span>
+      Monitoring Services
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      5 servicos backend que coletam, processam e agregam dados de monitoramento.
+    </p>
+
+    <div class="service-grid">
+      <div class="service-card">
+        <div class="service-card-header">
+          <div class="service-card-icon" style="background: rgba(239,68,68,0.15); color: #f87171;">&#x1F441;</div>
+          <div class="service-card-name">ExecutionMonitor</div>
+        </div>
+        <div class="service-card-desc">
+          Wraps engine execution. Registra startedAt, firstByteAt, firstContentAt e completedAt. Calcula durationMs automaticamente. Ponto de entrada principal para traces.
+        </div>
+        <div class="service-card-tags">
+          <span class="badge badge-red">real-time</span>
+          <span class="badge badge-teal">per-step</span>
+        </div>
+      </div>
+
+      <div class="service-card">
+        <div class="service-card-header">
+          <div class="service-card-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1F4CA;</div>
+          <div class="service-card-name">MetricsAggregator</div>
+        </div>
+        <div class="service-card-desc">
+          Fire-and-forget pos-execucao. Gera ExecutionAggregate e atualiza DailyExecutionMetrics. Nao bloqueia o fluxo principal.
+        </div>
+        <div class="service-card-tags">
+          <span class="badge badge-green">async</span>
+          <span class="badge badge-amber">fire-and-forget</span>
+        </div>
+      </div>
+
+      <div class="service-card">
+        <div class="service-card-header">
+          <div class="service-card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1F527;</div>
+          <div class="service-card-name">ToolCallExtractor</div>
+        </div>
+        <div class="service-card-desc">
+          Parseia parsedEvents[] dos traces e extrai cada tool_use/tool_result como ExecutionToolCall individual. Calcula duracao por ferramenta.
+        </div>
+        <div class="service-card-tags">
+          <span class="badge badge-purple">parser</span>
+          <span class="badge badge-teal">per-trace</span>
+        </div>
+      </div>
+
+      <div class="service-card">
+        <div class="service-card-header">
+          <div class="service-card-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1F4B0;</div>
+          <div class="service-card-name">HourlyTokenAggregator</div>
+        </div>
+        <div class="service-card-desc">
+          Roda a cada hora via BullMQ repeatable job. Agrupa tokens e custo por modelo e usuario. Alimenta HourlyTokenUsage.
+        </div>
+        <div class="service-card-tags">
+          <span class="badge badge-blue">cron</span>
+          <span class="badge badge-amber">hourly</span>
+        </div>
+      </div>
+
+      <div class="service-card">
+        <div class="service-card-header">
+          <div class="service-card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x1F9F9;</div>
+          <div class="service-card-name">TraceCleanup</div>
+        </div>
+        <div class="service-card-desc">
+          Delecao periodica de traces antigos. Configurable retention period. Preserva aggregates mesmo apos deletar traces brutos.
+        </div>
+        <div class="service-card-tags">
+          <span class="badge badge-amber">cron</span>
+          <span class="badge badge-gray">cleanup</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Service Flow -->
+    <div style="margin-top: 1.5rem;">
+      <p style="font-size:0.85rem; font-weight:600; margin-bottom:0.75rem; color:var(--text-secondary);">Fluxo de Dados entre Servicos:</p>
+      <div class="flow-container" style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px;">
+        <div class="flow-node" style="border-color:rgba(239,68,68,0.3);">
+          <span>&#x1F441;</span> ExecutionMonitor
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color:rgba(139,92,246,0.3);">
+          <span>&#x1F527;</span> ToolCallExtractor
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color:rgba(34,197,94,0.3);">
+          <span>&#x1F4CA;</span> MetricsAggregator
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color:rgba(59,130,246,0.3);">
+          <span>&#x1F4B0;</span> HourlyTokenAggregator
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color:rgba(245,158,11,0.3);">
+          <span>&#x1F9F9;</span> TraceCleanup
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 9. DASHBOARD FRONTEND -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(13,148,136,0.1); color: var(--text-accent);">&#x1F5A5;</span>
+      Dashboard Frontend
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      5 componentes React compoe o dashboard de monitoramento. Usam Recharts para graficos e TanStack Query para dados real-time.
+    </p>
+
+    <!-- Dashboard Mockup -->
+    <div class="dashboard-mock" style="margin-bottom: 1.5rem;">
+      <div class="dashboard-titlebar">
+        <div class="mock-dot" style="background: #f87171;"></div>
+        <div class="mock-dot" style="background: #fbbf24;"></div>
+        <div class="mock-dot" style="background: #4ade80;"></div>
+        <span style="font-size:0.8rem; color:var(--text-muted); margin-left:0.5rem;">Dashboard &mdash; Monitoramento</span>
+      </div>
+      <div class="dashboard-body">
+        <!-- KPIs -->
+        <div class="mock-kpi">
+          <div class="mock-kpi-value" style="color: var(--text-accent);">247</div>
+          <div class="mock-kpi-label">Execucoes Hoje</div>
+        </div>
+        <div class="mock-kpi">
+          <div class="mock-kpi-value" style="color: #4ade80;">94.3%</div>
+          <div class="mock-kpi-label">Taxa de Sucesso</div>
+        </div>
+        <div class="mock-kpi">
+          <div class="mock-kpi-value" style="color: #60a5fa;">12.4s</div>
+          <div class="mock-kpi-label">Duracao Media</div>
+        </div>
+        <div class="mock-kpi">
+          <div class="mock-kpi-value" style="color: #fbbf24;">$4.82</div>
+          <div class="mock-kpi-label">Custo Total Hoje</div>
+        </div>
+
+        <!-- Daily Chart -->
+        <div class="mock-chart">
+          <div class="mock-chart-title">Execucoes por Dia (DailyChart)</div>
+          <div class="chart-bars">
+            <div class="chart-bar" style="height: 45%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 62%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 38%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 75%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 55%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 82%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 90%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 68%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 45%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 58%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 72%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 95%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 80%; background: var(--gradient-1);"></div>
+            <div class="chart-bar" style="height: 65%; background: var(--gradient-1);"></div>
+          </div>
+        </div>
+
+        <!-- Performance Line -->
+        <div class="mock-chart">
+          <div class="mock-chart-title">Latencia p50 / p95 (PerformanceCards)</div>
+          <div class="chart-line">
+            <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+              <polyline fill="none" stroke="#60a5fa" stroke-width="2" points="0,60 25,55 50,50 75,45 100,48 125,40 150,42 175,35 200,38 225,30 250,32 275,25 300,28" />
+              <polyline fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="4,4" points="0,30 25,28 50,35 75,25 100,32 125,22 150,28 175,20 200,24 225,18 250,22 275,15 300,18" />
+            </svg>
+          </div>
+          <div style="display:flex; gap:1rem; position:absolute; bottom:0.75rem; right:1rem;">
+            <span style="font-size:0.65rem; color:#60a5fa;">&#x2501; p50</span>
+            <span style="font-size:0.65rem; color:#f87171;">&#x254C; p95</span>
+          </div>
+        </div>
+
+        <!-- Tool Analytics -->
+        <div class="mock-chart">
+          <div class="mock-chart-title">Tool Analytics</div>
+          <div style="display:flex; flex-direction:column; gap:0.5rem; padding-top:0.25rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span style="font-size:0.7rem; color:var(--text-secondary); width:50px;">Read</span>
+              <div class="progress-bar" style="flex:1;">
+                <div class="progress-fill" style="width:85%; background: var(--gradient-1);"></div>
+              </div>
+              <span style="font-size:0.7rem; color:var(--text-muted); width:30px; text-align:right;">340</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span style="font-size:0.7rem; color:var(--text-secondary); width:50px;">Bash</span>
+              <div class="progress-bar" style="flex:1;">
+                <div class="progress-fill" style="width:65%; background: var(--gradient-4);"></div>
+              </div>
+              <span style="font-size:0.7rem; color:var(--text-muted); width:30px; text-align:right;">260</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span style="font-size:0.7rem; color:var(--text-secondary); width:50px;">Write</span>
+              <div class="progress-bar" style="flex:1;">
+                <div class="progress-fill" style="width:45%; background: var(--gradient-2);"></div>
+              </div>
+              <span style="font-size:0.7rem; color:var(--text-muted); width:30px; text-align:right;">180</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span style="font-size:0.7rem; color:var(--text-secondary); width:50px;">Grep</span>
+              <div class="progress-bar" style="flex:1;">
+                <div class="progress-fill" style="width:30%; background: var(--gradient-3);"></div>
+              </div>
+              <span style="font-size:0.7rem; color:var(--text-muted); width:30px; text-align:right;">120</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerts Panel -->
+        <div class="mock-chart">
+          <div class="mock-chart-title">AlertsPanel</div>
+          <div style="display:flex; flex-direction:column; gap:0.5rem; padding-top:0.25rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0.6rem; background:rgba(239,68,68,0.1); border-radius:6px; border:1px solid rgba(239,68,68,0.2);">
+              <span class="status-dot error"></span>
+              <span style="font-size:0.7rem; color:#f87171;">Falha rate > 10%: workflow "Deploy Prod"</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0.6rem; background:rgba(245,158,11,0.1); border-radius:6px; border:1px solid rgba(245,158,11,0.2);">
+              <span class="status-dot warning"></span>
+              <span style="font-size:0.7rem; color:#fbbf24;">p95 > 30s: skill "code-review"</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem; padding:0.4rem 0.6rem; background:rgba(245,158,11,0.1); border-radius:6px; border:1px solid rgba(245,158,11,0.2);">
+              <span class="status-dot warning"></span>
+              <span style="font-size:0.7rem; color:#fbbf24;">Budget 80%: usuario "dev-team"</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Component list -->
+    <div class="grid-3" style="margin-top: 1rem;">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x1F4C8;</div>
+          <div class="card-title">DailyChart</div>
+        </div>
+        <div class="card-desc">Grafico de barras Recharts com execucoes por dia. Stacked bars para sucesso/falha. Tooltip com detalhes.</div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x26A1;</div>
+          <div class="card-title">PerformanceCards</div>
+        </div>
+        <div class="card-desc">KPIs: taxa de sucesso, media de duracao, p50/p95, custo medio por execucao. Sparklines de tendencia.</div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1F527;</div>
+          <div class="card-title">ToolAnalytics</div>
+        </div>
+        <div class="card-desc">Top tools por uso, duracao media, taxa de falha. Treemap ou horizontal bars.</div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x1F504;</div>
+          <div class="card-title">WorkflowComparison</div>
+        </div>
+        <div class="card-desc">Side-by-side de workflows. Compara duracao, custo, tokens e taxa de sucesso entre workflows diferentes.</div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(239,68,68,0.15); color: #f87171;">&#x1F6A8;</div>
+          <div class="card-title">AlertsPanel</div>
+        </div>
+        <div class="card-desc">Alertas em tempo real: failure rate alto, p95 anomalo, budget proximo do limite. Severidade com cores.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 10. ENDPOINTS -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1F310;</span>
+      Endpoints de Monitoramento
+    </h2>
+
+    <div class="search-box">
+      <span class="search-icon">&#x1F50D;</span>
+      <input type="text" placeholder="Filtrar endpoints..." data-search-target="endpoints-table">
+    </div>
+
+    <div class="table-container">
+      <table id="endpoints-table">
+        <thead>
+          <tr>
+            <th>Metodo</th>
+            <th>Rota</th>
+            <th>Descricao</th>
+            <th>Dados</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="endpoint-method method-get">GET</span></td>
+            <td><code class="mono" style="font-size:0.8rem; color:var(--text-accent);">/metrics/daily</code></td>
+            <td>Metricas diarias pre-agregadas</td>
+            <td><span class="badge badge-green">DailyExecutionMetrics</span></td>
+          </tr>
+          <tr>
+            <td><span class="endpoint-method method-get">GET</span></td>
+            <td><code class="mono" style="font-size:0.8rem; color:var(--text-accent);">/metrics/by-workflow</code></td>
+            <td>Metricas agrupadas por workflow</td>
+            <td><span class="badge badge-blue">groupBy()</span></td>
+          </tr>
+          <tr>
+            <td><span class="endpoint-method method-get">GET</span></td>
+            <td><code class="mono" style="font-size:0.8rem; color:var(--text-accent);">/metrics/alerts</code></td>
+            <td>Alertas ativos baseados em thresholds</td>
+            <td><span class="badge badge-red">aggregate + count</span></td>
+          </tr>
+          <tr>
+            <td><span class="endpoint-method method-get">GET</span></td>
+            <td><code class="mono" style="font-size:0.8rem; color:var(--text-accent);">/metrics/tool-analytics</code></td>
+            <td>Analytics de tool calls (top tools, duracoes)</td>
+            <td><span class="badge badge-purple">ExecutionToolCall</span></td>
+          </tr>
+          <tr>
+            <td><span class="endpoint-method method-get">GET</span></td>
+            <td><code class="mono" style="font-size:0.8rem; color:var(--text-accent);">/executions</code></td>
+            <td>Lista de execucoes paginada</td>
+            <td><span class="badge badge-teal">Execution[]</span></td>
+          </tr>
+          <tr>
+            <td><span class="endpoint-method method-get">GET</span></td>
+            <td><code class="mono" style="font-size:0.8rem; color:var(--text-accent);">/executions/summary</code></td>
+            <td>Resumo com totais e medias</td>
+            <td><span class="badge badge-teal">ExecutionAggregate</span></td>
+          </tr>
+          <tr>
+            <td><span class="endpoint-method method-get">GET</span></td>
+            <td><code class="mono" style="font-size:0.8rem; color:var(--text-accent);">/execution-ratings</code></td>
+            <td>Ratings de execucoes (feedback)</td>
+            <td><span class="badge badge-amber">ExecutionRating[]</span></td>
+          </tr>
+          <tr>
+            <td><span class="endpoint-method method-get">GET</span></td>
+            <td><code class="mono" style="font-size:0.8rem; color:var(--text-accent);">/hourly-token-usage</code></td>
+            <td>Uso de tokens por hora</td>
+            <td><span class="badge badge-blue">HourlyTokenUsage[]</span></td>
+          </tr>
+          <tr>
+            <td><span class="endpoint-method method-get">GET</span></td>
+            <td><code class="mono" style="font-size:0.8rem; color:var(--text-accent);">/resource-performance</code></td>
+            <td>Performance por recurso (skill/agent/rule)</td>
+            <td><span class="badge badge-purple">ResourcePerformanceMetric[]</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 11. FEEDBACK SYSTEM -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x2B50;</span>
+      Feedback System
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      Sistema de feedback em dois niveis: por execucao (macro) e por mensagem (micro). Alimenta o <code style="color:var(--text-accent);">avgQualityScore</code> no ResourcePerformanceMetric.
+    </p>
+
+    <div class="feedback-flow">
+      <div class="feedback-node">
+        <div class="feedback-node-icon">&#x1F464;</div>
+        <span>Usuario</span>
+      </div>
+      <span class="feedback-arrow">&rarr;</span>
+      <div class="feedback-node" style="border-color: rgba(245,158,11,0.3);">
+        <div class="feedback-node-icon">&#x2B50;</div>
+        <span>Rating 1-5</span>
+      </div>
+      <span class="feedback-arrow">&rarr;</span>
+      <div class="feedback-node" style="border-color: rgba(59,130,246,0.3);">
+        <div class="feedback-node-icon">&#x1F4DD;</div>
+        <span>Feedback Text</span>
+      </div>
+      <span class="feedback-arrow">&rarr;</span>
+      <div class="feedback-node" style="border-color: rgba(34,197,94,0.3);">
+        <div class="feedback-node-icon">&#x1F4CA;</div>
+        <span>Aggregation</span>
+      </div>
+      <span class="feedback-arrow">&rarr;</span>
+      <div class="feedback-node" style="border-color: rgba(139,92,246,0.3);">
+        <div class="feedback-node-icon">&#x1F3AF;</div>
+        <span>Quality Score</span>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top: 1.5rem;">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x1F4E6;</div>
+          <div class="card-title">ExecutionRating</div>
+        </div>
+        <div class="card-desc" style="margin-bottom: 0.75rem;">Rating por execucao completa (workflow ou single-step).</div>
+        <div class="table-container" style="border-radius: 8px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code class="mono" style="color:var(--text-accent);">executionId</code></td>
+                <td><span class="badge badge-blue">FK &rarr; Execution</span></td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color:var(--text-accent);">rating</code></td>
+                <td><span class="badge badge-amber">Int (1-5)</span></td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color:var(--text-accent);">feedback</code></td>
+                <td><span class="badge badge-gray">String?</span></td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color:var(--text-accent);">userId</code></td>
+                <td><span class="badge badge-teal">FK &rarr; User</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1F4AC;</div>
+          <div class="card-title">MessageFeedback</div>
+        </div>
+        <div class="card-desc" style="margin-bottom: 0.75rem;">Rating por mensagem individual dentro de uma conversa.</div>
+        <div class="table-container" style="border-radius: 8px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code class="mono" style="color:var(--text-accent);">messageId</code></td>
+                <td><span class="badge badge-blue">FK &rarr; Message</span></td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color:var(--text-accent);">rating</code></td>
+                <td><span class="badge badge-amber">Int (1-5)</span></td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color:var(--text-accent);">comment</code></td>
+                <td><span class="badge badge-gray">String?</span></td>
+              </tr>
+              <tr>
+                <td><code class="mono" style="color:var(--text-accent);">userId</code></td>
+                <td><span class="badge badge-teal">FK &rarr; User</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- DATA FLOW DIAGRAM -->
+  <!-- ======================================================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(13,148,136,0.1); color: var(--text-accent);">&#x1F504;</span>
+      Fluxo Completo de Dados
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      Como os dados fluem desde a execucao ate o dashboard.
+    </p>
+
+    <div class="card" style="padding: 2rem;">
+      <div style="display:flex; flex-direction:column; gap:1.25rem;">
+
+        <!-- Row 1: Execution -->
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+          <div class="flow-node" style="border-color:rgba(139,92,246,0.3); background:rgba(139,92,246,0.1);">
+            <span>&#x26A1;</span> Claude CLI Execution
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-node" style="border-color:rgba(239,68,68,0.3);">
+            <span>&#x1F441;</span> ExecutionMonitor
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-node" style="border-color:rgba(239,68,68,0.2);">
+            <span>&#x1F4BE;</span> ExecutionTrace
+          </div>
+        </div>
+
+        <!-- Row 2: Extraction -->
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; padding-left:2rem;">
+          <span style="color:var(--text-muted); font-size:0.8rem;">&#x2514;</span>
+          <div class="flow-node" style="border-color:rgba(139,92,246,0.3);">
+            <span>&#x1F527;</span> ToolCallExtractor
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-node" style="border-color:rgba(139,92,246,0.2);">
+            <span>&#x1F4BE;</span> ExecutionToolCall
+          </div>
+        </div>
+
+        <!-- Row 3: Logging -->
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; padding-left:2rem;">
+          <span style="color:var(--text-muted); font-size:0.8rem;">&#x2514;</span>
+          <div class="flow-node" style="border-color:rgba(245,158,11,0.3);">
+            <span>&#x1F4DD;</span> ExecutionLog
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">(12 event types emitidos durante a execucao)</span>
+        </div>
+
+        <!-- Row 4: Aggregation -->
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+          <div class="flow-node" style="border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.1);">
+            <span>&#x1F4CA;</span> MetricsAggregator
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-node" style="border-color:rgba(34,197,94,0.2);">
+            <span>&#x1F4BE;</span> ExecutionAggregate
+          </div>
+          <span class="flow-arrow">+</span>
+          <div class="flow-node" style="border-color:rgba(34,197,94,0.2);">
+            <span>&#x1F4BE;</span> DailyExecutionMetrics
+          </div>
+        </div>
+
+        <!-- Row 5: Hourly -->
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+          <div class="flow-node" style="border-color:rgba(59,130,246,0.3); background:rgba(59,130,246,0.1);">
+            <span>&#x23F0;</span> HourlyTokenAggregator
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-node" style="border-color:rgba(59,130,246,0.2);">
+            <span>&#x1F4BE;</span> HourlyTokenUsage
+          </div>
+        </div>
+
+        <!-- Row 6: Dashboard -->
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; padding-top:0.5rem; border-top:1px dashed var(--border-color);">
+          <div class="flow-node" style="border-color:var(--border-accent); background:var(--bg-accent-subtle);">
+            <span>&#x1F5A5;</span> Dashboard Frontend
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">
+            consome &rarr; /metrics/daily, /executions/summary, /metrics/tool-analytics, /metrics/alerts
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- NAVIGATION -->
+  <!-- ======================================================== -->
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:3rem; padding-top:2rem; border-top:1px solid var(--border-color);">
+    <a href="20-tokens-budget.html" style="color:var(--text-accent); text-decoration:none; font-size:0.9rem; display:flex; align-items:center; gap:0.5rem;">
+      &larr; 20. Tokens &amp; Budget
+    </a>
+    <a href="index.html" style="color:var(--text-muted); text-decoration:none; font-size:0.85rem;">
+      System Map
+    </a>
+    <a href="22-filas-bullmq.html" style="color:var(--text-accent); text-decoration:none; font-size:0.9rem; display:flex; align-items:center; gap:0.5rem;">
+      22. Filas BullMQ &rarr;
+    </a>
+  </div>
+
+</div>
+
+<script src="shared.js"></script>
+</body>
+</html>

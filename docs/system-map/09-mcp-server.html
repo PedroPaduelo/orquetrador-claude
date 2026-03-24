@@ -3,1140 +3,919 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MCP Server — 75 Ferramentas | Orquetrador Claude</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = {
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        surface: { 50:'#f8fafc',100:'#f1f5f9',700:'#1e293b',800:'#0f172a',900:'#020617' },
-      },
-      fontFamily: { sans: ['Inter','system-ui','sans-serif'], mono: ['JetBrains Mono','Fira Code','monospace'] },
-      animation: {
-        'pulse-slow':'pulse 3s ease-in-out infinite',
-        'flow':'flow 2s ease-in-out infinite',
-        'fadein':'fadein .3s ease-out',
-      },
-      keyframes: {
-        flow: { '0%,100%':{opacity:'0.4'},'50%':{opacity:'1'} },
-        fadein: { from:{opacity:'0',transform:'translateY(-8px)'},to:{opacity:'1',transform:'translateY(0)'} },
-      }
-    }
-  }
-}
-</script>
+<title>MCP Server — 58 Ferramentas | Orquetrador Claude</title>
+<link rel="stylesheet" href="shared.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
-html{scroll-behavior:smooth}
-body{-webkit-font-smoothing:antialiased}
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:#0f172a}
-::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:#475569}
-.category-card{transition:all .2s ease}
-.category-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
-.tool-row{transition:all .15s ease}
-.tool-row:hover{background:rgba(99,102,241,.06)}
-.tool-expand{max-height:0;overflow:hidden;transition:max-height .3s ease}
-.tool-expand.open{max-height:800px}
-.conn-line{stroke-dasharray:8 4;animation:dash 1.5s linear infinite}
-@keyframes dash{to{stroke-dashoffset:-24}}
-.glow-line{filter:drop-shadow(0 0 4px currentColor)}
-.badge-a{--tw-bg-opacity:1;background-color:rgb(79 70 229/var(--tw-bg-opacity))}
-.badge-b{--tw-bg-opacity:1;background-color:rgb(16 185 129/var(--tw-bg-opacity))}
-.badge-c{--tw-bg-opacity:1;background-color:rgb(245 158 11/var(--tw-bg-opacity))}
-.badge-d{--tw-bg-opacity:1;background-color:rgb(236 72 153/var(--tw-bg-opacity))}
-.badge-e{--tw-bg-opacity:1;background-color:rgb(139 92 246/var(--tw-bg-opacity))}
-.badge-f{--tw-bg-opacity:1;background-color:rgb(14 165 233/var(--tw-bg-opacity))}
-.badge-g{--tw-bg-opacity:1;background-color:rgb(244 63 94/var(--tw-bg-opacity))}
-.badge-h{--tw-bg-opacity:1;background-color:rgb(34 197 94/var(--tw-bg-opacity))}
-.badge-i{--tw-bg-opacity:1;background-color:rgb(251 146 60/var(--tw-bg-opacity))}
-.badge-j{--tw-bg-opacity:1;background-color:rgb(56 189 248/var(--tw-bg-opacity))}
-.search-highlight{background:rgba(250,204,21,.2);border-radius:2px;padding:0 2px}
+.hero-glow {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(99,102,241,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.tool-tag {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.02em;
+}
+.tool-tag-get { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+.tool-tag-post { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+.tool-tag-put { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+.tool-tag-del { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+.tool-tag-sse { background: rgba(139,92,246,0.12); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+.cat-tab {
+  padding: 0.6rem 1.1rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cat-tab:hover { color: var(--text-primary); }
+.cat-tab.active { color: var(--text-accent); border-bottom-color: var(--bg-accent); }
+.cat-tab .count {
+  background: var(--bg-accent-subtle);
+  color: var(--text-accent);
+  font-size: 0.7rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  font-weight: 700;
+}
+.cat-tab.active .count {
+  background: var(--bg-accent);
+  color: #fff;
+}
+.cat-panel { display: none; }
+.cat-panel.active { display: block; animation: fadeIn 0.3s ease; }
+.tool-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s;
+}
+.tool-card:hover { border-color: rgba(13,148,136,0.3); }
+.tool-name { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.88rem; color: var(--text-primary); }
+.tool-desc { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem; }
+.param-table { width: 100%; font-size: 0.8rem; margin-top: 0.75rem; }
+.param-table th { padding: 0.4rem 0.6rem; background: var(--bg-secondary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); border-bottom: 1px solid var(--border-color); text-align: left; }
+.param-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+.param-table tr:last-child td { border-bottom: none; }
+.param-name { font-family: 'JetBrains Mono', monospace; color: #67e8f9; font-size: 0.78rem; }
+.param-type { font-family: 'JetBrains Mono', monospace; color: #a78bfa; font-size: 0.72rem; }
+.param-req { color: #f87171; font-size: 0.7rem; font-weight: 600; }
+.param-opt { color: #64748b; font-size: 0.7rem; }
+.tabs-scroll {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.flow-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+.flow-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+.template-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  transition: all 0.2s;
+}
+.template-card:hover { border-color: rgba(13,148,136,0.3); transform: translateY(-1px); }
 </style>
 </head>
-<body class="bg-surface-900 text-gray-200 font-sans min-h-screen">
+<body>
+<script src="shared.js"></script>
 
-<nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);border-bottom:1px solid rgba(148,163,184,0.1)">
-  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-    <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-blue-400 transition">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
-      Orquetrador Claude
-    </a>
-    <div class="hidden lg:flex items-center gap-1 text-xs">
-      <a href="01-visao-geral.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visão Geral</a>
-      <a href="02-fluxo-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
-      <a href="03-banco-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">03 DB</a>
-      <a href="04-api-endpoints.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">04 API</a>
-      <a href="05-motor-execucao.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">05 Execução</a>
-      <a href="06-frontend.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">06 Frontend</a>
-      <a href="07-seguranca.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">07 Segurança</a>
-      <a href="08-integracoes.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">08 Integrações</a>
-      <a href="09-mcp-server.html" class="px-2.5 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 font-semibold" id="nav09">09 MCP</a>
-      <a href="10-tempo-real-filas.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav10">10 Real-time</a>
-        <a href="11-db-scan-melhorias.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav11">11 DB Scan</a>
-        <a href="12-estrutura-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav12">12 Estrutura</a>
-    </div>
+<div class="page-container">
+
+<!-- Header -->
+<div class="page-header">
+  <div class="breadcrumb">
+    <a href="index.html">System Map</a> <span>›</span> <span>09 — MCP Server</span>
   </div>
-</nav>
+  <h1>MCP Server</h1>
+  <p class="subtitle">58 ferramentas expostas via Model Context Protocol — 10 categorias, porta 3334, HTTP+SSE transport</p>
+</div>
 
-<main class="pt-14">
-
-<!-- ===== HERO ===== -->
-<section class="relative overflow-hidden">
-  <div class="absolute inset-0 bg-gradient-to-b from-indigo-950/30 via-transparent to-transparent pointer-events-none"></div>
-  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-indigo-600/8 rounded-full blur-[120px] pointer-events-none"></div>
-  <div class="max-w-7xl mx-auto px-6 pt-20 pb-16 relative">
-    <div class="flex items-center gap-3 mb-6">
-      <span class="text-xs font-bold tracking-widest uppercase text-indigo-400">09</span>
-      <div class="h-px flex-1 bg-gradient-to-r from-indigo-500/40 to-transparent max-w-[120px]"></div>
+<!-- Stats -->
+<section class="section">
+  <div class="grid-4">
+    <div class="stat-box">
+      <div class="stat-value" data-count="58">58</div>
+      <div class="stat-label">Ferramentas</div>
     </div>
-    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-4">
-      MCP Server
-    </h1>
-    <p class="text-xl sm:text-2xl font-light text-indigo-300/80 mb-8">75 Ferramentas Expostas via Model Context Protocol</p>
-    <p class="text-gray-400 max-w-2xl leading-relaxed">
-      O servidor MCP transforma toda a funcionalidade do orquestrador em ferramentas padronizadas que qualquer cliente MCP pode consumir — do Claude CLI a scripts Node.js. Um unico endpoint HTTP, autenticacao por Bearer token, e acesso completo a workflows, agentes, conversas e mais.
-    </p>
-
-    <!-- Quick stats -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-12">
-      <div class="bg-white/[0.03] rounded-xl p-4 border border-white/5">
-        <div class="text-3xl font-black text-white">75</div>
-        <div class="text-xs text-gray-500 mt-1">Ferramentas</div>
-      </div>
-      <div class="bg-white/[0.03] rounded-xl p-4 border border-white/5">
-        <div class="text-3xl font-black text-white">10</div>
-        <div class="text-xs text-gray-500 mt-1">Categorias</div>
-      </div>
-      <div class="bg-white/[0.03] rounded-xl p-4 border border-white/5">
-        <div class="text-3xl font-black text-white">HTTP</div>
-        <div class="text-xs text-gray-500 mt-1">Transport</div>
-      </div>
-      <div class="bg-white/[0.03] rounded-xl p-4 border border-white/5">
-        <div class="text-3xl font-black text-white">3334</div>
-        <div class="text-xs text-gray-500 mt-1">Porta</div>
-      </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="10">10</div>
+      <div class="stat-label">Categorias</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value">HTTP+SSE</div>
+      <div class="stat-label">Transport</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="3334">3334</div>
+      <div class="stat-label">Porta</div>
     </div>
   </div>
 </section>
 
-<!-- ===== WHAT IS MCP ===== -->
-<section class="max-w-7xl mx-auto px-6 py-16">
-  <h2 class="text-2xl font-bold text-white mb-8 flex items-center gap-3">
-    <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-      <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-    </div>
-    O que e MCP?
+<!-- 1. Visao Geral -->
+<section class="section" id="visao-geral">
+  <h2 class="section-title">
+    <span class="icon" style="background:var(--bg-accent-subtle);">&#9432;</span>
+    Visao Geral
   </h2>
-  <div class="grid md:grid-cols-2 gap-6">
-    <div class="bg-white/[0.03] rounded-2xl p-6 border border-white/5">
-      <h3 class="text-lg font-semibold text-white mb-3">Model Context Protocol</h3>
-      <p class="text-gray-400 text-sm leading-relaxed mb-4">
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(99,102,241,0.1);">&#128268;</div>
+        <div class="card-title">Model Context Protocol</div>
+      </div>
+      <div class="card-desc">
         Padrao aberto da Anthropic para integracao de ferramentas com modelos de IA. Funciona como um "USB" universal — qualquer ferramenta que implemente MCP pode ser consumida por qualquer cliente compativel (Claude CLI, Claude Desktop, IDEs, scripts).
-      </p>
-      <div class="space-y-2">
-        <div class="flex items-center gap-2 text-sm">
-          <div class="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
-          <span class="text-gray-300">Protocolo padronizado de tool calling</span>
-        </div>
-        <div class="flex items-center gap-2 text-sm">
-          <div class="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
-          <span class="text-gray-300">JSON-RPC 2.0 sobre HTTP</span>
-        </div>
-        <div class="flex items-center gap-2 text-sm">
-          <div class="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
-          <span class="text-gray-300">Sessoes stateful com gerenciamento de estado</span>
-        </div>
+        <ul style="margin-top:0.75rem;padding-left:1.2rem;list-style:disc;">
+          <li>Protocolo padronizado de tool calling</li>
+          <li>JSON-RPC 2.0 sobre HTTP</li>
+          <li>Sessoes stateful com gerenciamento de estado</li>
+        </ul>
       </div>
     </div>
-    <div class="bg-white/[0.03] rounded-2xl p-6 border border-white/5">
-      <h3 class="text-lg font-semibold text-white mb-3">Este Servidor</h3>
-      <p class="text-gray-400 text-sm leading-relaxed mb-4">
-        Expoe TODA a funcionalidade do Orquetrador como ferramentas MCP. Qualquer operacao possivel na UI tambem e possivel via MCP — criar workflows, executar conversas, gerenciar agentes, orquestrar swarms.
-      </p>
-      <div class="space-y-2">
-        <div class="flex items-start gap-2 text-sm">
-          <span class="text-indigo-400 font-mono text-xs mt-0.5 shrink-0">Transport</span>
-          <span class="text-gray-300">StreamableHTTPServerTransport na porta 3334</span>
-        </div>
-        <div class="flex items-start gap-2 text-sm">
-          <span class="text-indigo-400 font-mono text-xs mt-0.5 shrink-0">Auth</span>
-          <span class="text-gray-300">Bearer token (API key) por sessao</span>
-        </div>
-        <div class="flex items-start gap-2 text-sm">
-          <span class="text-indigo-400 font-mono text-xs mt-0.5 shrink-0">Backend</span>
-          <span class="text-gray-300">Proxy para API REST Fastify (:3333)</span>
-        </div>
-        <div class="flex items-start gap-2 text-sm">
-          <span class="text-indigo-400 font-mono text-xs mt-0.5 shrink-0">Endpoint</span>
-          <span class="text-gray-300 font-mono">/mcp</span>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(13,148,136,0.1);">&#9881;</div>
+        <div class="card-title">Este Servidor</div>
+      </div>
+      <div class="card-desc">
+        Expoe toda a funcionalidade do Orquetrador como ferramentas MCP. Qualquer operacao possivel na UI tambem e possivel via MCP.
+        <div style="margin-top:0.75rem;display:grid;gap:0.4rem;">
+          <div><code style="color:#67e8f9;font-size:0.8rem;">Transport</code> <span style="margin-left:0.5rem;">StreamableHTTPServerTransport na porta 3334</span></div>
+          <div><code style="color:#67e8f9;font-size:0.8rem;">Auth</code> <span style="margin-left:0.5rem;">Bearer token (API key) por sessao</span></div>
+          <div><code style="color:#67e8f9;font-size:0.8rem;">Backend</code> <span style="margin-left:0.5rem;">Proxy para API REST Fastify (:3333)</span></div>
+          <div><code style="color:#67e8f9;font-size:0.8rem;">SDK</code> <span style="margin-left:0.5rem;">@modelcontextprotocol/sdk v1.27.0</span></div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== SEARCH ===== -->
-<section class="max-w-7xl mx-auto px-6 pb-8">
-  <div class="relative">
-    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-    <input id="toolSearch" type="text" placeholder="Buscar ferramentas... (ex: conversation, create, workflow)" class="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40 transition">
-    <div id="searchCount" class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-500 hidden">
-      <span id="searchCountNum"></span> encontradas
+<!-- 2. Protocolo MCP -->
+<section class="section" id="protocolo">
+  <h2 class="section-title">
+    <span class="icon" style="background:rgba(139,92,246,0.1);">&#128274;</span>
+    Protocolo MCP
+  </h2>
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(59,130,246,0.1);">&#128225;</div>
+      <div class="card-title">Endpoints HTTP</div>
+    </div>
+    <div class="table-container" style="margin-top:0.5rem;">
+      <table>
+        <thead>
+          <tr><th>Metodo</th><th>Rota</th><th>Descricao</th><th>Headers</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="tool-tag tool-tag-post">POST</span></td>
+            <td><code>/mcp</code></td>
+            <td>Inicializacao de sessao e chamadas de tools (JSON-RPC)</td>
+            <td><code>Authorization: Bearer &lt;api-key&gt;</code></td>
+          </tr>
+          <tr>
+            <td><span class="tool-tag tool-tag-get">GET</span></td>
+            <td><code>/mcp</code></td>
+            <td>Stream SSE — recebe eventos em tempo real da sessao</td>
+            <td><code>mcp-session-id: &lt;uuid&gt;</code></td>
+          </tr>
+          <tr>
+            <td><span class="tool-tag tool-tag-del">DELETE</span></td>
+            <td><code>/mcp</code></td>
+            <td>Encerra sessao e limpa recursos</td>
+            <td><code>mcp-session-id: &lt;uuid&gt;</code></td>
+          </tr>
+          <tr>
+            <td><span class="tool-tag tool-tag-get">GET</span></td>
+            <td><code>/health</code></td>
+            <td>Health check do servidor MCP</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(245,158,11,0.1);">&#128477;</div>
+        <div class="card-title">Session Management</div>
+      </div>
+      <div class="card-desc">
+        Cada conexao recebe um UUID unico de sessao. O servidor mantem um <code>Map&lt;string, ServerSession&gt;</code> em memoria.
+        <div class="code-block" style="margin-top:0.75rem;">
+<span class="comment">// Fluxo de sessao</span>
+<span class="keyword">POST</span> /mcp { method: "initialize" }
+  <span class="comment">→ Servidor gera UUID</span>
+  <span class="comment">→ Cria ServerSession</span>
+  <span class="comment">→ Retorna mcp-session-id header</span>
+
+<span class="keyword">POST</span> /mcp { method: "tools/call", ... }
+  <span class="comment">→ Header: mcp-session-id: &lt;uuid&gt;</span>
+  <span class="comment">→ Lookup sessao no Map</span>
+  <span class="comment">→ Executa tool com API key da sessao</span>
+
+<span class="keyword">DELETE</span> /mcp
+  <span class="comment">→ Remove sessao do Map</span>
+  <span class="comment">→ Limpa backgroundExecutions</span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(239,68,68,0.1);">&#128272;</div>
+        <div class="card-title">Per-Session Authentication</div>
+      </div>
+      <div class="card-desc">
+        A API key e extraida do header <code>Authorization: Bearer</code> na requisicao de inicializacao e vinculada a sessao.
+        <div class="code-block" style="margin-top:0.75rem;">
+<span class="comment">// Autenticacao por sessao</span>
+<span class="keyword">const</span> apiKey = req.headers.authorization
+  ?.replace(<span class="string">'Bearer '</span>, <span class="string">''</span>);
+
+<span class="comment">// Armazenada na sessao</span>
+session.apiKey = apiKey;
+
+<span class="comment">// Usada em TODA chamada ao backend</span>
+apiGet(<span class="string">'/api/workflows'</span>, session.apiKey);
+apiPost(<span class="string">'/api/agents'</span>, body, session.apiKey);
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ===== TOOLS BY CATEGORY ===== -->
-<section class="max-w-7xl mx-auto px-6 pb-20" id="toolsSection">
-  <h2 class="text-2xl font-bold text-white mb-8 flex items-center gap-3">
-    <div class="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-      <svg class="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-    </div>
+<!-- 3. Tool Categories - TABS -->
+<section class="section" id="tools">
+  <h2 class="section-title">
+    <span class="icon" style="background:rgba(99,102,241,0.1);">&#128295;</span>
     Ferramentas por Categoria
   </h2>
+  <p style="color:var(--text-secondary);margin-bottom:1.25rem;font-size:0.9rem;">58 tools organizadas em 10 categorias. Clique em cada aba para ver os detalhes.</p>
 
-  <div class="space-y-4" id="categoriesContainer"></div>
+  <!-- Search -->
+  <div class="search-box" style="margin-bottom:1rem;">
+    <span class="search-icon">&#128269;</span>
+    <input type="text" id="toolSearchInput" placeholder="Buscar ferramentas..." style="padding-left:2.5rem;">
+    <span id="toolSearchCount" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);font-size:0.78rem;color:var(--text-muted);display:none;"></span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-scroll" id="catTabs">
+    <button class="cat-tab active" data-cat="system">System <span class="count">3</span></button>
+    <button class="cat-tab" data-cat="workflows">Workflows <span class="count">6</span></button>
+    <button class="cat-tab" data-cat="agents">Agents <span class="count">7</span></button>
+    <button class="cat-tab" data-cat="skills">Skills <span class="count">7</span></button>
+    <button class="cat-tab" data-cat="rules">Rules <span class="count">7</span></button>
+    <button class="cat-tab" data-cat="mcp-servers">MCP Servers <span class="count">8</span></button>
+    <button class="cat-tab" data-cat="plugins">Plugins <span class="count">8</span></button>
+    <button class="cat-tab" data-cat="conversations">Conversations <span class="count">14</span></button>
+    <button class="cat-tab" data-cat="traces">Traces <span class="count">5</span></button>
+    <button class="cat-tab" data-cat="hooks">Hooks <span class="count">10</span></button>
+  </div>
+
+  <!-- Panel: System & Diagnostics (3) -->
+  <div class="cat-panel active" id="panel-system">
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">health_check</span>
+        <span class="tool-tag tool-tag-get">GET</span>
+      </div>
+      <div class="tool-desc">Verifica saude do backend, retorna status e versao. Sem parametros.</div>
+    </div>
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">import_repo</span>
+        <span class="tool-tag tool-tag-post">POST</span>
+      </div>
+      <div class="tool-desc">Importa repositorio Git completo — cria workflows, agents, skills, rules e MCP servers a partir de .claude/ config.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">repoPath</td><td class="param-type">string</td><td class="param-req">sim</td><td>Caminho absoluto do repositorio</td></tr>
+        <tr><td class="param-name">workflowName</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Nome do workflow a criar</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">system_overview</span>
+        <span class="tool-tag tool-tag-get">GET</span>
+      </div>
+      <div class="tool-desc">Retorna panorama completo do sistema: contagem de workflows, agents, skills, rules, MCP servers, conversas ativas.</div>
+    </div>
+  </div>
+
+  <!-- Panel: Workflows (6) -->
+  <div class="cat-panel" id="panel-workflows">
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">workflow_list</span>
+        <span class="tool-tag tool-tag-get">GET</span>
+      </div>
+      <div class="tool-desc">Lista todos os workflows com paginacao e filtros.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">page</td><td class="param-type">number</td><td class="param-opt">nao</td><td>Pagina (default 1)</td></tr>
+        <tr><td class="param-name">limit</td><td class="param-type">number</td><td class="param-opt">nao</td><td>Itens por pagina (default 20)</td></tr>
+        <tr><td class="param-name">search</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Filtro por nome</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">workflow_get</span>
+        <span class="tool-tag tool-tag-get">GET</span>
+      </div>
+      <div class="tool-desc">Retorna detalhes completos de um workflow incluindo steps, agents, skills e rules vinculados.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">id</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID do workflow</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">workflow_create</span>
+        <span class="tool-tag tool-tag-post">POST</span>
+      </div>
+      <div class="tool-desc">Cria novo workflow com nome, descricao e configuracao de steps.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-req">sim</td><td>Nome do workflow</td></tr>
+        <tr><td class="param-name">description</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Descricao</td></tr>
+        <tr><td class="param-name">steps</td><td class="param-type">array</td><td class="param-opt">nao</td><td>Array de steps com agentId, prompt, etc.</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">workflow_update</span>
+        <span class="tool-tag tool-tag-put">PUT</span>
+      </div>
+      <div class="tool-desc">Atualiza campos de um workflow existente.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">id</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID do workflow</td></tr>
+        <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Novo nome</td></tr>
+        <tr><td class="param-name">description</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Nova descricao</td></tr>
+        <tr><td class="param-name">steps</td><td class="param-type">array</td><td class="param-opt">nao</td><td>Steps atualizados</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">workflow_delete</span>
+        <span class="tool-tag tool-tag-del">DELETE</span>
+      </div>
+      <div class="tool-desc">Remove um workflow permanentemente.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">id</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID do workflow</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">workflow_duplicate</span>
+        <span class="tool-tag tool-tag-post">POST</span>
+      </div>
+      <div class="tool-desc">Duplica um workflow existente com novo nome (copia steps, agents vinculados, etc.).</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">id</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID do workflow original</td></tr>
+        <tr><td class="param-name">newName</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Nome da copia</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- Panel: Agents (7) -->
+  <div class="cat-panel" id="panel-agents">
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">agent_list</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista todos os agents com paginacao e filtros.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">agent_get</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Retorna detalhes de um agent: model, system prompt, skills vinculadas, MCP servers.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody><tr><td class="param-name">id</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID do agent</td></tr></tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">agent_create</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Cria novo agent com nome, model, system prompt e configuracoes.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-req">sim</td><td>Nome do agent</td></tr>
+        <tr><td class="param-name">model</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Modelo (claude-sonnet-4-20250514, etc.)</td></tr>
+        <tr><td class="param-name">systemPrompt</td><td class="param-type">string</td><td class="param-opt">nao</td><td>System prompt</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">agent_update</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Atualiza campos de um agent existente.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">agent_delete</span><span class="tool-tag tool-tag-del">DELETE</span></div><div class="tool-desc">Remove um agent permanentemente.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">agent_toggle</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Ativa/desativa um agent (toggle isActive).</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody><tr><td class="param-name">id</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID do agent</td></tr></tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">agent_import</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Importa agent a partir de JSON exportado ou template.</div></div>
+  </div>
+
+  <!-- Panel: Skills (7) -->
+  <div class="cat-panel" id="panel-skills">
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">skill_list</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista todas as skills com paginacao.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">skill_get</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Retorna detalhes de uma skill: nome, conteudo, agents vinculados.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">skill_create</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Cria nova skill com nome e conteudo markdown.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-req">sim</td><td>Nome da skill</td></tr>
+        <tr><td class="param-name">content</td><td class="param-type">string</td><td class="param-req">sim</td><td>Conteudo (markdown)</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">skill_update</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Atualiza campos de uma skill existente.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">skill_delete</span><span class="tool-tag tool-tag-del">DELETE</span></div><div class="tool-desc">Remove uma skill permanentemente.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">skill_toggle</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Ativa/desativa uma skill.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">skill_import</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Importa skill de JSON exportado ou template.</div></div>
+  </div>
+
+  <!-- Panel: Rules (7) -->
+  <div class="cat-panel" id="panel-rules">
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">rule_list</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista todas as rules com paginacao.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">rule_get</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Retorna detalhes de uma rule: nome, conteudo, tipo, agents vinculados.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">rule_create</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Cria nova rule com nome, tipo e conteudo.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-req">sim</td><td>Nome da rule</td></tr>
+        <tr><td class="param-name">type</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Tipo: user, project, etc.</td></tr>
+        <tr><td class="param-name">content</td><td class="param-type">string</td><td class="param-req">sim</td><td>Conteudo da rule</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">rule_update</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Atualiza campos de uma rule existente.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">rule_delete</span><span class="tool-tag tool-tag-del">DELETE</span></div><div class="tool-desc">Remove uma rule permanentemente.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">rule_toggle</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Ativa/desativa uma rule.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">rule_import</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Importa rule de JSON exportado.</div></div>
+  </div>
+
+  <!-- Panel: MCP Servers (8) -->
+  <div class="cat-panel" id="panel-mcp-servers">
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">mcp_server_list</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista todos os MCP servers configurados.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">mcp_server_get</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Retorna detalhes de um MCP server: URL, tipo, status de conexao, tools disponiveis.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">mcp_server_create</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Registra novo MCP server com nome, URL e configuracao.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-req">sim</td><td>Nome do server</td></tr>
+        <tr><td class="param-name">url</td><td class="param-type">string</td><td class="param-req">sim</td><td>URL do endpoint</td></tr>
+        <tr><td class="param-name">type</td><td class="param-type">string</td><td class="param-opt">nao</td><td>http | stdio</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">mcp_server_update</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Atualiza configuracao de um MCP server.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">mcp_server_delete</span><span class="tool-tag tool-tag-del">DELETE</span></div><div class="tool-desc">Remove um MCP server.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">mcp_server_toggle</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Ativa/desativa um MCP server.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">mcp_server_test</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Testa conectividade com um MCP server — verifica se responde e lista tools disponiveis.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody><tr><td class="param-name">id</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID do MCP server</td></tr></tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">mcp_server_quick_install</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Instalacao rapida de MCP server a partir de URL ou nome de pacote npm.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">source</td><td class="param-type">string</td><td class="param-req">sim</td><td>URL ou nome npm</td></tr>
+        <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Nome customizado</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- Panel: Plugins (8) -->
+  <div class="cat-panel" id="panel-plugins">
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">plugin_list</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista todos os plugins instalados.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">plugin_get</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Retorna detalhes de um plugin: manifest, versao, status, tools expostas.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">plugin_import_url</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Importa plugin a partir de URL (GitHub raw, gist, etc.).</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody><tr><td class="param-name">url</td><td class="param-type">string</td><td class="param-req">sim</td><td>URL do manifest do plugin</td></tr></tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">plugin_install</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Instala plugin previamente importado (baixa dependencias, valida manifest).</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">plugin_update</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Atualiza plugin para versao mais recente.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">plugin_delete</span><span class="tool-tag tool-tag-del">DELETE</span></div><div class="tool-desc">Remove plugin permanentemente.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">plugin_toggle</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Ativa/desativa um plugin.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">plugin_resync</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Ressincroniza um plugin — rele o manifest e atualiza tools expostas.</div></div>
+  </div>
+
+  <!-- Panel: Conversations (14) -->
+  <div class="cat-panel" id="panel-conversations">
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_list</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista conversas com paginacao, filtros por status e folder.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">page</td><td class="param-type">number</td><td class="param-opt">nao</td><td>Pagina</td></tr>
+        <tr><td class="param-name">status</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Filtro: active, completed, cancelled</td></tr>
+        <tr><td class="param-name">folderId</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Filtro por pasta</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_get</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Retorna detalhes de uma conversa: step atual, workflow, status, metadata.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_create</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Cria nova conversa vinculada a um workflow.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">workflowId</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID do workflow</td></tr>
+        <tr><td class="param-name">title</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Titulo da conversa</td></tr>
+        <tr><td class="param-name">folderId</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Pasta de destino</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_delete</span><span class="tool-tag tool-tag-del">DELETE</span></div><div class="tool-desc">Remove uma conversa e todas as suas mensagens.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_advance_step</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Avanca conversa para o proximo step do workflow.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_go_back_step</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Volta conversa para o step anterior.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_jump_to_step</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Pula para um step especifico do workflow.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">conversationId</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID da conversa</td></tr>
+        <tr><td class="param-name">stepIndex</td><td class="param-type">number</td><td class="param-req">sim</td><td>Indice do step destino</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_cancel</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Cancela uma conversa em andamento.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_status</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Retorna status atual da conversa: step, estado da execucao, progresso.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_messages</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista mensagens de uma conversa com paginacao.</div></div>
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">conversation_send_message</span>
+        <span class="tool-tag tool-tag-sse">SSE</span>
+        <span class="badge badge-amber" style="font-size:0.68rem;">SYNC</span>
+      </div>
+      <div class="tool-desc">Envia mensagem e aguarda resposta completa via SSE (sincrono — bloqueia ate a resposta). Timeout: 600s.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">conversationId</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID da conversa</td></tr>
+        <tr><td class="param-name">message</td><td class="param-type">string</td><td class="param-req">sim</td><td>Conteudo da mensagem</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">conversation_send_message_async</span>
+        <span class="tool-tag tool-tag-sse">SSE</span>
+        <span class="badge badge-blue" style="font-size:0.68rem;">ASYNC</span>
+      </div>
+      <div class="tool-desc">Inicia SSE em background e retorna imediatamente. Use <code>conversation_await_execution</code> para aguardar o resultado.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">conversationId</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID da conversa</td></tr>
+        <tr><td class="param-name">message</td><td class="param-type">string</td><td class="param-req">sim</td><td>Conteudo da mensagem</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span class="tool-name">conversation_await_execution</span>
+        <span class="tool-tag tool-tag-get">GET</span>
+        <span class="badge badge-purple" style="font-size:0.68rem;">AWAIT</span>
+      </div>
+      <div class="tool-desc">Aguarda conclusao de uma execucao async iniciada por <code>send_message_async</code>. Retorna resultado completo.</div>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">conversation_folders_list</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista todas as pastas de conversas.</div></div>
+  </div>
+
+  <!-- Panel: Execution Traces (5) -->
+  <div class="cat-panel" id="panel-traces">
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">trace_list</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista traces de execucao com filtros por conversa, status e periodo.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">trace_get_detail</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Retorna detalhes completos de um trace: mensagens, tokens usados, duracoes, erros.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">message_toggle_context</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Ativa/desativa uma mensagem como contexto para mensagens futuras da conversa.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">messageId</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID da mensagem</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">message_update_actions</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Atualiza acoes associadas a uma mensagem (approve, reject, etc.).</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">message_delete</span><span class="tool-tag tool-tag-del">DELETE</span></div><div class="tool-desc">Remove uma mensagem de uma conversa.</div></div>
+  </div>
+
+  <!-- Panel: Hooks (10) -->
+  <div class="cat-panel" id="panel-hooks">
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">hook_list</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista todos os hooks configurados.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">hook_get</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Retorna detalhes de um hook: evento, matcher, acao, status.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">hook_create</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Cria novo hook com evento, matcher e acao customizada.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">name</td><td class="param-type">string</td><td class="param-req">sim</td><td>Nome do hook</td></tr>
+        <tr><td class="param-name">event</td><td class="param-type">string</td><td class="param-req">sim</td><td>Evento (ex: PreToolUse, PostToolUse)</td></tr>
+        <tr><td class="param-name">matcher</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Regex ou pattern de match</td></tr>
+        <tr><td class="param-name">action</td><td class="param-type">string</td><td class="param-req">sim</td><td>Bash command a executar</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">hook_update</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Atualiza campos de um hook existente.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">hook_delete</span><span class="tool-tag tool-tag-del">DELETE</span></div><div class="tool-desc">Remove um hook permanentemente.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">hook_toggle</span><span class="tool-tag tool-tag-put">PUT</span></div><div class="tool-desc">Ativa/desativa um hook.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">hook_templates</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista os 8 templates de hooks pre-configurados disponiveis.</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">hook_create_from_template</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Cria hook a partir de um template pre-configurado.</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">templateId</td><td class="param-type">string</td><td class="param-req">sim</td><td>ID do template</td></tr>
+      </tbody></table>
+    </div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">hook_events</span><span class="tool-tag tool-tag-get">GET</span></div><div class="tool-desc">Lista eventos disponiveis para hooks (PreToolUse, PostToolUse, etc.).</div></div>
+    <div class="tool-card"><div style="display:flex;align-items:center;gap:0.75rem;"><span class="tool-name">hook_preview</span><span class="tool-tag tool-tag-post">POST</span></div><div class="tool-desc">Previsualiza execucao de um hook sem aplica-lo (dry-run).</div>
+      <table class="param-table"><thead><tr><th>Param</th><th>Tipo</th><th>Req</th><th>Descricao</th></tr></thead><tbody>
+        <tr><td class="param-name">hookId</td><td class="param-type">string</td><td class="param-req">sim</td><td>UUID do hook</td></tr>
+        <tr><td class="param-name">testInput</td><td class="param-type">string</td><td class="param-opt">nao</td><td>Input de teste</td></tr>
+      </tbody></table>
+    </div>
+  </div>
 </section>
 
-<!-- ===== ORCHESTRATION PATTERN ===== -->
-<section class="max-w-7xl mx-auto px-6 pb-20">
-  <h2 class="text-2xl font-bold text-white mb-8 flex items-center gap-3">
-    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-      <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-    </div>
-    Orchestration Pattern — Swarm de Agentes
+<!-- 4. Fluxo de Comunicacao -->
+<section class="section" id="fluxo">
+  <h2 class="section-title">
+    <span class="icon" style="background:rgba(34,197,94,0.1);">&#8644;</span>
+    Fluxo de Comunicacao
   </h2>
-  <p class="text-gray-400 text-sm mb-8 max-w-2xl">
-    As ferramentas MCP permitem que um agente orquestrador crie e encadeie multiplas conversas, formando um swarm de agentes especializados. Cada conversa usa um workflow diferente e o output de uma alimenta a proxima.
-  </p>
-
-  <div class="bg-white/[0.03] rounded-2xl border border-white/5 overflow-hidden">
-    <!-- Sequential chain -->
-    <div class="p-6 border-b border-white/5">
-      <h3 class="text-sm font-semibold text-emerald-400 mb-4 uppercase tracking-wider">Encadeamento Sequencial</h3>
-      <div class="space-y-3 font-mono text-sm">
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">1</span>
-          <div>
-            <span class="text-yellow-400">conversation_create</span><span class="text-gray-500">(workflow_A)</span>
-            <span class="text-gray-600 mx-2">&rarr;</span>
-            <span class="text-emerald-400">ID_A</span>
-          </div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">2</span>
-          <div>
-            <span class="text-yellow-400">conversation_send_message</span><span class="text-gray-500">(ID_A, "task 1")</span>
-            <span class="text-gray-600 mx-2">&rarr;</span>
-            <span class="text-emerald-400">result_A</span>
-            <span class="ml-2 text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">SYNC - aguarda</span>
-          </div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">3</span>
-          <div>
-            <span class="text-yellow-400">conversation_create</span><span class="text-gray-500">(workflow_B)</span>
-            <span class="text-gray-600 mx-2">&rarr;</span>
-            <span class="text-emerald-400">ID_B</span>
-          </div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">4</span>
-          <div>
-            <span class="text-yellow-400">conversation_send_message</span><span class="text-gray-500">(ID_B, result_A)</span>
-            <span class="text-gray-600 mx-2">&rarr;</span>
-            <span class="text-emerald-400">result_B</span>
-            <span class="ml-2 text-xs px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">encadeia output</span>
-          </div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">5</span>
-          <div>
-            <span class="text-yellow-400">conversation_create</span><span class="text-gray-500">(workflow_C)</span>
-            <span class="text-gray-600 mx-2">&rarr;</span>
-            <span class="text-emerald-400">ID_C</span>
-          </div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">6</span>
-          <div>
-            <span class="text-yellow-400">conversation_send_message</span><span class="text-gray-500">(ID_C, result_A + result_B)</span>
-            <span class="text-gray-600 mx-2">&rarr;</span>
-            <span class="text-emerald-400">review</span>
-            <span class="ml-2 text-xs px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">consolida</span>
-          </div>
+  <div class="card" style="padding:2rem;">
+    <div class="flow-container" style="justify-content:center;">
+      <div class="flow-node" style="border-color:rgba(99,102,241,0.4);">
+        <span style="font-size:1rem;">&#129302;</span>
+        <div>
+          <div style="font-weight:600;font-size:0.85rem;">MCP Client</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);">Claude CLI / Desktop</div>
         </div>
       </div>
-    </div>
-
-    <!-- Parallel (async) pattern -->
-    <div class="p-6">
-      <h3 class="text-sm font-semibold text-sky-400 mb-4 uppercase tracking-wider">Execucao Paralela (Async)</h3>
-      <div class="space-y-3 font-mono text-sm">
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">1</span>
-          <div>
-            <span class="text-sky-400">conversation_send_message_async</span><span class="text-gray-500">(ID_A, task)</span>
-            <span class="ml-2 text-xs px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">retorna imediato</span>
-          </div>
+      <span class="flow-arrow">&#8594;</span>
+      <div class="flow-node" style="border-color:rgba(139,92,246,0.4);">
+        <span style="font-size:1rem;">&#128225;</span>
+        <div>
+          <div style="font-weight:600;font-size:0.85rem;">HTTP SSE</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);">JSON-RPC 2.0</div>
         </div>
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">2</span>
-          <div>
-            <span class="text-sky-400">conversation_send_message_async</span><span class="text-gray-500">(ID_B, task)</span>
-            <span class="ml-2 text-xs px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">retorna imediato</span>
-          </div>
+      </div>
+      <span class="flow-arrow">&#8594;</span>
+      <div class="flow-node" style="border-color:rgba(13,148,136,0.4);background:rgba(13,148,136,0.06);">
+        <span style="font-size:1rem;">&#9881;</span>
+        <div>
+          <div style="font-weight:600;font-size:0.85rem;">MCP Server</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);">:3334</div>
         </div>
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">3</span>
-          <div>
-            <span class="text-violet-400">conversation_await_execution</span><span class="text-gray-500">(ID_A)</span>
-            <span class="text-gray-600 mx-2">&rarr;</span>
-            <span class="text-emerald-400">result_A</span>
-          </div>
+      </div>
+      <span class="flow-arrow">&#8594;</span>
+      <div class="flow-node" style="border-color:rgba(59,130,246,0.4);">
+        <span style="font-size:1rem;">&#128268;</span>
+        <div>
+          <div style="font-weight:600;font-size:0.85rem;">HTTP fetch</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);">REST API</div>
         </div>
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">4</span>
-          <div>
-            <span class="text-violet-400">conversation_await_execution</span><span class="text-gray-500">(ID_B)</span>
-            <span class="text-gray-600 mx-2">&rarr;</span>
-            <span class="text-emerald-400">result_B</span>
-          </div>
+      </div>
+      <span class="flow-arrow">&#8594;</span>
+      <div class="flow-node" style="border-color:rgba(245,158,11,0.4);">
+        <span style="font-size:1rem;">&#128187;</span>
+        <div>
+          <div style="font-weight:600;font-size:0.85rem;">Backend API</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);">:3333</div>
         </div>
-        <div class="flex items-start gap-3">
-          <span class="text-gray-600 w-6 text-right shrink-0">5</span>
-          <div class="text-gray-400">
-            Usa result_A + result_B na proxima etapa
-          </div>
+      </div>
+      <span class="flow-arrow">&#8594;</span>
+      <div class="flow-node" style="border-color:rgba(34,197,94,0.4);">
+        <span style="font-size:1rem;">&#128451;</span>
+        <div>
+          <div style="font-weight:600;font-size:0.85rem;">PostgreSQL + Redis</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);">Storage</div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== CONNECTION DIAGRAM ===== -->
-<section class="max-w-7xl mx-auto px-6 pb-20">
-  <h2 class="text-2xl font-bold text-white mb-8 flex items-center gap-3">
-    <div class="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center">
-      <svg class="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-    </div>
-    Diagrama de Conexao
+<!-- 5. API Client Layer -->
+<section class="section" id="api-client">
+  <h2 class="section-title">
+    <span class="icon" style="background:rgba(59,130,246,0.1);">&#128640;</span>
+    API Client Layer
   </h2>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(34,197,94,0.1);">&#128230;</div>
+        <div class="card-title">Helpers HTTP</div>
+      </div>
+      <div class="card-desc">
+        Funcoes auxiliares que encapsulam fetch para o backend:
+        <div class="code-block" style="margin-top:0.75rem;">
+<span class="keyword">function</span> <span class="type">apiGet</span>(path, apiKey) { ... }
+<span class="keyword">function</span> <span class="type">apiPost</span>(path, body, apiKey) { ... }
+<span class="keyword">function</span> <span class="type">apiPut</span>(path, body, apiKey) { ... }
+<span class="keyword">function</span> <span class="type">apiPatch</span>(path, body, apiKey) { ... }
+<span class="keyword">function</span> <span class="type">apiDelete</span>(path, apiKey) { ... }
+        </div>
+        <p style="margin-top:0.5rem;font-size:0.82rem;">Todos adicionam <code>Authorization: Bearer</code> automaticamente e fazem JSON parse da resposta.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:rgba(139,92,246,0.1);">&#128225;</div>
+        <div class="card-title">apiPostSSE — Streaming</div>
+      </div>
+      <div class="card-desc">
+        Helper especial para Server-Sent Events com timeout de 600 segundos:
+        <div class="code-block" style="margin-top:0.75rem;">
+<span class="keyword">async function</span> <span class="type">apiPostSSE</span>(
+  path: <span class="type">string</span>,
+  body: <span class="type">object</span>,
+  apiKey: <span class="type">string</span>,
+  onChunk: (data) => <span class="type">void</span>
+): Promise&lt;<span class="type">string</span>&gt;
 
-  <div class="bg-white/[0.03] rounded-2xl border border-white/5 p-8 overflow-x-auto">
-    <svg viewBox="0 0 900 180" class="w-full max-w-4xl mx-auto" style="min-width:600px">
-      <!-- Nodes -->
-      <rect x="10" y="50" width="160" height="80" rx="12" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5"/>
-      <text x="90" y="82" text-anchor="middle" fill="#a5b4fc" font-size="11" font-weight="600">MCP Client</text>
-      <text x="90" y="100" text-anchor="middle" fill="#6366f1" font-size="9" font-family="monospace">(Claude CLI / SDK)</text>
-
-      <rect x="250" y="50" width="160" height="80" rx="12" fill="#022c22" stroke="#10b981" stroke-width="1.5"/>
-      <text x="330" y="78" text-anchor="middle" fill="#6ee7b7" font-size="11" font-weight="600">MCP Server</text>
-      <text x="330" y="96" text-anchor="middle" fill="#10b981" font-size="9" font-family="monospace">:3334 /mcp</text>
-      <text x="330" y="112" text-anchor="middle" fill="#047857" font-size="8">StreamableHTTP</text>
-
-      <rect x="490" y="50" width="160" height="80" rx="12" fill="#1c1917" stroke="#f59e0b" stroke-width="1.5"/>
-      <text x="570" y="78" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="600">Backend API</text>
-      <text x="570" y="96" text-anchor="middle" fill="#f59e0b" font-size="9" font-family="monospace">:3333 Fastify</text>
-      <text x="570" y="112" text-anchor="middle" fill="#92400e" font-size="8">REST + SSE</text>
-
-      <rect x="730" y="50" width="160" height="80" rx="12" fill="#1e1b4b" stroke="#8b5cf6" stroke-width="1.5"/>
-      <text x="810" y="82" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="600">PostgreSQL</text>
-      <text x="810" y="100" text-anchor="middle" fill="#8b5cf6" font-size="9" font-family="monospace">Prisma ORM</text>
-
-      <!-- Arrows -->
-      <line x1="170" y1="90" x2="250" y2="90" class="conn-line glow-line" stroke="#6366f1" stroke-width="2"/>
-      <polygon points="246,86 254,90 246,94" fill="#6366f1"/>
-      <text x="210" y="80" text-anchor="middle" fill="#818cf8" font-size="8" font-weight="600">HTTP</text>
-
-      <line x1="410" y1="90" x2="490" y2="90" class="conn-line glow-line" stroke="#10b981" stroke-width="2"/>
-      <polygon points="486,86 494,90 486,94" fill="#10b981"/>
-      <text x="450" y="80" text-anchor="middle" fill="#34d399" font-size="8" font-weight="600">HTTP</text>
-
-      <line x1="650" y1="90" x2="730" y2="90" class="conn-line glow-line" stroke="#f59e0b" stroke-width="2"/>
-      <polygon points="726,86 734,90 726,94" fill="#f59e0b"/>
-      <text x="690" y="80" text-anchor="middle" fill="#fbbf24" font-size="8" font-weight="600">SQL</text>
-
-      <!-- Labels below -->
-      <text x="210" y="155" text-anchor="middle" fill="#64748b" font-size="8">JSON-RPC 2.0</text>
-      <text x="450" y="155" text-anchor="middle" fill="#64748b" font-size="8">REST/SSE proxy</text>
-      <text x="690" y="155" text-anchor="middle" fill="#64748b" font-size="8">Prisma queries</text>
-
-      <!-- Bearer token callout -->
-      <rect x="175" y="40" width="70" height="16" rx="4" fill="#312e81" stroke="#6366f1" stroke-width=".5"/>
-      <text x="210" y="51" text-anchor="middle" fill="#a5b4fc" font-size="7" font-weight="500">Bearer Token</text>
-
-      <!-- Session ID callout -->
-      <rect x="275" y="40" width="110" height="16" rx="4" fill="#022c22" stroke="#10b981" stroke-width=".5"/>
-      <text x="330" y="51" text-anchor="middle" fill="#6ee7b7" font-size="7" font-weight="500">mcp-session-id header</text>
-    </svg>
+<span class="comment">// Timeout: 600s (10 min)</span>
+<span class="comment">// Acumula chunks SSE</span>
+<span class="comment">// Retorna resposta completa</span>
+<span class="comment">// Usado por send_message (sync)</span>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- ===== SESSION MANAGEMENT ===== -->
-<section class="max-w-7xl mx-auto px-6 pb-20">
-  <h2 class="text-2xl font-bold text-white mb-8 flex items-center gap-3">
-    <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-      <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-    </div>
-    Gerenciamento de Sessao
+<!-- 6. Background Execution Pattern -->
+<section class="section" id="background">
+  <h2 class="section-title">
+    <span class="icon" style="background:rgba(245,158,11,0.1);">&#9889;</span>
+    Background Execution Pattern
   </h2>
-
-  <div class="grid md:grid-cols-3 gap-4">
-    <!-- Initialize -->
-    <div class="bg-white/[0.03] rounded-2xl p-6 border border-white/5">
-      <div class="flex items-center gap-2 mb-4">
-        <span class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">1. Initialize</span>
+  <div class="card" style="padding:1.5rem;">
+    <p style="color:var(--text-secondary);margin-bottom:1.25rem;font-size:0.9rem;">
+      O padrao async/await permite execucoes paralelas — essencial para swarms de agentes onde multiplas conversas rodam simultaneamente.
+    </p>
+    <div style="display:grid;gap:0.5rem;">
+      <div class="flow-step">
+        <div class="flow-step-num" style="background:rgba(59,130,246,0.15);color:#60a5fa;">1</div>
+        <div>
+          <code style="color:#60a5fa;">conversation_send_message_async</code>
+          <span style="color:var(--text-secondary);font-size:0.82rem;margin-left:0.5rem;">Inicia SSE em background thread</span>
+        </div>
       </div>
-      <div class="bg-black/30 rounded-lg p-4 font-mono text-xs mb-3 overflow-x-auto">
-        <div><span class="text-emerald-400">POST</span> <span class="text-white">/mcp</span></div>
-        <div class="text-gray-500 mt-2">Headers:</div>
-        <div class="text-amber-300">Authorization: Bearer &lt;api-key&gt;</div>
-        <div class="text-gray-500 mt-2">Body: { initialize request }</div>
-        <div class="text-gray-500 mt-2">Response header:</div>
-        <div class="text-sky-300">mcp-session-id: &lt;uuid&gt;</div>
+      <div class="flow-step">
+        <div class="flow-step-num" style="background:rgba(139,92,246,0.15);color:#a78bfa;">2</div>
+        <div>
+          <span style="color:var(--text-secondary);font-size:0.85rem;">Promise armazenada em <code>backgroundExecutions Map&lt;convId, Promise&gt;</code></span>
+        </div>
       </div>
-      <p class="text-gray-500 text-xs">Cria uma nova sessao MCP. O servidor gera um <code class="text-indigo-400">sessionId</code> unico e armazena a API key associada.</p>
+      <div class="flow-step">
+        <div class="flow-step-num" style="background:rgba(245,158,11,0.15);color:#fbbf24;">3</div>
+        <div>
+          <span style="color:var(--text-secondary);font-size:0.85rem;">Retorna imediatamente — <code>{ status: "started", conversationId }</code></span>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num" style="background:rgba(34,197,94,0.15);color:#4ade80;">4</div>
+        <div>
+          <code style="color:#4ade80;">conversation_await_execution</code>
+          <span style="color:var(--text-secondary);font-size:0.82rem;margin-left:0.5rem;">Aguarda promise do Map e retorna resultado completo</span>
+        </div>
+      </div>
     </div>
+    <div class="code-block" style="margin-top:1rem;">
+<span class="comment">// Execucao paralela de 3 agentes</span>
+<span class="keyword">await</span> conversation_send_message_async(convA, <span class="string">"task 1"</span>)
+<span class="keyword">await</span> conversation_send_message_async(convB, <span class="string">"task 2"</span>)
+<span class="keyword">await</span> conversation_send_message_async(convC, <span class="string">"task 3"</span>)
 
-    <!-- Tool call -->
-    <div class="bg-white/[0.03] rounded-2xl p-6 border border-white/5">
-      <div class="flex items-center gap-2 mb-4">
-        <span class="text-xs font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">2. Tool Call</span>
-      </div>
-      <div class="bg-black/30 rounded-lg p-4 font-mono text-xs mb-3 overflow-x-auto">
-        <div><span class="text-emerald-400">POST</span> <span class="text-white">/mcp</span></div>
-        <div class="text-gray-500 mt-2">Headers:</div>
-        <div class="text-sky-300">mcp-session-id: &lt;uuid&gt;</div>
-        <div class="text-amber-300">Authorization: Bearer &lt;api-key&gt;</div>
-        <div class="text-gray-500 mt-2">Body: { tools/call request }</div>
-      </div>
-      <p class="text-gray-500 text-xs">Cada chamada de tool envia o <code class="text-indigo-400">mcp-session-id</code> no header. O servidor roteia para a sessao correta e usa a API key armazenada.</p>
-    </div>
-
-    <!-- Cleanup -->
-    <div class="bg-white/[0.03] rounded-2xl p-6 border border-white/5">
-      <div class="flex items-center gap-2 mb-4">
-        <span class="text-xs font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">3. Cleanup</span>
-      </div>
-      <div class="bg-black/30 rounded-lg p-4 font-mono text-xs mb-3 overflow-x-auto">
-        <div><span class="text-rose-400">DELETE</span> <span class="text-white">/mcp</span></div>
-        <div class="text-gray-500 mt-2">Headers:</div>
-        <div class="text-sky-300">mcp-session-id: &lt;uuid&gt;</div>
-        <div class="text-gray-500 mt-2">Response:</div>
-        <div class="text-emerald-400">{ "success": true }</div>
-      </div>
-      <p class="text-gray-500 text-xs">Fecha a sessao e remove a API key armazenada. O transport e destruido e os recursos liberados.</p>
+<span class="comment">// Aguardar resultados (em qualquer ordem)</span>
+resultA = <span class="keyword">await</span> conversation_await_execution(convA)
+resultB = <span class="keyword">await</span> conversation_await_execution(convB)
+resultC = <span class="keyword">await</span> conversation_await_execution(convC)
     </div>
   </div>
 </section>
 
-<!-- ===== HOW TO CONNECT ===== -->
-<section class="max-w-7xl mx-auto px-6 pb-20">
-  <h2 class="text-2xl font-bold text-white mb-8 flex items-center gap-3">
-    <div class="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
-      <svg class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-    </div>
-    Como Conectar
+<!-- 7. Hook Templates -->
+<section class="section" id="hook-templates">
+  <h2 class="section-title">
+    <span class="icon" style="background:rgba(236,72,153,0.1);">&#128204;</span>
+    Hook Templates
   </h2>
-
-  <div class="space-y-6">
-    <!-- Claude CLI -->
-    <div class="bg-white/[0.03] rounded-2xl border border-white/5 overflow-hidden">
-      <button class="w-full flex items-center justify-between p-5 text-left" onclick="this.nextElementSibling.classList.toggle('open')">
-        <div class="flex items-center gap-3">
-          <span class="text-xs font-bold px-2.5 py-1 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">Claude CLI</span>
-          <span class="text-sm text-gray-300">.claude/settings.json</span>
-        </div>
-        <svg class="w-4 h-4 text-gray-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-      </button>
-      <div class="tool-expand open">
-        <div class="px-5 pb-5">
-          <pre class="bg-black/40 rounded-xl p-5 font-mono text-xs text-gray-300 overflow-x-auto leading-relaxed"><code>{
-  <span class="text-indigo-400">"mcpServers"</span>: {
-    <span class="text-emerald-400">"orquetrador"</span>: {
-      <span class="text-amber-400">"type"</span>: <span class="text-sky-300">"http"</span>,
-      <span class="text-amber-400">"url"</span>: <span class="text-sky-300">"https://orquestrador-mcp.ddw1sl.easypanel.host/mcp"</span>,
-      <span class="text-amber-400">"headers"</span>: {
-        <span class="text-amber-400">"Authorization"</span>: <span class="text-sky-300">"Bearer YOUR_API_KEY"</span>
-      }
-    }
-  }
-}</code></pre>
-        </div>
+  <p style="color:var(--text-secondary);margin-bottom:1.25rem;font-size:0.9rem;">8 templates pre-configurados disponiveis via <code>hook_templates</code> e <code>hook_create_from_template</code>.</p>
+  <div class="grid-2">
+    <div class="template-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+        <span class="badge badge-red">block-rm-rf</span>
       </div>
+      <div style="color:var(--text-secondary);font-size:0.82rem;">Bloqueia comandos <code>rm -rf</code> perigosos antes da execucao. Evento: <code>PreToolUse</code></div>
     </div>
-
-    <!-- HTTP Direct -->
-    <div class="bg-white/[0.03] rounded-2xl border border-white/5 overflow-hidden">
-      <button class="w-full flex items-center justify-between p-5 text-left" onclick="this.nextElementSibling.classList.toggle('open')">
-        <div class="flex items-center gap-3">
-          <span class="text-xs font-bold px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">HTTP Direct</span>
-          <span class="text-sm text-gray-300">fetch / curl</span>
-        </div>
-        <svg class="w-4 h-4 text-gray-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-      </button>
-      <div class="tool-expand">
-        <div class="px-5 pb-5">
-          <pre class="bg-black/40 rounded-xl p-5 font-mono text-xs text-gray-300 overflow-x-auto leading-relaxed"><code><span class="text-gray-500">// 1. Initialize session</span>
-<span class="text-violet-400">const</span> initRes = <span class="text-violet-400">await</span> <span class="text-yellow-400">fetch</span>(<span class="text-sky-300">"https://orquestrador-mcp.ddw1sl.easypanel.host/mcp"</span>, {
-  <span class="text-amber-400">method</span>: <span class="text-sky-300">"POST"</span>,
-  <span class="text-amber-400">headers</span>: {
-    <span class="text-sky-300">"Content-Type"</span>: <span class="text-sky-300">"application/json"</span>,
-    <span class="text-sky-300">"Authorization"</span>: <span class="text-sky-300">"Bearer YOUR_API_KEY"</span>,
-  },
-  <span class="text-amber-400">body</span>: <span class="text-yellow-400">JSON.stringify</span>({
-    <span class="text-amber-400">jsonrpc</span>: <span class="text-sky-300">"2.0"</span>,
-    <span class="text-amber-400">id</span>: <span class="text-orange-400">1</span>,
-    <span class="text-amber-400">method</span>: <span class="text-sky-300">"initialize"</span>,
-    <span class="text-amber-400">params</span>: {
-      <span class="text-amber-400">protocolVersion</span>: <span class="text-sky-300">"2025-03-26"</span>,
-      <span class="text-amber-400">capabilities</span>: {},
-      <span class="text-amber-400">clientInfo</span>: { <span class="text-amber-400">name</span>: <span class="text-sky-300">"my-client"</span>, <span class="text-amber-400">version</span>: <span class="text-sky-300">"1.0"</span> }
-    }
-  })
-});
-
-<span class="text-violet-400">const</span> sessionId = initRes.headers.<span class="text-yellow-400">get</span>(<span class="text-sky-300">"mcp-session-id"</span>);
-
-<span class="text-gray-500">// 2. Call a tool</span>
-<span class="text-violet-400">const</span> toolRes = <span class="text-violet-400">await</span> <span class="text-yellow-400">fetch</span>(<span class="text-sky-300">"https://orquestrador-mcp.ddw1sl.easypanel.host/mcp"</span>, {
-  <span class="text-amber-400">method</span>: <span class="text-sky-300">"POST"</span>,
-  <span class="text-amber-400">headers</span>: {
-    <span class="text-sky-300">"Content-Type"</span>: <span class="text-sky-300">"application/json"</span>,
-    <span class="text-sky-300">"mcp-session-id"</span>: sessionId,
-  },
-  <span class="text-amber-400">body</span>: <span class="text-yellow-400">JSON.stringify</span>({
-    <span class="text-amber-400">jsonrpc</span>: <span class="text-sky-300">"2.0"</span>,
-    <span class="text-amber-400">id</span>: <span class="text-orange-400">2</span>,
-    <span class="text-amber-400">method</span>: <span class="text-sky-300">"tools/call"</span>,
-    <span class="text-amber-400">params</span>: {
-      <span class="text-amber-400">name</span>: <span class="text-sky-300">"health_check"</span>,
-      <span class="text-amber-400">arguments</span>: {}
-    }
-  })
-});</code></pre>
-        </div>
+    <div class="template-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+        <span class="badge badge-blue">auto-lint</span>
       </div>
+      <div style="color:var(--text-secondary);font-size:0.82rem;">Executa linter automaticamente apos escrita de arquivo. Evento: <code>PostToolUse</code></div>
     </div>
-
-    <!-- Node.js MCP Client -->
-    <div class="bg-white/[0.03] rounded-2xl border border-white/5 overflow-hidden">
-      <button class="w-full flex items-center justify-between p-5 text-left" onclick="this.nextElementSibling.classList.toggle('open')">
-        <div class="flex items-center gap-3">
-          <span class="text-xs font-bold px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Node.js</span>
-          <span class="text-sm text-gray-300">@modelcontextprotocol/sdk Client</span>
-        </div>
-        <svg class="w-4 h-4 text-gray-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-      </button>
-      <div class="tool-expand">
-        <div class="px-5 pb-5">
-          <pre class="bg-black/40 rounded-xl p-5 font-mono text-xs text-gray-300 overflow-x-auto leading-relaxed"><code><span class="text-violet-400">import</span> { Client } <span class="text-violet-400">from</span> <span class="text-sky-300">"@modelcontextprotocol/sdk/client/index.js"</span>;
-<span class="text-violet-400">import</span> { StreamableHTTPClientTransport } <span class="text-violet-400">from</span> <span class="text-sky-300">"@modelcontextprotocol/sdk/client/streamableHttp.js"</span>;
-
-<span class="text-violet-400">const</span> client = <span class="text-violet-400">new</span> <span class="text-yellow-400">Client</span>({
-  <span class="text-amber-400">name</span>: <span class="text-sky-300">"my-orchestrator-client"</span>,
-  <span class="text-amber-400">version</span>: <span class="text-sky-300">"1.0.0"</span>,
-});
-
-<span class="text-violet-400">const</span> transport = <span class="text-violet-400">new</span> <span class="text-yellow-400">StreamableHTTPClientTransport</span>(
-  <span class="text-violet-400">new</span> <span class="text-yellow-400">URL</span>(<span class="text-sky-300">"https://orquestrador-mcp.ddw1sl.easypanel.host/mcp"</span>),
-  {
-    <span class="text-amber-400">requestInit</span>: {
-      <span class="text-amber-400">headers</span>: { <span class="text-sky-300">"Authorization"</span>: <span class="text-sky-300">"Bearer YOUR_API_KEY"</span> }
-    }
-  }
-);
-
-<span class="text-violet-400">await</span> client.<span class="text-yellow-400">connect</span>(transport);
-
-<span class="text-gray-500">// List tools</span>
-<span class="text-violet-400">const</span> { tools } = <span class="text-violet-400">await</span> client.<span class="text-yellow-400">listTools</span>();
-console.<span class="text-yellow-400">log</span>(<span class="text-sky-300">`\${tools.length} tools available`</span>);
-
-<span class="text-gray-500">// Call a tool</span>
-<span class="text-violet-400">const</span> result = <span class="text-violet-400">await</span> client.<span class="text-yellow-400">callTool</span>({
-  <span class="text-amber-400">name</span>: <span class="text-sky-300">"workflow_list"</span>,
-  <span class="text-amber-400">arguments</span>: {}
-});
-console.<span class="text-yellow-400">log</span>(result);</code></pre>
-        </div>
+    <div class="template-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+        <span class="badge badge-teal">auto-format</span>
       </div>
+      <div style="color:var(--text-secondary);font-size:0.82rem;">Formata codigo automaticamente (prettier/eslint fix) apos escrita. Evento: <code>PostToolUse</code></div>
+    </div>
+    <div class="template-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+        <span class="badge badge-gray">log-operations</span>
+      </div>
+      <div style="color:var(--text-secondary);font-size:0.82rem;">Loga todas as operacoes de ferramentas em arquivo de audit. Evento: <code>PostToolUse</code></div>
+    </div>
+    <div class="template-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+        <span class="badge badge-red">block-secrets</span>
+      </div>
+      <div style="color:var(--text-secondary);font-size:0.82rem;">Bloqueia escrita de arquivos contendo tokens, senhas ou API keys. Evento: <code>PreToolUse</code></div>
+    </div>
+    <div class="template-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+        <span class="badge badge-green">auto-test</span>
+      </div>
+      <div style="color:var(--text-secondary);font-size:0.82rem;">Roda testes automaticamente apos alteracoes em arquivos de codigo. Evento: <code>PostToolUse</code></div>
+    </div>
+    <div class="template-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+        <span class="badge badge-purple">git-auto-stage</span>
+      </div>
+      <div style="color:var(--text-secondary);font-size:0.82rem;">Faz <code>git add</code> automaticamente em arquivos escritos. Evento: <code>PostToolUse</code></div>
+    </div>
+    <div class="template-card">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+        <span class="badge badge-amber">review-prompt</span>
+      </div>
+      <div style="color:var(--text-secondary);font-size:0.82rem;">Injeta instrucao de review no prompt antes de enviar. Evento: <code>PreToolUse</code></div>
     </div>
   </div>
 </section>
 
-<!-- ===== FOOTER ===== -->
-<footer class="border-t border-white/5 py-8">
-  <div class="max-w-7xl mx-auto px-6 flex items-center justify-between">
-    <span class="text-xs text-gray-600">Orquetrador Claude / System Map / 09-MCP-Server</span>
-    <span class="text-xs text-gray-600">75 ferramentas em 10 categorias</span>
-  </div>
-</footer>
+<!-- Footer nav -->
+<div style="display:flex;justify-content:space-between;align-items:center;padding:2rem 0;border-top:1px solid var(--border-color);margin-top:1rem;">
+  <a href="08-integracoes.html" style="color:var(--text-accent);text-decoration:none;font-size:0.9rem;">&larr; 08 Integracoes</a>
+  <span style="color:var(--text-muted);font-size:0.85rem;">Orquetrador Claude — System Map</span>
+  <a href="10-tempo-real-filas.html" style="color:var(--text-accent);text-decoration:none;font-size:0.9rem;">10 Tempo Real &rarr;</a>
+</div>
 
-</main>
+</div><!-- /page-container -->
 
 <script>
-// ===== TOOL DATA =====
-const categories = [
-  {
-    id:'a', letter:'A', name:'Sistema', badge:'badge-a', color:'#6366f1', count:3,
-    desc:'Saude do sistema, importacao e visao geral',
-    tools:[
-      { name:'health_check', desc:'Verifica a saude do sistema (status, timestamp, database connectivity)', params:[] },
-      { name:'import_repo', desc:'Escaneia um repositorio GitHub e importa em massa skills, agentes e rules', params:[
-        {n:'url',t:'string',r:true,d:'URL do repositorio GitHub'},
-        {n:'projectPath',t:'string',r:true,d:'Path local do projeto'},
-        {n:'saveToDb',t:'boolean',r:false,d:'Salvar no banco (default: true)'},
-      ]},
-      { name:'system_overview', desc:'Visao geral com contagens de workflows, agents, skills, rules, mcp-servers, plugins e conversations', params:[] },
-    ]
-  },
-  {
-    id:'b', letter:'B', name:'Workflows', badge:'badge-b', color:'#10b981', count:6,
-    desc:'Criar, editar e gerenciar pipelines de execucao multi-step',
-    tools:[
-      { name:'workflow_list', desc:'Lista todos os workflows com id, name, description, type, stepsCount, conversationsCount', params:[] },
-      { name:'workflow_get', desc:'Busca workflow pelo ID com steps completos (systemPrompt, model, skills, agents, rules, mcpServers, conditions)', params:[
-        {n:'id',t:'string',r:true,d:'ID do workflow'},
-      ]},
-      { name:'workflow_create', desc:'Cria um novo workflow com steps configurados', params:[
-        {n:'name',t:'string',r:true,d:'Nome do workflow'},
-        {n:'description',t:'string',r:false,d:'Descricao do workflow'},
-        {n:'type',t:'"sequential"|"step_by_step"',r:false,d:'Tipo (default: sequential)'},
-        {n:'steps',t:'Step[]',r:false,d:'Array de steps com name, systemPrompt, model, mcpServerIds, skillIds, agentIds, ruleIds, hookIds, conditions, backend, maxRetries'},
-      ]},
-      { name:'workflow_update', desc:'Atualiza workflow existente. Steps sao substituicao completa.', params:[
-        {n:'id',t:'string',r:true,d:'ID do workflow'},
-        {n:'name',t:'string',r:false,d:'Novo nome'},
-        {n:'description',t:'string',r:false,d:'Nova descricao'},
-        {n:'type',t:'"sequential"|"step_by_step"',r:false,d:'Novo tipo'},
-        {n:'steps',t:'Step[]',r:false,d:'Novos steps (substituicao completa)'},
-      ]},
-      { name:'workflow_delete', desc:'Deleta workflow permanentemente (irreversivel)', params:[
-        {n:'id',t:'string',r:true,d:'ID do workflow'},
-      ]},
-      { name:'workflow_duplicate', desc:'Duplica workflow existente com novo ID', params:[
-        {n:'id',t:'string',r:true,d:'ID do workflow a duplicar'},
-      ]},
-    ]
-  },
-  {
-    id:'c', letter:'C', name:'Agents', badge:'badge-c', color:'#f59e0b', count:7,
-    desc:'Personalidades de IA com tools, model e permissoes configuradas',
-    tools:[
-      { name:'agent_list', desc:'Lista agentes com id, name, description, model, enabled, isGlobal, permissionMode', params:[] },
-      { name:'agent_get', desc:'Busca agente com systemPrompt, tools permitidas/bloqueadas, skills, model, maxTurns', params:[
-        {n:'id',t:'string',r:true,d:'ID do agente'},
-      ]},
-      { name:'agent_create', desc:'Cria novo agente no sistema', params:[
-        {n:'name',t:'string',r:true,d:'Nome do agente'},
-        {n:'description',t:'string',r:false,d:'Descricao'},
-        {n:'systemPrompt',t:'string',r:false,d:'System prompt'},
-        {n:'tools',t:'string[]',r:false,d:'Tools permitidas (ex: Read, Write, Bash)'},
-        {n:'disallowedTools',t:'string[]',r:false,d:'Tools bloqueadas'},
-        {n:'model',t:'string',r:false,d:'Modelo (ex: claude-sonnet-4-20250514)'},
-        {n:'permissionMode',t:'string',r:false,d:'default, acceptEdits ou fullAuto'},
-        {n:'maxTurns',t:'number',r:false,d:'Max turnos por execucao'},
-        {n:'skills',t:'string[]',r:false,d:'IDs de skills associadas'},
-        {n:'enabled',t:'boolean',r:false,d:'Se esta ativo'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Se e global'},
-      ]},
-      { name:'agent_update', desc:'Atualiza agente existente. Todos campos opcionais.', params:[
-        {n:'id',t:'string',r:true,d:'ID do agente'},
-        {n:'name',t:'string',r:false,d:'Novo nome'},
-        {n:'description',t:'string',r:false,d:'Nova descricao'},
-        {n:'systemPrompt',t:'string',r:false,d:'Novo system prompt'},
-        {n:'tools',t:'string[]',r:false,d:'Novas tools'},
-        {n:'disallowedTools',t:'string[]',r:false,d:'Novas tools bloqueadas'},
-        {n:'model',t:'string',r:false,d:'Novo modelo'},
-        {n:'permissionMode',t:'string',r:false,d:'Novo modo'},
-        {n:'maxTurns',t:'number',r:false,d:'Novo max turnos'},
-        {n:'skills',t:'string[]',r:false,d:'Novos IDs de skills'},
-        {n:'enabled',t:'boolean',r:false,d:'Ativar/desativar'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Global ou nao'},
-      ]},
-      { name:'agent_delete', desc:'Deleta agente permanentemente', params:[
-        {n:'id',t:'string',r:true,d:'ID do agente'},
-      ]},
-      { name:'agent_toggle', desc:'Ativa ou desativa agente (toggle)', params:[
-        {n:'id',t:'string',r:true,d:'ID do agente'},
-      ]},
-      { name:'agent_import', desc:'Importa agente de URL GitHub ou conteudo markdown direto', params:[
-        {n:'url',t:'string',r:false,d:'URL do GitHub'},
-        {n:'content',t:'string',r:false,d:'Conteudo markdown'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Se e global'},
-      ]},
-    ]
-  },
-  {
-    id:'d', letter:'D', name:'Skills', badge:'badge-d', color:'#ec4899', count:7,
-    desc:'Prompts e instrucoes reutilizaveis em markdown',
-    tools:[
-      { name:'skill_list', desc:'Lista skills com id, name, description, enabled, isGlobal', params:[] },
-      { name:'skill_get', desc:'Busca skill com body (conteudo markdown) completo', params:[
-        {n:'id',t:'string',r:true,d:'ID da skill'},
-      ]},
-      { name:'skill_create', desc:'Cria nova skill', params:[
-        {n:'name',t:'string',r:true,d:'Nome da skill'},
-        {n:'description',t:'string',r:false,d:'Descricao'},
-        {n:'body',t:'string',r:false,d:'Conteudo markdown'},
-        {n:'allowedTools',t:'string[]',r:false,d:'Tools permitidas'},
-        {n:'model',t:'string',r:false,d:'Modelo recomendado'},
-        {n:'enabled',t:'boolean',r:false,d:'Se esta ativa'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Se e global'},
-      ]},
-      { name:'skill_update', desc:'Atualiza skill existente', params:[
-        {n:'id',t:'string',r:true,d:'ID da skill'},
-        {n:'name',t:'string',r:false,d:'Novo nome'},
-        {n:'description',t:'string',r:false,d:'Nova descricao'},
-        {n:'body',t:'string',r:false,d:'Novo conteudo markdown'},
-        {n:'allowedTools',t:'string[]',r:false,d:'Novas tools'},
-        {n:'model',t:'string',r:false,d:'Novo modelo'},
-        {n:'enabled',t:'boolean',r:false,d:'Ativar/desativar'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Global ou nao'},
-      ]},
-      { name:'skill_delete', desc:'Deleta skill permanentemente', params:[
-        {n:'id',t:'string',r:true,d:'ID da skill'},
-      ]},
-      { name:'skill_toggle', desc:'Ativa ou desativa skill (toggle)', params:[
-        {n:'id',t:'string',r:true,d:'ID da skill'},
-      ]},
-      { name:'skill_import', desc:'Importa skill de URL GitHub ou conteudo markdown direto', params:[
-        {n:'url',t:'string',r:false,d:'URL do GitHub'},
-        {n:'content',t:'string',r:false,d:'Conteudo markdown'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Se e global'},
-      ]},
-    ]
-  },
-  {
-    id:'e', letter:'E', name:'Rules', badge:'badge-e', color:'#8b5cf6', count:7,
-    desc:'Regras e diretrizes que guiam o comportamento da IA',
-    tools:[
-      { name:'rule_list', desc:'Lista rules com id, name, description, enabled, isGlobal, skillId', params:[] },
-      { name:'rule_get', desc:'Busca rule com body (conteudo) completo', params:[
-        {n:'id',t:'string',r:true,d:'ID da rule'},
-      ]},
-      { name:'rule_create', desc:'Cria nova rule', params:[
-        {n:'name',t:'string',r:true,d:'Nome da rule'},
-        {n:'description',t:'string',r:false,d:'Descricao'},
-        {n:'body',t:'string',r:false,d:'Conteudo da rule'},
-        {n:'enabled',t:'boolean',r:false,d:'Se esta ativa'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Se e global'},
-        {n:'skillId',t:'string',r:false,d:'ID de skill associada'},
-      ]},
-      { name:'rule_update', desc:'Atualiza rule existente', params:[
-        {n:'id',t:'string',r:true,d:'ID da rule'},
-        {n:'name',t:'string',r:false,d:'Novo nome'},
-        {n:'description',t:'string',r:false,d:'Nova descricao'},
-        {n:'body',t:'string',r:false,d:'Novo conteudo'},
-        {n:'enabled',t:'boolean',r:false,d:'Ativar/desativar'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Global ou nao'},
-        {n:'skillId',t:'string',r:false,d:'Novo skillId'},
-      ]},
-      { name:'rule_delete', desc:'Deleta rule permanentemente', params:[
-        {n:'id',t:'string',r:true,d:'ID da rule'},
-      ]},
-      { name:'rule_toggle', desc:'Ativa ou desativa rule (toggle)', params:[
-        {n:'id',t:'string',r:true,d:'ID da rule'},
-      ]},
-      { name:'rule_import', desc:'Importa rule de URL GitHub ou conteudo markdown direto', params:[
-        {n:'url',t:'string',r:false,d:'URL do GitHub'},
-        {n:'content',t:'string',r:false,d:'Conteudo markdown'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Se e global'},
-      ]},
-    ]
-  },
-  {
-    id:'f', letter:'F', name:'MCP Servers', badge:'badge-f', color:'#0ea5e9', count:8,
-    desc:'Servicos externos que fornecem tools adicionais aos workflows',
-    tools:[
-      { name:'mcp_server_list', desc:'Lista MCP servers com id, name, description, type (http/sse/stdio), uri, enabled, isGlobal', params:[] },
-      { name:'mcp_server_get', desc:'Busca MCP server com args, envVars, toolsCache, tipo de conexao', params:[
-        {n:'id',t:'string',r:true,d:'ID do MCP server'},
-      ]},
-      { name:'mcp_server_create', desc:'Registra novo MCP server', params:[
-        {n:'name',t:'string',r:true,d:'Nome do server'},
-        {n:'description',t:'string',r:false,d:'Descricao'},
-        {n:'type',t:'"http"|"sse"|"stdio"',r:false,d:'Tipo (default: http)'},
-        {n:'uri',t:'string',r:false,d:'URL do server (http/sse)'},
-        {n:'command',t:'string',r:false,d:'Comando (stdio)'},
-        {n:'args',t:'string[]',r:false,d:'Argumentos CLI'},
-        {n:'envVars',t:'Record<string,string>',r:false,d:'Variaveis de ambiente'},
-        {n:'enabled',t:'boolean',r:false,d:'Se esta ativo'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Se e global'},
-      ]},
-      { name:'mcp_server_update', desc:'Atualiza MCP server existente', params:[
-        {n:'id',t:'string',r:true,d:'ID do MCP server'},
-        {n:'name',t:'string',r:false,d:'Novo nome'},
-        {n:'description',t:'string',r:false,d:'Nova descricao'},
-        {n:'type',t:'"http"|"sse"|"stdio"',r:false,d:'Novo tipo'},
-        {n:'uri',t:'string',r:false,d:'Nova URL'},
-        {n:'command',t:'string',r:false,d:'Novo comando'},
-        {n:'args',t:'string[]',r:false,d:'Novos argumentos'},
-        {n:'envVars',t:'Record<string,string>',r:false,d:'Novas envVars'},
-        {n:'enabled',t:'boolean',r:false,d:'Ativar/desativar'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Global ou nao'},
-      ]},
-      { name:'mcp_server_delete', desc:'Deleta MCP server permanentemente', params:[
-        {n:'id',t:'string',r:true,d:'ID do MCP server'},
-      ]},
-      { name:'mcp_server_toggle', desc:'Ativa ou desativa MCP server (toggle)', params:[
-        {n:'id',t:'string',r:true,d:'ID do MCP server'},
-      ]},
-      { name:'mcp_server_test', desc:'Testa conexao e retorna tools disponiveis: { ok, tools[], error? }', params:[
-        {n:'id',t:'string',r:true,d:'ID do MCP server'},
-      ]},
-      { name:'mcp_server_quick_install', desc:'Instala rapidamente a partir de comando (auto-detecta tipo)', params:[
-        {n:'command',t:'string',r:true,d:'Comando de instalacao'},
-        {n:'name',t:'string',r:false,d:'Nome customizado'},
-        {n:'description',t:'string',r:false,d:'Descricao'},
-        {n:'envVars',t:'Record<string,string>',r:false,d:'Variaveis de ambiente'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Se e global'},
-      ]},
-    ]
-  },
-  {
-    id:'g', letter:'G', name:'Plugins', badge:'badge-g', color:'#f43f5e', count:8,
-    desc:'Pacotes que agrupam MCP servers, skills e agentes do GitHub',
-    tools:[
-      { name:'plugin_list', desc:'Lista plugins com id, name, description, version, author, enabled, mcpServersCount, skillsCount, agentsCount', params:[] },
-      { name:'plugin_get', desc:'Busca plugin com arrays de mcpServers, skills e agents filhos', params:[
-        {n:'id',t:'string',r:true,d:'ID do plugin'},
-      ]},
-      { name:'plugin_import_url', desc:'Importa plugin de URL GitHub (escaneia repo automaticamente)', params:[
-        {n:'url',t:'string',r:true,d:'URL do repositorio GitHub'},
-        {n:'projectPath',t:'string',r:false,d:'Path local do projeto'},
-      ]},
-      { name:'plugin_install', desc:'Instala plugin a partir de manifest JSON', params:[
-        {n:'name',t:'string',r:true,d:'Nome do plugin'},
-        {n:'description',t:'string',r:false,d:'Descricao'},
-        {n:'version',t:'string',r:false,d:'Versao'},
-        {n:'author',t:'string',r:false,d:'Autor'},
-        {n:'manifest',t:'{ mcpServers?, skills?, agents? }',r:true,d:'Manifest com componentes'},
-      ]},
-      { name:'plugin_update', desc:'Atualiza metadados do plugin', params:[
-        {n:'id',t:'string',r:true,d:'ID do plugin'},
-        {n:'name',t:'string',r:false,d:'Novo nome'},
-        {n:'description',t:'string',r:false,d:'Nova descricao'},
-        {n:'version',t:'string',r:false,d:'Nova versao'},
-        {n:'author',t:'string',r:false,d:'Novo autor'},
-        {n:'enabled',t:'boolean',r:false,d:'Ativar/desativar'},
-        {n:'projectPath',t:'string',r:false,d:'Novo projectPath'},
-      ]},
-      { name:'plugin_delete', desc:'Desinstala plugin e remove filhos em cascata (irreversivel)', params:[
-        {n:'id',t:'string',r:true,d:'ID do plugin'},
-      ]},
-      { name:'plugin_toggle', desc:'Ativa/desativa plugin e todos filhos em cascata', params:[
-        {n:'id',t:'string',r:true,d:'ID do plugin'},
-      ]},
-      { name:'plugin_resync', desc:'Re-sincroniza plugin do GitHub, atualizando componentes', params:[
-        {n:'id',t:'string',r:true,d:'ID do plugin'},
-        {n:'projectPath',t:'string',r:false,d:'Path do projeto'},
-      ]},
-    ]
-  },
-  {
-    id:'h', letter:'H', name:'Conversations', badge:'badge-h', color:'#22c55e', count:14,
-    desc:'Criar, executar e gerenciar conversas com workflows — o core da orquestracao',
-    tools:[
-      { name:'conversation_list', desc:'Lista conversas com id, title, workflowId, workflowName, workflowType, currentStepName, messagesCount', params:[
-        {n:'workflowId',t:'string',r:false,d:'Filtrar por workflow ID'},
-      ]},
-      { name:'conversation_get', desc:'Busca conversa com workflow (steps), messages (attachments), currentStepIndex', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-      ]},
-      { name:'conversation_create', desc:'Cria nova conversa associada a um workflow', params:[
-        {n:'workflowId',t:'string',r:true,d:'ID do workflow'},
-        {n:'title',t:'string',r:false,d:'Titulo (auto-gerado se omitido)'},
-        {n:'projectPath',t:'string',r:true,d:'Path do projeto onde a IA trabalha'},
-      ]},
-      { name:'conversation_delete', desc:'Deleta conversa permanentemente', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-      ]},
-      { name:'conversation_advance_step', desc:'Avanca para proximo step (somente step_by_step)', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-      ]},
-      { name:'conversation_go_back_step', desc:'Volta para step anterior (somente step_by_step)', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-      ]},
-      { name:'conversation_jump_to_step', desc:'Pula diretamente para um step especifico', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-        {n:'stepId',t:'string',r:true,d:'ID do step destino'},
-      ]},
-      { name:'conversation_cancel', desc:'Cancela execucao ativa', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-      ]},
-      { name:'conversation_status', desc:'Verifica status de execucao (isExecuting, lastExecution)', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-      ]},
-      { name:'conversation_messages', desc:'Lista mensagens com role, content, stepId, selectedForContext, attachments', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-        {n:'stepId',t:'string',r:false,d:'Filtrar por step ID'},
-      ]},
-      { name:'conversation_send_message', desc:'Envia mensagem e AGUARDA resultado completo via SSE. Tool principal para orquestracao.', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-        {n:'content',t:'string',r:true,d:'Mensagem a enviar'},
-        {n:'stepIndex',t:'number',r:false,d:'Indice do step (para step_by_step)'},
-        {n:'timeoutMs',t:'number',r:false,d:'Timeout em ms (default: 600000)'},
-      ]},
-      { name:'conversation_send_message_async', desc:'Envia mensagem em BACKGROUND e retorna imediatamente. Ideal para execucao paralela.', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-        {n:'content',t:'string',r:true,d:'Mensagem a enviar'},
-        {n:'stepIndex',t:'number',r:false,d:'Indice do step (para step_by_step)'},
-      ]},
-      { name:'conversation_await_execution', desc:'Aguarda execucao em background (async) terminar e retorna resultado', params:[
-        {n:'id',t:'string',r:true,d:'ID da conversa'},
-        {n:'timeoutMs',t:'number',r:false,d:'Timeout em ms (default: 600000)'},
-      ]},
-      { name:'folders_list', desc:'Lista pastas de projetos disponiveis com name, path, conversationsCount', params:[] },
-    ]
-  },
-  {
-    id:'i', letter:'I', name:'Execution Traces', badge:'badge-i', color:'#fb923c', count:5,
-    desc:'Investigar execucoes: logs, timing, erros, stdout/stderr bruto',
-    tools:[
-      { name:'trace_list', desc:'Lista traces de execucao com resultStatus, durationMs, contentLength, actionsCount, errorMessage', params:[
-        {n:'conversationId',t:'string',r:true,d:'ID da conversa'},
-      ]},
-      { name:'trace_get_detail', desc:'Detalhes completos: commandLine, stdoutRaw, stderrRaw, parsedEvents, systemPrompt, timing, pid, exitCode, signal', params:[
-        {n:'traceId',t:'string',r:true,d:'ID do trace'},
-      ]},
-      { name:'message_toggle_context', desc:'Marca/desmarca mensagem para inclusao no contexto futuro', params:[
-        {n:'messageId',t:'string',r:true,d:'ID da mensagem'},
-        {n:'selected',t:'boolean',r:true,d:'true = incluir, false = excluir'},
-      ]},
-      { name:'message_update_actions', desc:'Atualiza metadados de acoes de uma mensagem', params:[
-        {n:'messageId',t:'string',r:true,d:'ID da mensagem'},
-        {n:'actions',t:'unknown[]',r:true,d:'Array de acoes (metadata livre)'},
-      ]},
-      { name:'message_delete', desc:'Deleta mensagem permanentemente', params:[
-        {n:'messageId',t:'string',r:true,d:'ID da mensagem'},
-      ]},
-    ]
-  },
-  {
-    id:'j', letter:'J', name:'Hooks', badge:'badge-j', color:'#38bdf8', count:10,
-    desc:'Automacoes no ciclo de vida do Claude Code (16 eventos: PreToolUse, PostToolUse, Stop, etc.)',
-    tools:[
-      { name:'hook_list', desc:'Lista hooks com eventType, matcher, handlerType, command, prompt, timeout, isAsync, enabled', params:[] },
-      { name:'hook_get', desc:'Busca hook com todos os detalhes', params:[
-        {n:'id',t:'string',r:true,d:'ID do hook'},
-      ]},
-      { name:'hook_create', desc:'Cria novo hook para eventos do Claude Code', params:[
-        {n:'name',t:'string',r:true,d:'Nome do hook'},
-        {n:'description',t:'string',r:false,d:'Descricao'},
-        {n:'eventType',t:'string',r:true,d:'Evento: PreToolUse, PostToolUse, Stop, SessionStart, etc.'},
-        {n:'matcher',t:'string',r:false,d:'Regex matcher (ex: Bash, Write|Edit)'},
-        {n:'handlerType',t:'"command"|"prompt"|"agent"',r:false,d:'Tipo de handler'},
-        {n:'command',t:'string',r:false,d:'Comando shell (para command handler)'},
-        {n:'prompt',t:'string',r:false,d:'Prompt (para prompt/agent handler)'},
-        {n:'timeout',t:'number',r:false,d:'Timeout em ms (default: 60000)'},
-        {n:'isAsync',t:'boolean',r:false,d:'Executar sem bloquear'},
-        {n:'statusMessage',t:'string',r:false,d:'Mensagem durante execucao'},
-        {n:'enabled',t:'boolean',r:false,d:'Se esta ativo'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Se e global'},
-      ]},
-      { name:'hook_update', desc:'Atualiza hook existente', params:[
-        {n:'id',t:'string',r:true,d:'ID do hook'},
-        {n:'name',t:'string',r:false,d:'Novo nome'},
-        {n:'description',t:'string',r:false,d:'Nova descricao'},
-        {n:'eventType',t:'string',r:false,d:'Novo evento'},
-        {n:'matcher',t:'string',r:false,d:'Novo matcher'},
-        {n:'handlerType',t:'"command"|"prompt"|"agent"',r:false,d:'Novo tipo'},
-        {n:'command',t:'string',r:false,d:'Novo comando'},
-        {n:'prompt',t:'string',r:false,d:'Novo prompt'},
-        {n:'timeout',t:'number',r:false,d:'Novo timeout'},
-        {n:'isAsync',t:'boolean',r:false,d:'Novo isAsync'},
-        {n:'statusMessage',t:'string',r:false,d:'Nova mensagem'},
-        {n:'enabled',t:'boolean',r:false,d:'Ativar/desativar'},
-        {n:'isGlobal',t:'boolean',r:false,d:'Global ou nao'},
-      ]},
-      { name:'hook_delete', desc:'Deleta hook permanentemente', params:[
-        {n:'id',t:'string',r:true,d:'ID do hook'},
-      ]},
-      { name:'hook_toggle', desc:'Ativa ou desativa hook (toggle)', params:[
-        {n:'id',t:'string',r:true,d:'ID do hook'},
-      ]},
-      { name:'hook_templates', desc:'Lista templates pre-configurados (block-rm-rf, auto-lint, auto-format, etc.)', params:[] },
-      { name:'hook_create_from_template', desc:'Cria hook a partir de template pre-configurado', params:[
-        {n:'templateId',t:'string',r:true,d:'ID do template (ex: block-rm-rf, auto-lint)'},
-      ]},
-      { name:'hook_events', desc:'Lista os 16 eventos de hooks com metadados: value, label, description, supportsMatcher, category', params:[] },
-      { name:'hook_preview', desc:'Gera JSON de configuracao de hooks para .claude/settings.json', params:[
-        {n:'hookIds',t:'string[]',r:false,d:'IDs dos hooks (vazio = todos ativos)'},
-      ]},
-    ]
-  },
-];
-
-// ===== RENDER =====
-const container = document.getElementById('categoriesContainer');
-let totalToolCount = 0;
-
-categories.forEach(cat => {
-  totalToolCount += cat.tools.length;
-  const section = document.createElement('div');
-  section.className = 'category-section';
-  section.dataset.category = cat.id;
-
-  section.innerHTML = `
-    <div class="category-card bg-white/[0.03] rounded-2xl border border-white/5 overflow-hidden">
-      <button class="cat-toggle w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] transition" data-cat="${cat.id}">
-        <div class="flex items-center gap-3 min-w-0">
-          <span class="text-xs font-bold px-2.5 py-1 rounded-md text-white ${cat.badge} shrink-0">${cat.letter}</span>
-          <div class="min-w-0">
-            <span class="text-base font-semibold text-white">${cat.name}</span>
-            <span class="text-xs text-gray-500 ml-2">${cat.count} tools</span>
-            <p class="text-xs text-gray-500 mt-0.5 truncate">${cat.desc}</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0 ml-4">
-          <span class="text-xs font-mono text-gray-600">${cat.count}</span>
-          <svg class="w-4 h-4 text-gray-500 transition-transform cat-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-        </div>
-      </button>
-      <div class="cat-content tool-expand" data-cat-content="${cat.id}">
-        <div class="border-t border-white/5">
-          ${cat.tools.map(tool => `
-            <div class="tool-item border-b border-white/[0.03] last:border-0" data-toolname="${tool.name}">
-              <button class="tool-toggle w-full flex items-center justify-between px-5 py-3.5 text-left tool-row" data-tool="${tool.name}">
-                <div class="flex items-center gap-3 min-w-0">
-                  <code class="text-sm font-mono font-semibold shrink-0" style="color:${cat.color}">${tool.name}</code>
-                  <span class="text-xs text-gray-500 truncate hidden sm:inline">${tool.desc.substring(0,80)}${tool.desc.length>80?'...':''}</span>
-                </div>
-                <div class="flex items-center gap-2 shrink-0 ml-2">
-                  ${tool.params.length ? `<span class="text-[10px] text-gray-600">${tool.params.filter(p=>p.r).length} req / ${tool.params.length} total</span>` : `<span class="text-[10px] text-gray-600">no params</span>`}
-                  <svg class="w-3 h-3 text-gray-600 transition-transform tool-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                </div>
-              </button>
-              <div class="tool-detail tool-expand" data-tool-detail="${tool.name}">
-                <div class="px-5 pb-4 animate-fadein">
-                  <p class="text-sm text-gray-400 mb-3">${tool.desc}</p>
-                  ${tool.params.length ? `
-                    <table class="w-full text-xs">
-                      <thead>
-                        <tr class="text-left text-gray-600">
-                          <th class="pb-2 pr-3 font-medium">Parametro</th>
-                          <th class="pb-2 pr-3 font-medium">Tipo</th>
-                          <th class="pb-2 pr-3 font-medium w-8">Req</th>
-                          <th class="pb-2 font-medium">Descricao</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${tool.params.map(p => `
-                          <tr class="border-t border-white/[0.03]">
-                            <td class="py-2 pr-3 font-mono text-indigo-300">${p.n}</td>
-                            <td class="py-2 pr-3 font-mono text-amber-400/70">${p.t}</td>
-                            <td class="py-2 pr-3">${p.r ? '<span class="text-rose-400 font-bold">*</span>' : '<span class="text-gray-600">-</span>'}</td>
-                            <td class="py-2 text-gray-500">${p.d}</td>
-                          </tr>
-                        `).join('')}
-                      </tbody>
-                    </table>
-                  ` : '<p class="text-xs text-gray-600 italic">Nenhum parametro necessario</p>'}
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    </div>
-  `;
-
-  container.appendChild(section);
-});
-
-// ===== TOGGLE LOGIC =====
-document.querySelectorAll('.cat-toggle').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const catId = btn.dataset.cat;
-    const content = document.querySelector(`[data-cat-content="${catId}"]`);
-    const chevron = btn.querySelector('.cat-chevron');
-    content.classList.toggle('open');
-    chevron.style.transform = content.classList.contains('open') ? 'rotate(180deg)' : '';
+// Tab switching for tool categories
+document.querySelectorAll('.cat-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.cat-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    const panelId = 'panel-' + tab.dataset.cat;
+    const panel = document.getElementById(panelId);
+    if (panel) panel.classList.add('active');
   });
 });
 
-document.querySelectorAll('.tool-toggle').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const toolName = btn.dataset.tool;
-    const detail = document.querySelector(`[data-tool-detail="${toolName}"]`);
-    const chevron = btn.querySelector('.tool-chevron');
-    detail.classList.toggle('open');
-    chevron.style.transform = detail.classList.contains('open') ? 'rotate(180deg)' : '';
-  });
-});
+// Tool search
+const toolSearchInput = document.getElementById('toolSearchInput');
+const toolSearchCount = document.getElementById('toolSearchCount');
 
-// ===== SEARCH =====
-const searchInput = document.getElementById('toolSearch');
-const searchCount = document.getElementById('searchCount');
-const searchCountNum = document.getElementById('searchCountNum');
-
-searchInput.addEventListener('input', () => {
-  const q = searchInput.value.toLowerCase().trim();
+toolSearchInput.addEventListener('input', () => {
+  const q = toolSearchInput.value.toLowerCase().trim();
+  const allCards = document.querySelectorAll('.tool-card');
+  const allPanels = document.querySelectorAll('.cat-panel');
+  const allTabs = document.querySelectorAll('.cat-tab');
 
   if (!q) {
-    // Reset all
-    document.querySelectorAll('.category-section').forEach(s => s.style.display = '');
-    document.querySelectorAll('.tool-item').forEach(s => s.style.display = '');
-    document.querySelectorAll('.cat-content').forEach(c => c.classList.remove('open'));
-    searchCount.classList.add('hidden');
+    allCards.forEach(c => c.style.display = '');
+    toolSearchCount.style.display = 'none';
     return;
   }
 
   let found = 0;
+  let firstMatchPanel = null;
 
-  categories.forEach(cat => {
-    const section = document.querySelector(`[data-category="${cat.id}"]`);
-    const content = document.querySelector(`[data-cat-content="${cat.id}"]`);
-    let catHasMatch = false;
-
-    cat.tools.forEach(tool => {
-      const toolEl = section.querySelector(`[data-toolname="${tool.name}"]`);
-      const matches = tool.name.toLowerCase().includes(q) ||
-                      tool.desc.toLowerCase().includes(q) ||
-                      cat.name.toLowerCase().includes(q) ||
-                      tool.params.some(p => p.n.toLowerCase().includes(q) || p.d.toLowerCase().includes(q));
-
-      if (matches) {
-        toolEl.style.display = '';
-        catHasMatch = true;
+  allPanels.forEach(panel => {
+    let panelHasMatch = false;
+    panel.querySelectorAll('.tool-card').forEach(card => {
+      const text = card.textContent.toLowerCase();
+      if (text.includes(q)) {
+        card.style.display = '';
+        panelHasMatch = true;
         found++;
       } else {
-        toolEl.style.display = 'none';
+        card.style.display = 'none';
       }
     });
-
-    if (catHasMatch) {
-      section.style.display = '';
-      content.classList.add('open');
-    } else {
-      section.style.display = 'none';
+    if (panelHasMatch && !firstMatchPanel) {
+      firstMatchPanel = panel.id.replace('panel-', '');
     }
   });
 
-  searchCountNum.textContent = found;
-  searchCount.classList.remove('hidden');
+  // Switch to first matching tab
+  if (firstMatchPanel) {
+    allTabs.forEach(t => t.classList.remove('active'));
+    allPanels.forEach(p => p.classList.remove('active'));
+    const matchTab = document.querySelector(`.cat-tab[data-cat="${firstMatchPanel}"]`);
+    const matchPanel = document.getElementById('panel-' + firstMatchPanel);
+    if (matchTab) matchTab.classList.add('active');
+    if (matchPanel) matchPanel.classList.add('active');
+  }
+
+  toolSearchCount.textContent = found + ' encontradas';
+  toolSearchCount.style.display = found > 0 ? 'block' : 'none';
 });
-
-// Open first category by default
-document.querySelector('[data-cat-content="a"]').classList.add('open');
-document.querySelector('.cat-toggle[data-cat="a"] .cat-chevron').style.transform = 'rotate(180deg)';
 </script>
-
-<footer class="border-t border-slate-800 py-6 mt-10">
-  <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-slate-500">
-    <a href="08-integracoes.html" class="hover:text-white transition">&larr; 08 Integrações</a>
-    <span class="text-slate-600">Orquetrador Claude</span>
-    <a href="10-tempo-real-filas.html" class="hover:text-white transition">10 Tempo Real &rarr;</a>
-  </div>
-</footer>
 
 </body>
 </html>
