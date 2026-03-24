@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>25 - Tags & Resources | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Tag color samples */
+    .tag-sample {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid;
+    }
+
+    /* Resource type grid cards */
+    .resource-type-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+      transition: all 0.3s;
+      cursor: default;
+    }
+    .resource-type-card:hover {
+      border-color: rgba(13, 148, 136, 0.4);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+    .resource-type-card .rt-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin: 0 auto 0.75rem;
+    }
+    .resource-type-card .rt-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+    .resource-type-card .rt-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* Diagram nodes */
+    .diagram-flow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .d-node {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.65rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      white-space: nowrap;
+      transition: all 0.3s;
+    }
+    .d-node:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+    }
+    .d-arrow {
+      color: var(--text-muted);
+      font-size: 1.3rem;
+      padding: 0 0.35rem;
+    }
+
+    /* Lifecycle steps */
+    .lifecycle {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      overflow-x: auto;
+      padding: 1rem 0;
+    }
+    .lc-step {
+      flex: 1;
+      min-width: 140px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1rem;
+      text-align: center;
+      position: relative;
+      transition: all 0.3s;
+    }
+    .lc-step:first-child { border-radius: 12px 0 0 12px; }
+    .lc-step:last-child { border-radius: 0 12px 12px 0; }
+    .lc-step:hover { background: var(--bg-card-hover); }
+    .lc-step .lc-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .lc-step .lc-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+    .lc-step .lc-desc {
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    .lc-step::after {
+      content: '';
+      position: absolute;
+      right: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 6px solid transparent;
+      border-left-color: var(--border-color);
+      z-index: 2;
+    }
+    .lc-step:last-child::after { display: none; }
+
+    /* Dependency graph */
+    .dep-graph {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 1.5rem;
+    }
+    .dep-source, .dep-target {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.85rem 1.1rem;
+      font-size: 0.82rem;
+    }
+    .dep-link {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+    }
+    .dep-link-arrow {
+      font-size: 1.5rem;
+      color: var(--text-accent);
+    }
+
+    /* Method badges */
+    .method-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 60px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .method-GET    { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .method-POST   { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+    .method-PUT    { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .method-DELETE { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+
+    /* Endpoint row */
+    .endpoint-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      transition: background 0.2s;
+    }
+    .endpoint-row:hover { background: var(--bg-card-hover); }
+    .endpoint-row:last-child { border-bottom: none; }
+    .endpoint-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text-primary);
+      flex: 1;
+    }
+    .endpoint-desc {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      min-width: 180px;
+      text-align: right;
+    }
+
+    /* Tag badge in UI preview */
+    .ui-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .ui-tag .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Frontend preview card */
+    .preview-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1rem;
+      max-width: 360px;
+    }
+    .preview-card .pc-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .preview-card .pc-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-card .pc-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .preview-card .pc-desc {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.6rem;
+    }
+    .preview-card .pc-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    @media (max-width: 768px) {
+      .dep-graph { grid-template-columns: 1fr; }
+      .dep-link { flex-direction: row; }
+      .dep-link-arrow { transform: rotate(90deg); }
+      .lifecycle { flex-direction: column; }
+      .lc-step { border-radius: 8px !important; }
+      .lc-step::after { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="breadcrumb">
+        <a href="index.html">System Map</a>
+        <span>&rsaquo;</span>
+        <span>25 - Tags & Resources</span>
+      </div>
+      <h1>Tags & Resources</h1>
+      <p class="subtitle">Sistema universal de tags, dependencias entre recursos e templates reutilizaveis</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-4 section">
+      <div class="stat-box">
+        <div class="stat-value" data-count="7">7</div>
+        <div class="stat-label">Resource Types</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="7">7</div>
+        <div class="stat-label">Tag Endpoints</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="2">2</div>
+        <div class="stat-label">Dependency Endpoints</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="5">5</div>
+        <div class="stat-label">Template Endpoints</div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 1. Universal Tagging System -->
+    <!-- ========================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x1f3f7;</span>
+        Universal Tagging System
+      </h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1.25rem; font-size: 0.92rem;">
+        Tags podem ser aplicadas a <strong style="color: var(--text-primary);">qualquer tipo de recurso</strong> do sistema.
+        O modelo polim&oacute;rfico <code class="mono" style="color: var(--text-accent);">ResourceTag</code> conecta tags a recursos de forma gen&eacute;rica,
+        sem necessidade de tabelas join espec&iacute;ficas para cada tipo.
+      </p>
+
+      <!-- Tagging diagram -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 0.92rem;">Arquitetura de Tagging</div>
+        <div class="diagram-flow">
+          <div class="d-node" style="border-color: rgba(13,148,136,0.4);">
+            <span>&#x1f3f7;</span> Tag
+          </div>
+          <span class="d-arrow">&rarr;</span>
+          <div class="d-node" style="border-color: rgba(139,92,246,0.4);">
+            <span>&#x1f517;</span> ResourceTag
+          </div>
+          <span class="d-arrow">&rarr;</span>
+          <div class="d-node" style="border-color: rgba(59,130,246,0.4);">
+            <span>&#x1f4e6;</span> Any Resource
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; padding: 0.5rem 0;">
+          <span class="badge badge-teal">mcp_server</span>
+          <span class="badge badge-purple">skill</span>
+          <span class="badge badge-blue">agent</span>
+          <span class="badge badge-amber">rule</span>
+          <span class="badge badge-red">hook</span>
+          <span class="badge badge-green">plugin</span>
+          <span class="badge badge-gray">workflow</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. Tag Model -->
+    <!-- ========================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1f4cb;</span>
+        Tag Model
+      </h2>
+
+      <div class="grid-2">
+        <!-- Tag -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x1f3f7;</div>
+            <div>
+              <div class="card-title">Tag</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Modelo principal</div>
+            </div>
+          </div>
+          <div class="code-block">
+<span class="keyword">model</span> <span class="type">Tag</span> {
+  <span class="comment">// Campos</span>
+  id        <span class="type">String</span>   <span class="comment">@id @default(uuid())</span>
+  name      <span class="type">String</span>   <span class="comment">// Unico por usuario</span>
+  color     <span class="type">String</span>   <span class="comment">// Hex (#FF5733)</span>
+  userId    <span class="type">String</span>
+  createdAt <span class="type">DateTime</span> <span class="comment">@default(now())</span>
+  updatedAt <span class="type">DateTime</span> <span class="comment">@updatedAt</span>
+
+  <span class="comment">// Relations</span>
+  user      <span class="type">User</span>          <span class="comment">@relation</span>
+  resources <span class="type">ResourceTag</span>[] <span class="comment">// Polimorfismo</span>
+
+  <span class="comment">@@unique([name, userId])</span>
+}
+          </div>
+        </div>
+
+        <!-- ResourceTag -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1f517;</div>
+            <div>
+              <div class="card-title">ResourceTag</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Join polim&oacute;rfico</div>
+            </div>
+          </div>
+          <div class="code-block">
+<span class="keyword">model</span> <span class="type">ResourceTag</span> {
+  <span class="comment">// Campos</span>
+  id           <span class="type">String</span>       <span class="comment">@id @default(uuid())</span>
+  tagId        <span class="type">String</span>
+  resourceType <span class="type">ResourceType</span> <span class="comment">// Enum</span>
+  resourceId   <span class="type">String</span>
+  createdAt    <span class="type">DateTime</span>     <span class="comment">@default(now())</span>
+
+  <span class="comment">// Relations</span>
+  tag          <span class="type">Tag</span>          <span class="comment">@relation</span>
+
+  <span class="comment">@@unique([tagId, resourceType, resourceId])</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <!-- ResourceType enum -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <div style="font-weight: 600; margin-bottom: 0.75rem; font-size: 0.92rem;">ResourceType Enum</div>
+        <div class="code-block">
+<span class="keyword">enum</span> <span class="type">ResourceType</span> {
+  <span class="string">mcp_server</span>
+  <span class="string">skill</span>
+  <span class="string">agent</span>
+  <span class="string">rule</span>
+  <span class="string">hook</span>
+  <span class="string">plugin</span>
+  <span class="string">workflow</span>
+}
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. Resource Types Grid -->
+    <!-- ========================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x1f4e6;</span>
+        Resource Types
+      </h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem;">
+        <div class="resource-type-card">
+          <div class="rt-icon" style="background: rgba(13,148,136,0.15); color: #2dd4bf;">&#x1f5a5;</div>
+          <div class="rt-name">mcp_server</div>
+          <div class="rt-label">Servidores MCP</div>
+        </div>
+        <div class="resource-type-card">
+          <div class="rt-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1f9e0;</div>
+          <div class="rt-name">skill</div>
+          <div class="rt-label">Skills / Habilidades</div>
+        </div>
+        <div class="resource-type-card">
+          <div class="rt-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1f916;</div>
+          <div class="rt-name">agent</div>
+          <div class="rt-label">Agentes IA</div>
+        </div>
+        <div class="resource-type-card">
+          <div class="rt-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x1f4d0;</div>
+          <div class="rt-name">rule</div>
+          <div class="rt-label">Regras</div>
+        </div>
+        <div class="resource-type-card">
+          <div class="rt-icon" style="background: rgba(239,68,68,0.15); color: #f87171;">&#x1fa9d;</div>
+          <div class="rt-name">hook</div>
+          <div class="rt-label">Hooks</div>
+        </div>
+        <div class="resource-type-card">
+          <div class="rt-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1f9e9;</div>
+          <div class="rt-name">plugin</div>
+          <div class="rt-label">Plugins</div>
+        </div>
+        <div class="resource-type-card">
+          <div class="rt-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">&#x1f504;</div>
+          <div class="rt-name">workflow</div>
+          <div class="rt-label">Workflows</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 4. Tag Endpoints -->
+    <!-- ========================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x1f310;</span>
+        Tag Endpoints
+      </h2>
+
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <!-- Header -->
+        <div style="padding: 1rem 1.25rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-weight: 600; font-size: 0.92rem;">CRUD + Assign / Remove</div>
+          <span class="badge badge-teal">7 endpoints</span>
+        </div>
+
+        <!-- Endpoints list -->
+        <div class="endpoint-row">
+          <span class="method-badge method-GET">GET</span>
+          <span class="endpoint-path">/tags</span>
+          <span class="endpoint-desc">Listar tags do usu&aacute;rio</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="method-badge method-POST">POST</span>
+          <span class="endpoint-path">/tags</span>
+          <span class="endpoint-desc">Criar tag (name, color)</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="method-badge method-PUT">PUT</span>
+          <span class="endpoint-path">/tags/:id</span>
+          <span class="endpoint-desc">Atualizar tag</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="method-badge method-DELETE">DELETE</span>
+          <span class="endpoint-path">/tags/:id</span>
+          <span class="endpoint-desc">Deletar tag</span>
+        </div>
+        <div class="endpoint-row" style="background: rgba(13,148,136,0.03);">
+          <span class="method-badge method-POST">POST</span>
+          <span class="endpoint-path">/tags/:id/resources</span>
+          <span class="endpoint-desc">Associar tag a recurso</span>
+        </div>
+        <div class="endpoint-row" style="background: rgba(13,148,136,0.03);">
+          <span class="method-badge method-DELETE">DELETE</span>
+          <span class="endpoint-path">/tags/:id/resources/:resourceType/:resourceId</span>
+          <span class="endpoint-desc">Remover tag de recurso</span>
+        </div>
+        <div class="endpoint-row" style="background: rgba(13,148,136,0.03);">
+          <span class="method-badge method-GET">GET</span>
+          <span class="endpoint-path">/resources/:resourceType/:resourceId/tags</span>
+          <span class="endpoint-desc">Tags de um recurso</span>
+        </div>
+      </div>
+
+      <!-- Request/Response examples -->
+      <div class="grid-2" style="margin-top: 1.5rem;">
+        <div class="card">
+          <div style="font-weight: 600; margin-bottom: 0.75rem; font-size: 0.88rem; color: #4ade80;">POST /tags</div>
+          <div class="code-block">
+<span class="comment">// Request body</span>
+{
+  <span class="string">"name"</span>: <span class="string">"producao"</span>,
+  <span class="string">"color"</span>: <span class="string">"#22c55e"</span>
+}
+
+<span class="comment">// Response 201</span>
+{
+  <span class="string">"id"</span>: <span class="string">"abc-123"</span>,
+  <span class="string">"name"</span>: <span class="string">"producao"</span>,
+  <span class="string">"color"</span>: <span class="string">"#22c55e"</span>,
+  <span class="string">"userId"</span>: <span class="string">"usr-456"</span>
+}
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight: 600; margin-bottom: 0.75rem; font-size: 0.88rem; color: #4ade80;">POST /tags/:id/resources</div>
+          <div class="code-block">
+<span class="comment">// Request body</span>
+{
+  <span class="string">"resourceType"</span>: <span class="string">"agent"</span>,
+  <span class="string">"resourceId"</span>: <span class="string">"agent-789"</span>
+}
+
+<span class="comment">// Response 201</span>
+{
+  <span class="string">"id"</span>: <span class="string">"rt-001"</span>,
+  <span class="string">"tagId"</span>: <span class="string">"abc-123"</span>,
+  <span class="string">"resourceType"</span>: <span class="string">"agent"</span>,
+  <span class="string">"resourceId"</span>: <span class="string">"agent-789"</span>
+}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 5. Resource Dependencies -->
+    <!-- ========================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x1f6e1;</span>
+        Resource Dependencies
+      </h2>
+
+      <p style="color: var(--text-secondary); margin-bottom: 1.25rem; font-size: 0.92rem;">
+        O modelo <code class="mono" style="color: var(--text-accent);">ResourceDependency</code> rastreia depend&ecirc;ncias entre recursos.
+        Usado para validar se &eacute; seguro deletar um recurso (verifica se outros dependem dele).
+      </p>
+
+      <!-- ResourceDependency model -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x1f517;</div>
+          <div>
+            <div class="card-title">ResourceDependency</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Grafo de depend&ecirc;ncias</div>
+          </div>
+        </div>
+        <div class="code-block">
+<span class="keyword">model</span> <span class="type">ResourceDependency</span> {
+  id             <span class="type">String</span>       <span class="comment">@id @default(uuid())</span>
+  sourceType     <span class="type">ResourceType</span> <span class="comment">// Quem depende</span>
+  sourceId       <span class="type">String</span>
+  dependencyType <span class="type">ResourceType</span> <span class="comment">// De quem depende</span>
+  dependencyId   <span class="type">String</span>
+  dependencyName <span class="type">String</span>       <span class="comment">// Nome legivel</span>
+  isOptional     <span class="type">Boolean</span>      <span class="comment">@default(false)</span>
+  createdAt      <span class="type">DateTime</span>     <span class="comment">@default(now())</span>
+}
+        </div>
+      </div>
+
+      <!-- Dependency Graph Example -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 0.92rem;">Exemplo: Grafo de Depend&ecirc;ncias</div>
+
+        <div class="dep-graph">
+          <div class="dep-source">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.1rem;">&#x1f504;</span>
+              <strong style="color: var(--text-primary);">Workflow &ldquo;Deploy&rdquo;</strong>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">sourceType: workflow</div>
+          </div>
+          <div class="dep-link">
+            <span class="dep-link-arrow">&rarr;</span>
+            <span>depends on</span>
+          </div>
+          <div class="dep-target">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.1rem;">&#x1f916;</span>
+              <strong style="color: var(--text-primary);">Agent &ldquo;Code Reviewer&rdquo;</strong>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">dependencyType: agent</div>
+          </div>
+        </div>
+
+        <div class="dep-graph" style="padding-top: 0;">
+          <div class="dep-source">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.1rem;">&#x1f504;</span>
+              <strong style="color: var(--text-primary);">Workflow &ldquo;Deploy&rdquo;</strong>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">sourceType: workflow</div>
+          </div>
+          <div class="dep-link">
+            <span class="dep-link-arrow">&rarr;</span>
+            <span>depends on</span>
+          </div>
+          <div class="dep-target">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.1rem;">&#x1f9e9;</span>
+              <strong style="color: var(--text-primary);">Plugin &ldquo;Slack Notifier&rdquo;</strong>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">dependencyType: plugin <span class="badge badge-amber" style="margin-left: 0.5rem;">optional</span></div>
+          </div>
+        </div>
+
+        <div class="dep-graph" style="padding-top: 0;">
+          <div class="dep-source">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.1rem;">&#x1f9e0;</span>
+              <strong style="color: var(--text-primary);">Skill &ldquo;Analyze PR&rdquo;</strong>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">sourceType: skill</div>
+          </div>
+          <div class="dep-link">
+            <span class="dep-link-arrow">&rarr;</span>
+            <span>depends on</span>
+          </div>
+          <div class="dep-target">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span style="font-size: 1.1rem;">&#x1f5a5;</span>
+              <strong style="color: var(--text-primary);">MCP Server &ldquo;GitHub&rdquo;</strong>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">dependencyType: mcp_server</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dependency Endpoints -->
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 1rem 1.25rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-weight: 600; font-size: 0.92rem;">Dependency Endpoints</div>
+          <span class="badge badge-amber">2 endpoints</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="method-badge method-GET">GET</span>
+          <span class="endpoint-path">/resources/:type/:id/dependents</span>
+          <span class="endpoint-desc">Quem depende deste recurso</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="method-badge method-GET">GET</span>
+          <span class="endpoint-path">/resources/:type/:id/validate-deletion</span>
+          <span class="endpoint-desc">Seguro deletar?</span>
+        </div>
+      </div>
+
+      <!-- Validate deletion response -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <div style="font-weight: 600; margin-bottom: 0.75rem; font-size: 0.88rem; color: #60a5fa;">GET /resources/:type/:id/validate-deletion</div>
+        <div class="grid-2">
+          <div>
+            <div style="font-size: 0.78rem; color: #4ade80; font-weight: 600; margin-bottom: 0.5rem;">Safe to delete</div>
+            <div class="code-block">
+{
+  <span class="string">"safe"</span>: <span class="keyword">true</span>,
+  <span class="string">"dependents"</span>: [],
+  <span class="string">"message"</span>: <span class="string">"Nenhum recurso depende deste"</span>
+}
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 0.78rem; color: #f87171; font-weight: 600; margin-bottom: 0.5rem;">NOT safe to delete</div>
+            <div class="code-block">
+{
+  <span class="string">"safe"</span>: <span class="keyword">false</span>,
+  <span class="string">"dependents"</span>: [
+    {
+      <span class="string">"sourceType"</span>: <span class="string">"workflow"</span>,
+      <span class="string">"sourceId"</span>: <span class="string">"wf-001"</span>,
+      <span class="string">"isOptional"</span>: <span class="keyword">false</span>
+    }
+  ],
+  <span class="string">"message"</span>: <span class="string">"1 recurso depende"</span>
+}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 6. Step Templates -->
+    <!-- ========================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1f4c4;</span>
+        Step Templates
+      </h2>
+
+      <p style="color: var(--text-secondary); margin-bottom: 1.25rem; font-size: 0.92rem;">
+        Templates reutiliz&aacute;veis para configura&ccedil;&atilde;o de steps em workflows.
+        Permitem padronizar steps comuns sem recri&aacute;-los manualmente.
+      </p>
+
+      <!-- StepTemplate model -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1f4c4;</div>
+          <div>
+            <div class="card-title">StepTemplate</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Template reutiliz&aacute;vel</div>
+          </div>
+        </div>
+        <div class="code-block">
+<span class="keyword">model</span> <span class="type">StepTemplate</span> {
+  id           <span class="type">String</span>   <span class="comment">@id @default(uuid())</span>
+  name         <span class="type">String</span>   <span class="comment">// Nome do template</span>
+  description  <span class="type">String</span>?  <span class="comment">// Descricao</span>
+  baseUrl      <span class="type">String</span>?  <span class="comment">// URL base do servico</span>
+  systemPrompt <span class="type">String</span>?  <span class="comment">// System prompt padrao</span>
+  conditions   <span class="type">Json</span>?    <span class="comment">// Condicoes de execucao</span>
+  resourceIds  <span class="type">Json</span>?    <span class="comment">// IDs dos recursos associados</span>
+  userId       <span class="type">String</span>
+  createdAt    <span class="type">DateTime</span> <span class="comment">@default(now())</span>
+  updatedAt    <span class="type">DateTime</span> <span class="comment">@updatedAt</span>
+
+  <span class="comment">// Relations</span>
+  user         <span class="type">User</span>     <span class="comment">@relation</span>
+}
+        </div>
+      </div>
+
+      <!-- Step Template Endpoints -->
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 1rem 1.25rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-weight: 600; font-size: 0.92rem;">Step Template Endpoints (CRUD)</div>
+          <span class="badge badge-green">5 endpoints</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="method-badge method-GET">GET</span>
+          <span class="endpoint-path">/step-templates</span>
+          <span class="endpoint-desc">Listar templates</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="method-badge method-GET">GET</span>
+          <span class="endpoint-path">/step-templates/:id</span>
+          <span class="endpoint-desc">Detalhe do template</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="method-badge method-POST">POST</span>
+          <span class="endpoint-path">/step-templates</span>
+          <span class="endpoint-desc">Criar template</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="method-badge method-PUT">PUT</span>
+          <span class="endpoint-path">/step-templates/:id</span>
+          <span class="endpoint-desc">Atualizar template</span>
+        </div>
+        <div class="endpoint-row">
+          <span class="method-badge method-DELETE">DELETE</span>
+          <span class="endpoint-path">/step-templates/:id</span>
+          <span class="endpoint-desc">Deletar template</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 7. Frontend Integration -->
+    <!-- ========================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x1f5a5;</span>
+        Frontend Integration
+      </h2>
+
+      <p style="color: var(--text-secondary); margin-bottom: 1.25rem; font-size: 0.92rem;">
+        Tags aparecem como badges coloridos nos cards de recursos. O sistema de filtros permite
+        buscar recursos por tag, facilitando organizacao e navegacao.
+      </p>
+
+      <div class="grid-2">
+        <!-- Preview: Resource Card with tags -->
+        <div class="card">
+          <div style="font-weight: 600; margin-bottom: 1rem; font-size: 0.88rem;">Card de Recurso com Tags</div>
+          <div class="preview-card">
+            <div class="pc-header">
+              <div class="pc-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1f916;</div>
+              <div>
+                <div class="pc-title">Code Reviewer Agent</div>
+              </div>
+            </div>
+            <div class="pc-desc">Analisa PRs e sugere melhorias de codigo automaticamente.</div>
+            <div class="pc-tags">
+              <span class="ui-tag" style="background: rgba(34,197,94,0.15); color: #4ade80;">
+                <span class="dot" style="background: #22c55e;"></span> producao
+              </span>
+              <span class="ui-tag" style="background: rgba(59,130,246,0.15); color: #60a5fa;">
+                <span class="dot" style="background: #3b82f6;"></span> code-review
+              </span>
+              <span class="ui-tag" style="background: rgba(245,158,11,0.15); color: #fbbf24;">
+                <span class="dot" style="background: #f59e0b;"></span> v2
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview: Tag filter -->
+        <div class="card">
+          <div style="font-weight: 600; margin-bottom: 1rem; font-size: 0.88rem;">Filtro por Tags</div>
+          <div class="preview-card" style="max-width: 100%;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+              <span style="font-size: 0.78rem; color: var(--text-muted); margin-right: 0.25rem;">Filtrar:</span>
+              <span class="ui-tag" style="background: rgba(34,197,94,0.2); color: #4ade80; cursor: pointer; border: 1px solid rgba(34,197,94,0.4);">
+                <span class="dot" style="background: #22c55e;"></span> producao
+              </span>
+              <span class="ui-tag" style="background: var(--bg-card); color: var(--text-secondary); cursor: pointer; border: 1px solid var(--border-color);">
+                <span class="dot" style="background: #64748b;"></span> staging
+              </span>
+              <span class="ui-tag" style="background: var(--bg-card); color: var(--text-secondary); cursor: pointer; border: 1px solid var(--border-color);">
+                <span class="dot" style="background: #64748b;"></span> deprecated
+              </span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">
+              Mostrando <strong style="color: var(--text-primary);">4</strong> de <strong style="color: var(--text-primary);">12</strong> recursos com tag &ldquo;producao&rdquo;
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 8. Resource Lifecycle -->
+    <!-- ========================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1f504;</span>
+        Resource Lifecycle
+      </h2>
+
+      <div class="card">
+        <div class="lifecycle">
+          <div class="lc-step">
+            <div class="lc-num" style="background: rgba(34,197,94,0.15); color: #4ade80;">1</div>
+            <div class="lc-title">Create</div>
+            <div class="lc-desc">Recurso criado via API. Tipo registrado no enum ResourceType.</div>
+          </div>
+          <div class="lc-step">
+            <div class="lc-num" style="background: rgba(13,148,136,0.15); color: #2dd4bf;">2</div>
+            <div class="lc-title">Tag</div>
+            <div class="lc-desc">Tags associadas via POST /tags/:id/resources. Permite organizar e filtrar.</div>
+          </div>
+          <div class="lc-step">
+            <div class="lc-num" style="background: rgba(59,130,246,0.15); color: #60a5fa;">3</div>
+            <div class="lc-title">Use</div>
+            <div class="lc-desc">Recurso utilizado em workflows. Dependencias registradas automaticamente.</div>
+          </div>
+          <div class="lc-step">
+            <div class="lc-num" style="background: rgba(245,158,11,0.15); color: #fbbf24;">4</div>
+            <div class="lc-title">Track</div>
+            <div class="lc-desc">ResourceDependency rastreia quem depende de quem.</div>
+          </div>
+          <div class="lc-step">
+            <div class="lc-num" style="background: rgba(239,68,68,0.15); color: #f87171;">5</div>
+            <div class="lc-title">Delete</div>
+            <div class="lc-desc">validate-deletion verifica dependentes antes de permitir a remocao.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lifecycle flow diagram -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 0.92rem;">Fluxo de Dele&ccedil;&atilde;o Segura</div>
+        <div class="diagram-flow">
+          <div class="d-node" style="border-color: rgba(239,68,68,0.4);">
+            &#x1f5d1; DELETE /resources/:type/:id
+          </div>
+          <span class="d-arrow">&rarr;</span>
+          <div class="d-node" style="border-color: rgba(245,158,11,0.4);">
+            &#x1f50d; validate-deletion
+          </div>
+          <span class="d-arrow">&rarr;</span>
+          <div class="d-node" style="border-color: rgba(34,197,94,0.4);">
+            &#x2705; safe: true?
+          </div>
+          <span class="d-arrow">&rarr;</span>
+          <div class="d-node" style="border-color: rgba(34,197,94,0.4);">
+            &#x1f5d1; Confirma delete
+          </div>
+        </div>
+        <div class="diagram-flow" style="padding-top: 0;">
+          <div style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <span style="color: var(--text-muted); font-size: 0.82rem;">Se <code class="mono" style="color: #f87171;">safe: false</code>:</span>
+            <div class="d-node" style="border-color: rgba(239,68,68,0.4);">
+              &#x26a0; Mostra lista de dependentes
+            </div>
+            <span class="d-arrow">&rarr;</span>
+            <div class="d-node" style="border-color: rgba(245,158,11,0.4);">
+              &#x1f4ac; Confirma&ccedil;&atilde;o manual
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 9. Tagging Diagram (full) -->
+    <!-- ========================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(13,148,136,0.1); color: #2dd4bf;">&#x1f5fa;</span>
+        Diagrama Completo do Sistema
+      </h2>
+
+      <div class="card">
+        <div style="font-weight: 600; margin-bottom: 1rem; font-size: 0.92rem;">Tag &rarr; ResourceTag &rarr; Resources</div>
+
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 2rem; padding: 1rem;">
+          <!-- Tags column -->
+          <div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;">Tags</div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div class="tag-sample" style="background: rgba(34,197,94,0.1); color: #4ade80; border-color: rgba(34,197,94,0.3);">
+                <span style="width: 10px; height: 10px; border-radius: 50%; background: #22c55e;"></span>
+                producao
+              </div>
+              <div class="tag-sample" style="background: rgba(59,130,246,0.1); color: #60a5fa; border-color: rgba(59,130,246,0.3);">
+                <span style="width: 10px; height: 10px; border-radius: 50%; background: #3b82f6;"></span>
+                code-review
+              </div>
+              <div class="tag-sample" style="background: rgba(245,158,11,0.1); color: #fbbf24; border-color: rgba(245,158,11,0.3);">
+                <span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b;"></span>
+                experimental
+              </div>
+              <div class="tag-sample" style="background: rgba(239,68,68,0.1); color: #f87171; border-color: rgba(239,68,68,0.3);">
+                <span style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></span>
+                deprecated
+              </div>
+            </div>
+          </div>
+
+          <!-- Resources column -->
+          <div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;">Recursos Tagueados</div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Recurso</th>
+                    <th>Tipo</th>
+                    <th>Tags</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="font-weight: 500;">Code Reviewer</td>
+                    <td><span class="badge badge-blue">agent</span></td>
+                    <td>
+                      <span class="ui-tag" style="background: rgba(34,197,94,0.15); color: #4ade80;"><span class="dot" style="background: #22c55e;"></span> producao</span>
+                      <span class="ui-tag" style="background: rgba(59,130,246,0.15); color: #60a5fa;"><span class="dot" style="background: #3b82f6;"></span> code-review</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 500;">GitHub MCP</td>
+                    <td><span class="badge badge-teal">mcp_server</span></td>
+                    <td>
+                      <span class="ui-tag" style="background: rgba(34,197,94,0.15); color: #4ade80;"><span class="dot" style="background: #22c55e;"></span> producao</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 500;">Analyze PR</td>
+                    <td><span class="badge badge-purple">skill</span></td>
+                    <td>
+                      <span class="ui-tag" style="background: rgba(59,130,246,0.15); color: #60a5fa;"><span class="dot" style="background: #3b82f6;"></span> code-review</span>
+                      <span class="ui-tag" style="background: rgba(245,158,11,0.15); color: #fbbf24;"><span class="dot" style="background: #f59e0b;"></span> experimental</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 500;">Slack Notifier</td>
+                    <td><span class="badge badge-green">plugin</span></td>
+                    <td>
+                      <span class="ui-tag" style="background: rgba(34,197,94,0.15); color: #4ade80;"><span class="dot" style="background: #22c55e;"></span> producao</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 500;">Legacy Hook v1</td>
+                    <td><span class="badge badge-red">hook</span></td>
+                    <td>
+                      <span class="ui-tag" style="background: rgba(239,68,68,0.15); color: #f87171;"><span class="dot" style="background: #ef4444;"></span> deprecated</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- Summary -->
+    <!-- ========================================== -->
+    <div class="section">
+      <div class="grid-3">
+        <div class="card" style="border-left: 3px solid #2dd4bf;">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x1f3f7;</div>
+            <div class="card-title">Tags</div>
+          </div>
+          <div class="card-desc">
+            <ul style="list-style: none; padding: 0; margin: 0;">
+              <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem;">Nome &uacute;nico por usu&aacute;rio</li>
+              <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem;">Cor hex customiz&aacute;vel</li>
+              <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem;">Aplicavel a qualquer recurso</li>
+              <li style="padding: 0.3rem 0; font-size: 0.82rem;">7 endpoints de API</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="border-left: 3px solid #fbbf24;">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x1f517;</div>
+            <div class="card-title">Dependencies</div>
+          </div>
+          <div class="card-desc">
+            <ul style="list-style: none; padding: 0; margin: 0;">
+              <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem;">Grafo source &rarr; dependency</li>
+              <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem;">Suporte a depend&ecirc;ncia opcional</li>
+              <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem;">Valida&ccedil;&atilde;o pr&eacute;-dele&ccedil;&atilde;o</li>
+              <li style="padding: 0.3rem 0; font-size: 0.82rem;">2 endpoints de consulta</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="border-left: 3px solid #4ade80;">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1f4c4;</div>
+            <div class="card-title">Templates</div>
+          </div>
+          <div class="card-desc">
+            <ul style="list-style: none; padding: 0; margin: 0;">
+              <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem;">Configs de step reutiliz&aacute;veis</li>
+              <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem;">SystemPrompt + condi&ccedil;&otilde;es</li>
+              <li style="padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem;">ResourceIds associados</li>
+              <li style="padding: 0.3rem 0; font-size: 0.82rem;">CRUD completo (5 endpoints)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="shared.js"></script>
+</body>
+</html>

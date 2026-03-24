@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Git Integration | Orquetrador Claude - System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .flow-diagram {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .flow-diagram::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--gradient-1);
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 0.85rem;
+      transition: all 0.3s;
+    }
+    .flow-step:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+    }
+    .flow-step .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-teal { background: rgba(13,148,136,0.2); color: #2dd4bf; }
+    .step-purple { background: rgba(139,92,246,0.2); color: #a78bfa; }
+    .step-blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .step-amber { background: rgba(245,158,11,0.2); color: #fbbf24; }
+    .step-green { background: rgba(34,197,94,0.2); color: #4ade80; }
+
+    .flow-vertical {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      position: relative;
+      padding-left: 1.5rem;
+    }
+    .flow-vertical::before {
+      content: '';
+      position: absolute;
+      left: 0.85rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border-color);
+    }
+    .flow-vertical .flow-step {
+      position: relative;
+    }
+    .flow-vertical .flow-step::before {
+      content: '';
+      position: absolute;
+      left: -1.5rem;
+      top: 50%;
+      width: 1.5rem;
+      height: 2px;
+      background: var(--border-color);
+    }
+
+    .model-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    .model-card:hover {
+      border-color: rgba(13,148,136,0.3);
+      box-shadow: var(--shadow-glow);
+    }
+    .model-card-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .model-card-body {
+      padding: 1rem 1.25rem;
+    }
+
+    .field-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      padding: 0.35rem 0;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(30,41,59,0.5);
+    }
+    .field-row:last-child { border-bottom: none; }
+    .field-name {
+      font-family: 'JetBrains Mono', monospace;
+      color: #2dd4bf;
+      font-size: 0.8rem;
+      min-width: 140px;
+    }
+    .field-type {
+      font-family: 'JetBrains Mono', monospace;
+      color: #a78bfa;
+      font-size: 0.75rem;
+    }
+    .field-desc {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+    }
+    .field-constraint {
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(245,158,11,0.1);
+      color: #fbbf24;
+      font-weight: 500;
+    }
+
+    .arch-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    .arch-box:hover {
+      border-color: rgba(13,148,136,0.3);
+      transform: translateY(-2px);
+    }
+    .arch-box-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    .arch-box-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+    .arch-box-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .connector-h {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      padding: 0 0.25rem;
+    }
+
+    .endpoint-method {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      min-width: 52px;
+      text-align: center;
+      display: inline-block;
+    }
+    .method-get { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .method-post { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .method-put { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .method-patch { background: rgba(139,92,246,0.15); color: #a78bfa; }
+    .method-delete { background: rgba(239,68,68,0.15); color: #f87171; }
+
+    .tracking-field {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.7rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+    .tracking-field:hover {
+      border-color: rgba(13,148,136,0.3);
+      color: var(--text-primary);
+    }
+
+    .resource-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+    }
+    @media (max-width: 900px) { .resource-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .resource-grid { grid-template-columns: 1fr; } }
+
+    .resource-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .resource-chip-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="breadcrumb">
+        <a href="index.html">System Map</a> <span>&rsaquo;</span> <span>Git Integration</span>
+      </div>
+      <h1>Git Integration</h1>
+      <p class="subtitle">Integracao completa com GitHub para importar e sincronizar resources (skills, agents, rules) de repositorios.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-4 section">
+      <div class="stat-box">
+        <div class="stat-value" data-count="10">10</div>
+        <div class="stat-label">Endpoints</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="3">3</div>
+        <div class="stat-label">Modelos Prisma</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="4">4</div>
+        <div class="stat-label">Resource Types</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="10">10</div>
+        <div class="stat-label">Tracking Fields</div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 1. Visao Geral -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(13,148,136,0.15); color: #2dd4bf;">&#128193;</div>
+        Visao Geral
+      </h2>
+      <div class="card" style="padding: 1.5rem;">
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          O Orquetrador Claude oferece integracao completa com o GitHub, permitindo que usuarios importem e sincronizem <strong>skills</strong>, <strong>agents</strong>, <strong>rules</strong> e <strong>hooks</strong> diretamente de repositorios Git. Cada usuario pode configurar multiplas contas GitHub (pessoal, trabalho), e o sistema rastreia a origem de cada recurso importado para manter sincronizacao bidirecional.
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem;">
+          <span class="badge badge-teal">OAuth / PAT</span>
+          <span class="badge badge-purple">Multi-Account</span>
+          <span class="badge badge-blue">Auto-Sync</span>
+          <span class="badge badge-green">Bulk Import</span>
+          <span class="badge badge-amber">File Manifest</span>
+        </div>
+
+        <!-- Architecture Overview -->
+        <div class="flow-diagram" style="margin-top: 1rem;">
+          <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 1.25rem; color: var(--text-secondary);">Arquitetura de Integracao GitHub</h3>
+          <div style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 0; align-items: center;">
+            <!-- User Layer -->
+            <div class="arch-box">
+              <div class="arch-box-icon">&#128100;</div>
+              <div class="arch-box-title">Usuario</div>
+              <div class="arch-box-desc">Settings / Import Dialogs</div>
+            </div>
+            <div class="connector-h">&rarr;</div>
+            <!-- API Layer -->
+            <div class="arch-box" style="border-color: rgba(13,148,136,0.3);">
+              <div class="arch-box-icon">&#9889;</div>
+              <div class="arch-box-title">API Layer</div>
+              <div class="arch-box-desc">git.routes.ts / git.service.ts</div>
+            </div>
+            <div class="connector-h">&rarr;</div>
+            <!-- GitHub -->
+            <div class="arch-box" style="border-color: rgba(139,92,246,0.3);">
+              <div class="arch-box-icon">&#128025;</div>
+              <div class="arch-box-title">GitHub API</div>
+              <div class="arch-box-desc">REST API v3 + OAuth</div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: center; margin: 0.75rem 0; color: var(--text-muted); font-size: 1.25rem;">&#8595;</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div class="arch-box">
+              <div class="arch-box-icon">&#128451;</div>
+              <div class="arch-box-title">GitAccount</div>
+              <div class="arch-box-desc">Contas conectadas</div>
+            </div>
+            <div class="arch-box">
+              <div class="arch-box-icon">&#128269;</div>
+              <div class="arch-box-title">GitSource</div>
+              <div class="arch-box-desc">Rastreamento centralizado</div>
+            </div>
+            <div class="arch-box">
+              <div class="arch-box-icon">&#128279;</div>
+              <div class="arch-box-title">ProjectGitMapping</div>
+              <div class="arch-box-desc">Mapeamento projeto &rarr; conta</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 2. Modelos Prisma -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#128451;</div>
+        Modelos Prisma
+      </h2>
+
+      <div class="grid-2" style="gap: 1.5rem; margin-bottom: 1.5rem;">
+        <!-- GitAccount -->
+        <div class="model-card">
+          <div class="model-card-header">
+            <span style="font-size: 1.2rem;">&#128451;</span>
+            <div>
+              <div style="font-weight: 700; font-size: 1rem;">GitAccount</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Multiplas contas por usuario</div>
+            </div>
+            <span class="badge badge-purple" style="margin-left: auto;">N:1 User</span>
+          </div>
+          <div class="model-card-body">
+            <div class="field-row">
+              <span class="field-name">id</span>
+              <span class="field-type">String @id</span>
+              <span class="field-desc">UUID</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">userId</span>
+              <span class="field-type">String</span>
+              <span class="field-desc">FK &rarr; User</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">label</span>
+              <span class="field-type">String</span>
+              <span class="field-desc">Ex: "Pessoal", "Trabalho"</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">token</span>
+              <span class="field-type">String</span>
+              <span class="field-desc">GitHub OAuth/PAT (AES encrypted)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">username</span>
+              <span class="field-type">String?</span>
+              <span class="field-desc">GitHub username (cached)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">createdAt</span>
+              <span class="field-type">DateTime</span>
+              <span class="field-desc">Criacao</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">updatedAt</span>
+              <span class="field-type">DateTime</span>
+              <span class="field-desc">Atualizacao</span>
+            </div>
+            <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+              <span class="field-constraint">@@unique([label, userId])</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- GitSource -->
+        <div class="model-card">
+          <div class="model-card-header">
+            <span style="font-size: 1.2rem;">&#128269;</span>
+            <div>
+              <div style="font-weight: 700; font-size: 1rem;">GitSource</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Rastreamento centralizado de origem</div>
+            </div>
+            <span class="badge badge-teal" style="margin-left: auto;">1:1 Resource</span>
+          </div>
+          <div class="model-card-body">
+            <div class="field-row">
+              <span class="field-name">id</span>
+              <span class="field-type">String @id</span>
+              <span class="field-desc">UUID</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">resourceType</span>
+              <span class="field-type">String</span>
+              <span class="field-desc">skill | agent | rule | hook</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">resourceId</span>
+              <span class="field-type">String</span>
+              <span class="field-desc">ID do recurso vinculado</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">repoOwner</span>
+              <span class="field-type">String</span>
+              <span class="field-desc">Dono do repositorio</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">repoName</span>
+              <span class="field-type">String</span>
+              <span class="field-desc">Nome do repositorio</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">repoBranch</span>
+              <span class="field-type">String</span>
+              <span class="field-desc">Branch (default: main)</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">repoPath</span>
+              <span class="field-type">String</span>
+              <span class="field-desc">Caminho no repositorio</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">lastSyncedAt</span>
+              <span class="field-type">DateTime?</span>
+              <span class="field-desc">Ultimo sync</span>
+            </div>
+            <div class="field-row">
+              <span class="field-name">createdAt</span>
+              <span class="field-type">DateTime</span>
+              <span class="field-desc">Criacao</span>
+            </div>
+            <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+              <span class="field-constraint">@@unique([resourceType, resourceId])</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ProjectGitMapping -->
+      <div class="model-card" style="max-width: 600px;">
+        <div class="model-card-header">
+          <span style="font-size: 1.2rem;">&#128279;</span>
+          <div>
+            <div style="font-weight: 700; font-size: 1rem;">ProjectGitMapping</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Mapeia diretorio &rarr; conta Git</div>
+          </div>
+          <span class="badge badge-blue" style="margin-left: auto;">N:1 GitAccount</span>
+        </div>
+        <div class="model-card-body">
+          <div class="field-row">
+            <span class="field-name">id</span>
+            <span class="field-type">String @id</span>
+            <span class="field-desc">UUID</span>
+          </div>
+          <div class="field-row">
+            <span class="field-name">projectPath</span>
+            <span class="field-type">String</span>
+            <span class="field-desc">Caminho do projeto no disco</span>
+          </div>
+          <div class="field-row">
+            <span class="field-name">gitAccountId</span>
+            <span class="field-type">String</span>
+            <span class="field-desc">FK &rarr; GitAccount</span>
+          </div>
+          <div class="field-row">
+            <span class="field-name">createdAt</span>
+            <span class="field-type">DateTime</span>
+            <span class="field-desc">Criacao</span>
+          </div>
+          <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+            <span class="field-constraint">@@unique([projectPath])</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 3. Import Flow -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#128229;</div>
+        Import Flow
+      </h2>
+
+      <div class="flow-diagram">
+        <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 1.25rem; color: var(--text-secondary);">Fluxo de Importacao de Repositorio</h3>
+        <div class="flow-vertical">
+          <div class="flow-step">
+            <div class="step-num step-teal">1</div>
+            <div>
+              <div style="font-weight: 600;">Usuario fornece URL do repositorio</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Via ImportRepoDialog ou import dialog por tipo de recurso</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num step-purple">2</div>
+            <div>
+              <div style="font-weight: 600;">Sistema escaneia o repositorio</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Busca arquivos de skills (.md, .txt), agents (CLAUDE.md), rules e hooks via GitHub API</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num step-blue">3</div>
+            <div>
+              <div style="font-weight: 600;">Cria resources com source='imported'</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Skills, Agents, Rules sao criados no banco com flag de origem</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num step-amber">4</div>
+            <div>
+              <div style="font-weight: 600;">Registra metadata no GitSource</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">repoOwner, repoName, repoBranch, repoPath, lastSyncedAt</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num step-green">5</div>
+            <div>
+              <div style="font-weight: 600;">Cria fileManifest[] para cada recurso</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Lista de arquivos com paths e hashes para deteccao de mudancas</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 4. Sync Flow -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#128260;</div>
+        Sync Flow
+      </h2>
+
+      <div class="flow-diagram">
+        <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 1.25rem; color: var(--text-secondary);">Fluxo de Sincronizacao</h3>
+        <div class="flow-vertical">
+          <div class="flow-step">
+            <div class="step-num step-blue">1</div>
+            <div>
+              <div style="font-weight: 600;">PATCH /resources/:type/:id/sync</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Usuario ou scheduler dispara sincronizacao</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num step-purple">2</div>
+            <div>
+              <div style="font-weight: 600;">Busca GitSource do recurso</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Localiza metadata: repo, branch, path</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num step-teal">3</div>
+            <div>
+              <div style="font-weight: 600;">Fetch latest do GitHub</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Baixa conteudo atualizado via GitHub REST API</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num step-amber">4</div>
+            <div>
+              <div style="font-weight: 600;">Compara com fileManifest</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Detecta diferencas entre versao local e remota</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="step-num step-green">5</div>
+            <div>
+              <div style="font-weight: 600;">Atualiza resource + lastSyncedAt</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">body/content atualizado, manifest renovado, timestamp atualizado</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 5. Bulk Import -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#128230;</div>
+        Bulk Import
+      </h2>
+
+      <div class="grid-2" style="gap: 1.5rem;">
+        <div class="card" style="padding: 1.25rem;">
+          <div class="card-header" style="margin-bottom: 0.75rem;">
+            <div class="card-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#127959;</div>
+            <div>
+              <div class="card-title" style="font-size: 1rem;">POST /import-repo</div>
+              <div style="font-size: 0.8rem; color: var(--text-secondary);">Import completo de repositorio</div>
+            </div>
+          </div>
+          <p class="card-desc" style="font-size: 0.85rem;">
+            Escaneia o repositorio inteiro e importa <strong>todos</strong> os recursos encontrados (skills, agents, rules, hooks). Detecta automaticamente o tipo de cada arquivo.
+          </p>
+          <div class="code-block" style="margin-top: 0.75rem; font-size: 0.8rem;">
+<span class="keyword">POST</span> /api/git/import-repo
+{
+  <span class="string">"repoUrl"</span>: <span class="string">"https://github.com/user/repo"</span>,
+  <span class="string">"branch"</span>: <span class="string">"main"</span>,
+  <span class="string">"gitAccountId"</span>: <span class="string">"acc_123..."</span>
+}
+          </div>
+        </div>
+
+        <div class="card" style="padding: 1.25rem;">
+          <div class="card-header" style="margin-bottom: 0.75rem;">
+            <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#128218;</div>
+            <div>
+              <div class="card-title" style="font-size: 1rem;">Bulk Import por Tipo</div>
+              <div style="font-size: 0.8rem; color: var(--text-secondary);">Endpoints especificos por recurso</div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="endpoint-method method-post">POST</span>
+              <code style="font-size: 0.8rem; color: var(--text-primary);">/api/skills/bulk-import</code>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="endpoint-method method-post">POST</span>
+              <code style="font-size: 0.8rem; color: var(--text-primary);">/api/agents/bulk-import</code>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="endpoint-method method-post">POST</span>
+              <code style="font-size: 0.8rem; color: var(--text-primary);">/api/rules/bulk-import</code>
+            </div>
+          </div>
+          <p class="card-desc" style="font-size: 0.8rem; margin-top: 0.75rem;">
+            Cada endpoint importa apenas o tipo especifico de recurso, filtrando os arquivos relevantes do repositorio.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 6. Endpoints -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(13,148,136,0.15); color: #2dd4bf;">&#128268;</div>
+        API Endpoints (10)
+      </h2>
+
+      <div class="table-container">
+        <table id="endpoints-table">
+          <thead>
+            <tr>
+              <th>Metodo</th>
+              <th>Rota</th>
+              <th>Descricao</th>
+              <th>Auth</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="endpoint-method method-put">PUT</span></td>
+              <td><code>/api/auth/github</code></td>
+              <td>Configura token GitHub (OAuth/PAT)</td>
+              <td><span class="badge badge-teal">JWT</span></td>
+            </tr>
+            <tr>
+              <td><span class="endpoint-method method-delete">DELETE</span></td>
+              <td><code>/api/auth/github</code></td>
+              <td>Remove token GitHub</td>
+              <td><span class="badge badge-teal">JWT</span></td>
+            </tr>
+            <tr>
+              <td><span class="endpoint-method method-get">GET</span></td>
+              <td><code>/api/git-accounts</code></td>
+              <td>Lista contas GitHub conectadas</td>
+              <td><span class="badge badge-teal">JWT</span></td>
+            </tr>
+            <tr>
+              <td><span class="endpoint-method method-get">GET</span></td>
+              <td><code>/api/git-sources</code></td>
+              <td>Lista recursos com origem Git</td>
+              <td><span class="badge badge-teal">JWT</span></td>
+            </tr>
+            <tr>
+              <td><span class="endpoint-method method-post">POST</span></td>
+              <td><code>/api/git-sources/:id/sync</code></td>
+              <td>Dispara sync manual de um recurso</td>
+              <td><span class="badge badge-teal">JWT</span></td>
+            </tr>
+            <tr>
+              <td><span class="endpoint-method method-put">PUT</span></td>
+              <td><code>/api/git-sources/:id</code></td>
+              <td>Atualiza metadata do git source</td>
+              <td><span class="badge badge-teal">JWT</span></td>
+            </tr>
+            <tr>
+              <td><span class="endpoint-method method-delete">DELETE</span></td>
+              <td><code>/api/git-sources/:id</code></td>
+              <td>Remove rastreamento git de um recurso</td>
+              <td><span class="badge badge-teal">JWT</span></td>
+            </tr>
+            <tr>
+              <td><span class="endpoint-method method-get">GET</span></td>
+              <td><code>/api/repos/:owner/:name/branches</code></td>
+              <td>Lista branches de um repositorio</td>
+              <td><span class="badge badge-teal">JWT</span></td>
+            </tr>
+            <tr>
+              <td><span class="endpoint-method method-post">POST</span></td>
+              <td><code>/api/repos/:owner/:name/files</code></td>
+              <td>Lista/busca arquivos no repositorio</td>
+              <td><span class="badge badge-teal">JWT</span></td>
+            </tr>
+            <tr>
+              <td><span class="endpoint-method method-post">POST</span></td>
+              <td><code>/api/repos</code></td>
+              <td>Busca repositorios do usuario</td>
+              <td><span class="badge badge-teal">JWT</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sync endpoint detail -->
+      <div class="accordion-item" style="margin-top: 1.5rem;">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="endpoint-method method-post">POST</span>
+            <span style="font-weight: 600;">/api/repos/:owner/:name/sync</span>
+            <span class="badge badge-amber">Bonus</span>
+          </div>
+          <span class="accordion-arrow">&#9660;</span>
+        </div>
+        <div class="accordion-body">
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            Sincroniza <strong>todos</strong> os recursos importados de um repositorio especifico. Itera sobre todos os GitSource vinculados a esse repo e executa o sync de cada um.
+          </p>
+          <div class="code-block" style="font-size: 0.8rem;">
+<span class="comment">// Request</span>
+<span class="keyword">POST</span> /api/repos/myuser/my-skills/sync
+<span class="comment">// Response</span>
+{
+  <span class="string">"synced"</span>: <span class="number">5</span>,
+  <span class="string">"failed"</span>: <span class="number">0</span>,
+  <span class="string">"skipped"</span>: <span class="number">1</span>,
+  <span class="string">"details"</span>: [...]
+}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 7. GitHub Tracking Fields -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#128278;</div>
+        GitHub Tracking Fields
+      </h2>
+
+      <div class="card" style="padding: 1.5rem;">
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          Campos adicionados diretamente nos modelos <strong>Skill</strong>, <strong>Agent</strong>, <strong>Rule</strong> e <strong>Hook</strong> para rastreamento de origem Git. Esses campos sao preenchidos durante o import e atualizados durante o sync.
+        </p>
+
+        <!-- Resource types that have these fields -->
+        <div class="resource-grid" style="margin-bottom: 1.25rem;">
+          <div class="resource-chip">
+            <div class="resource-chip-icon" style="background: rgba(13,148,136,0.15); color: #2dd4bf;">&#129504;</div>
+            <span>Skill</span>
+          </div>
+          <div class="resource-chip">
+            <div class="resource-chip-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#129302;</div>
+            <span>Agent</span>
+          </div>
+          <div class="resource-chip">
+            <div class="resource-chip-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#128208;</div>
+            <span>Rule</span>
+          </div>
+          <div class="resource-chip">
+            <div class="resource-chip-icon" style="background: rgba(239,68,68,0.15); color: #f87171;">&#128295;</div>
+            <span>Hook</span>
+          </div>
+        </div>
+
+        <!-- Fields list -->
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem;">
+          <span class="tracking-field">&#128279; repoUrl</span>
+          <span class="tracking-field">&#128100; repoOwner</span>
+          <span class="tracking-field">&#128193; repoName</span>
+          <span class="tracking-field">&#127795; repoBranch</span>
+          <span class="tracking-field">&#128196; repoPath</span>
+          <span class="tracking-field">&#128203; fileManifest[]</span>
+          <span class="tracking-field">&#128339; lastSyncedAt</span>
+          <span class="tracking-field">&#128279; source</span>
+          <span class="tracking-field">&#128273; gitAccountId</span>
+          <span class="tracking-field">&#128218; gitSourceId</span>
+        </div>
+
+        <!-- Schema example -->
+        <div class="code-block" style="font-size: 0.8rem;">
+<span class="comment">// Prisma schema — campos Git em Skill (mesmo padrao em Agent, Rule, Hook)</span>
+<span class="keyword">model</span> <span class="type">Skill</span> {
+  id            <span class="type">String</span>   <span class="keyword">@id</span> <span class="keyword">@default</span>(<span class="keyword">uuid</span>())
+  <span class="comment">// ... campos normais ...</span>
+  source        <span class="type">String</span>?  <span class="comment">// 'manual' | 'imported'</span>
+  repoUrl       <span class="type">String</span>?
+  repoOwner     <span class="type">String</span>?
+  repoName      <span class="type">String</span>?
+  repoBranch    <span class="type">String</span>?  <span class="keyword">@default</span>(<span class="string">"main"</span>)
+  repoPath      <span class="type">String</span>?
+  fileManifest  <span class="type">Json</span>?   <span class="comment">// [{ path, sha, size }]</span>
+  lastSyncedAt  <span class="type">DateTime</span>?
+  gitAccount    <span class="type">GitAccount</span>? <span class="keyword">@relation</span>(<span class="string">fields: [gitAccountId]</span>)
+  gitAccountId  <span class="type">String</span>?
+  gitSource     <span class="type">GitSource</span>? <span class="keyword">@relation</span>(<span class="string">fields: [gitSourceId]</span>)
+  gitSourceId   <span class="type">String</span>?
+}
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 8. Frontend -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#128421;</div>
+        Frontend
+      </h2>
+
+      <div class="grid-3" style="gap: 1.5rem;">
+        <!-- Settings Page -->
+        <div class="card" style="padding: 1.25rem;">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(13,148,136,0.15); color: #2dd4bf;">&#9881;</div>
+            <div class="card-title" style="font-size: 0.95rem;">Settings &mdash; Git</div>
+          </div>
+          <p class="card-desc" style="font-size: 0.85rem;">
+            Pagina de configuracao onde o usuario gerencia contas GitHub conectadas. Permite adicionar/remover tokens, renomear labels e ver status de conexao.
+          </p>
+          <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+            <span class="badge badge-gray">GitAccountList</span>
+            <span class="badge badge-gray">AddAccountDialog</span>
+            <span class="badge badge-gray">TokenInput</span>
+          </div>
+        </div>
+
+        <!-- ImportRepoDialog -->
+        <div class="card" style="padding: 1.25rem;">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#128229;</div>
+            <div class="card-title" style="font-size: 0.95rem;">ImportRepoDialog</div>
+          </div>
+          <p class="card-desc" style="font-size: 0.85rem;">
+            Componente compartilhado (shared) usado em todas as paginas de recurso. Permite colar URL do repo, selecionar branch, pre-visualizar arquivos e importar.
+          </p>
+          <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+            <span class="badge badge-gray">RepoUrlInput</span>
+            <span class="badge badge-gray">BranchSelector</span>
+            <span class="badge badge-gray">FilePreview</span>
+          </div>
+        </div>
+
+        <!-- Per-Resource Dialogs -->
+        <div class="card" style="padding: 1.25rem;">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#128218;</div>
+            <div class="card-title" style="font-size: 0.95rem;">Import por Tipo</div>
+          </div>
+          <p class="card-desc" style="font-size: 0.85rem;">
+            Cada pagina de recurso (Skills, Agents, Rules) tem seu proprio botao de import que abre o ImportRepoDialog filtrado para o tipo especifico.
+          </p>
+          <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+            <span class="badge badge-teal">ImportSkillDialog</span>
+            <span class="badge badge-blue">ImportAgentDialog</span>
+            <span class="badge badge-amber">ImportRuleDialog</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frontend flow -->
+      <div class="flow-diagram" style="margin-top: 1.5rem;">
+        <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-secondary);">Fluxo do Usuario no Frontend</h3>
+        <div class="flow-container" style="justify-content: center;">
+          <div class="flow-node" style="border-color: rgba(13,148,136,0.3);">
+            <span>&#9881;</span> Settings: Add Account
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-node" style="border-color: rgba(139,92,246,0.3);">
+            <span>&#128218;</span> Resource Page
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-node" style="border-color: rgba(59,130,246,0.3);">
+            <span>&#128229;</span> Import Dialog
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-node" style="border-color: rgba(245,158,11,0.3);">
+            <span>&#128269;</span> Scan Repo
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div class="flow-node" style="border-color: rgba(34,197,94,0.3);">
+            <span>&#9989;</span> Import
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 0.5rem;">
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Apos import, o recurso aparece com badge "imported" e botao "Sync" na listagem</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 9. Seguranca -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(239,68,68,0.15); color: #f87171;">&#128274;</div>
+        Seguranca
+      </h2>
+
+      <div class="grid-2" style="gap: 1.5rem;">
+        <div class="card" style="padding: 1.25rem;">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#128272;</div>
+            <div class="card-title" style="font-size: 0.95rem;">Token Encryption</div>
+          </div>
+          <p class="card-desc" style="font-size: 0.85rem; margin-bottom: 0.5rem;">
+            Tokens GitHub sao criptografados com <strong>AES-256-CBC</strong> antes de salvar no banco. A chave de criptografia vem da env <code>ENCRYPTION_KEY</code>.
+          </p>
+          <div class="code-block" style="font-size: 0.78rem;">
+<span class="comment">// git.routes.ts</span>
+<span class="keyword">const</span> encryptedToken = <span class="type">encrypt</span>(token);
+<span class="keyword">await</span> prisma.gitAccount.create({
+  data: { token: encryptedToken, ... }
+});
+
+<span class="comment">// Na leitura</span>
+<span class="keyword">const</span> token = <span class="type">decrypt</span>(account.token);
+          </div>
+        </div>
+
+        <div class="card" style="padding: 1.25rem;">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(13,148,136,0.15); color: #2dd4bf;">&#128737;</div>
+            <div class="card-title" style="font-size: 0.95rem;">Ownership & Isolation</div>
+          </div>
+          <p class="card-desc" style="font-size: 0.85rem;">
+            Todas as queries Git filtram por <code>userId</code>. Um usuario so ve e sincroniza recursos vinculados as suas contas. Operacoes de update/delete verificam ownership em transacao antes de executar.
+          </p>
+          <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+            <span class="badge badge-green">userId filter</span>
+            <span class="badge badge-teal">$transaction ownership</span>
+            <span class="badge badge-purple">AES encrypt/decrypt</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 10. Relacionamentos -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#128279;</div>
+        Relacionamentos entre Modelos
+      </h2>
+
+      <div class="flow-diagram">
+        <h3 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 1.25rem; color: var(--text-secondary);">Diagrama de Relacionamentos</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+          <!-- Row 1: User -> GitAccount -->
+          <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+            <div class="diagram-box" style="border-color: rgba(59,130,246,0.3);">
+              <span>&#128100;</span> <strong>User</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.25rem;">
+              <div class="diagram-connector"></div>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">1:N</span>
+              <div class="diagram-connector"></div>
+            </div>
+            <div class="diagram-box" style="border-color: rgba(139,92,246,0.3);">
+              <span>&#128451;</span> <strong>GitAccount</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.25rem;">
+              <div class="diagram-connector"></div>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">1:N</span>
+              <div class="diagram-connector"></div>
+            </div>
+            <div class="diagram-box" style="border-color: rgba(245,158,11,0.3);">
+              <span>&#128279;</span> <strong>ProjectGitMapping</strong>
+            </div>
+          </div>
+
+          <!-- Row 2: GitSource -> Resources -->
+          <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+            <div class="diagram-box" style="border-color: rgba(13,148,136,0.3);">
+              <span>&#128269;</span> <strong>GitSource</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.25rem;">
+              <div class="diagram-connector"></div>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">1:1</span>
+              <div class="diagram-connector"></div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <div class="diagram-box" style="border-color: rgba(13,148,136,0.2);">&#129504; Skill</div>
+              <div class="diagram-box" style="border-color: rgba(59,130,246,0.2);">&#129302; Agent</div>
+              <div class="diagram-box" style="border-color: rgba(245,158,11,0.2);">&#128208; Rule</div>
+              <div class="diagram-box" style="border-color: rgba(239,68,68,0.2);">&#128295; Hook</div>
+            </div>
+          </div>
+
+          <!-- Row 3: GitAccount -> Resources -->
+          <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+            <div class="diagram-box" style="border-color: rgba(139,92,246,0.3);">
+              <span>&#128451;</span> <strong>GitAccount</strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.25rem;">
+              <div class="diagram-connector"></div>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">1:N</span>
+              <div class="diagram-connector"></div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <div class="diagram-box" style="border-color: rgba(13,148,136,0.2);">&#129504; Skill</div>
+              <div class="diagram-box" style="border-color: rgba(59,130,246,0.2);">&#129302; Agent</div>
+              <div class="diagram-box" style="border-color: rgba(245,158,11,0.2);">&#128208; Rule</div>
+              <div class="diagram-box" style="border-color: rgba(239,68,68,0.2);">&#128295; Hook</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== -->
+    <!-- 11. fileManifest Detail -->
+    <!-- ===================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#128203;</div>
+        File Manifest
+      </h2>
+
+      <div class="card" style="padding: 1.5rem;">
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          O <code>fileManifest</code> e um array JSON armazenado em cada recurso importado. Ele registra todos os arquivos que compoem o recurso, permitindo deteccao precisa de mudancas durante o sync.
+        </p>
+        <div class="code-block" style="font-size: 0.8rem;">
+<span class="comment">// Exemplo de fileManifest para uma Skill importada</span>
+[
+  {
+    <span class="string">"path"</span>: <span class="string">"skills/code-review.md"</span>,
+    <span class="string">"sha"</span>: <span class="string">"a1b2c3d4e5f6..."</span>,
+    <span class="string">"size"</span>: <span class="number">2048</span>,
+    <span class="string">"type"</span>: <span class="string">"file"</span>
+  },
+  {
+    <span class="string">"path"</span>: <span class="string">"skills/code-review-examples/"</span>,
+    <span class="string">"sha"</span>: <span class="string">"f6e5d4c3b2a1..."</span>,
+    <span class="string">"size"</span>: <span class="number">0</span>,
+    <span class="string">"type"</span>: <span class="string">"dir"</span>
+  }
+]
+
+<span class="comment">// Comparacao durante sync:</span>
+<span class="comment">// 1. Fetch current SHA de cada arquivo via GitHub API</span>
+<span class="comment">// 2. Compara com SHA armazenado no manifest</span>
+<span class="comment">// 3. Se diferente → atualiza conteudo + SHA</span>
+<span class="comment">// 4. Se igual → skip (nenhuma mudanca)</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="shared.js"></script>
+</body>
+</html>
