@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>24 - Admin | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Role matrix */
+    .role-matrix th.role-col {
+      text-align: center;
+      min-width: 100px;
+    }
+    .role-matrix td.check {
+      text-align: center;
+      font-size: 1.1rem;
+    }
+    .check-yes { color: #4ade80; }
+    .check-no { color: #475569; }
+
+    /* Audit flow */
+    .audit-flow {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      padding: 1.5rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+    }
+    .audit-flow .step {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    .audit-flow .step:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+    }
+    .audit-flow .arrow {
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    /* Admin mockup */
+    .mockup-frame {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .mockup-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .mockup-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .mockup-body {
+      padding: 1.25rem;
+    }
+    .mockup-sidebar {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 1rem;
+      min-height: 320px;
+    }
+    .mockup-nav {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 0.75rem;
+      border: 1px solid var(--border-color);
+    }
+    .mockup-nav-item {
+      padding: 0.45rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+    .mockup-nav-item.active {
+      background: var(--bg-accent-subtle);
+      color: var(--text-accent);
+    }
+    .mockup-nav-item.admin-section {
+      border-top: 1px solid var(--border-color);
+      margin-top: 0.5rem;
+      padding-top: 0.6rem;
+      color: #fbbf24;
+    }
+    .mockup-content {
+      background: var(--bg-card);
+      border-radius: 8px;
+      padding: 1rem;
+      border: 1px solid var(--border-color);
+    }
+    .mockup-user-row {
+      display: grid;
+      grid-template-columns: 1fr 120px 90px 60px;
+      gap: 0.5rem;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.78rem;
+    }
+    .mockup-user-row:last-child { border-bottom: none; }
+    .mockup-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .mockup-badge-admin { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .mockup-badge-dev { background: rgba(139,92,246,0.15); color: #a78bfa; }
+    .mockup-badge-viewer { background: rgba(100,116,139,0.15); color: #94a3b8; }
+    .mockup-badge-active { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .mockup-badge-suspended { background: rgba(239,68,68,0.15); color: #f87171; }
+    .mockup-btn {
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .mockup-btn-danger {
+      border-color: rgba(239,68,68,0.3);
+      color: #f87171;
+    }
+
+    /* Audit log model */
+    .model-field {
+      display: grid;
+      grid-template-columns: 140px 100px 1fr;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.85rem;
+    }
+    .model-field:last-child { border-bottom: none; }
+    .field-name { color: var(--text-accent); font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+    .field-type { color: #c084fc; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+    .field-desc { color: var(--text-secondary); }
+
+    /* User model */
+    .user-model-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+    .user-field-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem;
+    }
+    .user-field-card .fname {
+      color: var(--text-accent);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 500;
+    }
+    .user-field-card .ftype {
+      color: #c084fc;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      margin-top: 0.15rem;
+    }
+    .user-field-card .fdesc {
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      margin-top: 0.35rem;
+    }
+
+    /* Sidebar visibility indicator */
+    .sidebar-demo {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .sidebar-panel {
+      flex: 1;
+      min-width: 200px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .sidebar-panel h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .sidebar-panel .item {
+      padding: 0.35rem 0.5rem;
+      font-size: 0.78rem;
+      border-radius: 4px;
+      margin-bottom: 0.2rem;
+      color: var(--text-secondary);
+    }
+    .sidebar-panel .item.visible { color: var(--text-primary); }
+    .sidebar-panel .item.hidden { color: var(--text-muted); text-decoration: line-through; opacity: 0.4; }
+    .sidebar-panel .item.admin-item { color: #fbbf24; }
+
+    @media (max-width: 768px) {
+      .mockup-sidebar { grid-template-columns: 1fr; }
+      .model-field { grid-template-columns: 1fr; gap: 0.25rem; }
+      .mockup-user-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <script src="shared.js"></script>
+
+  <div class="page-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div class="breadcrumb">
+        <a href="index.html">System Map</a>
+        <span>›</span>
+        <span>24 - Admin</span>
+      </div>
+      <h1>Admin</h1>
+      <p class="subtitle">Gerenciamento de usuarios, audit logging e supervisao do sistema. Acesso restrito ao role <code>admin</code>.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-4 section">
+      <div class="stat-box">
+        <div class="stat-value">3</div>
+        <div class="stat-label">Roles</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">5</div>
+        <div class="stat-label">Endpoints</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">5</div>
+        <div class="stat-label">Acoes Auditadas</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">10</div>
+        <div class="stat-label">Campos AuditLog</div>
+      </div>
+    </div>
+
+    <!-- 1. Visao Geral -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(251,191,36,0.15);">&#128081;</div>
+        Visao Geral
+      </h2>
+      <div class="card">
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          O modulo Admin centraliza funcionalidades administrativas do Orquetrador Claude: gerenciamento de usuarios (criar, editar role, deletar), visualizacao de audit logs e configuracao do sistema. Todas as rotas sao protegidas por middleware de verificacao de role <code>admin</code>.
+        </p>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <span class="badge badge-amber">&#128081; Admin Only</span>
+          <span class="badge badge-teal">&#128274; Role Middleware</span>
+          <span class="badge badge-purple">&#128203; Audit Trail</span>
+          <span class="badge badge-blue">&#128101; User Management</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. User Management Endpoints -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(59,130,246,0.15);">&#128101;</div>
+        User Management - Endpoints
+      </h2>
+
+      <div class="table-container" style="margin-bottom: 1.5rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Metodo</th>
+              <th>Rota</th>
+              <th>Descricao</th>
+              <th>Auth</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/admin/users</code></td>
+              <td>Lista todos os usuarios (paginado)</td>
+              <td><span class="badge badge-amber">admin</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">PUT</span></td>
+              <td><code>/admin/users/:id/role</code></td>
+              <td>Altera role do usuario (admin, developer, viewer)</td>
+              <td><span class="badge badge-amber">admin</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-red">DELETE</span></td>
+              <td><code>/admin/users/:id</code></td>
+              <td>Remove usuario do sistema</td>
+              <td><span class="badge badge-amber">admin</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Request/Response examples -->
+      <div class="grid-2" style="margin-bottom: 1.5rem;">
+        <div class="card">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">PUT /admin/users/:id/role</h3>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Request Body</p>
+          <div class="code-block"><pre>{
+  <span class="string">"role"</span>: <span class="string">"developer"</span>  <span class="comment">// "admin" | "developer" | "viewer"</span>
+}</pre></div>
+        </div>
+        <div class="card">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">DELETE /admin/users/:id</h3>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem;">Response 200</p>
+          <div class="code-block"><pre>{
+  <span class="string">"message"</span>: <span class="string">"User deleted successfully"</span>,
+  <span class="string">"userId"</span>: <span class="string">"clx..."</span>
+}</pre></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Role Comparison Matrix -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.15);">&#128272;</div>
+        Matriz de Permissoes por Role
+      </h2>
+
+      <div class="table-container role-matrix">
+        <table>
+          <thead>
+            <tr>
+              <th>Permissao</th>
+              <th class="role-col"><span class="badge badge-amber">&#128081; admin</span></th>
+              <th class="role-col"><span class="badge badge-purple">&#128187; developer</span></th>
+              <th class="role-col"><span class="badge badge-gray">&#128065; viewer</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>View dashboards</td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+            </tr>
+            <tr>
+              <td>Create workflows</td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-no">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>Execute workflows</td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-no">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>Manage resources</td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-no">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>User management</td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-no">&#10007;</span></td>
+              <td class="check"><span class="check-no">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>Audit logs</td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-no">&#10007;</span></td>
+              <td class="check"><span class="check-no">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>System settings</td>
+              <td class="check"><span class="check-yes">&#10003;</span></td>
+              <td class="check"><span class="check-no">&#10007;</span></td>
+              <td class="check"><span class="check-no">&#10007;</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 4. Audit Log System -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(13,148,136,0.15);">&#128203;</div>
+        Audit Log System
+      </h2>
+
+      <p class="card-desc" style="margin-bottom: 1.5rem;">
+        Toda acao relevante no sistema gera um registro de auditoria. O modelo <code>AuditLog</code> captura quem fez, o que fez, em qual recurso, e o diff (before/after) da alteracao.
+      </p>
+
+      <!-- AuditLog Model -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 class="card-title" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span style="color: var(--text-accent);">AuditLog</span> Model
+        </h3>
+        <div class="model-field" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.25rem; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
+          <span>Campo</span><span>Tipo</span><span>Descricao</span>
+        </div>
+        <div class="model-field">
+          <span class="field-name">id</span>
+          <span class="field-type">String</span>
+          <span class="field-desc">CUID, primary key</span>
+        </div>
+        <div class="model-field">
+          <span class="field-name">userId</span>
+          <span class="field-type">String</span>
+          <span class="field-desc">FK para User - quem executou a acao</span>
+        </div>
+        <div class="model-field">
+          <span class="field-name">action</span>
+          <span class="field-type">String</span>
+          <span class="field-desc">create | update | delete | execute | login</span>
+        </div>
+        <div class="model-field">
+          <span class="field-name">resourceType</span>
+          <span class="field-type">ResourceType</span>
+          <span class="field-desc">Enum: workflow, skill, agent, plugin, etc.</span>
+        </div>
+        <div class="model-field">
+          <span class="field-name">resourceId</span>
+          <span class="field-type">String?</span>
+          <span class="field-desc">ID do recurso afetado (opcional para login)</span>
+        </div>
+        <div class="model-field">
+          <span class="field-name">resourceName</span>
+          <span class="field-type">String?</span>
+          <span class="field-desc">Nome legivel do recurso</span>
+        </div>
+        <div class="model-field">
+          <span class="field-name">diff</span>
+          <span class="field-type">Json?</span>
+          <span class="field-desc">{ before: {...}, after: {...} }</span>
+        </div>
+        <div class="model-field">
+          <span class="field-name">metadata</span>
+          <span class="field-type">Json?</span>
+          <span class="field-desc">Dados adicionais (IP, user-agent, etc.)</span>
+        </div>
+        <div class="model-field">
+          <span class="field-name">ipAddress</span>
+          <span class="field-type">String?</span>
+          <span class="field-desc">Endereco IP da requisicao</span>
+        </div>
+        <div class="model-field">
+          <span class="field-name">createdAt</span>
+          <span class="field-type">DateTime</span>
+          <span class="field-desc">Timestamp da acao</span>
+        </div>
+      </div>
+
+      <!-- Actions tracked -->
+      <div class="grid-2" style="margin-bottom: 1.5rem;">
+        <div class="card">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Acoes Rastreadas</h3>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <span class="badge badge-green">create</span>
+            <span class="badge badge-blue">update</span>
+            <span class="badge badge-red">delete</span>
+            <span class="badge badge-purple">execute</span>
+            <span class="badge badge-teal">login</span>
+          </div>
+          <p class="card-desc" style="margin-top: 0.75rem; font-size: 0.82rem;">
+            Cada acao gera um <code>AuditLog</code> automaticamente via middleware ou chamada direta no service layer.
+          </p>
+        </div>
+        <div class="card">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Resource Types</h3>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+            <span class="badge badge-gray">workflow</span>
+            <span class="badge badge-gray">skill</span>
+            <span class="badge badge-gray">agent</span>
+            <span class="badge badge-gray">plugin</span>
+            <span class="badge badge-gray">hook</span>
+            <span class="badge badge-gray">rule</span>
+            <span class="badge badge-gray">mcpServer</span>
+            <span class="badge badge-gray">conversation</span>
+            <span class="badge badge-gray">execution</span>
+            <span class="badge badge-gray">webhook</span>
+            <span class="badge badge-gray">trigger</span>
+            <span class="badge badge-gray">user</span>
+            <span class="badge badge-gray">tag</span>
+            <span class="badge badge-gray">gitSource</span>
+          </div>
+          <p class="card-desc" style="margin-top: 0.75rem; font-size: 0.82rem;">
+            Todos os valores do enum <code>ResourceType</code> do Prisma.
+          </p>
+        </div>
+      </div>
+
+      <!-- Audit Flow Diagram -->
+      <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--text-primary);">Fluxo de Auditoria</h3>
+      <div class="audit-flow" style="margin-bottom: 1.5rem;">
+        <div class="step">&#128100; User Action</div>
+        <span class="arrow">&#8594;</span>
+        <div class="step" style="border-color: rgba(13,148,136,0.3);">&#128274; Auth Middleware</div>
+        <span class="arrow">&#8594;</span>
+        <div class="step" style="border-color: rgba(139,92,246,0.3);">&#9881; Service Layer</div>
+        <span class="arrow">&#8594;</span>
+        <div class="step" style="border-color: rgba(245,158,11,0.3);">&#128203; AuditLog.create()</div>
+        <span class="arrow">&#8594;</span>
+        <div class="step" style="border-color: rgba(59,130,246,0.3);">&#128451; PostgreSQL</div>
+      </div>
+
+      <!-- Diff example -->
+      <div class="card">
+        <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Exemplo de Diff (role change)</h3>
+        <div class="code-block"><pre>{
+  <span class="string">"action"</span>: <span class="string">"update"</span>,
+  <span class="string">"resourceType"</span>: <span class="string">"user"</span>,
+  <span class="string">"resourceId"</span>: <span class="string">"clx1abc..."</span>,
+  <span class="string">"resourceName"</span>: <span class="string">"joao@exemplo.com"</span>,
+  <span class="string">"diff"</span>: {
+    <span class="string">"before"</span>: { <span class="string">"role"</span>: <span class="string">"viewer"</span> },
+    <span class="string">"after"</span>: { <span class="string">"role"</span>: <span class="string">"developer"</span> }
+  },
+  <span class="string">"ipAddress"</span>: <span class="string">"192.168.1.100"</span>
+}</pre></div>
+      </div>
+    </div>
+
+    <!-- 5. Audit Log Endpoints -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(59,130,246,0.15);">&#128269;</div>
+        Audit Log - Endpoints
+      </h2>
+
+      <div class="table-container" style="margin-bottom: 1.5rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Metodo</th>
+              <th>Rota</th>
+              <th>Descricao</th>
+              <th>Auth</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/admin/audit-logs</code></td>
+              <td>Lista audit logs (paginado, filtravel por action, resourceType, userId, dateRange)</td>
+              <td><span class="badge badge-amber">admin</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/admin/audit-logs/:id</code></td>
+              <td>Detalhe de um audit log especifico (com diff completo)</td>
+              <td><span class="badge badge-amber">admin</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Query Parameters (list)</h3>
+          <div class="code-block"><pre>GET /admin/audit-logs
+  ?page=<span class="number">1</span>
+  &limit=<span class="number">20</span>
+  &action=<span class="string">update</span>
+  &resourceType=<span class="string">workflow</span>
+  &userId=<span class="string">clx...</span>
+  &startDate=<span class="string">2026-03-01</span>
+  &endDate=<span class="string">2026-03-24</span></pre></div>
+        </div>
+        <div class="card">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Response (list)</h3>
+          <div class="code-block"><pre>{
+  <span class="string">"data"</span>: [
+    {
+      <span class="string">"id"</span>: <span class="string">"clx..."</span>,
+      <span class="string">"action"</span>: <span class="string">"update"</span>,
+      <span class="string">"resourceType"</span>: <span class="string">"user"</span>,
+      <span class="string">"resourceName"</span>: <span class="string">"joao@ex.com"</span>,
+      <span class="string">"createdAt"</span>: <span class="string">"2026-03-24T..."</span>,
+      <span class="string">"user"</span>: { <span class="string">"name"</span>: <span class="string">"Admin"</span> }
+    }
+  ],
+  <span class="string">"total"</span>: <span class="number">142</span>,
+  <span class="string">"page"</span>: <span class="number">1</span>,
+  <span class="string">"limit"</span>: <span class="number">20</span>
+}</pre></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Frontend - Admin Dashboard Mockup -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.15);">&#128421;</div>
+        Frontend - Admin Dashboard
+      </h2>
+
+      <p class="card-desc" style="margin-bottom: 1.25rem;">
+        Pagina <code>/admin/users</code> com rota protegida (admin-only). Renderizacao condicional via hook <code>useRole()</code>. Componentes: tabela de usuarios, badges de role, dropdown de alteracao de role, dialog de confirmacao de delete.
+      </p>
+
+      <!-- Mockup -->
+      <div class="mockup-frame" style="margin-bottom: 1.5rem;">
+        <div class="mockup-titlebar">
+          <div class="mockup-dot" style="background: #f87171;"></div>
+          <div class="mockup-dot" style="background: #fbbf24;"></div>
+          <div class="mockup-dot" style="background: #4ade80;"></div>
+          <span style="margin-left: 0.75rem; font-size: 0.78rem; color: var(--text-muted);">https://orquestrador.ddw1sl.easypanel.host/admin/users</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-sidebar">
+            <!-- Nav -->
+            <div class="mockup-nav">
+              <div class="mockup-nav-item">&#128202; Dashboard</div>
+              <div class="mockup-nav-item">&#128221; Workflows</div>
+              <div class="mockup-nav-item">&#128488; Conversations</div>
+              <div class="mockup-nav-item">&#129504; Skills</div>
+              <div class="mockup-nav-item">&#129302; Agents</div>
+              <div class="mockup-nav-item admin-section active">&#128081; Users</div>
+              <div class="mockup-nav-item" style="color: #fbbf24;">&#128203; Audit Logs</div>
+              <div class="mockup-nav-item" style="color: #fbbf24;">&#9881; Settings</div>
+            </div>
+            <!-- Content -->
+            <div class="mockup-content">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <span style="font-weight: 600; font-size: 0.9rem;">Usuarios</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">4 usuarios</span>
+              </div>
+              <!-- Header -->
+              <div class="mockup-user-row" style="font-weight: 600; font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">
+                <span>Email</span>
+                <span>Role</span>
+                <span>Status</span>
+                <span></span>
+              </div>
+              <!-- Users -->
+              <div class="mockup-user-row">
+                <span style="color: var(--text-primary);">admin@orq.com</span>
+                <span><span class="mockup-badge mockup-badge-admin">admin</span></span>
+                <span><span class="mockup-badge mockup-badge-active">active</span></span>
+                <span></span>
+              </div>
+              <div class="mockup-user-row">
+                <span style="color: var(--text-primary);">dev@orq.com</span>
+                <span><span class="mockup-badge mockup-badge-dev">developer</span></span>
+                <span><span class="mockup-badge mockup-badge-active">active</span></span>
+                <span><span class="mockup-btn mockup-btn-danger">&#128465;</span></span>
+              </div>
+              <div class="mockup-user-row">
+                <span style="color: var(--text-primary);">joao@orq.com</span>
+                <span><span class="mockup-badge mockup-badge-viewer">viewer</span></span>
+                <span><span class="mockup-badge mockup-badge-active">active</span></span>
+                <span><span class="mockup-btn mockup-btn-danger">&#128465;</span></span>
+              </div>
+              <div class="mockup-user-row">
+                <span style="color: var(--text-secondary);">maria@orq.com</span>
+                <span><span class="mockup-badge mockup-badge-dev">developer</span></span>
+                <span><span class="mockup-badge mockup-badge-suspended">suspended</span></span>
+                <span><span class="mockup-btn mockup-btn-danger">&#128465;</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Frontend components -->
+      <div class="grid-2">
+        <div class="card">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Componentes</h3>
+          <div style="font-size: 0.85rem; line-height: 2;">
+            <div><code style="color: var(--text-accent);">AdminUsersPage</code> <span class="badge badge-gray">page</span></div>
+            <div><code style="color: var(--text-accent);">UserTable</code> <span class="badge badge-gray">component</span></div>
+            <div><code style="color: var(--text-accent);">RoleBadge</code> <span class="badge badge-gray">ui</span></div>
+            <div><code style="color: var(--text-accent);">RoleChangeDropdown</code> <span class="badge badge-gray">component</span></div>
+            <div><code style="color: var(--text-accent);">DeleteUserDialog</code> <span class="badge badge-gray">component</span></div>
+            <div><code style="color: var(--text-accent);">AuditLogTable</code> <span class="badge badge-gray">component</span></div>
+            <div><code style="color: var(--text-accent);">AuditLogDetail</code> <span class="badge badge-gray">component</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Hooks & Guards</h3>
+          <div style="font-size: 0.85rem; line-height: 2;">
+            <div><code style="color: #c084fc;">useRole()</code> - retorna role do usuario logado</div>
+            <div><code style="color: #c084fc;">useIsAdmin()</code> - boolean, shortcut</div>
+            <div><code style="color: #c084fc;">AdminRoute</code> - wrapper que redireciona se nao admin</div>
+            <div><code style="color: #c084fc;">useAdminUsers()</code> - React Query hook para listar usuarios</div>
+            <div><code style="color: #c084fc;">useAuditLogs()</code> - React Query hook para audit logs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Sidebar Navigation -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(245,158,11,0.15);">&#128193;</div>
+        Sidebar Navigation - Visibilidade por Role
+      </h2>
+
+      <p class="card-desc" style="margin-bottom: 1.25rem;">
+        A secao Admin do sidebar so aparece para usuarios com role <code>admin</code>. O hook <code>useRole()</code> controla a renderizacao condicional.
+      </p>
+
+      <div class="sidebar-demo">
+        <!-- Admin view -->
+        <div class="sidebar-panel" style="border-color: rgba(251,191,36,0.3);">
+          <h4><span class="badge badge-amber">admin</span> Sidebar</h4>
+          <div class="item visible">&#128202; Dashboard</div>
+          <div class="item visible">&#128221; Workflows</div>
+          <div class="item visible">&#128488; Conversations</div>
+          <div class="item visible">&#129504; Skills</div>
+          <div class="item visible">&#129302; Agents</div>
+          <div class="item visible">&#9881; Plugins</div>
+          <div style="border-top: 1px solid var(--border-color); margin: 0.5rem 0; padding-top: 0.5rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Admin</div>
+          <div class="item admin-item">&#128081; Users</div>
+          <div class="item admin-item">&#128203; Audit Logs</div>
+          <div class="item admin-item">&#9881; Settings</div>
+        </div>
+        <!-- Developer view -->
+        <div class="sidebar-panel" style="border-color: rgba(139,92,246,0.3);">
+          <h4><span class="badge badge-purple">developer</span> Sidebar</h4>
+          <div class="item visible">&#128202; Dashboard</div>
+          <div class="item visible">&#128221; Workflows</div>
+          <div class="item visible">&#128488; Conversations</div>
+          <div class="item visible">&#129504; Skills</div>
+          <div class="item visible">&#129302; Agents</div>
+          <div class="item visible">&#9881; Plugins</div>
+          <div style="border-top: 1px solid var(--border-color); margin: 0.5rem 0; padding-top: 0.5rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Admin</div>
+          <div class="item hidden">&#128081; Users</div>
+          <div class="item hidden">&#128203; Audit Logs</div>
+          <div class="item hidden">&#9881; Settings</div>
+        </div>
+        <!-- Viewer view -->
+        <div class="sidebar-panel" style="border-color: rgba(100,116,139,0.3);">
+          <h4><span class="badge badge-gray">viewer</span> Sidebar</h4>
+          <div class="item visible">&#128202; Dashboard</div>
+          <div class="item visible">&#128221; Workflows</div>
+          <div class="item visible">&#128488; Conversations</div>
+          <div class="item visible">&#129504; Skills</div>
+          <div class="item visible">&#129302; Agents</div>
+          <div class="item visible">&#9881; Plugins</div>
+          <div style="border-top: 1px solid var(--border-color); margin: 0.5rem 0; padding-top: 0.5rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Admin</div>
+          <div class="item hidden">&#128081; Users</div>
+          <div class="item hidden">&#128203; Audit Logs</div>
+          <div class="item hidden">&#9881; Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. User Model -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(34,197,94,0.15);">&#128100;</div>
+        User Model
+      </h2>
+
+      <div class="user-model-grid" style="margin-bottom: 1.5rem;">
+        <div class="user-field-card">
+          <div class="fname">id</div>
+          <div class="ftype">String @id @default(cuid())</div>
+          <div class="fdesc">Identificador unico</div>
+        </div>
+        <div class="user-field-card">
+          <div class="fname">email</div>
+          <div class="ftype">String @unique</div>
+          <div class="fdesc">Email do usuario</div>
+        </div>
+        <div class="user-field-card">
+          <div class="fname">passwordHash</div>
+          <div class="ftype">String</div>
+          <div class="fdesc">Hash bcrypt da senha</div>
+        </div>
+        <div class="user-field-card">
+          <div class="fname">name</div>
+          <div class="ftype">String</div>
+          <div class="fdesc">Nome de exibicao</div>
+        </div>
+        <div class="user-field-card" style="border-color: rgba(251,191,36,0.3);">
+          <div class="fname">role</div>
+          <div class="ftype">UserRole @default(developer)</div>
+          <div class="fdesc">admin | developer | viewer</div>
+        </div>
+        <div class="user-field-card" style="border-color: rgba(34,197,94,0.3);">
+          <div class="fname">status</div>
+          <div class="ftype">UserStatus @default(active)</div>
+          <div class="fdesc">active | suspended | invited</div>
+        </div>
+        <div class="user-field-card">
+          <div class="fname">maxConcurrentExecutions</div>
+          <div class="ftype">Int @default(5)</div>
+          <div class="fdesc">Limite de execucoes simultaneas</div>
+        </div>
+        <div class="user-field-card">
+          <div class="fname">preferences</div>
+          <div class="ftype">Json?</div>
+          <div class="fdesc">Preferencias (tema, notificacoes, etc.)</div>
+        </div>
+        <div class="user-field-card">
+          <div class="fname">lastLoginAt</div>
+          <div class="ftype">DateTime?</div>
+          <div class="fdesc">Ultimo login registrado</div>
+        </div>
+      </div>
+
+      <!-- Status + Role enums -->
+      <div class="grid-2">
+        <div class="card">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">UserRole Enum</h3>
+          <div class="code-block"><pre><span class="keyword">enum</span> <span class="type">UserRole</span> {
+  <span class="string">admin</span>      <span class="comment">// Acesso total ao sistema</span>
+  <span class="string">developer</span>   <span class="comment">// Criar e executar workflows</span>
+  <span class="string">viewer</span>      <span class="comment">// Somente leitura</span>
+}</pre></div>
+        </div>
+        <div class="card">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">UserStatus Enum</h3>
+          <div class="code-block"><pre><span class="keyword">enum</span> <span class="type">UserStatus</span> {
+  <span class="string">active</span>      <span class="comment">// Usuario ativo</span>
+  <span class="string">suspended</span>   <span class="comment">// Acesso bloqueado</span>
+  <span class="string">invited</span>     <span class="comment">// Convite enviado, pendente</span>
+}</pre></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. Security -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(239,68,68,0.15);">&#128274;</div>
+        Seguranca
+      </h2>
+
+      <div class="grid-2" style="margin-bottom: 1.5rem;">
+        <div class="card" style="border-left: 3px solid #f87171;">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Role Check Middleware</h3>
+          <p class="card-desc" style="margin-bottom: 0.75rem;">
+            Todas as rotas <code>/admin/*</code> passam pelo middleware <code>requireRole('admin')</code> que:
+          </p>
+          <div style="font-size: 0.85rem; line-height: 1.8; color: var(--text-secondary);">
+            <div>1. Verifica JWT valido (via <code>authenticate</code>)</div>
+            <div>2. Extrai <code>user.role</code> do token</div>
+            <div>3. Compara com role requerido</div>
+            <div>4. Retorna <code>403 Forbidden</code> se nao autorizado</div>
+          </div>
+        </div>
+        <div class="card" style="border-left: 3px solid #fbbf24;">
+          <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Protecoes Adicionais</h3>
+          <div style="font-size: 0.85rem; line-height: 1.8; color: var(--text-secondary);">
+            <div>&#8226; Admin nao pode deletar a si mesmo</div>
+            <div>&#8226; Ultimo admin nao pode ter role rebaixado</div>
+            <div>&#8226; Toda alteracao de role gera AuditLog</div>
+            <div>&#8226; Delete gera AuditLog antes de remover</div>
+            <div>&#8226; Rate limit em rotas admin (mais restritivo)</div>
+            <div>&#8226; IP registrado em todas as acoes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Auth flow diagram -->
+      <div class="card">
+        <h3 class="card-title" style="font-size: 0.95rem; margin-bottom: 0.75rem;">Fluxo de Autorizacao Admin</h3>
+        <div class="audit-flow">
+          <div class="step">&#127760; Request</div>
+          <span class="arrow">&#8594;</span>
+          <div class="step" style="border-color: rgba(13,148,136,0.3);">&#128274; JWT Verify</div>
+          <span class="arrow">&#8594;</span>
+          <div class="step" style="border-color: rgba(251,191,36,0.3);">&#128081; requireRole('admin')</div>
+          <span class="arrow">&#8594;</span>
+          <div class="step" style="border-color: rgba(34,197,94,0.3);">&#9989; role === 'admin' ?</div>
+          <span class="arrow">&#8594;</span>
+          <div class="step" style="border-color: rgba(59,130,246,0.3);">&#128640; Route Handler</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; padding: 0.5rem 1rem; background: rgba(239,68,68,0.06); border-radius: 8px; font-size: 0.82rem;">
+          <span style="color: #f87171;">&#9888;</span>
+          <span style="color: var(--text-secondary);">Se role != admin: retorna <code>403 { error: "Forbidden", message: "Admin role required" }</code></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
