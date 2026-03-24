@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>18 - Webhooks | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+  <div class="page-container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="breadcrumb">
+        <a href="index.html">System Map</a>
+        <span>&rsaquo;</span>
+        <span>18 &mdash; Webhooks</span>
+      </div>
+      <h1>Webhooks</h1>
+      <p class="subtitle">Notificacoes outbound via HTTP POST com HMAC-SHA256, retry com backoff exponencial e historico de entregas.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-4 section">
+      <div class="stat-box">
+        <div class="stat-value" data-count="7">7</div>
+        <div class="stat-label">Endpoints</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">HMAC</div>
+        <div class="stat-label">SHA-256 Signing</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="3">3</div>
+        <div class="stat-label">Max Retries</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">AES</div>
+        <div class="stat-label">Secret Encryption</div>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 1. Visao Geral -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x1f310;</span>
+        Visao Geral
+      </h2>
+      <div class="card">
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          Webhooks outbound notificam sistemas externos quando eventos ocorrem no orquestrador. Quando uma execucao completa, um step falha
+          ou um workflow inicia, o sistema encontra todos os webhooks registrados para aquele evento, assina o payload com HMAC-SHA256 e faz um HTTP POST
+          para a URL configurada. Entregas mal-sucedidas sao retentadas automaticamente com backoff exponencial.
+        </p>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <span class="badge badge-teal">Outbound (este modulo)</span>
+          <span class="badge badge-purple">HMAC-SHA256</span>
+          <span class="badge badge-blue">Retry automatico</span>
+          <span class="badge badge-amber">AES encrypt secrets</span>
+          <span class="badge badge-green">Ownership validation</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 2. Delivery Flow -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x27A1;</span>
+        Delivery Flow
+      </h2>
+
+      <div class="flow-container" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;">
+        <div class="flow-node" style="border-color: rgba(245,158,11,0.4);">
+          <span>&#x26A1;</span> Evento ocorre
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color: rgba(13,148,136,0.4);">
+          <span>&#x1F50D;</span> findByEvent()
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color: rgba(139,92,246,0.4);">
+          <span>&#x1F512;</span> HMAC sign
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color: rgba(59,130,246,0.4);">
+          <span>&#x1F4E6;</span> Create Delivery
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color: rgba(34,197,94,0.4);">
+          <span>&#x1F4E4;</span> HTTP POST
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color: rgba(245,158,11,0.4);">
+          <span>&#x1F504;</span> Retry / Done
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.25rem;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x1F4CB;</div>
+          <div class="card-title">Detalhes do Fluxo</div>
+        </div>
+        <ol style="color: var(--text-secondary); font-size: 0.9rem; line-height: 2; padding-left: 1.25rem;">
+          <li><strong style="color: var(--text-primary);">Evento ocorre</strong> &mdash; Ex: <code>execution_completed</code> no task-orchestrator</li>
+          <li><strong style="color: var(--text-primary);">Match webhooks</strong> &mdash; <code>findByEvent(event, userId)</code> busca webhooks habilitados cujos <code>events[]</code> incluem o evento ou <code>*</code></li>
+          <li><strong style="color: var(--text-primary);">HMAC sign</strong> &mdash; <code>signPayload(json, secret)</code> gera <code>sha256=&lt;hex&gt;</code></li>
+          <li><strong style="color: var(--text-primary);">Create WebhookDelivery</strong> &mdash; Status <code>pending</code> no banco</li>
+          <li><strong style="color: var(--text-primary);">HTTP POST</strong> &mdash; <code>fetch(url, { body, headers })</code> com timeout 10s</li>
+          <li><strong style="color: var(--text-primary);">Track response</strong> &mdash; Atualiza <code>responseCode</code>, <code>responseBody</code>, <code>status</code></li>
+          <li><strong style="color: var(--text-primary);">Retry on failure</strong> &mdash; Ate 3 tentativas com backoff exponencial (1s, 4s, 9s)</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 3. Modelo de Dados -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1F4BE;</span>
+        Modelo de Dados
+      </h2>
+
+      <div class="grid-2">
+        <!-- Webhook -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(13,148,136,0.1); color: var(--text-accent);">W</div>
+            <div>
+              <div class="card-title">Webhook</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Tabela: webhooks</div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr><th>Campo</th><th>Tipo</th><th>Info</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>id</code></td><td>String (UUID)</td><td>PK, auto-gerado</td></tr>
+                <tr><td><code>url</code></td><td>String</td><td>URL de destino do POST</td></tr>
+                <tr><td><code>events</code></td><td>Json</td><td>Array de eventos, ex: ["execution_completed"]</td></tr>
+                <tr><td><code>secret</code></td><td>String</td><td>AES-encrypted, usado no HMAC</td></tr>
+                <tr><td><code>enabled</code></td><td>Boolean</td><td>Default: true</td></tr>
+                <tr><td><code>userId</code></td><td>String (FK)</td><td>Ref: User.id, onDelete: Cascade</td></tr>
+                <tr><td><code>createdAt</code></td><td>DateTime</td><td>Auto</td></tr>
+                <tr><td><code>updatedAt</code></td><td>DateTime</td><td>Auto @updatedAt</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--text-muted);">
+            Indexes: <span class="badge badge-teal">userId</span>
+          </div>
+        </div>
+
+        <!-- WebhookDelivery -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">D</div>
+            <div>
+              <div class="card-title">WebhookDelivery</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Tabela: webhook_deliveries</div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr><th>Campo</th><th>Tipo</th><th>Info</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>id</code></td><td>String (UUID)</td><td>PK, auto-gerado</td></tr>
+                <tr><td><code>webhookId</code></td><td>String (FK)</td><td>Ref: Webhook.id, onDelete: Cascade</td></tr>
+                <tr><td><code>payload</code></td><td>Json</td><td>Corpo enviado ao destino</td></tr>
+                <tr><td><code>responseCode</code></td><td>Int?</td><td>HTTP status da resposta</td></tr>
+                <tr><td><code>responseBody</code></td><td>String?</td><td>Primeiros 1000 chars da resposta</td></tr>
+                <tr><td><code>attempts</code></td><td>Int</td><td>Default: 0, max: 3</td></tr>
+                <tr><td><code>status</code></td><td>DeliveryStatus</td><td>pending | success | failed</td></tr>
+                <tr><td><code>createdAt</code></td><td>DateTime</td><td>Auto</td></tr>
+                <tr><td><code>completedAt</code></td><td>DateTime?</td><td>Quando concluiu (sucesso ou falha final)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--text-muted);">
+            Indexes: <span class="badge badge-amber">webhookId</span> <span class="badge badge-red">status</span> <span class="badge badge-blue">createdAt</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delivery Status enum -->
+      <div class="card" style="margin-top: 1.25rem;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">E</div>
+          <div class="card-title">Enum DeliveryStatus</div>
+        </div>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="status-dot warning"></span>
+            <span style="font-size: 0.9rem;"><code>pending</code> &mdash; Aguardando envio ou retry</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="status-dot active"></span>
+            <span style="font-size: 0.9rem;"><code>success</code> &mdash; Resposta 2xx recebida</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="status-dot error"></span>
+            <span style="font-size: 0.9rem;"><code>failed</code> &mdash; Esgotou retries ou erro persistente</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 4. Eventos Disponiveis -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x26A1;</span>
+        Eventos Disponiveis
+      </h2>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Evento</th><th>Descricao</th><th>Quando dispara</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>execution_completed</code></td>
+              <td>Execucao de workflow finalizada com sucesso</td>
+              <td>TaskOrchestrator marca execution como completed</td>
+            </tr>
+            <tr>
+              <td><code>step_completed</code></td>
+              <td>Um step individual completou</td>
+              <td>Flush do step com status success</td>
+            </tr>
+            <tr>
+              <td><code>step_failed</code></td>
+              <td>Um step falhou (error/timeout)</td>
+              <td>classifyError() detecta falha no step</td>
+            </tr>
+            <tr>
+              <td><code>workflow_started</code></td>
+              <td>Workflow iniciou execucao</td>
+              <td>Inicio de executeSequential/executeDAG/executeStepByStep</td>
+            </tr>
+            <tr>
+              <td><code>test</code></td>
+              <td>Evento de teste manual</td>
+              <td>POST /webhooks/:id/test</td>
+            </tr>
+            <tr>
+              <td><code>*</code></td>
+              <td>Wildcard &mdash; recebe todos os eventos</td>
+              <td>Qualquer dispatch</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card" style="margin-top: 1rem;">
+        <p class="card-desc">
+          <strong>Wildcard:</strong> Um webhook com <code>events: ["*"]</code> recebe TODOS os eventos disparados.
+          O filtro acontece no <code>findByEvent()</code> que verifica <code>events.includes(event) || events.includes('*')</code>.
+        </p>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 5. HMAC-SHA256 Signing -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1F512;</span>
+        HMAC-SHA256 Signing
+      </h2>
+
+      <div class="grid-2">
+        <!-- Signing process -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">1</div>
+            <div class="card-title">Processo de Assinatura</div>
+          </div>
+          <ol style="color: var(--text-secondary); font-size: 0.9rem; line-height: 2.2; padding-left: 1.25rem;">
+            <li>Webhook tem um <code>secret</code> gerado com <code>randomBytes(32).toString('hex')</code></li>
+            <li>Secret armazenado AES-encrypted no banco via <code>encrypt()</code></li>
+            <li>No dispatch, secret e decriptado via <code>decrypt()</code></li>
+            <li><code>createHmac('sha256', secret).update(payload).digest('hex')</code></li>
+            <li>Assinatura enviada no header <code>X-Webhook-Signature: sha256=&lt;hex&gt;</code></li>
+          </ol>
+        </div>
+
+        <!-- Verification -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">2</div>
+            <div class="card-title">Verificacao no Receptor</div>
+          </div>
+          <div class="code-block" style="margin-bottom: 1rem;">
+<span class="comment">// Exemplo de verificacao no receptor (Node.js)</span>
+<span class="keyword">const</span> crypto = <span class="keyword">require</span>(<span class="string">'crypto'</span>);
+
+<span class="keyword">function</span> <span class="type">verifyWebhook</span>(body, signature, secret) {
+  <span class="keyword">const</span> expected = <span class="string">'sha256='</span> +
+    crypto.<span class="type">createHmac</span>(<span class="string">'sha256'</span>, secret)
+      .<span class="type">update</span>(body)
+      .<span class="type">digest</span>(<span class="string">'hex'</span>);
+
+  <span class="keyword">return</span> crypto.<span class="type">timingSafeEqual</span>(
+    Buffer.<span class="type">from</span>(signature),
+    Buffer.<span class="type">from</span>(expected)
+  );
+}
+          </div>
+          <p class="card-desc">
+            Sempre use <code>timingSafeEqual</code> para evitar timing attacks na comparacao de assinaturas.
+          </p>
+        </div>
+      </div>
+
+      <!-- Headers sent -->
+      <div class="card" style="margin-top: 1.25rem;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">H</div>
+          <div class="card-title">Headers Enviados no POST</div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Header</th><th>Valor</th><th>Descricao</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>Content-Type</code></td><td><code>application/json</code></td><td>Payload e JSON</td></tr>
+              <tr><td><code>X-Webhook-Signature</code></td><td><code>sha256=&lt;hex&gt;</code></td><td>Assinatura HMAC do body</td></tr>
+              <tr><td><code>X-Webhook-Event</code></td><td>Nome do evento</td><td>Tipo do evento disparado</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 6. Payload Structure -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1F4E6;</span>
+        Payload Structure
+      </h2>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">{}</div>
+          <div class="card-title">Exemplo de Payload</div>
+        </div>
+        <div class="code-block">
+{
+  <span class="string">"event"</span>: <span class="string">"execution_completed"</span>,
+  <span class="string">"timestamp"</span>: <span class="string">"2026-03-24T15:30:00.000Z"</span>,
+  <span class="string">"data"</span>: {
+    <span class="string">"executionId"</span>: <span class="string">"exec-abc-123"</span>,
+    <span class="string">"workflowId"</span>: <span class="string">"wf-xyz-789"</span>,
+    <span class="string">"status"</span>: <span class="string">"completed"</span>,
+    <span class="string">"stepName"</span>: <span class="string">"generate-report"</span>,
+    <span class="string">"output"</span>: { <span class="string">"result"</span>: <span class="string">"Report generated successfully"</span> }
+  }
+}
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 1.25rem;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">T</div>
+            <div class="card-title">Payload de Teste</div>
+          </div>
+          <div class="code-block">
+{
+  <span class="string">"event"</span>: <span class="string">"test"</span>,
+  <span class="string">"timestamp"</span>: <span class="string">"2026-03-24T15:30:00.000Z"</span>,
+  <span class="string">"data"</span>: {
+    <span class="string">"message"</span>: <span class="string">"Test webhook delivery"</span>
+  }
+}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(239,68,68,0.1); color: #f87171;">F</div>
+            <div class="card-title">Payload de step_failed</div>
+          </div>
+          <div class="code-block">
+{
+  <span class="string">"event"</span>: <span class="string">"step_failed"</span>,
+  <span class="string">"timestamp"</span>: <span class="string">"2026-03-24T15:31:00.000Z"</span>,
+  <span class="string">"data"</span>: {
+    <span class="string">"executionId"</span>: <span class="string">"exec-abc-123"</span>,
+    <span class="string">"stepName"</span>: <span class="string">"deploy-staging"</span>,
+    <span class="string">"status"</span>: <span class="string">"failed"</span>,
+    <span class="string">"error"</span>: <span class="string">"Connection timeout"</span>
+  }
+}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 7. API Endpoints -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x1F50C;</span>
+        API Endpoints
+      </h2>
+
+      <!-- Accordion for each endpoint -->
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-green">GET</span>
+            <code>/webhooks</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">&mdash; Listar webhooks (paginado)</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            Retorna webhooks do usuario autenticado com paginacao. Inclui contagem de deliveries.
+          </p>
+          <div class="code-block">
+<span class="comment">// Query params (paginationSchema)</span>
+<span class="keyword">page</span>: <span class="type">number</span> <span class="comment">// default 1</span>
+<span class="keyword">perPage</span>: <span class="type">number</span> <span class="comment">// default 20</span>
+
+<span class="comment">// Response</span>
+{
+  <span class="string">"data"</span>: [
+    { <span class="string">"id"</span>, <span class="string">"url"</span>, <span class="string">"events"</span>, <span class="string">"enabled"</span>, <span class="string">"deliveriesCount"</span>, <span class="string">"createdAt"</span> }
+  ],
+  <span class="string">"total"</span>: <span class="number">15</span>,
+  <span class="string">"page"</span>: <span class="number">1</span>,
+  <span class="string">"perPage"</span>: <span class="number">20</span>,
+  <span class="string">"totalPages"</span>: <span class="number">1</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-green">GET</span>
+            <code>/webhooks/:id</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">&mdash; Detalhes do webhook</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            Retorna detalhes incluindo o <code>secret</code> decriptado. Valida ownership via <code>findFirst({ where: { id, userId } })</code>.
+          </p>
+          <div class="code-block">
+<span class="comment">// Response</span>
+{
+  <span class="string">"id"</span>: <span class="string">"uuid"</span>,
+  <span class="string">"url"</span>: <span class="string">"https://example.com/hook"</span>,
+  <span class="string">"events"</span>: [<span class="string">"execution_completed"</span>, <span class="string">"step_failed"</span>],
+  <span class="string">"secret"</span>: <span class="string">"hex-64-chars..."</span>,
+  <span class="string">"enabled"</span>: <span class="keyword">true</span>,
+  <span class="string">"createdAt"</span>: <span class="string">"2026-03-24T10:00:00.000Z"</span>,
+  <span class="string">"updatedAt"</span>: <span class="string">"2026-03-24T12:00:00.000Z"</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-blue">POST</span>
+            <code>/webhooks</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">&mdash; Criar webhook</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            Cria um novo webhook. O <code>secret</code> e gerado automaticamente com <code>randomBytes(32).toString('hex')</code>,
+            armazenado com <code>encrypt()</code> e retornado em texto puro na resposta (unica vez).
+          </p>
+          <div class="code-block">
+<span class="comment">// Body</span>
+{
+  <span class="string">"url"</span>: <span class="string">"https://example.com/hook"</span>,  <span class="comment">// obrigatorio, z.string().url()</span>
+  <span class="string">"events"</span>: [<span class="string">"execution_completed"</span>],  <span class="comment">// obrigatorio, min 1</span>
+  <span class="string">"enabled"</span>: <span class="keyword">true</span>                     <span class="comment">// opcional, default true</span>
+}
+
+<span class="comment">// Response (201)</span>
+{
+  <span class="string">"id"</span>: <span class="string">"uuid"</span>,
+  <span class="string">"url"</span>: <span class="string">"https://example.com/hook"</span>,
+  <span class="string">"events"</span>: [<span class="string">"execution_completed"</span>],
+  <span class="string">"enabled"</span>: <span class="keyword">true</span>,
+  <span class="string">"secret"</span>: <span class="string">"a1b2c3d4..."</span>,
+  <span class="string">"createdAt"</span>: <span class="string">"2026-03-24T10:00:00.000Z"</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-amber">PUT</span>
+            <code>/webhooks/:id</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">&mdash; Atualizar webhook</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            Atualiza um webhook existente. Usa <code>$transaction</code> com verificacao de ownership interna.
+            O <code>secret</code> NAO pode ser alterado (regenere criando um novo webhook).
+          </p>
+          <div class="code-block">
+<span class="comment">// Body (todos opcionais)</span>
+{
+  <span class="string">"url"</span>: <span class="string">"https://new-url.com/hook"</span>,
+  <span class="string">"events"</span>: [<span class="string">"step_failed"</span>, <span class="string">"step_completed"</span>],
+  <span class="string">"enabled"</span>: <span class="keyword">false</span>
+}
+
+<span class="comment">// Response</span>
+{ <span class="string">"id"</span>, <span class="string">"url"</span>, <span class="string">"events"</span>, <span class="string">"enabled"</span> }
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-red">DELETE</span>
+            <code>/webhooks/:id</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">&mdash; Remover webhook</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            Remove o webhook e todas as suas deliveries (cascade). Usa <code>$transaction</code> com verificacao de ownership.
+          </p>
+          <div class="code-block">
+<span class="comment">// Response: 204 No Content</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-green">GET</span>
+            <code>/webhooks/:id/deliveries</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">&mdash; Historico de entregas</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            Retorna as ultimas 50 deliveries do webhook, ordenadas por <code>createdAt DESC</code>.
+            Valida ownership antes de listar.
+          </p>
+          <div class="code-block">
+<span class="comment">// Response</span>
+[
+  {
+    <span class="string">"id"</span>: <span class="string">"uuid"</span>,
+    <span class="string">"status"</span>: <span class="string">"success"</span>,
+    <span class="string">"responseCode"</span>: <span class="number">200</span>,
+    <span class="string">"attempts"</span>: <span class="number">1</span>,
+    <span class="string">"createdAt"</span>: <span class="string">"2026-03-24T15:30:00.000Z"</span>,
+    <span class="string">"completedAt"</span>: <span class="string">"2026-03-24T15:30:01.000Z"</span>
+  },
+  {
+    <span class="string">"id"</span>: <span class="string">"uuid"</span>,
+    <span class="string">"status"</span>: <span class="string">"failed"</span>,
+    <span class="string">"responseCode"</span>: <span class="number">500</span>,
+    <span class="string">"attempts"</span>: <span class="number">3</span>,
+    <span class="string">"createdAt"</span>: <span class="string">"2026-03-24T15:25:00.000Z"</span>,
+    <span class="string">"completedAt"</span>: <span class="string">"2026-03-24T15:25:14.000Z"</span>
+  }
+]
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-blue">POST</span>
+            <code>/webhooks/:id/test</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">&mdash; Enviar teste</span>
+          </div>
+          <span class="accordion-arrow">&#x25BC;</span>
+        </div>
+        <div class="accordion-body">
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            Dispara um evento <code>test</code> para o webhook selecionado. Cria um WebhookDelivery real que pode ser acompanhado no historico.
+          </p>
+          <div class="code-block">
+<span class="comment">// Response</span>
+{ <span class="string">"success"</span>: <span class="keyword">true</span> }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 8. Retry & Backoff -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x1F504;</span>
+        Retry &amp; Backoff Exponencial
+      </h2>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">R</div>
+          <div class="card-title">deliverWithRetry()</div>
+        </div>
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          Cada delivery tem ate <strong>3 tentativas</strong>. O backoff e quadratico: <code>attempt * attempt * 1000ms</code>.
+        </p>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Tentativa</th><th>Delay antes</th><th>Status se falhar</th><th>Status se OK</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge badge-teal">1</span></td>
+                <td>Imediato</td>
+                <td><span class="badge badge-amber">pending</span> (continua)</td>
+                <td><span class="badge badge-green">success</span></td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-teal">2</span></td>
+                <td>1 segundo</td>
+                <td><span class="badge badge-amber">pending</span> (continua)</td>
+                <td><span class="badge badge-green">success</span></td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-teal">3</span></td>
+                <td>4 segundos</td>
+                <td><span class="badge badge-red">failed</span> (final)</td>
+                <td><span class="badge badge-green">success</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="card-desc" style="margin-top: 1rem;">
+          Timeout por request: <strong>10 segundos</strong> (<code>AbortSignal.timeout(10_000)</code>).
+          Response body truncado em 1000 caracteres. Fire-and-forget com <code>.catch()</code> para nao bloquear o dispatch.
+        </p>
+      </div>
+
+      <!-- Delivery state machine -->
+      <div class="card" style="margin-top: 1.25rem;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">SM</div>
+          <div class="card-title">State Machine: DeliveryStatus</div>
+        </div>
+        <div class="flow-container" style="justify-content: center;">
+          <div class="flow-node" style="border-color: rgba(245,158,11,0.4);">
+            <span class="status-dot warning"></span> pending
+          </div>
+          <span class="flow-arrow">&rarr;</span>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start;">
+            <div class="flow-node" style="border-color: rgba(34,197,94,0.4);">
+              <span class="status-dot active"></span> success <span style="font-size: 0.75rem; color: var(--text-muted);">(2xx)</span>
+            </div>
+            <div class="flow-node" style="border-color: rgba(239,68,68,0.4);">
+              <span class="status-dot error"></span> failed <span style="font-size: 0.75rem; color: var(--text-muted);">(3 retries esgotados)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 9. Seguranca -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(239,68,68,0.1); color: #f87171;">&#x1F6E1;</span>
+        Seguranca
+      </h2>
+
+      <div class="grid-2">
+        <div class="card risk-low">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x2705;</div>
+            <div class="card-title">Ownership Validation</div>
+          </div>
+          <p class="card-desc">
+            Todas as operacoes (GET, PUT, DELETE, deliveries, test) validam <code>userId</code> via
+            <code>findFirst({ where: { id, userId } })</code>. Update e delete usam <code>$transaction</code> para evitar race conditions.
+          </p>
+        </div>
+
+        <div class="card risk-low">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1F510;</div>
+            <div class="card-title">Secret Encryption</div>
+          </div>
+          <p class="card-desc">
+            Secrets sao armazenados com AES encryption via <code>encrypt()</code> / <code>decrypt()</code> do modulo
+            <code>src/lib/crypto.ts</code>. O secret em texto puro so e retornado no momento da criacao (POST /webhooks).
+          </p>
+        </div>
+
+        <div class="card risk-low">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x23F1;</div>
+            <div class="card-title">Timeout Protection</div>
+          </div>
+          <p class="card-desc">
+            Cada HTTP POST tem timeout de 10 segundos via <code>AbortSignal.timeout(10_000)</code>.
+            Response body e truncado em 1000 chars para evitar payloads maliciosos no banco.
+          </p>
+        </div>
+
+        <div class="card risk-low">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1F525;</div>
+            <div class="card-title">Fire-and-Forget</div>
+          </div>
+          <p class="card-desc">
+            Deliveries sao executadas assincronamente com <code>.catch()</code>. Se o dispatch falhar,
+            o evento original nao e afetado. Erros sao logados no console.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 10. Inbound vs Outbound -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(13,148,136,0.1); color: var(--text-accent);">&#x21C4;</span>
+        Inbound vs Outbound
+      </h2>
+
+      <div class="grid-2">
+        <div class="card" style="border-left: 3px solid var(--bg-accent);">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(13,148,136,0.1); color: var(--text-accent);">&#x1F4E4;</div>
+            <div>
+              <div class="card-title">Outbound Webhooks</div>
+              <span class="badge badge-teal">Este modulo</span>
+            </div>
+          </div>
+          <p class="card-desc" style="margin-bottom: 0.75rem;">Notificam sistemas externos quando eventos ocorrem no orquestrador.</p>
+          <ul style="color: var(--text-secondary); font-size: 0.85rem; line-height: 1.8; padding-left: 1.25rem;">
+            <li>Dominio: <code>src/domains/webhooks/</code></li>
+            <li>Modelo: Webhook + WebhookDelivery</li>
+            <li>Fluxo: Evento interno &rarr; HTTP POST &rarr; Sistema externo</li>
+            <li>Autenticacao: HMAC-SHA256</li>
+          </ul>
+        </div>
+
+        <div class="card" style="border-left: 3px solid #a78bfa;">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1F4E5;</div>
+            <div>
+              <div class="card-title">Inbound Webhooks</div>
+              <span class="badge badge-purple">WorkflowTrigger</span>
+            </div>
+          </div>
+          <p class="card-desc" style="margin-bottom: 0.75rem;">Recebem chamadas externas para iniciar workflows no orquestrador.</p>
+          <ul style="color: var(--text-secondary); font-size: 0.85rem; line-height: 1.8; padding-left: 1.25rem;">
+            <li>Dominio: <code>src/domains/triggers/</code></li>
+            <li>Modelo: WorkflowTrigger (type=webhook_inbound)</li>
+            <li>Fluxo: Sistema externo &rarr; POST /triggers/webhook/:id &rarr; Inicia workflow</li>
+            <li>Docs: <a href="17-triggers.html" style="color: var(--text-accent);">Pagina 17 - Triggers</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 11. Frontend Components -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x1F5A5;</span>
+        Frontend
+      </h2>
+
+      <div class="card" style="margin-bottom: 1.25rem;">
+        <p class="card-desc">
+          Componentes React em <code>src/features/webhooks/</code> com hooks para CRUD e listagem.
+        </p>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Componente / Arquivo</th><th>Tipo</th><th>Descricao</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>features/webhooks/index.tsx</code></td>
+              <td><span class="badge badge-blue">Pagina</span></td>
+              <td>Pagina principal com lista de webhooks, modal de criacao/edicao</td>
+            </tr>
+            <tr>
+              <td><code>features/webhooks/api.ts</code></td>
+              <td><span class="badge badge-teal">API</span></td>
+              <td>Chamadas HTTP (list, get, create, update, delete, deliveries, test)</td>
+            </tr>
+            <tr>
+              <td><code>features/webhooks/hooks/use-webhooks.ts</code></td>
+              <td><span class="badge badge-purple">Hook</span></td>
+              <td>TanStack Query hooks para webhooks (queries + mutations)</td>
+            </tr>
+            <tr>
+              <td><code>WebhookCard</code></td>
+              <td><span class="badge badge-amber">Componente</span></td>
+              <td>Card individual com URL, eventos, status enabled/disabled</td>
+            </tr>
+            <tr>
+              <td><code>WebhookTable</code></td>
+              <td><span class="badge badge-amber">Componente</span></td>
+              <td>Tabela de deliveries com status, response code, attempts</td>
+            </tr>
+            <tr>
+              <td><code>WebhookForm</code></td>
+              <td><span class="badge badge-amber">Componente</span></td>
+              <td>Formulario de criacao/edicao com selecao de eventos</td>
+            </tr>
+            <tr>
+              <td><code>WebhookModal</code></td>
+              <td><span class="badge badge-amber">Componente</span></td>
+              <td>Modal para detalhes, delivery history e teste</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ======================================== -->
+    <!-- 12. Arquivos do Backend -->
+    <!-- ======================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(100,116,139,0.1); color: #94a3b8;">&#x1F4C2;</span>
+        Arquivos Relevantes
+      </h2>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Arquivo</th><th>Responsabilidade</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>backend/src/domains/webhooks/webhooks.routes.ts</code></td>
+              <td>7 endpoints: GET list, GET detail, POST create, PUT update, DELETE, GET deliveries, POST test</td>
+            </tr>
+            <tr>
+              <td><code>backend/src/domains/webhooks/webhooks.service.ts</code></td>
+              <td>generateSecret(), signPayload(), dispatch(), deliverWithRetry()</td>
+            </tr>
+            <tr>
+              <td><code>backend/src/domains/webhooks/webhooks.repository.ts</code></td>
+              <td>findAll, findAllPaginated, findById, create, update, delete, findByEvent, getDeliveries</td>
+            </tr>
+            <tr>
+              <td><code>backend/src/lib/crypto.ts</code></td>
+              <td>encrypt() / decrypt() para AES encryption do secret</td>
+            </tr>
+            <tr>
+              <td><code>backend/prisma/schema.prisma</code></td>
+              <td>Modelos Webhook e WebhookDelivery + enum DeliveryStatus</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /page-container -->
+
+  <script src="shared.js"></script>
+</body>
+</html>
