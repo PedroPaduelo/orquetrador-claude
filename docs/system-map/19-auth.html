@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>19 - Autenticacao | Orquetrador Claude</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .auth-method-card { position: relative; overflow: hidden; }
+    .auth-method-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 12px 12px 0 0;
+    }
+    .auth-method-card.jwt::before { background: var(--gradient-1); }
+    .auth-method-card.apikey::before { background: var(--gradient-4); }
+    .auth-method-card.mcp::before { background: var(--gradient-2); }
+
+    .flow-diagram {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      flex-wrap: wrap;
+      padding: 1.5rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow-x: auto;
+    }
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 120px;
+      text-align: center;
+    }
+    .flow-step-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    .flow-step-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .flow-step-detail {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      max-width: 130px;
+    }
+    .flow-connector {
+      display: flex;
+      align-items: center;
+      padding: 0 0.25rem;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      align-self: center;
+      margin-top: -1.5rem;
+    }
+
+    .scope-matrix td, .scope-matrix th { font-size: 0.8rem; padding: 0.6rem 0.8rem; }
+    .scope-check { color: #4ade80; font-weight: 700; }
+    .scope-deny { color: #64748b; }
+
+    .lifecycle-step {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .lifecycle-step:last-child { border-bottom: none; }
+    .lifecycle-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-accent-subtle);
+      color: var(--text-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .lifecycle-content { flex: 1; }
+    .lifecycle-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; }
+    .lifecycle-desc { font-size: 0.85rem; color: var(--text-secondary); }
+
+    .rbac-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    @media (max-width: 768px) { .rbac-grid { grid-template-columns: 1fr; } }
+
+    .role-card { position: relative; padding-top: 2.5rem; }
+    .role-badge {
+      position: absolute;
+      top: -1px;
+      left: 1.5rem;
+      padding: 0.3rem 1rem;
+      border-radius: 0 0 8px 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .role-admin { background: linear-gradient(135deg, #ef4444, #f97316); color: white; }
+    .role-developer { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; }
+    .role-viewer { background: linear-gradient(135deg, #64748b, #94a3b8); color: white; }
+
+    .perm-list { list-style: none; padding: 0; margin: 0; }
+    .perm-list li {
+      padding: 0.4rem 0;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .perm-list li::before { font-size: 0.75rem; }
+    .perm-yes::before { content: '\2713'; color: #4ade80; font-weight: 700; }
+    .perm-no::before { content: '\2717'; color: #64748b; }
+
+    .endpoint-row { display: grid; grid-template-columns: 80px 1fr 2fr; gap: 1rem; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); }
+    .endpoint-row:last-child { border-bottom: none; }
+    .method-badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; text-align: center; }
+    .method-get { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .method-post { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .method-delete { background: rgba(239,68,68,0.15); color: #f87171; }
+    .method-put { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+    .frontend-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .frontend-flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem 0;
+    }
+    .frontend-flow-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+    .frontend-flow-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--bg-accent);
+      flex-shrink: 0;
+    }
+    .frontend-flow-bar {
+      width: 2px;
+      height: 100%;
+      min-height: 40px;
+      background: var(--border-color);
+    }
+  </style>
+</head>
+<body>
+  <script src="shared.js"></script>
+
+  <div class="page-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div class="breadcrumb">
+        <a href="index.html">System Map</a>
+        <span>&rsaquo;</span>
+        <span>19 - Autenticacao</span>
+      </div>
+      <h1>Autenticacao</h1>
+      <p class="subtitle">3 metodos de autenticacao, RBAC, API Keys com scopes, rate limiting e fluxo completo frontend/backend.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-4" style="margin-bottom: 3rem;">
+      <div class="stat-box">
+        <div class="stat-value" data-count="3">3</div>
+        <div class="stat-label">Metodos de Auth</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="3">3</div>
+        <div class="stat-label">Roles (RBAC)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="9">9</div>
+        <div class="stat-label">Endpoints</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">7d</div>
+        <div class="stat-label">JWT Expiration</div>
+      </div>
+    </div>
+
+    <!-- Section 1: 3 Auth Methods Overview -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128272;</div>
+        3 Metodos de Autenticacao
+      </div>
+      <div class="grid-3">
+        <div class="card auth-method-card jwt">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128273;</div>
+            <div>
+              <div class="card-title">JWT Tokens</div>
+              <span class="badge badge-teal">Primario</span>
+            </div>
+          </div>
+          <div class="card-desc">
+            <p>Metodo principal usado pelo frontend. Tokens assinados com <code class="mono" style="color:var(--text-accent);">JWT_SECRET</code>, validos por 7 dias.</p>
+            <br>
+            <p><strong>Payload:</strong> <code class="mono" style="font-size:0.8rem;">{ sub: userId }</code></p>
+            <p><strong>Header:</strong> <code class="mono" style="font-size:0.8rem;">Authorization: Bearer &lt;token&gt;</code></p>
+            <p><strong>Lib:</strong> <code class="mono" style="font-size:0.8rem;">@fastify/jwt</code></p>
+          </div>
+        </div>
+
+        <div class="card auth-method-card apikey">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#128477;</div>
+            <div>
+              <div class="card-title">API Keys</div>
+              <span class="badge badge-blue">Integracoes</span>
+            </div>
+          </div>
+          <div class="card-desc">
+            <p>Para integracoes externas e automacoes. Prefixo <code class="mono" style="color:#60a5fa;">exk_</code>, armazenadas como hash SHA256.</p>
+            <br>
+            <p><strong>Formato:</strong> <code class="mono" style="font-size:0.8rem;">exk_&lt;base64url&gt;</code></p>
+            <p><strong>Scopes:</strong> Controle granular por recurso:acao</p>
+            <p><strong>Rate Limit:</strong> Por chave, via Redis</p>
+          </div>
+        </div>
+
+        <div class="card auth-method-card mcp">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#129302;</div>
+            <div>
+              <div class="card-title">MCP Session Auth</div>
+              <span class="badge badge-purple">Protocolo MCP</span>
+            </div>
+          </div>
+          <div class="card-desc">
+            <p>Autenticacao baseada em sessao para o protocolo MCP. O MCP server valida a sessao com o backend.</p>
+            <br>
+            <p><strong>Transporte:</strong> SSE / Streamable HTTP</p>
+            <p><strong>Sessao:</strong> Vinculada ao userId</p>
+            <p><strong>Porta:</strong> 3334 (mcp-server)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: JWT Auth Flow Diagram -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128260;</div>
+        Fluxo JWT — Registro e Login
+      </div>
+
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="tab-register">Registro</button>
+          <button class="tab-btn" data-tab="tab-login">Login</button>
+          <button class="tab-btn" data-tab="tab-request">Request Autenticado</button>
+        </div>
+
+        <div class="tab-content active" id="tab-register">
+          <div class="flow-diagram">
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-info); color: #60a5fa;">&#128100;</div>
+              <div class="flow-step-label">Cliente</div>
+              <div class="flow-step-detail">POST /auth/register</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128270;</div>
+              <div class="flow-step-label">Verifica Email</div>
+              <div class="flow-step-detail">findUnique por email</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128274;</div>
+              <div class="flow-step-label">Hash Senha</div>
+              <div class="flow-step-detail">bcrypt.hash(pw, 10)</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-success); color: #4ade80;">&#128190;</div>
+              <div class="flow-step-label">Cria User</div>
+              <div class="flow-step-detail">prisma.user.create</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128193;</div>
+              <div class="flow-step-label">Cria Diretorio</div>
+              <div class="flow-step-detail">users/{id}/projetos</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#127919;</div>
+              <div class="flow-step-label">Gera JWT</div>
+              <div class="flow-step-detail">{ sub: userId } exp 7d</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-success); color: #4ade80;">&#9989;</div>
+              <div class="flow-step-label">201 Created</div>
+              <div class="flow-step-detail">{ token, user }</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-login">
+          <div class="flow-diagram">
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-info); color: #60a5fa;">&#128100;</div>
+              <div class="flow-step-label">Cliente</div>
+              <div class="flow-step-detail">POST /auth/login</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128270;</div>
+              <div class="flow-step-label">Busca User</div>
+              <div class="flow-step-detail">findUnique por email</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128274;</div>
+              <div class="flow-step-label">Compara Senha</div>
+              <div class="flow-step-detail">bcrypt.compare</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#127919;</div>
+              <div class="flow-step-label">Gera JWT</div>
+              <div class="flow-step-detail">{ sub: userId } exp 7d</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-success); color: #4ade80;">&#9989;</div>
+              <div class="flow-step-label">200 OK</div>
+              <div class="flow-step-detail">{ token, user }</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-request">
+          <div class="flow-diagram">
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-info); color: #60a5fa;">&#128100;</div>
+              <div class="flow-step-label">Request</div>
+              <div class="flow-step-detail">Bearer &lt;token&gt;</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128272;</div>
+              <div class="flow-step-label">preHandler</div>
+              <div class="flow-step-detail">auth middleware</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128273;</div>
+              <div class="flow-step-label">jwtVerify</div>
+              <div class="flow-step-detail">Extrai { sub }</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: rgba(239,68,68,0.1); color: #f87171;">&#128451;</div>
+              <div class="flow-step-label">Redis Cache</div>
+              <div class="flow-step-detail">jwt:user:{sub} TTL 5min</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128101;</div>
+              <div class="flow-step-label">Valida User</div>
+              <div class="flow-step-detail">exists + not suspended</div>
+            </div>
+            <div class="flow-connector">&rarr;</div>
+            <div class="flow-step">
+              <div class="flow-step-icon" style="background: var(--bg-success); color: #4ade80;">&#9989;</div>
+              <div class="flow-step-label">userId</div>
+              <div class="flow-step-detail">getCurrentUserId()</div>
+            </div>
+          </div>
+          <div style="margin-top: 1rem;">
+            <div class="code-block"><span class="comment">// Middleware auth.ts — preHandler hook</span>
+<span class="keyword">const</span> { sub } = <span class="keyword">await</span> request.jwtVerify&lt;{ sub: <span class="type">string</span> }&gt;()
+
+<span class="comment">// Valida user existe e nao esta suspenso (cache Redis 5min)</span>
+<span class="keyword">const</span> cacheKey = <span class="string">`jwt:user:${sub}`</span>
+<span class="keyword">const</span> cached = <span class="keyword">await</span> redis.get(cacheKey)
+<span class="keyword">if</span> (cached === <span class="string">'1'</span>) <span class="keyword">return</span> sub  <span class="comment">// cache hit</span>
+
+<span class="comment">// cache miss — consulta DB</span>
+<span class="keyword">const</span> user = <span class="keyword">await</span> prisma.user.findUnique({ where: { id: sub } })
+<span class="keyword">const</span> exists = !!user && user.status !== <span class="string">'suspended'</span>
+<span class="keyword">await</span> redis.set(cacheKey, exists ? <span class="string">'1'</span> : <span class="string">'0'</span>, <span class="string">'EX'</span>, <span class="number">300</span>)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: API Key Auth Flow -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: var(--bg-info); color: #60a5fa;">&#128477;</div>
+        API Key — Fluxo Completo
+      </div>
+
+      <div class="flow-diagram" style="margin-bottom: 1.5rem;">
+        <div class="flow-step">
+          <div class="flow-step-icon" style="background: var(--bg-info); color: #60a5fa;">&#128100;</div>
+          <div class="flow-step-label">Request</div>
+          <div class="flow-step-detail">Bearer exk_...</div>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-step-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128270;</div>
+          <div class="flow-step-label">Detecta Prefixo</div>
+          <div class="flow-step-detail">startsWith exk_</div>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-step-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128272;</div>
+          <div class="flow-step-label">SHA256 Hash</div>
+          <div class="flow-step-detail">createHash('sha256')</div>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-step-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128451;</div>
+          <div class="flow-step-label">Lookup DB</div>
+          <div class="flow-step-detail">findUnique keyHash</div>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-step-icon" style="background: rgba(239,68,68,0.1); color: #f87171;">&#128737;</div>
+          <div class="flow-step-label">Validate</div>
+          <div class="flow-step-detail">!revoked, !expired</div>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-step-icon" style="background: var(--bg-success); color: #4ade80;">&#9989;</div>
+          <div class="flow-step-label">apiKeyInfo</div>
+          <div class="flow-step-detail">scopes, rateLimit, IP</div>
+        </div>
+      </div>
+
+      <!-- API Key Enforcement Pipeline -->
+      <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">Pipeline de Enforcement (pos-autenticacao)</h3>
+      <div class="flow-diagram" style="margin-bottom: 1.5rem;">
+        <div class="flow-step">
+          <div class="flow-step-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#127757;</div>
+          <div class="flow-step-label">1. IP Whitelist</div>
+          <div class="flow-step-detail">Verifica IP do cliente contra lista</div>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-step-icon" style="background: var(--bg-info); color: #60a5fa;">&#128272;</div>
+          <div class="flow-step-label">2. Scope Check</div>
+          <div class="flow-step-detail">Deriva scope da rota, compara com key</div>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-step-icon" style="background: var(--bg-warning); color: #fbbf24;">&#9889;</div>
+          <div class="flow-step-label">3. Rate Limit</div>
+          <div class="flow-step-detail">Redis INCR + EXPIRE 60s</div>
+        </div>
+        <div class="flow-connector">&rarr;</div>
+        <div class="flow-step">
+          <div class="flow-step-icon" style="background: var(--bg-success); color: #4ade80;">&#9989;</div>
+          <div class="flow-step-label">Autorizado</div>
+          <div class="flow-step-detail">Request prossegue</div>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="comment">// api-key-enforcement.ts</span>
+<span class="keyword">export async function</span> <span class="type">apiKeyEnforcement</span>(request, reply) {
+  <span class="keyword">const</span> keyInfo = request.apiKeyInfo
+  <span class="keyword">if</span> (!keyInfo) <span class="keyword">return</span>  <span class="comment">// Nao e API key, pula</span>
+
+  <span class="comment">// 1. IP Whitelist</span>
+  <span class="keyword">if</span> (keyInfo.ipWhitelist.length > <span class="number">0</span>) {
+    <span class="keyword">if</span> (!keyInfo.ipWhitelist.includes(request.ip))
+      <span class="keyword">throw new</span> ForbiddenError(<span class="string">`IP ${request.ip} not in whitelist`</span>)
+  }
+
+  <span class="comment">// 2. Scope Check</span>
+  <span class="keyword">const</span> routeScope = deriveRouteScope(request.method, request.url)
+  <span class="keyword">const</span> hasScope = keyInfo.scopes.some(s => matchScope(s, routeScope))
+  <span class="keyword">if</span> (!hasScope) <span class="keyword">throw new</span> ForbiddenError(<span class="string">`Lacks scope for ${routeScope}`</span>)
+
+  <span class="comment">// 3. Rate Limit (Redis per-key counter, TTL 60s)</span>
+  <span class="keyword">const</span> current = <span class="keyword">await</span> redis.incr(<span class="string">`ratelimit:apikey:${keyInfo.id}`</span>)
+  <span class="keyword">if</span> (current > keyInfo.rateLimit)
+    <span class="keyword">throw new</span> ForbiddenError(<span class="string">'Rate limit exceeded'</span>)
+}</div>
+    </div>
+
+    <!-- Section 4: Scope System -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: var(--bg-info); color: #60a5fa;">&#128737;</div>
+        Sistema de Scopes
+      </div>
+
+      <div class="grid-2" style="margin-bottom: 1.5rem;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128196;</div>
+            <div class="card-title">Formato</div>
+          </div>
+          <div class="card-desc">
+            <p style="margin-bottom: 0.75rem;">Scopes seguem o padrao <code class="mono" style="color:var(--text-accent);">resource:action</code></p>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div><span class="badge badge-teal">workflows:read</span> Ler workflows</div>
+              <div><span class="badge badge-blue">executions:write</span> Criar execucoes</div>
+              <div><span class="badge badge-red">admin:delete</span> Deletar como admin</div>
+              <div><span class="badge badge-purple">*:*</span> Acesso total (wildcard)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128161;</div>
+            <div class="card-title">Wildcards</div>
+          </div>
+          <div class="card-desc">
+            <p style="margin-bottom: 0.75rem;">Wildcards permitem acesso amplo com uma unica scope.</p>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div><code class="mono" style="font-size:0.8rem;color:#fbbf24;">*</code> &mdash; Acesso total a tudo</div>
+              <div><code class="mono" style="font-size:0.8rem;color:#fbbf24;">workflows:*</code> &mdash; Todas as acoes em workflows</div>
+              <div><code class="mono" style="font-size:0.8rem;color:#fbbf24;">*:read</code> &mdash; Leitura em todos os recursos</div>
+              <div><code class="mono" style="font-size:0.8rem;color:#fbbf24;">*:delete</code> &mdash; Delete em todos os recursos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">Mapeamento HTTP &rarr; Action</h3>
+      <div class="table-container" style="margin-bottom: 1.5rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Metodo HTTP</th>
+              <th>Action</th>
+              <th>Exemplo de Scope</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="method-badge method-get">GET</span></td><td><code class="mono">read</code></td><td><code class="mono" style="color:var(--text-secondary);">workflows:read</code></td></tr>
+            <tr><td><span class="method-badge method-get">HEAD</span></td><td><code class="mono">read</code></td><td><code class="mono" style="color:var(--text-secondary);">workflows:read</code></td></tr>
+            <tr><td><span class="method-badge method-post">POST</span></td><td><code class="mono">write</code></td><td><code class="mono" style="color:var(--text-secondary);">executions:write</code></td></tr>
+            <tr><td><span class="method-badge method-put">PUT</span></td><td><code class="mono">write</code></td><td><code class="mono" style="color:var(--text-secondary);">workflows:write</code></td></tr>
+            <tr><td><span class="method-badge method-put">PATCH</span></td><td><code class="mono">write</code></td><td><code class="mono" style="color:var(--text-secondary);">agents:write</code></td></tr>
+            <tr><td><span class="method-badge method-delete">DELETE</span></td><td><code class="mono">delete</code></td><td><code class="mono" style="color:var(--text-secondary);">api_keys:delete</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">Matriz de Scopes</h3>
+      <div class="table-container scope-matrix">
+        <table>
+          <thead>
+            <tr>
+              <th>Recurso</th>
+              <th>read</th>
+              <th>write</th>
+              <th>delete</th>
+              <th>Derivado de URL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code class="mono">workflows</code></td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td><code class="mono" style="color:var(--text-muted);">/api/workflows/...</code></td>
+            </tr>
+            <tr>
+              <td><code class="mono">executions</code></td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td><code class="mono" style="color:var(--text-muted);">/api/executions/...</code></td>
+            </tr>
+            <tr>
+              <td><code class="mono">conversations</code></td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td><code class="mono" style="color:var(--text-muted);">/api/conversations/...</code></td>
+            </tr>
+            <tr>
+              <td><code class="mono">agents</code></td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td><code class="mono" style="color:var(--text-muted);">/api/agents/...</code></td>
+            </tr>
+            <tr>
+              <td><code class="mono">skills</code></td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td><code class="mono" style="color:var(--text-muted);">/api/skills/...</code></td>
+            </tr>
+            <tr>
+              <td><code class="mono">api_keys</code></td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td><code class="mono" style="color:var(--text-muted);">/api/api-keys/...</code></td>
+            </tr>
+            <tr>
+              <td><code class="mono">admin</code></td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td><code class="mono" style="color:var(--text-muted);">/api/admin/...</code></td>
+            </tr>
+            <tr>
+              <td><code class="mono">webhooks</code></td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td class="scope-check">&#10003;</td>
+              <td><code class="mono" style="color:var(--text-muted);">/api/webhooks/...</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code-block" style="margin-top: 1rem;"><span class="comment">// matchScope() — Logica de correspondencia</span>
+<span class="keyword">function</span> <span class="type">matchScope</span>(scope: <span class="type">string</span>, route: <span class="type">string</span>): <span class="type">boolean</span> {
+  <span class="keyword">if</span> (scope === <span class="string">'*'</span> || scope === <span class="string">'*:*'</span>) <span class="keyword">return true</span>
+  <span class="keyword">const</span> [scopeRes, scopeAct] = scope.split(<span class="string">':'</span>)
+  <span class="keyword">const</span> [routeRes, routeAct] = route.split(<span class="string">':'</span>)
+  <span class="keyword">if</span> (scopeRes === <span class="string">'*'</span>) <span class="keyword">return true</span>
+  <span class="keyword">if</span> (scopeRes !== routeRes) <span class="keyword">return false</span>
+  <span class="keyword">if</span> (scopeAct === <span class="string">'*'</span>) <span class="keyword">return true</span>
+  <span class="keyword">return</span> scopeAct === routeAct
+}
+
+<span class="comment">// deriveRouteScope() — Extrai scope da URL</span>
+<span class="comment">// GET /api/workflows/abc123 → "workflows:read"</span>
+<span class="comment">// POST /api/executions → "executions:write"</span>
+<span class="comment">// DELETE /api/api-keys/id → "api_keys:delete"</span></div>
+    </div>
+
+    <!-- Section 5: API Key Lifecycle -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128257;</div>
+        Ciclo de Vida da API Key
+      </div>
+
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="lifecycle-step">
+          <div class="lifecycle-number">1</div>
+          <div class="lifecycle-content">
+            <div class="lifecycle-title">Geracao</div>
+            <div class="lifecycle-desc">
+              <code class="mono" style="font-size:0.8rem;">POST /api-keys</code> com <code class="mono" style="font-size:0.8rem;">{ name }</code>.
+              Gera 32 bytes aleatorios via <code class="mono" style="font-size:0.8rem;">crypto.randomBytes(32)</code>, codifica em base64url com prefixo <code class="mono" style="font-size:0.8rem;">exk_</code>.
+              Armazena: hash SHA256 + prefix (primeiros 12 chars).
+              <strong>A chave raw so e retornada UMA VEZ na response de criacao.</strong>
+            </div>
+          </div>
+        </div>
+        <div class="lifecycle-step">
+          <div class="lifecycle-number">2</div>
+          <div class="lifecycle-content">
+            <div class="lifecycle-title">Uso</div>
+            <div class="lifecycle-desc">
+              Cada request com <code class="mono" style="font-size:0.8rem;">Bearer exk_...</code> incrementa <code class="mono" style="font-size:0.8rem;">usageCount</code> e atualiza <code class="mono" style="font-size:0.8rem;">lastUsedAt</code> (fire-and-forget, nao bloqueia a request).
+            </div>
+          </div>
+        </div>
+        <div class="lifecycle-step">
+          <div class="lifecycle-number">3</div>
+          <div class="lifecycle-content">
+            <div class="lifecycle-title">Listagem</div>
+            <div class="lifecycle-desc">
+              <code class="mono" style="font-size:0.8rem;">GET /api-keys</code> retorna todas as keys do usuario (nao revogadas). Mostra <code class="mono" style="font-size:0.8rem;">prefix</code>, <code class="mono" style="font-size:0.8rem;">name</code>, <code class="mono" style="font-size:0.8rem;">lastUsedAt</code>, <code class="mono" style="font-size:0.8rem;">createdAt</code>. <strong>Nunca retorna a key raw ou o hash.</strong>
+            </div>
+          </div>
+        </div>
+        <div class="lifecycle-step">
+          <div class="lifecycle-number">4</div>
+          <div class="lifecycle-content">
+            <div class="lifecycle-title">Revogacao</div>
+            <div class="lifecycle-desc">
+              <code class="mono" style="font-size:0.8rem;">DELETE /api-keys/:id</code> seta <code class="mono" style="font-size:0.8rem;">revoked = true</code>. A key nao e deletada do banco (soft delete para auditoria). Requests subsequentes com essa key retornam 401.
+            </div>
+          </div>
+        </div>
+        <div class="lifecycle-step">
+          <div class="lifecycle-number">5</div>
+          <div class="lifecycle-content">
+            <div class="lifecycle-title">Expiracao</div>
+            <div class="lifecycle-desc">
+              Campo <code class="mono" style="font-size:0.8rem;">expiresAt</code> opcional. Se definido e a data passou, o middleware rejeita com 401 "API key expired". Keys sem <code class="mono" style="font-size:0.8rem;">expiresAt</code> nao expiram automaticamente.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Key Prisma Model -->
+      <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">Modelo Prisma — ApiKey</h3>
+      <div class="code-block"><span class="keyword">model</span> <span class="type">ApiKey</span> {
+  id          <span class="type">String</span>    @id @default(uuid())
+  name        <span class="type">String</span>
+  keyHash     <span class="type">String</span>    @unique @map(<span class="string">"key_hash"</span>)
+  prefix      <span class="type">String</span>    <span class="comment">// primeiros 12 chars (exk_abc1...)</span>
+  scopes      <span class="type">Json</span>      @default(<span class="string">"[]"</span>)     <span class="comment">// ["workflows:read", "executions:*"]</span>
+  rateLimit   <span class="type">Int?</span>      @map(<span class="string">"rate_limit"</span>)  <span class="comment">// requests por minuto</span>
+  usageCount  <span class="type">Int</span>       @default(<span class="number">0</span>)
+  ipWhitelist <span class="type">Json</span>      @default(<span class="string">"[]"</span>)     <span class="comment">// ["192.168.1.1", "10.0.0.0/8"]</span>
+  lastUsedAt  <span class="type">DateTime?</span>
+  expiresAt   <span class="type">DateTime?</span>
+  revoked     <span class="type">Boolean</span>   @default(<span class="keyword">false</span>)
+  createdAt   <span class="type">DateTime</span>  @default(now())
+  userId      <span class="type">String</span>    @map(<span class="string">"user_id"</span>)
+  user        <span class="type">User</span>      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map(<span class="string">"api_keys"</span>)
+}</div>
+    </div>
+
+    <!-- Section 6: IP Whitelist & Rate Limiting -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: var(--bg-warning); color: #fbbf24;">&#9889;</div>
+        IP Whitelist &amp; Rate Limiting
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#127757;</div>
+            <div class="card-title">IP Whitelist</div>
+          </div>
+          <div class="card-desc">
+            <p style="margin-bottom: 0.75rem;">Lista opcional de IPs permitidos por API key. Se definida, requests de outros IPs sao rejeitados com <span class="badge badge-red">403 Forbidden</span>.</p>
+            <div class="code-block" style="font-size: 0.8rem;"><span class="comment">// Verificacao de IP</span>
+<span class="keyword">if</span> (keyInfo.ipWhitelist.length > <span class="number">0</span>) {
+  <span class="keyword">if</span> (!keyInfo.ipWhitelist.includes(request.ip))
+    <span class="keyword">throw new</span> ForbiddenError(
+      <span class="string">`IP ${request.ip} not in API key whitelist`</span>
+    )
+}</div>
+            <br>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Armazenado como JSON array no campo <code class="mono">ipWhitelist</code> da ApiKey.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128200;</div>
+            <div class="card-title">Rate Limiting</div>
+          </div>
+          <div class="card-desc">
+            <p style="margin-bottom: 0.75rem;">Dois niveis de rate limiting:</p>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div>
+                <span class="badge badge-teal">Global</span>
+                <p style="font-size: 0.85rem; margin-top: 0.25rem;">100 req/min por user/IP (<code class="mono" style="font-size:0.75rem;">@fastify/rate-limit</code>)</p>
+              </div>
+              <div>
+                <span class="badge badge-amber">Auth endpoints</span>
+                <p style="font-size: 0.85rem; margin-top: 0.25rem;">5 req/min em <code class="mono" style="font-size:0.75rem;">/auth/login</code> e <code class="mono" style="font-size:0.75rem;">/auth/register</code></p>
+              </div>
+              <div>
+                <span class="badge badge-blue">Por API Key</span>
+                <p style="font-size: 0.85rem; margin-top: 0.25rem;">Configuravel por key via campo <code class="mono" style="font-size:0.75rem;">rateLimit</code>. Counter Redis com TTL 60s.</p>
+              </div>
+              <div>
+                <span class="badge badge-purple">Execucoes</span>
+                <p style="font-size: 0.85rem; margin-top: 0.25rem;">5 req/min para criar execucoes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 7: RBAC -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(239,68,68,0.1); color: #f87171;">&#128081;</div>
+        RBAC — Role-Based Access Control
+      </div>
+
+      <div class="rbac-grid">
+        <div class="card role-card">
+          <span class="role-badge role-admin">Admin</span>
+          <div class="card-title" style="margin-bottom: 0.75rem;">Administrador</div>
+          <ul class="perm-list">
+            <li class="perm-yes">Acesso total ao sistema</li>
+            <li class="perm-yes">Gerenciamento de usuarios</li>
+            <li class="perm-yes">Audit logs</li>
+            <li class="perm-yes">Configuracoes globais</li>
+            <li class="perm-yes">Criar / editar / deletar tudo</li>
+            <li class="perm-yes">Executar workflows</li>
+            <li class="perm-yes">Visualizar metricas</li>
+          </ul>
+        </div>
+
+        <div class="card role-card">
+          <span class="role-badge role-developer">Developer</span>
+          <div class="card-title" style="margin-bottom: 0.75rem;">Desenvolvedor <span class="badge badge-teal" style="margin-left: 0.5rem;">default</span></div>
+          <ul class="perm-list">
+            <li class="perm-yes">Criar e editar workflows</li>
+            <li class="perm-yes">Executar workflows</li>
+            <li class="perm-yes">Gerenciar conversations</li>
+            <li class="perm-yes">Criar agents e skills</li>
+            <li class="perm-yes">Gerenciar API keys proprias</li>
+            <li class="perm-yes">Visualizar metricas proprias</li>
+            <li class="perm-no">Gerenciamento de usuarios</li>
+            <li class="perm-no">Audit logs</li>
+          </ul>
+        </div>
+
+        <div class="card role-card">
+          <span class="role-badge role-viewer">Viewer</span>
+          <div class="card-title" style="margin-bottom: 0.75rem;">Visualizador</div>
+          <ul class="perm-list">
+            <li class="perm-yes">Visualizar workflows</li>
+            <li class="perm-yes">Visualizar execucoes</li>
+            <li class="perm-yes">Visualizar conversations</li>
+            <li class="perm-yes">Visualizar metricas</li>
+            <li class="perm-no">Criar ou editar nada</li>
+            <li class="perm-no">Executar workflows</li>
+            <li class="perm-no">Gerenciar API keys</li>
+            <li class="perm-no">Gerenciamento de usuarios</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.5rem;">
+        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Middleware RBAC</h3>
+        <div class="code-block"><span class="comment">// middlewares/rbac.ts</span>
+<span class="keyword">export function</span> <span class="type">requireRole</span>(...allowedRoles: <span class="type">string</span>[]) {
+  <span class="keyword">return async</span> (request, reply) => {
+    <span class="keyword">const</span> userId = <span class="keyword">await</span> request.getCurrentUserId()
+    <span class="keyword">const</span> user = <span class="keyword">await</span> prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: <span class="keyword">true</span> },
+    })
+    <span class="keyword">if</span> (!user || !allowedRoles.includes(user.role))
+      <span class="keyword">throw new</span> ForbiddenError(<span class="string">'You do not have permission'</span>)
+  }
+}
+
+<span class="comment">// Uso nas rotas:</span>
+server.get(<span class="string">'/admin/users'</span>, {
+  preHandler: [requireRole(<span class="string">'admin'</span>)]
+}, handler)
+
+server.post(<span class="string">'/workflows'</span>, {
+  preHandler: [requireRole(<span class="string">'admin'</span>, <span class="string">'developer'</span>)]
+}, handler)</div>
+      </div>
+
+      <!-- Prisma enums -->
+      <div class="grid-2" style="margin-top: 1.5rem;">
+        <div class="card">
+          <div class="card-title" style="margin-bottom: 0.75rem;">Enum UserRole</div>
+          <div class="code-block"><span class="keyword">enum</span> <span class="type">UserRole</span> {
+  admin
+  developer
+  viewer
+}</div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom: 0.75rem;">Enum UserStatus</div>
+          <div class="code-block"><span class="keyword">enum</span> <span class="type">UserStatus</span> {
+  active      <span class="comment">// Pode fazer login</span>
+  suspended   <span class="comment">// JWT rejeitado no middleware</span>
+  invited     <span class="comment">// Aguardando primeiro login</span>
+}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 8: Frontend Auth Flow -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128187;</div>
+        Frontend — Fluxo de Autenticacao
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128736;</div>
+            <div class="card-title">Auth Store (Zustand)</div>
+          </div>
+          <div class="card-desc">
+            <p style="margin-bottom: 0.75rem;">Estado global de autenticacao via Zustand.</p>
+            <div class="code-block" style="font-size: 0.8rem;"><span class="keyword">interface</span> <span class="type">AuthState</span> {
+  user: <span class="type">AuthUser</span> | <span class="keyword">null</span>
+  token: <span class="type">string</span> | <span class="keyword">null</span>
+  isLoading: <span class="type">boolean</span>
+  isAuthenticated: <span class="type">boolean</span>
+
+  login(email, password): <span class="type">Promise</span>&lt;<span class="type">void</span>&gt;
+  register(email, password, name?): <span class="type">Promise</span>&lt;<span class="type">void</span>&gt;
+  logout(): <span class="type">void</span>
+  checkAuth(): <span class="type">Promise</span>&lt;<span class="type">void</span>&gt;
+}</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#128737;</div>
+            <div class="card-title">ProtectedRoute</div>
+          </div>
+          <div class="card-desc">
+            <p style="margin-bottom: 0.75rem;">Componente wrapper que protege rotas privadas.</p>
+            <div class="code-block" style="font-size: 0.8rem;"><span class="keyword">function</span> <span class="type">ProtectedRoute</span>({ children }) {
+  <span class="keyword">const</span> { isAuthenticated, isLoading, checkAuth }
+    = useAuthStore()
+
+  useEffect(() => { checkAuth() }, [])
+
+  <span class="keyword">if</span> (isLoading) <span class="keyword">return</span> &lt;Loader /&gt;
+  <span class="keyword">if</span> (!isAuthenticated)
+    <span class="keyword">return</span> &lt;Navigate to=<span class="string">"/login"</span> /&gt;
+
+  <span class="keyword">return</span> children
+}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.5rem;">
+        <div class="card-title" style="margin-bottom: 1rem;">Fluxo Completo — Frontend</div>
+        <div class="flow-diagram">
+          <div class="flow-step">
+            <div class="flow-step-icon" style="background: var(--bg-info); color: #60a5fa;">&#128100;</div>
+            <div class="flow-step-label">Login Form</div>
+            <div class="flow-step-detail">email + password</div>
+          </div>
+          <div class="flow-connector">&rarr;</div>
+          <div class="flow-step">
+            <div class="flow-step-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128259;</div>
+            <div class="flow-step-label">authApi.login()</div>
+            <div class="flow-step-detail">POST /auth/login</div>
+          </div>
+          <div class="flow-connector">&rarr;</div>
+          <div class="flow-step">
+            <div class="flow-step-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128190;</div>
+            <div class="flow-step-label">localStorage</div>
+            <div class="flow-step-detail">setItem('token', jwt)</div>
+          </div>
+          <div class="flow-connector">&rarr;</div>
+          <div class="flow-step">
+            <div class="flow-step-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128203;</div>
+            <div class="flow-step-label">Zustand Store</div>
+            <div class="flow-step-detail">{ user, token, isAuth }</div>
+          </div>
+          <div class="flow-connector">&rarr;</div>
+          <div class="flow-step">
+            <div class="flow-step-icon" style="background: var(--bg-success); color: #4ade80;">&#9989;</div>
+            <div class="flow-step-label">Dashboard</div>
+            <div class="flow-step-detail">Redirect automtico</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 1.5rem;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128259;</div>
+            <div class="card-title">Axios Interceptor</div>
+          </div>
+          <div class="card-desc">
+            <p style="margin-bottom: 0.5rem;">Toda request HTTP automaticamente inclui o Bearer token.</p>
+            <div class="code-block" style="font-size: 0.8rem;"><span class="comment">// Interceptor de request</span>
+api.interceptors.request.use(config => {
+  <span class="keyword">const</span> token = localStorage.getItem(<span class="string">'token'</span>)
+  <span class="keyword">if</span> (token)
+    config.headers.Authorization = <span class="string">`Bearer ${token}`</span>
+  <span class="keyword">return</span> config
+})</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(239,68,68,0.1); color: #f87171;">&#128683;</div>
+            <div class="card-title">Auto Logout (401)</div>
+          </div>
+          <div class="card-desc">
+            <p style="margin-bottom: 0.5rem;">Qualquer response 401 limpa a sessao e redireciona.</p>
+            <div class="code-block" style="font-size: 0.8rem;"><span class="comment">// Interceptor de response</span>
+api.interceptors.response.use(
+  res => res,
+  err => {
+    <span class="keyword">if</span> (err.response?.status === <span class="number">401</span>) {
+      localStorage.removeItem(<span class="string">'token'</span>)
+      window.location.href = <span class="string">'/login'</span>
+    }
+    <span class="keyword">return</span> Promise.reject(err)
+  }
+)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 9: Endpoints -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128268;</div>
+        Endpoints de Autenticacao
+      </div>
+
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="tab-auth-endpoints">Auth</button>
+          <button class="tab-btn" data-tab="tab-apikey-endpoints">API Keys</button>
+        </div>
+
+        <div class="tab-content active" id="tab-auth-endpoints">
+          <div class="card" style="padding: 0;">
+            <div class="endpoint-row" style="background: var(--bg-secondary); border-radius: 12px 12px 0 0;">
+              <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-secondary);">Metodo</span>
+              <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-secondary);">Rota</span>
+              <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-secondary);">Descricao</span>
+            </div>
+            <div class="endpoint-row">
+              <span class="method-badge method-post">POST</span>
+              <code class="mono" style="font-size: 0.85rem;">/auth/register</code>
+              <span style="font-size: 0.85rem; color: var(--text-secondary);">Registra novo usuario. Body: <code class="mono" style="font-size:0.75rem;">{ email, password, name? }</code>. Retorna <code class="mono" style="font-size:0.75rem;">{ token, user }</code>. Rate limit: 5/min.</span>
+            </div>
+            <div class="endpoint-row">
+              <span class="method-badge method-post">POST</span>
+              <code class="mono" style="font-size: 0.85rem;">/auth/login</code>
+              <span style="font-size: 0.85rem; color: var(--text-secondary);">Login com email/password. Retorna <code class="mono" style="font-size:0.75rem;">{ token, user }</code>. Rate limit: 5/min.</span>
+            </div>
+            <div class="endpoint-row">
+              <span class="method-badge method-get">GET</span>
+              <code class="mono" style="font-size: 0.85rem;">/auth/me</code>
+              <span style="font-size: 0.85rem; color: var(--text-secondary);">Retorna perfil do usuario autenticado. Requer Bearer token. Inclui <code class="mono" style="font-size:0.75rem;">hasGithub</code>.</span>
+            </div>
+            <div class="endpoint-row" style="border-radius: 0 0 12px 12px;">
+              <span class="method-badge method-get">GET</span>
+              <code class="mono" style="font-size: 0.85rem;">/auth/budget</code>
+              <span style="font-size: 0.85rem; color: var(--text-secondary);">Resumo de budget de tokens: dailyUsage, dailyLimit, monthlyUsage, monthlyLimit, percentuais.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-apikey-endpoints">
+          <div class="card" style="padding: 0;">
+            <div class="endpoint-row" style="background: var(--bg-secondary); border-radius: 12px 12px 0 0;">
+              <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-secondary);">Metodo</span>
+              <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-secondary);">Rota</span>
+              <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-secondary);">Descricao</span>
+            </div>
+            <div class="endpoint-row">
+              <span class="method-badge method-post">POST</span>
+              <code class="mono" style="font-size: 0.85rem;">/api-keys</code>
+              <span style="font-size: 0.85rem; color: var(--text-secondary);">Gera nova API key. Body: <code class="mono" style="font-size:0.75rem;">{ name }</code>. Retorna a key raw (unica vez) + id, prefix, createdAt.</span>
+            </div>
+            <div class="endpoint-row">
+              <span class="method-badge method-get">GET</span>
+              <code class="mono" style="font-size: 0.85rem;">/api-keys</code>
+              <span style="font-size: 0.85rem; color: var(--text-secondary);">Lista API keys do usuario (nao revogadas). Retorna prefix, name, lastUsedAt, createdAt, revoked.</span>
+            </div>
+            <div class="endpoint-row" style="border-radius: 0 0 12px 12px;">
+              <span class="method-badge method-delete">DELETE</span>
+              <code class="mono" style="font-size: 0.85rem;">/api-keys/:id</code>
+              <span style="font-size: 0.85rem; color: var(--text-secondary);">Revoga API key (soft delete: <code class="mono" style="font-size:0.75rem;">revoked = true</code>). Retorna 204 No Content.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exemplos curl -->
+      <div class="accordion-item" style="margin-top: 1.5rem;">
+        <div class="accordion-header">
+          <span style="display: flex; align-items: center; gap: 0.5rem;">&#128187; Exemplos cURL</span>
+          <span class="accordion-arrow">&#9660;</span>
+        </div>
+        <div class="accordion-body">
+          <div class="code-block"><span class="comment"># Registro</span>
+curl -X POST https://orquestrador-api.ddw1sl.easypanel.host/auth/register \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{"email":"user@example.com","password":"123456","name":"Myke"}'</span>
+
+<span class="comment"># Login</span>
+curl -X POST https://orquestrador-api.ddw1sl.easypanel.host/auth/login \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{"email":"user@example.com","password":"123456"}'</span>
+
+<span class="comment"># Perfil (com token)</span>
+curl https://orquestrador-api.ddw1sl.easypanel.host/auth/me \
+  -H <span class="string">"Authorization: Bearer eyJhbGc..."</span>
+
+<span class="comment"># Budget</span>
+curl https://orquestrador-api.ddw1sl.easypanel.host/auth/budget \
+  -H <span class="string">"Authorization: Bearer eyJhbGc..."</span>
+
+<span class="comment"># Criar API Key</span>
+curl -X POST https://orquestrador-api.ddw1sl.easypanel.host/api-keys \
+  -H <span class="string">"Authorization: Bearer eyJhbGc..."</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{"name":"CI/CD Pipeline"}'</span>
+
+<span class="comment"># Listar API Keys</span>
+curl https://orquestrador-api.ddw1sl.easypanel.host/api-keys \
+  -H <span class="string">"Authorization: Bearer eyJhbGc..."</span>
+
+<span class="comment"># Revogar API Key</span>
+curl -X DELETE https://orquestrador-api.ddw1sl.easypanel.host/api-keys/UUID \
+  -H <span class="string">"Authorization: Bearer eyJhbGc..."</span>
+
+<span class="comment"># Usar API Key diretamente</span>
+curl https://orquestrador-api.ddw1sl.easypanel.host/api/workflows \
+  -H <span class="string">"Authorization: Bearer exk_abc123..."</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 10: Password Security -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(239,68,68,0.1); color: #f87171;">&#128274;</div>
+        Seguranca de Senhas
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128272;</div>
+            <div class="card-title">bcryptjs</div>
+          </div>
+          <div class="card-desc">
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div><span class="badge badge-teal">Algoritmo</span> bcrypt (via bcryptjs)</div>
+              <div><span class="badge badge-blue">Salt rounds</span> 10</div>
+              <div><span class="badge badge-green">Hash</span> Registro: <code class="mono" style="font-size:0.8rem;">bcrypt.hash(password, 10)</code></div>
+              <div><span class="badge badge-amber">Verify</span> Login: <code class="mono" style="font-size:0.8rem;">bcrypt.compare(password, hash)</code></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128737;</div>
+            <div class="card-title">Protecoes</div>
+          </div>
+          <div class="card-desc">
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div><span class="badge badge-green">Senha minima</span> 6 caracteres (validacao Zod)</div>
+              <div><span class="badge badge-teal">Rate limit</span> 5 tentativas de login/min</div>
+              <div><span class="badge badge-blue">Mensagem generica</span> "Email ou senha invalidos" (nao revela se o email existe)</div>
+              <div><span class="badge badge-purple">Status check</span> Usuarios suspensos nao podem logar</div>
+              <div><span class="badge badge-amber">API Key hash</span> SHA256, nunca armazenado em texto</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 11: Architecture Overview -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#127959;</div>
+        Arquitetura — Arquivos Envolvidos
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Arquivo</th>
+              <th>Responsabilidade</th>
+              <th>Layer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code class="mono" style="font-size: 0.8rem;">middlewares/auth.ts</code></td>
+              <td>preHandler hook: JWT verify + API key detect + Redis cache user</td>
+              <td><span class="badge badge-teal">Middleware</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="font-size: 0.8rem;">middlewares/api-key-enforcement.ts</code></td>
+              <td>IP whitelist, scope check, rate limit per API key</td>
+              <td><span class="badge badge-teal">Middleware</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="font-size: 0.8rem;">middlewares/rbac.ts</code></td>
+              <td>requireRole() — verifica role do usuario</td>
+              <td><span class="badge badge-teal">Middleware</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="font-size: 0.8rem;">middlewares/rate-limit.ts</code></td>
+              <td>Rate limiting global (100/min) e por endpoint</td>
+              <td><span class="badge badge-teal">Middleware</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="font-size: 0.8rem;">domains/auth/auth.routes.ts</code></td>
+              <td>Endpoints: register, login, me, budget</td>
+              <td><span class="badge badge-blue">Routes</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="font-size: 0.8rem;">domains/api-keys/api-keys.routes.ts</code></td>
+              <td>CRUD de API keys: create, list, revoke</td>
+              <td><span class="badge badge-blue">Routes</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="font-size: 0.8rem;">frontend/src/features/auth/store.ts</code></td>
+              <td>Zustand store: login, register, logout, checkAuth</td>
+              <td><span class="badge badge-purple">Frontend</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="font-size: 0.8rem;">frontend/src/features/auth/protected-route.tsx</code></td>
+              <td>ProtectedRoute component: guard de rotas</td>
+              <td><span class="badge badge-purple">Frontend</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="font-size: 0.8rem;">http/errors/unauthorized-error.ts</code></td>
+              <td>Classe UnauthorizedError (401)</td>
+              <td><span class="badge badge-red">Error</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 12: User Model -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: var(--bg-success); color: #4ade80;">&#128101;</div>
+        Modelo User — Prisma
+      </div>
+
+      <div class="code-block"><span class="keyword">model</span> <span class="type">User</span> {
+  id                      <span class="type">String</span>     @id @default(uuid())
+  email                   <span class="type">String</span>     @unique
+  passwordHash            <span class="type">String</span>     @map(<span class="string">"password_hash"</span>)
+  name                    <span class="type">String?</span>
+  status                  <span class="type">UserStatus</span> @default(active)     <span class="comment">// active | suspended | invited</span>
+  role                    <span class="type">UserRole</span>   @default(developer)  <span class="comment">// admin | developer | viewer</span>
+  preferences             <span class="type">Json</span>       @default(<span class="string">"{}"</span>)
+  lastLoginAt             <span class="type">DateTime?</span>
+  maxConcurrentExecutions <span class="type">Int</span>        @default(<span class="number">5</span>)
+  createdAt               <span class="type">DateTime</span>   @default(now())
+  updatedAt               <span class="type">DateTime</span>   @default(now()) @updatedAt
+
+  <span class="comment">// Relacoes</span>
+  workflows      <span class="type">Workflow[]</span>
+  conversations  <span class="type">Conversation[]</span>
+  mcpServers     <span class="type">McpServer[]</span>
+  skills         <span class="type">Skill[]</span>
+  agents         <span class="type">Agent[]</span>
+  rules          <span class="type">Rule[]</span>
+  plugins        <span class="type">Plugin[]</span>
+  hooks          <span class="type">Hook[]</span>
+  apiKeys        <span class="type">ApiKey[]</span>
+  tokenBudget    <span class="type">UserTokenBudget?</span>
+  webhooks       <span class="type">Webhook[]</span>
+  gitAccounts    <span class="type">GitAccount[]</span>
+
+  @@map(<span class="string">"users"</span>)
+}</div>
+    </div>
+
+  </div>
+</body>
+</html>

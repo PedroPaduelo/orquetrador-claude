@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>11 - Workflows | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* State Diagram */
+    .state-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: 2rem 1rem;
+      flex-wrap: wrap;
+    }
+    .state-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      border: 2px solid var(--border-color);
+      background: var(--bg-card);
+      min-width: 120px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    .state-node:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-glow);
+    }
+    .state-node .state-icon { font-size: 1.5rem; }
+    .state-node .state-label { font-weight: 600; font-size: 0.9rem; }
+    .state-node .state-desc { font-size: 0.75rem; color: var(--text-muted); }
+    .state-node.draft { border-color: rgba(251,191,36,0.5); }
+    .state-node.active { border-color: rgba(34,197,94,0.5); }
+    .state-node.archived { border-color: rgba(100,116,139,0.5); }
+    .state-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+      color: var(--text-muted);
+    }
+    .state-arrow .arrow-line {
+      font-size: 1.5rem;
+      color: var(--text-accent);
+    }
+    .state-arrow .arrow-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* Anatomy Card */
+    .anatomy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .anatomy-item {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .anatomy-item .field-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-accent);
+      font-weight: 600;
+    }
+    .anatomy-item .field-type {
+      font-size: 0.75rem;
+      color: #a78bfa;
+      margin-left: 0.5rem;
+    }
+    .anatomy-item .field-desc {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      margin-top: 0.35rem;
+      line-height: 1.5;
+    }
+    .anatomy-item .field-default {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Flowchart */
+    .flowchart {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1.5rem;
+    }
+    .flowchart-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .fc-node {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.3s;
+    }
+    .fc-node:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+    }
+    .fc-node.decision {
+      border-radius: 2px;
+      transform: rotate(0deg);
+      background: rgba(139,92,246,0.1);
+      border-color: rgba(139,92,246,0.3);
+      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+      padding: 1.5rem 2rem;
+      text-align: center;
+    }
+    .fc-node.action-next { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.08); }
+    .fc-node.action-retry { border-color: rgba(251,191,36,0.4); background: rgba(251,191,36,0.08); }
+    .fc-node.action-jump { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); }
+    .fc-node.action-complete { border-color: rgba(139,92,246,0.4); background: rgba(139,92,246,0.08); }
+    .fc-arrow-down {
+      color: var(--text-muted);
+      font-size: 1.2rem;
+    }
+
+    /* Resource pills */
+    .resource-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .resource-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+
+    /* Wizard steps */
+    .wizard-phases {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .wizard-phase {
+      flex: 1;
+      min-width: 280px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      position: relative;
+    }
+    .wizard-phase .phase-number {
+      position: absolute;
+      top: -12px;
+      left: 16px;
+      background: var(--bg-accent);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .wizard-phase .phase-title {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .wizard-phase ul {
+      list-style: none;
+      padding: 0;
+    }
+    .wizard-phase li {
+      padding: 0.3rem 0;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .wizard-phase li::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--text-accent);
+      flex-shrink: 0;
+    }
+
+    /* Method badge in tables */
+    .method {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+      min-width: 52px;
+      text-align: center;
+    }
+    .method-get { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .method-post { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .method-put { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .method-delete { background: rgba(239,68,68,0.15); color: #f87171; }
+
+    td code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      background: var(--bg-secondary);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      color: #e2e8f0;
+    }
+
+    /* Subsection label */
+    .subsection {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.75rem;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Version timeline */
+    .version-timeline {
+      border-left: 2px solid var(--border-color);
+      margin-left: 1rem;
+      padding-left: 1.5rem;
+    }
+    .version-entry {
+      position: relative;
+      margin-bottom: 1.25rem;
+      padding: 0.75rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+    }
+    .version-entry::before {
+      content: '';
+      position: absolute;
+      left: -2rem;
+      top: 1rem;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--bg-accent);
+      border: 2px solid var(--bg-primary);
+    }
+    .version-entry .ver-number {
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--text-accent);
+    }
+    .version-entry .ver-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+    }
+
+    /* Nested JSON view */
+    .json-tree {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      overflow-x: auto;
+      color: #e2e8f0;
+    }
+    .json-tree .jk { color: #67e8f9; }
+    .json-tree .js { color: #86efac; }
+    .json-tree .jn { color: #fbbf24; }
+    .json-tree .jt { color: #c084fc; }
+    .json-tree .jc { color: #64748b; }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">System Map</a>
+      <span>&rsaquo;</span>
+      <span>11 - Workflows</span>
+    </div>
+    <h1>Workflows</h1>
+    <p class="subtitle">Templates de execucao compostos por steps ordenados, conditions, versionamento e integracao com recursos do sistema.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4" style="margin-bottom: 2.5rem;">
+    <div class="stat-box">
+      <div class="stat-value" data-count="2">2</div>
+      <div class="stat-label">Tipos de Workflow</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="3">3</div>
+      <div class="stat-label">Estados do Ciclo</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="20">20</div>
+      <div class="stat-label">Endpoints</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="8">8</div>
+      <div class="stat-label">Tipos de Condition</div>
+    </div>
+  </div>
+
+  <!-- ==================== 1. VISAO GERAL ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">1</span>
+      Visao Geral
+    </h2>
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <p class="card-desc" style="margin-bottom: 1rem;">
+        Workflows sao <strong>templates de execucao</strong> do Orquetrador. Cada workflow define uma sequencia de steps que serao executados em ordem, com suporte a conditions, retries, validadores e integracao com recursos (MCP servers, skills, agents, rules, hooks).
+      </p>
+      <div class="grid-2">
+        <div class="anatomy-item">
+          <div class="field-name">sequential</div>
+          <div class="field-desc">Todos os steps executam em sequencia, um apos o outro. Se o workflow tiver dependsOn em algum step, o motor de execucao usa DAG automaticamente.</div>
+        </div>
+        <div class="anatomy-item">
+          <div class="field-name">step_by_step</div>
+          <div class="field-desc">Executa um step por vez, aguardando input do usuario entre cada step. Ideal para fluxos interativos e revisao humana.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Conceitos-chave</span>
+      </div>
+      <ul style="list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem;">
+        <li style="padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary);"><strong style="color: var(--text-primary);">Workflow</strong> &mdash; template de execucao com metadata e steps</li>
+        <li style="padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary);"><strong style="color: var(--text-primary);">WorkflowStep</strong> &mdash; unidade atomica de execucao dentro do workflow</li>
+        <li style="padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary);"><strong style="color: var(--text-primary);">Conditions</strong> &mdash; regras que determinam o proximo step com base no output</li>
+        <li style="padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary);"><strong style="color: var(--text-primary);">Conversation</strong> &mdash; instancia de execucao de um workflow</li>
+        <li style="padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary);"><strong style="color: var(--text-primary);">WorkflowVersion</strong> &mdash; snapshot + diff para rollback</li>
+        <li style="padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary);"><strong style="color: var(--text-primary);">StepTemplate</strong> &mdash; configuracao reutilizavel de step</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ==================== 2. CICLO DE VIDA ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">2</span>
+      Ciclo de Vida
+    </h2>
+    <div class="card">
+      <p class="card-desc" style="margin-bottom: 1.5rem;">Workflows passam por tres estados controlados pelo enum <code style="font-family:'JetBrains Mono',monospace; background:var(--bg-secondary); padding:0.15rem 0.4rem; border-radius:4px; font-size:0.8rem;">WorkflowStatus</code>.</p>
+
+      <div class="state-diagram">
+        <div class="state-node draft">
+          <div class="state-icon">&#x270F;&#xFE0F;</div>
+          <div class="state-label">Draft</div>
+          <div class="state-desc">Em construcao</div>
+        </div>
+
+        <div class="state-arrow">
+          <div class="arrow-label">ativar</div>
+          <div class="arrow-line">&rarr;</div>
+        </div>
+
+        <div class="state-node active">
+          <div class="state-icon">&#x2705;</div>
+          <div class="state-label">Active</div>
+          <div class="state-desc">Pronto para execucao</div>
+        </div>
+
+        <div class="state-arrow">
+          <div class="arrow-label">arquivar</div>
+          <div class="arrow-line">&rarr;</div>
+        </div>
+
+        <div class="state-node archived">
+          <div class="state-icon">&#x1F4E6;</div>
+          <div class="state-label">Archived</div>
+          <div class="state-desc">Desativado</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+        <div style="flex: 1; min-width: 200px; padding: 0.75rem; background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.2); border-radius: 8px;">
+          <div style="font-weight: 600; font-size: 0.85rem; color: #fbbf24;">Draft</div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">Workflow sendo configurado. Steps podem ser adicionados/editados. Nao pode ser executado via API externa.</div>
+        </div>
+        <div style="flex: 1; min-width: 200px; padding: 0.75rem; background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.2); border-radius: 8px;">
+          <div style="font-weight: 600; font-size: 0.85rem; color: #4ade80;">Active</div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">Workflow pronto. Pode ser executado, duplicado, versionado. Estado padrao ao criar um workflow.</div>
+        </div>
+        <div style="flex: 1; min-width: 200px; padding: 0.75rem; background: rgba(100,116,139,0.06); border: 1px solid rgba(100,116,139,0.2); border-radius: 8px;">
+          <div style="font-weight: 600; font-size: 0.85rem; color: #94a3b8;">Archived</div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem;">Workflow desativado. Historico e conversations preservados. Pode ser reativado.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 3. ESTRUTURA DO WORKFLOW ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">3</span>
+      Estrutura do Workflow
+    </h2>
+
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <span class="card-title">Modelo Prisma: Workflow</span>
+        <span class="badge badge-teal">@@map("workflows")</span>
+      </div>
+      <div class="anatomy-grid">
+        <div class="anatomy-item">
+          <div><span class="field-name">id</span><span class="field-type">String @id @default(uuid())</span></div>
+          <div class="field-desc">Identificador unico do workflow.</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">name</span><span class="field-type">String</span></div>
+          <div class="field-desc">Nome descritivo do workflow.</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">description</span><span class="field-type">String?</span></div>
+          <div class="field-desc">Descricao opcional do proposito do workflow.</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">type</span><span class="field-type">String</span></div>
+          <div class="field-desc">"sequential" ou "step_by_step". Define o modo de execucao.</div>
+          <div class="field-default">Default: "sequential"</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">status</span><span class="field-type">WorkflowStatus</span></div>
+          <div class="field-desc">Estado atual: draft, active ou archived.</div>
+          <div class="field-default">Default: active</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">tags</span><span class="field-type">Json</span></div>
+          <div class="field-desc">Array JSON de tags para categorizar o workflow.</div>
+          <div class="field-default">Default: []</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">executionCount</span><span class="field-type">Int</span></div>
+          <div class="field-desc">Contador de execucoes do workflow.</div>
+          <div class="field-default">Default: 0</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">lastExecutedAt</span><span class="field-type">DateTime?</span></div>
+          <div class="field-desc">Data/hora da ultima execucao.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Relacoes</span>
+      </div>
+      <div class="grid-2" style="gap: 0.75rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;padding:0.6rem 1rem;background:var(--bg-secondary);border-radius:8px;">
+          <span style="font-size:1rem;">&#x1F9E9;</span>
+          <div>
+            <div style="font-weight:600;font-size:0.85rem;">steps: WorkflowStep[]</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Steps que compoem o workflow</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;padding:0.6rem 1rem;background:var(--bg-secondary);border-radius:8px;">
+          <span style="font-size:1rem;">&#x1F4AC;</span>
+          <div>
+            <div style="font-weight:600;font-size:0.85rem;">conversations: Conversation[]</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Instancias de execucao</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;padding:0.6rem 1rem;background:var(--bg-secondary);border-radius:8px;">
+          <span style="font-size:1rem;">&#x1F4CB;</span>
+          <div>
+            <div style="font-weight:600;font-size:0.85rem;">versions: WorkflowVersion[]</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Historico de versoes com snapshots</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;padding:0.6rem 1rem;background:var(--bg-secondary);border-radius:8px;">
+          <span style="font-size:1rem;">&#x23F0;</span>
+          <div>
+            <div style="font-weight:600;font-size:0.85rem;">triggers: WorkflowTrigger[]</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">Triggers que disparam o workflow</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 4. WORKFLOW STEP - ANATOMIA ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">4</span>
+      WorkflowStep &mdash; Anatomia Completa
+    </h2>
+
+    <!-- Campos Base -->
+    <div class="accordion-item open">
+      <div class="accordion-header">
+        <span>Campos Base</span>
+        <span class="accordion-arrow">&#x25BC;</span>
+      </div>
+      <div class="accordion-body">
+        <div class="anatomy-grid">
+          <div class="anatomy-item">
+            <div><span class="field-name">name</span><span class="field-type">String</span></div>
+            <div class="field-desc">Nome identificador do step.</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">baseUrl</span><span class="field-type">String</span></div>
+            <div class="field-desc">URL base do projeto para execucao (path no servidor).</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">stepOrder</span><span class="field-type">Int</span></div>
+            <div class="field-desc">Posicao do step na sequencia (0-indexed).</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">systemPrompt</span><span class="field-type">String?</span></div>
+            <div class="field-desc">Prompt de sistema customizado para este step.</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">useBasePrompt</span><span class="field-type">Boolean</span></div>
+            <div class="field-desc">Se true, combina com o prompt base do usuario.</div>
+            <div class="field-default">Default: true</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conditions -->
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span>Conditions &mdash; Sistema de Regras</span>
+        <span class="accordion-arrow">&#x25BC;</span>
+      </div>
+      <div class="accordion-body">
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;">O campo <code style="font-family:'JetBrains Mono',monospace;background:var(--bg-secondary);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.8rem;">conditions</code> e um JSON com regras que avaliam o output do step e determinam a acao seguinte.</p>
+        <div class="json-tree" style="margin-bottom:1rem;">
+<span class="jt">{</span>
+  <span class="jk">"rules"</span>: [
+    {
+      <span class="jk">"type"</span>: <span class="js">"contains"</span>,      <span class="jc">// tipo de comparacao</span>
+      <span class="jk">"match"</span>: <span class="js">"APROVADO"</span>,     <span class="jc">// valor para comparar</span>
+      <span class="jk">"goto"</span>: <span class="js">"complete"</span>,      <span class="jc">// acao: next|retry|jump|complete</span>
+      <span class="jk">"maxRetries"</span>: <span class="jn">3</span>,          <span class="jc">// tentativas (se retry)</span>
+      <span class="jk">"retryMessage"</span>: <span class="js">"Tente novamente com mais detalhe"</span>
+    }
+  ],
+  <span class="jk">"default"</span>: <span class="js">"next"</span>           <span class="jc">// acao se nenhuma regra matched</span>
+<span class="jt">}</span>
+        </div>
+        <div class="anatomy-grid">
+          <div class="anatomy-item">
+            <div><span class="field-name">maxRetries</span><span class="field-type">Int</span></div>
+            <div class="field-desc">Numero maximo de retries para o step.</div>
+            <div class="field-default">Default: 0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAG Dependencies -->
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span>DAG Dependencies</span>
+        <span class="accordion-arrow">&#x25BC;</span>
+      </div>
+      <div class="accordion-body">
+        <div class="anatomy-grid">
+          <div class="anatomy-item">
+            <div><span class="field-name">dependsOn</span><span class="field-type">Json (string[])</span></div>
+            <div class="field-desc">Array de IDs de steps dos quais este step depende. Se preenchido, o motor usa DAG Executor para execucao paralela.</div>
+            <div class="field-default">Default: []</div>
+          </div>
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.75rem;">Quando qualquer step tem dependsOn preenchido, o workflow e automaticamente detectado como DAG pelo <code style="font-family:'JetBrains Mono',monospace;background:var(--bg-secondary);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.8rem;">isDAGWorkflow()</code> e executado com o DAG Executor.</p>
+      </div>
+    </div>
+
+    <!-- Validators -->
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span>Validators</span>
+        <span class="accordion-arrow">&#x25BC;</span>
+      </div>
+      <div class="accordion-body">
+        <div class="anatomy-grid">
+          <div class="anatomy-item">
+            <div><span class="field-name">validators</span><span class="field-type">Json (array)</span></div>
+            <div class="field-desc">Array de validadores que checam o output do step antes de prosseguir. Cada validador tem type e config.</div>
+            <div class="field-default">Default: []</div>
+          </div>
+        </div>
+        <div class="json-tree" style="margin-top:0.75rem;">
+<span class="jk">"validators"</span>: [
+  { <span class="jk">"type"</span>: <span class="js">"json_schema"</span>, <span class="jk">"config"</span>: { <span class="jk">"schema"</span>: { ... } } },
+  { <span class="jk">"type"</span>: <span class="js">"contains"</span>, <span class="jk">"config"</span>: { <span class="jk">"text"</span>: <span class="js">"OK"</span> } },
+  { <span class="jk">"type"</span>: <span class="js">"min_length"</span>, <span class="jk">"config"</span>: { <span class="jk">"length"</span>: <span class="jn">100</span> } }
+]
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeout e Error Handling -->
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span>Timeout e Error Handling</span>
+        <span class="accordion-arrow">&#x25BC;</span>
+      </div>
+      <div class="accordion-body">
+        <div class="anatomy-grid">
+          <div class="anatomy-item">
+            <div><span class="field-name">timeout</span><span class="field-type">Int? (ms)</span></div>
+            <div class="field-desc">Tempo maximo de execucao do step em milissegundos.</div>
+            <div class="field-default">Default: 300000 (5 min)</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">errorHandler</span><span class="field-type">StepErrorHandler</span></div>
+            <div class="field-desc">Estrategia quando o step falha.</div>
+            <div class="field-default">Default: fail</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">skipCondition</span><span class="field-type">String?</span></div>
+            <div class="field-desc">Expressao avaliada em runtime. Se true, o step e pulado.</div>
+          </div>
+        </div>
+
+        <div class="subsection" style="margin-top:1.25rem;">Enum StepErrorHandler</div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <div style="padding:0.5rem 0.75rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:0.8rem;">
+            <strong style="color:#f87171;">fail</strong>
+            <div style="color:var(--text-muted);font-size:0.75rem;">Para a execucao inteira</div>
+          </div>
+          <div style="padding:0.5rem 0.75rem;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:8px;font-size:0.8rem;">
+            <strong style="color:#fbbf24;">skip</strong>
+            <div style="color:var(--text-muted);font-size:0.75rem;">Pula o step e continua</div>
+          </div>
+          <div style="padding:0.5rem 0.75rem;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:8px;font-size:0.8rem;">
+            <strong style="color:#a78bfa;">fallback</strong>
+            <div style="color:var(--text-muted);font-size:0.75rem;">Executa logica de fallback</div>
+          </div>
+          <div style="padding:0.5rem 0.75rem;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;font-size:0.8rem;">
+            <strong style="color:#4ade80;">continue_next</strong>
+            <div style="color:var(--text-muted);font-size:0.75rem;">Ignora erro e prossegue</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resources -->
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span>Resources (Recursos Vinculados)</span>
+        <span class="accordion-arrow">&#x25BC;</span>
+      </div>
+      <div class="accordion-body">
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.75rem;">Cada step pode ter multiplos recursos vinculados via join tables (M:N).</p>
+        <div class="resource-pills" style="margin-bottom:1rem;">
+          <div class="resource-pill"><span style="color:#60a5fa;">&#x1F916;</span> mcpServerIds <span class="badge badge-blue" style="padding:0.1rem 0.4rem;font-size:0.65rem;">WorkflowStepMcpServer</span></div>
+          <div class="resource-pill"><span style="color:#a78bfa;">&#x1F9E0;</span> skillIds <span class="badge badge-purple" style="padding:0.1rem 0.4rem;font-size:0.65rem;">WorkflowStepSkill</span></div>
+          <div class="resource-pill"><span style="color:#4ade80;">&#x1F916;</span> agentIds <span class="badge badge-green" style="padding:0.1rem 0.4rem;font-size:0.65rem;">WorkflowStepAgent</span></div>
+          <div class="resource-pill"><span style="color:#fbbf24;">&#x1F4D0;</span> ruleIds <span class="badge badge-amber" style="padding:0.1rem 0.4rem;font-size:0.65rem;">WorkflowStepRule</span></div>
+          <div class="resource-pill"><span style="color:#f87171;">&#x1FA9D;</span> hookIds <span class="badge badge-red" style="padding:0.1rem 0.4rem;font-size:0.65rem;">WorkflowStepHook</span></div>
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-muted);">Cada join table tem: id, stepId, resourceId, order, config?, createdAt. Unique constraint em [stepId, resourceId].</p>
+      </div>
+    </div>
+
+    <!-- Variables e Output -->
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span>Variables e Output</span>
+        <span class="accordion-arrow">&#x25BC;</span>
+      </div>
+      <div class="accordion-body">
+        <div class="anatomy-grid">
+          <div class="anatomy-item">
+            <div><span class="field-name">outputVariables</span><span class="field-type">Json (string[])</span></div>
+            <div class="field-desc">Nomes de variaveis extraidas do output do step.</div>
+            <div class="field-default">Default: []</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">inputVariables</span><span class="field-type">Json (string[])</span></div>
+            <div class="field-desc">Variaveis esperadas como input (de steps anteriores).</div>
+            <div class="field-default">Default: []</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">outputSchema</span><span class="field-type">Json?</span></div>
+            <div class="field-desc">JSON Schema esperado do output do step.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backend e Model -->
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span>Backend e Model</span>
+        <span class="accordion-arrow">&#x25BC;</span>
+      </div>
+      <div class="accordion-body">
+        <div class="anatomy-grid">
+          <div class="anatomy-item">
+            <div><span class="field-name">backend</span><span class="field-type">String</span></div>
+            <div class="field-desc">Motor de execucao: "claude" (Claude CLI) ou "api" (Anthropic API direta).</div>
+            <div class="field-default">Default: "claude"</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">model</span><span class="field-type">String?</span></div>
+            <div class="field-desc">Modelo especifico para o step (ex: claude-3-opus, claude-3-sonnet). Null usa o padrao.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-Workflow e Template -->
+    <div class="accordion-item">
+      <div class="accordion-header">
+        <span>Sub-Workflow e Template</span>
+        <span class="accordion-arrow">&#x25BC;</span>
+      </div>
+      <div class="accordion-body">
+        <div class="anatomy-grid">
+          <div class="anatomy-item">
+            <div><span class="field-name">subWorkflowId</span><span class="field-type">String?</span></div>
+            <div class="field-desc">ID de outro workflow para executar como sub-step. Permite composicao de workflows.</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">templateId</span><span class="field-type">String?</span></div>
+            <div class="field-desc">ID do StepTemplate usado como base para este step.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 5. CONDITIONS SYSTEM ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">5</span>
+      Conditions System
+    </h2>
+
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="card-header">
+        <span class="card-title">Tipos de Regra (Condition Rules)</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Descricao</th>
+              <th>Exemplo de match</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>contains</code></td><td>Output contem o texto</td><td><code>"APROVADO"</code></td></tr>
+            <tr><td><code>not_contains</code></td><td>Output nao contem o texto</td><td><code>"ERRO"</code></td></tr>
+            <tr><td><code>equals</code></td><td>Output e exatamente igual ao texto</td><td><code>"OK"</code></td></tr>
+            <tr><td><code>starts_with</code></td><td>Output comeca com o texto</td><td><code>"RESULTADO:"</code></td></tr>
+            <tr><td><code>ends_with</code></td><td>Output termina com o texto</td><td><code>"FIM"</code></td></tr>
+            <tr><td><code>regex</code></td><td>Output match com expressao regular</td><td><code>"\\d{3,}"</code></td></tr>
+            <tr><td><code>length_gt</code></td><td>Output tem mais de N caracteres</td><td><code>"500"</code></td></tr>
+            <tr><td><code>length_lt</code></td><td>Output tem menos de N caracteres</td><td><code>"100"</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Fluxo de Avaliacao de Conditions</span>
+      </div>
+
+      <div class="flowchart">
+        <div class="fc-node" style="background:rgba(13,148,136,0.1);border-color:rgba(13,148,136,0.3);">
+          Step executa e produz output
+        </div>
+        <div class="fc-arrow-down">&#x25BC;</div>
+        <div class="fc-node">
+          Avaliar rules[] em ordem
+        </div>
+        <div class="fc-arrow-down">&#x25BC;</div>
+
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;width:100%;">
+          <div style="text-align:center;">
+            <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.3rem;">Rule matched?</div>
+            <div style="display:flex;gap:0.75rem;">
+              <div style="text-align:center;">
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.3rem;">Sim</div>
+                <div class="fc-arrow-down" style="font-size:0.8rem;">&#x25BC;</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.3rem;">Nao</div>
+                <div class="fc-arrow-down" style="font-size:0.8rem;">&#x25BC;</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flowchart-row" style="width:100%;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.5rem;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">goto action:</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:center;">
+              <div class="fc-node action-next">next<div style="font-size:0.65rem;color:var(--text-muted);">proximo step</div></div>
+              <div class="fc-node action-retry">retry<div style="font-size:0.65rem;color:var(--text-muted);">re-executa (maxRetries)</div></div>
+              <div class="fc-node action-jump">jump<div style="font-size:0.65rem;color:var(--text-muted);">pula para step ID</div></div>
+              <div class="fc-node action-complete">complete<div style="font-size:0.65rem;color:var(--text-muted);">finaliza workflow</div></div>
+            </div>
+          </div>
+
+          <div style="flex:0.5;display:flex;flex-direction:column;align-items:center;gap:0.5rem;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">Proxima rule ou default:</div>
+            <div class="fc-node" style="border-color:rgba(100,116,139,0.3);">default: "next"</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 6. VERSIONAMENTO ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-3);">6</span>
+      Versionamento
+    </h2>
+
+    <div class="grid-2" style="margin-bottom:1.5rem;">
+      <!-- WorkflowVersion -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">WorkflowVersion</span>
+          <span class="badge badge-teal">@@map("workflow_versions")</span>
+        </div>
+        <div class="anatomy-grid" style="grid-template-columns:1fr;">
+          <div class="anatomy-item">
+            <div><span class="field-name">version</span><span class="field-type">Int</span></div>
+            <div class="field-desc">Numero sequencial da versao (unique com workflowId).</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">snapshot</span><span class="field-type">Json</span></div>
+            <div class="field-desc">Snapshot completo do workflow + steps naquele momento.</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">diff</span><span class="field-type">Json?</span></div>
+            <div class="field-desc">Diff estrutural da versao anterior para esta.</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">changelog</span><span class="field-type">String?</span></div>
+            <div class="field-desc">Descricao das mudancas feitas nesta versao.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PromptVersion -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">PromptVersion</span>
+          <span class="badge badge-purple">@@map("prompt_versions")</span>
+        </div>
+        <div class="anatomy-grid" style="grid-template-columns:1fr;">
+          <div class="anatomy-item">
+            <div><span class="field-name">stepId</span><span class="field-type">String</span></div>
+            <div class="field-desc">Step ao qual esta versao de prompt pertence.</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">version</span><span class="field-type">Int</span></div>
+            <div class="field-desc">Numero sequencial da versao do prompt.</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">content</span><span class="field-type">String</span></div>
+            <div class="field-desc">Conteudo completo do systemPrompt nesta versao.</div>
+          </div>
+          <div class="anatomy-item">
+            <div><span class="field-name">diff</span><span class="field-type">String?</span></div>
+            <div class="field-desc">Diff textual da versao anterior.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Fluxo de Versionamento</span>
+      </div>
+      <div class="version-timeline">
+        <div class="version-entry">
+          <div class="ver-number">v1 &mdash; Criacao</div>
+          <div class="ver-desc">Snapshot inicial ao criar o workflow. Sem diff.</div>
+        </div>
+        <div class="version-entry">
+          <div class="ver-number">v2 &mdash; Edicao de step</div>
+          <div class="ver-desc">Novo snapshot criado automaticamente ao salvar (PUT /workflows/:id). Diff e changelog calculados.</div>
+        </div>
+        <div class="version-entry">
+          <div class="ver-number">v3 &mdash; Rollback para v1</div>
+          <div class="ver-desc">POST /workflows/:id/versions/rollback {version: 1}. Restaura o workflow a partir do snapshot da v1. Cria uma nova versao (v3) com changelog indicando rollback.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 7. ENDPOINTS ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">7</span>
+      Endpoints
+    </h2>
+
+    <div class="search-box">
+      <span class="search-icon">&#x1F50D;</span>
+      <input type="text" placeholder="Filtrar endpoints..." data-search-target="endpoints-table">
+    </div>
+
+    <div class="tabs-container">
+      <div class="tabs-header">
+        <button class="tab-btn active" data-tab="tab-crud">CRUD</button>
+        <button class="tab-btn" data-tab="tab-execution">Execution API</button>
+        <button class="tab-btn" data-tab="tab-versions">Versions</button>
+        <button class="tab-btn" data-tab="tab-resources">Resources</button>
+      </div>
+
+      <!-- CRUD Endpoints -->
+      <div class="tab-content active" id="tab-crud">
+        <div class="table-container">
+          <table id="endpoints-table">
+            <thead>
+              <tr><th>Method</th><th>Path</th><th>Descricao</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="method method-post">POST</span></td>
+                <td><code>/workflows</code></td>
+                <td>Criar workflow com steps</td>
+              </tr>
+              <tr>
+                <td><span class="method method-get">GET</span></td>
+                <td><code>/workflows</code></td>
+                <td>Listar todos os workflows do usuario</td>
+              </tr>
+              <tr>
+                <td><span class="method method-get">GET</span></td>
+                <td><code>/workflows/:id</code></td>
+                <td>Buscar workflow por ID (inclui steps)</td>
+              </tr>
+              <tr>
+                <td><span class="method method-put">PUT</span></td>
+                <td><code>/workflows/:id</code></td>
+                <td>Atualizar workflow (name, type, steps)</td>
+              </tr>
+              <tr>
+                <td><span class="method method-delete">DELETE</span></td>
+                <td><code>/workflows/:id</code></td>
+                <td>Deletar workflow (cascade)</td>
+              </tr>
+              <tr>
+                <td><span class="method method-post">POST</span></td>
+                <td><code>/workflows/:id/duplicate</code></td>
+                <td>Duplicar workflow completo com steps</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Execution Endpoints -->
+      <div class="tab-content" id="tab-execution">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Method</th><th>Path</th><th>Descricao</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="method method-post">POST</span></td>
+                <td><code>/api/v1/workflows/:id/execute</code></td>
+                <td>Execucao sincrona (espera resultado)</td>
+              </tr>
+              <tr>
+                <td><span class="method method-post">POST</span></td>
+                <td><code>/api/v1/workflows/:id/execute/stream</code></td>
+                <td>Execucao com SSE streaming</td>
+              </tr>
+              <tr>
+                <td><span class="method method-post">POST</span></td>
+                <td><code>/api/v1/workflows/:id/execute/async</code></td>
+                <td>Execucao assincrona (fire-and-forget, 202)</td>
+              </tr>
+              <tr>
+                <td><span class="method method-get">GET</span></td>
+                <td><code>/api/v1/workflows</code></td>
+                <td>Listar workflows disponiveis (discovery)</td>
+              </tr>
+              <tr>
+                <td><span class="method method-get">GET</span></td>
+                <td><code>/api/v1/executions/:conversationId</code></td>
+                <td>Status e resultado de uma execucao</td>
+              </tr>
+              <tr>
+                <td><span class="method method-get">GET</span></td>
+                <td><code>/api/v1/executions/:conversationId/stream</code></td>
+                <td>Watch execucao ativa via SSE (read-only)</td>
+              </tr>
+              <tr>
+                <td><span class="method method-post">POST</span></td>
+                <td><code>/api/v1/executions/:conversationId/message</code></td>
+                <td>Enviar mensagem follow-up (sync)</td>
+              </tr>
+              <tr>
+                <td><span class="method method-post">POST</span></td>
+                <td><code>/api/v1/executions/:conversationId/cancel</code></td>
+                <td>Cancelar execucao ativa</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Version Endpoints -->
+      <div class="tab-content" id="tab-versions">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Method</th><th>Path</th><th>Descricao</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="method method-get">GET</span></td>
+                <td><code>/workflows/:id/versions</code></td>
+                <td>Listar versoes do workflow</td>
+              </tr>
+              <tr>
+                <td><span class="method method-get">GET</span></td>
+                <td><code>/workflows/:id/versions/:version</code></td>
+                <td>Buscar versao especifica com snapshot</td>
+              </tr>
+              <tr>
+                <td><span class="method method-post">POST</span></td>
+                <td><code>/workflows/:id/versions/rollback</code></td>
+                <td>Rollback para versao especifica</td>
+              </tr>
+              <tr>
+                <td><span class="method method-get">GET</span></td>
+                <td><code>/steps/:stepId/prompt-versions</code></td>
+                <td>Listar versoes do prompt de um step</td>
+              </tr>
+              <tr>
+                <td><span class="method method-post">POST</span></td>
+                <td><code>/steps/:stepId/prompt-versions/rollback</code></td>
+                <td>Rollback prompt para versao especifica</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Resource Dependency Endpoints -->
+      <div class="tab-content" id="tab-resources">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Method</th><th>Path</th><th>Descricao</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="method method-get">GET</span></td>
+                <td><code>/resources/:resourceType/:resourceId/dependents</code></td>
+                <td>Listar recursos que dependem do recurso dado</td>
+              </tr>
+              <tr>
+                <td><span class="method method-get">GET</span></td>
+                <td><code>/resources/:resourceType/:resourceId/validate-deletion</code></td>
+                <td>Validar se recurso pode ser deletado com seguranca</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 8. STEP TEMPLATES ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">8</span>
+      Step Templates
+    </h2>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Modelo Prisma: StepTemplate</span>
+        <span class="badge badge-teal">@@map("step_templates")</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:1rem;">Templates reutilizaveis de configuracao de step. Permitem criar steps padronizados sem reconfigurar tudo do zero. Unique constraint em [name, userId].</p>
+      <div class="anatomy-grid">
+        <div class="anatomy-item">
+          <div><span class="field-name">name</span><span class="field-type">String</span></div>
+          <div class="field-desc">Nome do template (unico por usuario).</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">description</span><span class="field-type">String?</span></div>
+          <div class="field-desc">Descricao do proposito do template.</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">baseUrl</span><span class="field-type">String</span></div>
+          <div class="field-desc">URL base padrao do template.</div>
+          <div class="field-default">Default: ""</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">systemPrompt</span><span class="field-type">String?</span></div>
+          <div class="field-desc">Prompt de sistema padrao do template.</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">conditions</span><span class="field-type">Json</span></div>
+          <div class="field-desc">Conditions padrao do template.</div>
+          <div class="field-default">Default: {}</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">resourceIds</span><span class="field-type">Json</span></div>
+          <div class="field-desc">Mapa de IDs de recursos pre-configurados.</div>
+          <div class="field-default">Default: {}</div>
+        </div>
+      </div>
+      <div style="margin-top:1rem;padding:0.75rem;background:var(--bg-secondary);border-radius:8px;font-size:0.8rem;color:var(--text-secondary);">
+        Quando um step referencia um template via <code style="font-family:'JetBrains Mono',monospace;background:var(--bg-card);padding:0.1rem 0.3rem;border-radius:4px;font-size:0.8rem;">templateId</code>, ele herda as configuracoes do template. O step pode sobrescrever qualquer campo herdado.
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 9. RESOURCE DEPENDENCIES ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-3);">9</span>
+      Resource Dependencies
+    </h2>
+
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="card-header">
+        <span class="card-title">Modelo Prisma: ResourceDependency</span>
+        <span class="badge badge-teal">@@map("resource_dependencies")</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:1rem;">Rastreia dependencias entre recursos do sistema. Usado para validar se um recurso pode ser deletado sem quebrar workflows existentes.</p>
+      <div class="anatomy-grid">
+        <div class="anatomy-item">
+          <div><span class="field-name">sourceType</span><span class="field-type">ResourceType</span></div>
+          <div class="field-desc">Tipo do recurso que depende (ex: workflow).</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">sourceId</span><span class="field-type">String</span></div>
+          <div class="field-desc">ID do recurso que depende.</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">dependencyType</span><span class="field-type">ResourceType</span></div>
+          <div class="field-desc">Tipo do recurso dependido (ex: mcp_server, skill).</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">dependencyId</span><span class="field-type">String</span></div>
+          <div class="field-desc">ID do recurso dependido.</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">dependencyName</span><span class="field-type">String?</span></div>
+          <div class="field-desc">Nome cached do recurso para display.</div>
+        </div>
+        <div class="anatomy-item">
+          <div><span class="field-name">isOptional</span><span class="field-type">Boolean</span></div>
+          <div class="field-desc">Se true, deletar a dependencia nao bloqueia.</div>
+          <div class="field-default">Default: false</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Fluxo de Validacao de Delecao</span>
+      </div>
+      <div class="flow-container">
+        <div class="flow-node">
+          Tentativa de deletar recurso
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node">
+          GET /validate-deletion
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color:rgba(251,191,36,0.4);">
+          Busca dependents no ResourceDependency
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="border-color:rgba(34,197,94,0.4);">
+          canDelete: true/false
+        </div>
+      </div>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">
+        ResourceType enum: <code style="font-family:'JetBrains Mono',monospace;background:var(--bg-secondary);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.75rem;">mcp_server | skill | agent | rule | hook | plugin | workflow</code>
+      </p>
+    </div>
+  </div>
+
+  <!-- ==================== 10. WORKFLOW WIZARD ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">10</span>
+      Workflow Wizard (Frontend)
+    </h2>
+
+    <div class="card" style="margin-bottom:1.5rem;">
+      <p class="card-desc" style="margin-bottom:1.5rem;">O wizard de criacao de workflows no frontend e divido em 3 fases. O usuario pode navegar entre as fases livremente e a criacao so e efetivada ao finalizar.</p>
+
+      <div class="wizard-phases">
+        <!-- Phase 1 -->
+        <div class="wizard-phase">
+          <div class="phase-number">1</div>
+          <div class="phase-title">Basic Info</div>
+          <ul>
+            <li>Nome do workflow</li>
+            <li>Descricao (opcional)</li>
+            <li>Tipo: sequential ou step_by_step</li>
+            <li>Tags para categorizacao</li>
+          </ul>
+        </div>
+
+        <!-- Phase 2 -->
+        <div class="wizard-phase" style="flex:1.5;">
+          <div class="phase-number">2</div>
+          <div class="phase-title">Step Builder</div>
+          <ul>
+            <li>Adicionar/remover steps</li>
+            <li>Editar nome, prompt, baseUrl por step</li>
+            <li>Reordenar steps (drag & drop)</li>
+            <li>Vincular recursos (MCP, Skills, Agents, Rules, Hooks)</li>
+            <li>Configurar conditions e validators</li>
+            <li>Definir error handler e timeout</li>
+            <li>Selecionar template como base</li>
+          </ul>
+        </div>
+
+        <!-- Phase 3 -->
+        <div class="wizard-phase">
+          <div class="phase-number">3</div>
+          <div class="phase-title">Review</div>
+          <ul>
+            <li>Preview visual do fluxo completo</li>
+            <li>Resumo de steps e conditions</li>
+            <li>Visualizacao de resources vinculados</li>
+            <li>Botao de criar/salvar workflow</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Fluxo Visual do Wizard</span>
+      </div>
+      <div class="flow-container" style="justify-content:center;">
+        <div class="flow-node" style="background:rgba(59,130,246,0.1);border-color:rgba(59,130,246,0.3);">
+          Phase 1: Info
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="background:rgba(139,92,246,0.1);border-color:rgba(139,92,246,0.3);">
+          Phase 2: Steps
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.3);">
+          Phase 3: Review
+        </div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-node" style="background:rgba(13,148,136,0.15);border-color:rgba(13,148,136,0.4);">
+          POST /workflows
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== EXECUTION EXAMPLE ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">&#x2699;&#xFE0F;</span>
+      Exemplo: Execucao Sincrona
+    </h2>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">POST /api/v1/workflows/:id/execute</span>
+        <span class="badge badge-blue">Sync</span>
+      </div>
+
+      <div class="subsection">Request Body</div>
+      <div class="json-tree">
+<span class="jt">{</span>
+  <span class="jk">"message"</span>: <span class="js">"Refatora o modulo de auth para usar JWT"</span>,
+  <span class="jk">"projectPath"</span>: <span class="js">"/workspace/meu-projeto"</span>,
+  <span class="jk">"conversationId"</span>: <span class="js">"uuid-opcional"</span>,   <span class="jc">// reutiliza conversation existente</span>
+  <span class="jk">"timeoutMs"</span>: <span class="jn">600000</span>                   <span class="jc">// 10 min (default)</span>
+<span class="jt">}</span>
+      </div>
+
+      <div class="subsection">Response (200)</div>
+      <div class="json-tree">
+<span class="jt">{</span>
+  <span class="jk">"conversationId"</span>: <span class="js">"abc-123"</span>,
+  <span class="jk">"status"</span>: <span class="js">"completed"</span>,           <span class="jc">// completed | paused | error</span>
+  <span class="jk">"result"</span>: {
+    <span class="jk">"content"</span>: <span class="js">"Refatoracao concluida..."</span>,
+    <span class="jk">"steps"</span>: [
+      { <span class="jk">"stepName"</span>: <span class="js">"Analise"</span>, <span class="jk">"stepOrder"</span>: <span class="jn">0</span>, <span class="jk">"content"</span>: <span class="js">"..."</span> },
+      { <span class="jk">"stepName"</span>: <span class="js">"Implementacao"</span>, <span class="jk">"stepOrder"</span>: <span class="jn">1</span>, <span class="jk">"content"</span>: <span class="js">"..."</span> }
+    ],
+    <span class="jk">"messagesCount"</span>: <span class="jn">4</span>
+  },
+  <span class="jk">"pausedInfo"</span>: <span class="jt">null</span>
+<span class="jt">}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SSE EVENTS ==================== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">&#x1F4E1;</span>
+      Eventos SSE (Streaming)
+    </h2>
+
+    <div class="card">
+      <p class="card-desc" style="margin-bottom:1rem;">Eventos emitidos durante execucao via streaming (POST /execute/stream e GET /executions/:id/stream):</p>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Evento SSE</th><th>Evento Interno</th><th>Descricao</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>init</code></td><td>&mdash;</td><td>Primeiro evento, envia conversationId</td></tr>
+            <tr><td><code>step_start</code></td><td>step:start</td><td>Step iniciou execucao</td></tr>
+            <tr><td><code>stream</code></td><td>step:stream</td><td>Token de streaming do step</td></tr>
+            <tr><td><code>step_complete</code></td><td>step:complete</td><td>Step concluiu</td></tr>
+            <tr><td><code>step_error</code></td><td>step:error</td><td>Step falhou</td></tr>
+            <tr><td><code>message_saved</code></td><td>message:saved</td><td>Mensagem salva no banco</td></tr>
+            <tr><td><code>condition_retry</code></td><td>condition:retry</td><td>Condition triggou retry</td></tr>
+            <tr><td><code>condition_jump</code></td><td>condition:jump</td><td>Condition triggou jump para outro step</td></tr>
+            <tr><td><code>context_reset</code></td><td>context:reset</td><td>Contexto do Claude resetado</td></tr>
+            <tr><td><code>dag_batch_start</code></td><td>dag:batch_start</td><td>Batch de steps DAG iniciou</td></tr>
+            <tr><td><code>validation_failed</code></td><td>validation:failed</td><td>Validator do step falhou</td></tr>
+            <tr><td><code>execution_paused</code></td><td>execution:paused</td><td>Execucao pausada (aguardando input)</td></tr>
+            <tr><td><code>execution_resumed</code></td><td>execution:resumed</td><td>Execucao retomada</td></tr>
+            <tr><td><code>user_interrupt</code></td><td>user:interrupt</td><td>Usuario enviou interrupt</td></tr>
+            <tr><td><code>complete</code></td><td>execution:complete</td><td>Execucao finalizada</td></tr>
+            <tr><td><code>cancelled</code></td><td>execution:cancelled</td><td>Execucao cancelada</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-container -->
+
+<script src="shared.js"></script>
+</body>
+</html>
