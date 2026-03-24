@@ -255,7 +255,7 @@ model WorkflowStep {
   model   String?
 
   // Error handling & timeout
-  timeout       Int?             @default(300000) // ms, default 5min
+  timeout       Int?             @default(0) // ms, 0 = sem timeout (demandas IA demoram)
   errorHandler  StepErrorHandler @default(fail) @map("error_handler")
   skipCondition String?          @map("skip_condition") // expression to evaluate
   subWorkflowId String?          @map("sub_workflow_id") // for sub-workflow steps

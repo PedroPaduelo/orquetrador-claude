@@ -11,10 +11,11 @@ export interface StepErrorDecision {
   logMessage: string
 }
 
-const DEFAULT_TIMEOUT_MS = 300000 // 5 min
+const DEFAULT_TIMEOUT_MS = 0 // 0 = sem timeout (demandas IA podem demorar bastante)
 
 export function getStepTimeout(step: WorkflowStep): number {
-  return (step.timeout as number | null) ?? DEFAULT_TIMEOUT_MS
+  const timeout = (step.timeout as number | null) ?? DEFAULT_TIMEOUT_MS
+  return timeout > 0 ? timeout : 0
 }
 
 export function isStepError(result: EngineExecuteResult): boolean {
