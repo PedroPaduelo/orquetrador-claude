@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Filas BullMQ | Orquetrador Claude — System Map</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* State Machine */
+.state-machine {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.state-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.state-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 24px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 2px solid;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.state-node:hover { transform: scale(1.05); }
+
+.state-created {
+  background: rgba(100, 116, 139, 0.15);
+  border-color: #94a3b8;
+  color: #cbd5e1;
+}
+
+.state-waiting {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.state-active {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: #f59e0b;
+  color: #fbbf24;
+}
+
+.state-completed {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: #22c55e;
+  color: #4ade80;
+}
+
+.state-failed {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #f87171;
+}
+
+.state-arrow {
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  font-weight: 300;
+}
+
+.state-branch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.state-branch::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 2px;
+  background: var(--border-color);
+  border-radius: 1px;
+}
+
+/* Queue flow diagram */
+.queue-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  padding: 2rem 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.qf-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 100px;
+}
+
+.qf-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  border: 1px solid var(--border-color);
+}
+
+.qf-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.qf-sub {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.qf-arrow {
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  margin: 0 0.25rem;
+  flex-shrink: 0;
+}
+
+/* Bull Board mockup */
+.bull-board-mock {
+  background: #1a1a2e;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.bb-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #16162a;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bb-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.bb-tab {
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.bb-tab-active {
+  background: var(--bg-accent-subtle);
+  color: var(--text-accent);
+}
+
+.bb-tab-inactive {
+  color: var(--text-muted);
+}
+
+.bb-body {
+  padding: 1rem;
+}
+
+.bb-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.bb-stat {
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.bb-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.bb-stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.2rem;
+}
+
+.bb-job-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  margin-bottom: 0.35rem;
+}
+
+.bb-job-row:nth-child(even) { background: rgba(30, 41, 59, 0.3); }
+
+/* Shutdown timeline */
+.shutdown-timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.shutdown-timeline::before {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--bg-accent), #ef4444);
+  border-radius: 1px;
+}
+
+.shutdown-step {
+  position: relative;
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.shutdown-step::before {
+  content: '';
+  position: absolute;
+  left: -1.75rem;
+  top: 1rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-accent);
+  background: var(--bg-primary);
+}
+
+.shutdown-step.danger::before {
+  border-color: #ef4444;
+}
+
+.shutdown-step .step-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.shutdown-step .step-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Redis singleton cards */
+.redis-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .redis-cards { grid-template-columns: 1fr; }
+  .bb-stats { grid-template-columns: repeat(2, 1fr); }
+  .queue-flow { flex-direction: column; }
+  .qf-arrow { transform: rotate(90deg); }
+}
+
+.redis-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.25rem;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.redis-card:hover {
+  border-color: rgba(13, 148, 136, 0.4);
+  box-shadow: var(--shadow-glow);
+}
+
+.redis-card .rc-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  margin: 0 auto 0.75rem;
+}
+
+.redis-card .rc-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.redis-card .rc-fn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-accent);
+  margin-bottom: 0.5rem;
+}
+
+.redis-card .rc-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+</style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">System Map</a>
+      <span>›</span>
+      <span>22 — Filas BullMQ</span>
+    </div>
+    <h1>Filas BullMQ</h1>
+    <p class="subtitle">BullMQ 5 com Redis para processamento de jobs em background. Fila principal: <code class="mono" style="color:var(--text-accent)">'execution'</code></p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4 section">
+    <div class="stat-box">
+      <div class="stat-value" data-count="1">1</div>
+      <div class="stat-label">Fila (execution)</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="3">3</div>
+      <div class="stat-label">Concorrencia Padrao</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="3">3</div>
+      <div class="stat-label">Redis Singletons</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value">30s</div>
+      <div class="stat-label">Max Drain (shutdown)</div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 1: Visao Geral ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:var(--bg-accent-subtle)">📦</span>
+      Visao Geral
+    </h2>
+
+    <div class="card" style="cursor:default">
+      <p class="card-desc" style="margin-bottom:1rem">
+        O Orquetrador Claude usa <strong>BullMQ 5</strong> com <strong>Redis</strong> (via ioredis) para processar execucoes de workflows em background. Toda execucao passa pela fila antes de chegar ao <code class="mono">TaskOrchestrator</code>.
+      </p>
+      <p class="card-desc" style="margin-bottom:1rem">
+        A arquitetura desacopla a API (que recebe o request) do processamento real (que roda no worker), permitindo concorrencia controlada e resiliencia a falhas.
+      </p>
+
+      <div class="queue-flow">
+        <div class="qf-step">
+          <div class="qf-icon" style="background:var(--bg-info)">🌐</div>
+          <div class="qf-label">API Route</div>
+          <div class="qf-sub">POST /execute</div>
+        </div>
+        <span class="qf-arrow">→</span>
+        <div class="qf-step">
+          <div class="qf-icon" style="background:var(--bg-accent-subtle)">📥</div>
+          <div class="qf-label">Queue.add()</div>
+          <div class="qf-sub">execution-queue.ts</div>
+        </div>
+        <span class="qf-arrow">→</span>
+        <div class="qf-step">
+          <div class="qf-icon" style="background:rgba(239,68,68,0.15)">🔴</div>
+          <div class="qf-label">Redis</div>
+          <div class="qf-sub">Job storage</div>
+        </div>
+        <span class="qf-arrow">→</span>
+        <div class="qf-step">
+          <div class="qf-icon" style="background:var(--bg-warning)">⚙️</div>
+          <div class="qf-label">Worker</div>
+          <div class="qf-sub">execution-worker.ts</div>
+        </div>
+        <span class="qf-arrow">→</span>
+        <div class="qf-step">
+          <div class="qf-icon" style="background:rgba(139,92,246,0.15)">🧠</div>
+          <div class="qf-label">Processor</div>
+          <div class="qf-sub">execution-processor.ts</div>
+        </div>
+        <span class="qf-arrow">→</span>
+        <div class="qf-step">
+          <div class="qf-icon" style="background:var(--bg-success)">🎯</div>
+          <div class="qf-label">Orchestrator</div>
+          <div class="qf-sub">task-orchestrator.ts</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 2: Job Data Structure ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:rgba(139,92,246,0.15)">📋</span>
+      Estrutura do Job (ExecutionJobData)
+    </h2>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Tipo</th>
+            <th>Obrigatorio</th>
+            <th>Descricao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code class="mono">conversationId</code></td>
+            <td><span class="badge badge-blue">string</span></td>
+            <td><span class="badge badge-green">sim</span></td>
+            <td>ID da conversa associada a execucao</td>
+          </tr>
+          <tr>
+            <td><code class="mono">workflowId</code></td>
+            <td><span class="badge badge-blue">string</span></td>
+            <td><span class="badge badge-green">sim</span></td>
+            <td>ID do workflow a executar</td>
+          </tr>
+          <tr>
+            <td><code class="mono">userId</code></td>
+            <td><span class="badge badge-blue">string</span></td>
+            <td><span class="badge badge-green">sim</span></td>
+            <td>ID do usuario que solicitou</td>
+          </tr>
+          <tr>
+            <td><code class="mono">content</code></td>
+            <td><span class="badge badge-blue">string</span></td>
+            <td><span class="badge badge-green">sim</span></td>
+            <td>Mensagem/prompt do usuario</td>
+          </tr>
+          <tr>
+            <td><code class="mono">stepIndex</code></td>
+            <td><span class="badge badge-purple">number?</span></td>
+            <td><span class="badge badge-gray">nao</span></td>
+            <td>Indice do step para execucao step-by-step</td>
+          </tr>
+          <tr>
+            <td><code class="mono">projectPath</code></td>
+            <td><span class="badge badge-blue">string</span></td>
+            <td><span class="badge badge-green">sim</span></td>
+            <td>Caminho do projeto no filesystem</td>
+          </tr>
+          <tr>
+            <td><code class="mono">workflowType</code></td>
+            <td><span class="badge badge-blue">string</span></td>
+            <td><span class="badge badge-green">sim</span></td>
+            <td>'sequential' | 'step_by_step' — determina modo de execucao</td>
+          </tr>
+          <tr>
+            <td><code class="mono">attachments</code></td>
+            <td><span class="badge badge-purple">Array?</span></td>
+            <td><span class="badge badge-gray">nao</span></td>
+            <td>Arquivos anexos (id, filename, mimeType, path, projectPath, url, size)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div class="code-block"><span class="keyword">export interface</span> <span class="type">ExecutionJobData</span> {
+  conversationId: <span class="type">string</span>
+  workflowId: <span class="type">string</span>
+  userId: <span class="type">string</span>
+  content: <span class="type">string</span>
+  stepIndex?: <span class="type">number</span>
+  projectPath: <span class="type">string</span>
+  workflowType: <span class="type">string</span>
+  attachments?: <span class="type">Array</span>&lt;{
+    id: <span class="type">string</span>
+    filename: <span class="type">string</span>
+    mimeType: <span class="type">string</span>
+    path: <span class="type">string</span>
+    projectPath: <span class="type">string</span>
+    url: <span class="type">string</span>
+    size?: <span class="type">number</span>
+  }&gt;
+}</div>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem">
+      Arquivo: <code class="mono">backend/src/domains/execution/queue/execution-queue.ts</code>
+    </p>
+  </div>
+
+  <!-- ===== SECTION 3: Job Options ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:var(--bg-warning)">⚙️</span>
+      Opcoes de Job (defaultJobOptions)
+    </h2>
+
+    <div class="grid-3">
+      <div class="card" style="cursor:default">
+        <div class="card-header">
+          <div class="card-icon" style="background:var(--bg-success)">🗑️</div>
+          <div>
+            <div class="card-title">removeOnComplete</div>
+          </div>
+        </div>
+        <div class="card-desc">
+          <code class="mono" style="color:var(--text-accent)">{ count: 100 }</code>
+          <p style="margin-top:0.5rem">Mantem ate 100 jobs completados no Redis. Jobs mais antigos sao removidos automaticamente para evitar crescimento indefinido da memoria.</p>
+        </div>
+      </div>
+
+      <div class="card" style="cursor:default">
+        <div class="card-header">
+          <div class="card-icon" style="background:var(--bg-danger)">❌</div>
+          <div>
+            <div class="card-title">removeOnFail</div>
+          </div>
+        </div>
+        <div class="card-desc">
+          <code class="mono" style="color:var(--text-accent)">{ count: 50 }</code>
+          <p style="margin-top:0.5rem">Mantem ate 50 jobs falhados para analise. Permite diagnostico de erros sem acumular dados indefinidamente.</p>
+        </div>
+      </div>
+
+      <div class="card" style="cursor:default">
+        <div class="card-header">
+          <div class="card-icon" style="background:var(--bg-info)">🔄</div>
+          <div>
+            <div class="card-title">attempts</div>
+          </div>
+        </div>
+        <div class="card-desc">
+          <code class="mono" style="color:var(--text-accent)">1</code>
+          <p style="margin-top:0.5rem">Sem auto-retry pelo BullMQ. O <code class="mono">TaskOrchestrator</code> tem sua propria logica de retry com backoff e classificacao de erros.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div class="code-block"><span class="keyword">new</span> Queue&lt;<span class="type">ExecutionJobData</span>&gt;(<span class="string">'execution'</span>, {
+  connection: getRedis() <span class="keyword">as any</span>,
+  defaultJobOptions: {
+    removeOnComplete: { count: <span class="number">100</span> },
+    removeOnFail: { count: <span class="number">50</span> },
+    attempts: <span class="number">1</span>, <span class="comment">// Execution should not auto-retry</span>
+  },
+})</div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 4: Worker Configuration ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:rgba(59,130,246,0.15)">🔧</span>
+      Configuracao do Worker
+    </h2>
+
+    <div class="grid-2">
+      <div class="card" style="cursor:default">
+        <div class="card-header">
+          <div class="card-icon" style="background:var(--bg-accent-subtle)">⚡</div>
+          <div class="card-title">Concorrencia</div>
+        </div>
+        <div class="card-desc">
+          <p>Controlada pela env <code class="mono" style="color:var(--text-accent)">EXECUTION_CONCURRENCY</code> (default: <strong>3</strong>).</p>
+          <p style="margin-top:0.5rem">Determina quantos jobs podem ser processados simultaneamente pelo worker. Cada job consome um processo Claude, entao o valor deve ser ajustado conforme recursos disponiveis.</p>
+        </div>
+      </div>
+
+      <div class="card" style="cursor:default">
+        <div class="card-header">
+          <div class="card-icon" style="background:var(--bg-warning)">🛡️</div>
+          <div class="card-title">Inicializacao Resiliente</div>
+        </div>
+        <div class="card-desc">
+          <p>O worker inicia junto com o servidor mas de forma <strong>nao-bloqueante</strong>.</p>
+          <p style="margin-top:0.5rem">Se o Redis nao estiver disponivel, a fila e desabilitada silenciosamente (warn no log) e o servidor continua funcionando sem processamento de jobs.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem;font-weight:600;margin:1.5rem 0 0.75rem;color:var(--text-primary)">Eventos do Worker</h3>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Evento</th>
+            <th>Quando</th>
+            <th>Acao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-green">completed</span></td>
+            <td>Job processado com sucesso</td>
+            <td>Log: <code class="mono">Job {id} completed for conversation {conversationId}</code></td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-red">failed</span></td>
+            <td>Job falhou durante processamento</td>
+            <td>Log error: <code class="mono">Job {id} failed: {error.message}</code></td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-amber">error</span></td>
+            <td>Erro interno do worker (conexao, etc)</td>
+            <td>Log error: <code class="mono">[ExecutionWorker] Error: {message}</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div class="code-block"><span class="keyword">const</span> CONCURRENCY = parseInt(process.env.EXECUTION_CONCURRENCY || <span class="string">'3'</span>, <span class="number">10</span>)
+
+<span class="keyword">const</span> _worker = <span class="keyword">new</span> Worker&lt;<span class="type">ExecutionJobData</span>&gt;(
+  <span class="string">'execution'</span>,
+  processExecutionJob,
+  {
+    connection: getRedis() <span class="keyword">as any</span>,
+    concurrency: CONCURRENCY,
+  }
+)
+
+_worker.on(<span class="string">'completed'</span>, (job) =&gt; { <span class="comment">/* log success */</span> })
+_worker.on(<span class="string">'failed'</span>, (job, err) =&gt; { <span class="comment">/* log error */</span> })
+_worker.on(<span class="string">'error'</span>, (err) =&gt; { <span class="comment">/* log error */</span> })</div>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem">
+      Arquivo: <code class="mono">backend/src/domains/execution/queue/execution-worker.ts</code>
+    </p>
+  </div>
+
+  <!-- ===== SECTION 5: Job Lifecycle ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:var(--bg-success)">🔄</span>
+      Ciclo de Vida do Job
+    </h2>
+
+    <div class="state-machine">
+      <div class="state-row">
+        <div class="state-node state-created">📝 Created</div>
+        <span class="state-arrow">→</span>
+        <div class="state-node state-waiting">⏳ Waiting</div>
+        <span class="state-arrow">→</span>
+        <div class="state-node state-active">⚙️ Active</div>
+        <span class="state-arrow">→</span>
+        <div class="state-branch">
+          <div class="state-node state-completed">✅ Completed</div>
+          <div class="state-node state-failed">❌ Failed</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:1.5rem">
+      <div class="card" style="cursor:default">
+        <h3 style="font-weight:600;margin-bottom:0.75rem">Transicoes de Estado</h3>
+        <div style="display:flex;flex-direction:column;gap:0.5rem">
+          <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem">
+            <span class="badge badge-gray">Created</span>
+            <span style="color:var(--text-muted)">→</span>
+            <span class="badge badge-blue">Waiting</span>
+            <span class="card-desc" style="margin-left:0.5rem">queue.add() chamado</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem">
+            <span class="badge badge-blue">Waiting</span>
+            <span style="color:var(--text-muted)">→</span>
+            <span class="badge badge-amber">Active</span>
+            <span class="card-desc" style="margin-left:0.5rem">Worker pega o job</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem">
+            <span class="badge badge-amber">Active</span>
+            <span style="color:var(--text-muted)">→</span>
+            <span class="badge badge-green">Completed</span>
+            <span class="card-desc" style="margin-left:0.5rem">processExecutionJob() retorna</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem">
+            <span class="badge badge-amber">Active</span>
+            <span style="color:var(--text-muted)">→</span>
+            <span class="badge badge-red">Failed</span>
+            <span class="card-desc" style="margin-left:0.5rem">processExecutionJob() lanca erro</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="cursor:default">
+        <h3 style="font-weight:600;margin-bottom:0.75rem">Detalhes do Processamento</h3>
+        <div class="card-desc" style="display:flex;flex-direction:column;gap:0.5rem">
+          <p><strong>Active:</strong> O processor carrega a conversation + workflow do banco, monta o contexto e decide o modo de execucao:</p>
+          <p style="padding-left:1rem">
+            — <code class="mono" style="color:var(--text-accent)">sequential + DAG</code> → <code class="mono">executeDAG()</code><br>
+            — <code class="mono" style="color:var(--text-accent)">sequential</code> → <code class="mono">executeSequential()</code><br>
+            — <code class="mono" style="color:var(--text-accent)">step_by_step</code> → <code class="mono">executeStepByStep()</code>
+          </p>
+          <p><strong>Erros:</strong> Publicados via Redis Pub/Sub no canal <code class="mono">execution:{conversationId}</code> para o frontend receber em tempo real.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 6: Bull Board ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:rgba(139,92,246,0.15)">📊</span>
+      Bull Board Dashboard
+    </h2>
+
+    <div class="grid-2">
+      <div>
+        <div class="card" style="cursor:default;margin-bottom:1rem">
+          <div class="card-header">
+            <div class="card-icon" style="background:rgba(139,92,246,0.15)">🖥️</div>
+            <div>
+              <div class="card-title">@bull-board/fastify</div>
+              <div class="card-desc">Dashboard visual para monitorar a fila</div>
+            </div>
+          </div>
+          <div class="card-desc" style="margin-top:0.5rem">
+            <p><strong>URL:</strong> <code class="mono" style="color:var(--text-accent)">/admin/queues</code></p>
+            <p style="margin-top:0.5rem"><strong>Funcionalidades:</strong></p>
+            <ul style="padding-left:1.25rem;margin-top:0.25rem;list-style:disc">
+              <li>Ver jobs pendentes, ativos, completados e falhados</li>
+              <li>Detalhes de cada job (dados, tentativas, timestamps)</li>
+              <li>Retry manual de jobs falhados</li>
+              <li>Limpar filas</li>
+              <li>Metricas em tempo real</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="code-block"><span class="keyword">import</span> { createBullBoard } <span class="keyword">from</span> <span class="string">'@bull-board/api'</span>
+<span class="keyword">import</span> { BullMQAdapter } <span class="keyword">from</span> <span class="string">'@bull-board/api/bullMQAdapter'</span>
+<span class="keyword">import</span> { FastifyAdapter } <span class="keyword">from</span> <span class="string">'@bull-board/fastify'</span>
+
+<span class="keyword">const</span> serverAdapter = <span class="keyword">new</span> FastifyAdapter()
+serverAdapter.setBasePath(<span class="string">'/admin/queues'</span>)
+
+createBullBoard({
+  queues: [<span class="keyword">new</span> BullMQAdapter(executionQueue)],
+  serverAdapter,
+})
+
+<span class="keyword">await</span> app.register(serverAdapter.registerPlugin(), {
+  prefix: <span class="string">'/admin/queues'</span>
+})</div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem">
+          Arquivo: <code class="mono">backend/src/server.ts</code>
+        </p>
+      </div>
+
+      <!-- Bull Board Mockup -->
+      <div>
+        <div class="bull-board-mock">
+          <div class="bb-toolbar">
+            <div style="display:flex;gap:5px">
+              <div class="bb-dot" style="background:#ef4444"></div>
+              <div class="bb-dot" style="background:#f59e0b"></div>
+              <div class="bb-dot" style="background:#22c55e"></div>
+            </div>
+            <span class="bb-tab bb-tab-active">execution</span>
+            <span style="font-size:0.7rem;color:var(--text-muted);margin-left:auto">/admin/queues</span>
+          </div>
+          <div class="bb-body">
+            <div class="bb-stats">
+              <div class="bb-stat">
+                <div class="bb-stat-value" style="color:#60a5fa">2</div>
+                <div class="bb-stat-label" style="color:var(--text-muted)">Waiting</div>
+              </div>
+              <div class="bb-stat">
+                <div class="bb-stat-value" style="color:#fbbf24">1</div>
+                <div class="bb-stat-label" style="color:var(--text-muted)">Active</div>
+              </div>
+              <div class="bb-stat">
+                <div class="bb-stat-value" style="color:#4ade80">847</div>
+                <div class="bb-stat-label" style="color:var(--text-muted)">Completed</div>
+              </div>
+              <div class="bb-stat">
+                <div class="bb-stat-value" style="color:#f87171">12</div>
+                <div class="bb-stat-label" style="color:var(--text-muted)">Failed</div>
+              </div>
+            </div>
+
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;font-weight:600">Active Jobs</div>
+            <div class="bb-job-row" style="background:rgba(245,158,11,0.08)">
+              <span style="font-size:0.8rem;font-family:'JetBrains Mono',monospace;color:#fbbf24">#4821</span>
+              <span style="font-size:0.75rem;color:var(--text-secondary)">conv_abc123</span>
+              <span class="badge badge-amber" style="font-size:0.65rem">processing</span>
+            </div>
+
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin:0.75rem 0 0.5rem;font-weight:600">Waiting Jobs</div>
+            <div class="bb-job-row">
+              <span style="font-size:0.8rem;font-family:'JetBrains Mono',monospace;color:#60a5fa">#4822</span>
+              <span style="font-size:0.75rem;color:var(--text-secondary)">conv_def456</span>
+              <span class="badge badge-blue" style="font-size:0.65rem">waiting</span>
+            </div>
+            <div class="bb-job-row">
+              <span style="font-size:0.8rem;font-family:'JetBrains Mono',monospace;color:#60a5fa">#4823</span>
+              <span style="font-size:0.75rem;color:var(--text-secondary)">conv_ghi789</span>
+              <span class="badge badge-blue" style="font-size:0.65rem">waiting</span>
+            </div>
+
+            <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin:0.75rem 0 0.5rem;font-weight:600">Recent Failed</div>
+            <div class="bb-job-row" style="background:rgba(239,68,68,0.05)">
+              <span style="font-size:0.8rem;font-family:'JetBrains Mono',monospace;color:#f87171">#4819</span>
+              <span style="font-size:0.75rem;color:var(--text-secondary)">conv_xyz000</span>
+              <span class="badge badge-red" style="font-size:0.65rem">timeout</span>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.5rem">Mockup do Bull Board Dashboard</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 7: Redis Connection ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:rgba(239,68,68,0.15)">🔴</span>
+      Conexao Redis
+    </h2>
+
+    <div class="card" style="cursor:default;margin-bottom:1.5rem">
+      <div class="card-desc">
+        <p>O Redis e configurado via <code class="mono" style="color:var(--text-accent)">REDIS_URL</code> (default: <code class="mono">redis://localhost:6379</code>). Todas as conexoes usam <strong>lazy connect</strong> — so conectam quando acessadas pela primeira vez.</p>
+        <p style="margin-top:0.5rem">Se o Redis nao estiver disponivel, o sistema <strong>degrada gracefully</strong>: a fila e desabilitada, o worker nao inicia, mas a API continua respondendo (execucoes sincronas diretas, sem fila).</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;color:var(--text-primary)">3 Singletons Lazy</h3>
+
+    <div class="redis-cards">
+      <div class="redis-card">
+        <div class="rc-icon" style="background:var(--bg-accent-subtle)">🔗</div>
+        <div class="rc-name">General</div>
+        <div class="rc-fn">getRedis()</div>
+        <div class="rc-desc">Conexao principal. Usada pela Queue e Worker do BullMQ para operacoes de leitura/escrita de jobs.</div>
+      </div>
+
+      <div class="redis-card">
+        <div class="rc-icon" style="background:rgba(59,130,246,0.15)">📡</div>
+        <div class="rc-name">Subscriber</div>
+        <div class="rc-fn">getSubscriber()</div>
+        <div class="rc-desc">Dedicada a Pub/Sub (subscribe). Usada pelo SSE para receber eventos de execucao em tempo real.</div>
+      </div>
+
+      <div class="redis-card">
+        <div class="rc-icon" style="background:rgba(139,92,246,0.15)">📤</div>
+        <div class="rc-name">Publisher</div>
+        <div class="rc-fn">getPublisher()</div>
+        <div class="rc-desc">Dedicada a Pub/Sub (publish). Usada pelo processor para enviar eventos de progresso ao frontend.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div class="code-block"><span class="comment">// Lazy singletons — only connect when first accessed</span>
+<span class="keyword">let</span> _general: <span class="type">Redis</span> | <span class="type">null</span> = <span class="keyword">null</span>
+<span class="keyword">let</span> _subscriber: <span class="type">Redis</span> | <span class="type">null</span> = <span class="keyword">null</span>
+<span class="keyword">let</span> _publisher: <span class="type">Redis</span> | <span class="type">null</span> = <span class="keyword">null</span>
+
+<span class="keyword">function</span> createConnection(name: <span class="type">string</span>): <span class="type">Redis</span> {
+  <span class="keyword">return new</span> Redis(REDIS_URL, {
+    maxRetriesPerRequest: <span class="keyword">null</span>,
+    lazyConnect: <span class="keyword">true</span>,
+    connectionName: name,
+  })
+}</div>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem">
+      Arquivo: <code class="mono">backend/src/lib/redis.ts</code>
+    </p>
+  </div>
+
+  <!-- ===== SECTION 8: Graceful Shutdown ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:var(--bg-danger)">🛑</span>
+      Graceful Shutdown
+    </h2>
+
+    <div class="card" style="cursor:default;margin-bottom:1.5rem">
+      <div class="card-desc">
+        O servidor escuta <code class="mono" style="color:var(--text-accent)">SIGINT</code> e <code class="mono" style="color:var(--text-accent)">SIGTERM</code> e executa um shutdown ordenado para garantir que nenhuma execucao seja perdida.
+      </div>
+    </div>
+
+    <div class="shutdown-timeline">
+      <div class="shutdown-step">
+        <div class="step-title">1. Parar de Aceitar Novos Jobs</div>
+        <div class="step-desc">
+          <code class="mono">projectPathLock.cleanup()</code> — Libera locks de projeto.<br>
+          <code class="mono">stopMetricsAggregation()</code> — Para o agregador de metricas.
+        </div>
+      </div>
+
+      <div class="shutdown-step">
+        <div class="step-title">2. Drenar Execucoes Ativas (max 30s)</div>
+        <div class="step-desc">
+          Loop que verifica <code class="mono">taskOrchestrator.getActiveCount()</code> a cada 2s.<br>
+          Se ainda houver execucoes apos 30s, forca o shutdown com warning no log.
+        </div>
+      </div>
+
+      <div class="shutdown-step">
+        <div class="step-title">3. Parar Trigger Scheduler</div>
+        <div class="step-desc">
+          <code class="mono">stopTriggerScheduler()</code> — Para o scheduler de triggers cron/webhook.
+        </div>
+      </div>
+
+      <div class="shutdown-step">
+        <div class="step-title">4. Parar Worker</div>
+        <div class="step-desc">
+          <code class="mono">stopExecutionWorker()</code> — Worker para de pegar novos jobs e fecha a conexao.
+        </div>
+      </div>
+
+      <div class="shutdown-step">
+        <div class="step-title">5. Fechar Queue</div>
+        <div class="step-desc">
+          <code class="mono">closeExecutionQueue()</code> — Fecha a instancia da fila BullMQ.
+        </div>
+      </div>
+
+      <div class="shutdown-step">
+        <div class="step-title">6. Fechar Fastify</div>
+        <div class="step-desc">
+          <code class="mono">app.close()</code> — Fecha o servidor HTTP/WebSocket.
+        </div>
+      </div>
+
+      <div class="shutdown-step danger">
+        <div class="step-title">7. Fechar Redis</div>
+        <div class="step-desc">
+          <code class="mono">closeAllRedis()</code> — Encerra as 3 conexoes Redis (general, subscriber, publisher) via <code class="mono">Promise.allSettled()</code>.
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div class="code-block"><span class="keyword">const</span> signals = [<span class="string">'SIGINT'</span>, <span class="string">'SIGTERM'</span>]
+signals.forEach((signal) =&gt; {
+  process.on(signal, <span class="keyword">async</span> () =&gt; {
+    <span class="comment">// 1. Stop accepting new executions</span>
+    projectPathLock.cleanup()
+    stopMetricsAggregation()
+
+    <span class="comment">// 2. Wait for active executions to drain (max 30s)</span>
+    <span class="keyword">const</span> MAX_DRAIN_MS = <span class="number">30_000</span>
+    <span class="keyword">while</span> (activeCount &gt; <span class="number">0</span> && elapsed &lt; MAX_DRAIN_MS) { <span class="comment">/* poll */</span> }
+
+    <span class="comment">// 3-7. Shutdown infrastructure</span>
+    <span class="keyword">await</span> stopTriggerScheduler()
+    <span class="keyword">await</span> stopExecutionWorker()
+    <span class="keyword">await</span> closeExecutionQueue()
+    <span class="keyword">await</span> app.close()
+    <span class="keyword">await</span> closeAllRedis()
+    process.exit(<span class="number">0</span>)
+  })
+})</div>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem">
+      Arquivo: <code class="mono">backend/src/server.ts</code>
+    </p>
+  </div>
+
+  <!-- ===== SECTION 9: Recovery ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:var(--bg-warning)">🔧</span>
+      Recovery de Crashes
+    </h2>
+
+    <div class="grid-2">
+      <div class="card" style="cursor:default">
+        <div class="card-header">
+          <div class="card-icon" style="background:var(--bg-warning)">🔍</div>
+          <div>
+            <div class="card-title">recoverStaleExecutions()</div>
+          </div>
+        </div>
+        <div class="card-desc">
+          <p>Executada no <strong>startup do servidor</strong>. Busca no banco todas as <code class="mono">ExecutionState</code> com <code class="mono">state: 'running'</code> — ou seja, execucoes que estavam ativas quando o servidor caiu.</p>
+          <p style="margin-top:0.5rem">Para cada execucao stale:</p>
+          <ul style="padding-left:1.25rem;margin-top:0.25rem;list-style:disc">
+            <li>Marca como <code class="mono" style="color:#f87171">failed</code></li>
+            <li>Preserva metadata existente via merge</li>
+            <li>Adiciona <code class="mono">recoveryError</code> e <code class="mono">recoveryFailedAt</code></li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="code-block"><span class="keyword">export async function</span> <span class="type">recoverStaleExecutions</span>(): <span class="type">Promise</span>&lt;<span class="type">number</span>&gt; {
+  <span class="keyword">const</span> staleExecutions = <span class="keyword">await</span> prisma.executionState.findMany({
+    where: { state: <span class="string">'running'</span> },
+    select: { id: <span class="keyword">true</span>, metadata: <span class="keyword">true</span> },
+  })
+
+  <span class="keyword">for</span> (<span class="keyword">const</span> exec <span class="keyword">of</span> staleExecutions) {
+    <span class="keyword">await</span> prisma.executionState.update({
+      where: { id: exec.id },
+      data: {
+        state: <span class="string">'failed'</span>,
+        metadata: {
+          ...existingMeta,
+          recoveryError: <span class="string">'Server restarted during execution'</span>,
+          recoveryFailedAt: <span class="keyword">new</span> Date().toISOString(),
+        },
+      },
+    })
+  }
+}</div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem">
+          Arquivo: <code class="mono">backend/src/domains/execution/orchestrator/recovery.ts</code>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 10: Processor Function ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:var(--bg-success)">🎯</span>
+      Funcao Processadora
+    </h2>
+
+    <div class="card" style="cursor:default;margin-bottom:1.5rem">
+      <div class="card-header">
+        <div class="card-icon" style="background:var(--bg-success)">⚡</div>
+        <div>
+          <div class="card-title">processExecutionJob(job)</div>
+          <div class="card-desc">Funcao principal que o Worker executa para cada job da fila</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="accordion-item open">
+      <div class="accordion-header">
+        <span style="font-weight:600">Fluxo Completo do Processor</span>
+        <span class="accordion-arrow">▼</span>
+      </div>
+      <div class="accordion-body">
+        <div style="display:flex;flex-direction:column;gap:1rem">
+          <div style="display:flex;align-items:flex-start;gap:0.75rem">
+            <span class="badge badge-blue" style="min-width:20px;justify-content:center">1</span>
+            <div>
+              <strong>Extrair dados do job</strong>
+              <p class="card-desc" style="margin-top:0.25rem">Desestrutura <code class="mono">conversationId</code>, <code class="mono">content</code>, <code class="mono">stepIndex</code>, <code class="mono">projectPath</code>, <code class="mono">workflowType</code>, <code class="mono">userId</code>, <code class="mono">attachments</code> do <code class="mono">job.data</code></p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:0.75rem">
+            <span class="badge badge-blue" style="min-width:20px;justify-content:center">2</span>
+            <div>
+              <strong>Obter canal Redis Pub/Sub</strong>
+              <p class="card-desc" style="margin-top:0.25rem">Canal: <code class="mono" style="color:var(--text-accent)">execution:{conversationId}</code> — usado para enviar eventos ao frontend via SSE</p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:0.75rem">
+            <span class="badge badge-blue" style="min-width:20px;justify-content:center">3</span>
+            <div>
+              <strong>Carregar Conversation + Workflow do banco</strong>
+              <p class="card-desc" style="margin-top:0.25rem"><code class="mono">prisma.conversation.findUnique()</code> com include de workflow e steps (ordenados por <code class="mono">stepOrder</code>)</p>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:0.75rem">
+            <span class="badge badge-blue" style="min-width:20px;justify-content:center">4</span>
+            <div>
+              <strong>Decidir modo de execucao</strong>
+              <div style="margin-top:0.5rem">
+                <div class="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Condicao</th>
+                        <th>Metodo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><code class="mono">sequential</code> + <code class="mono">isDAGWorkflow(steps) === true</code></td>
+                        <td><code class="mono" style="color:var(--text-accent)">taskOrchestrator.executeDAG()</code></td>
+                      </tr>
+                      <tr>
+                        <td><code class="mono">sequential</code> + <code class="mono">isDAGWorkflow(steps) === false</code></td>
+                        <td><code class="mono" style="color:var(--text-accent)">taskOrchestrator.executeSequential()</code></td>
+                      </tr>
+                      <tr>
+                        <td><code class="mono">step_by_step</code> (ou qualquer outro)</td>
+                        <td><code class="mono" style="color:var(--text-accent)">taskOrchestrator.executeStepByStep()</code></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:0.75rem">
+            <span class="badge badge-red" style="min-width:20px;justify-content:center">5</span>
+            <div>
+              <strong>Tratamento de erros</strong>
+              <p class="card-desc" style="margin-top:0.25rem">Se qualquer erro ocorrer, publica evento <code class="mono" style="color:#f87171">error</code> no canal Redis para o frontend exibir ao usuario</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:1.25rem">
+      <div class="code-block"><span class="keyword">export async function</span> <span class="type">processExecutionJob</span>(job: <span class="type">Job</span>&lt;<span class="type">ExecutionJobData</span>&gt;): <span class="type">Promise</span>&lt;<span class="type">void</span>&gt; {
+  <span class="keyword">const</span> { conversationId, content, stepIndex, projectPath, workflowType, userId, attachments } = job.data
+  <span class="keyword">const</span> pub = getPublisher()
+  <span class="keyword">const</span> channel = <span class="string">`execution:${conversationId}`</span>
+
+  <span class="keyword">const</span> conversation = <span class="keyword">await</span> prisma.conversation.findUnique({
+    where: { id: conversationId },
+    include: { workflow: { include: { steps: { orderBy: { stepOrder: <span class="string">'asc'</span> } } } } },
+  })
+
+  <span class="keyword">if</span> (!conversation) {
+    <span class="keyword">await</span> pub.publish(channel, JSON.stringify({ event: <span class="string">'error'</span>, data: { message: <span class="string">'Conversation not found'</span> } }))
+    <span class="keyword">return</span>
+  }
+
+  <span class="keyword">try</span> {
+    <span class="keyword">if</span> (workflowType === <span class="string">'sequential'</span> && isDAGWorkflow(steps)) {
+      <span class="keyword">await</span> taskOrchestrator.executeDAG(context, content)
+    } <span class="keyword">else if</span> (workflowType === <span class="string">'sequential'</span>) {
+      <span class="keyword">await</span> taskOrchestrator.executeSequential(context, content)
+    } <span class="keyword">else</span> {
+      <span class="keyword">await</span> taskOrchestrator.executeStepByStep(context, content, currentIndex)
+    }
+  } <span class="keyword">catch</span> (error) {
+    <span class="keyword">await</span> pub.publish(channel, JSON.stringify({
+      event: <span class="string">'error'</span>,
+      data: { message: error.message },
+    }))
+  }
+}</div>
+    </div>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem">
+      Arquivo: <code class="mono">backend/src/domains/execution/queue/execution-processor.ts</code>
+    </p>
+  </div>
+
+  <!-- ===== Arquivos Relacionados ===== -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background:rgba(100,116,139,0.15)">📁</span>
+      Arquivos Relacionados
+    </h2>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Arquivo</th>
+            <th>Responsabilidade</th>
+            <th>Exports Principais</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code class="mono">queue/execution-queue.ts</code></td>
+            <td>Cria e gerencia a instancia da Queue BullMQ</td>
+            <td>
+              <span class="badge badge-teal">getExecutionQueue()</span>
+              <span class="badge badge-teal">closeExecutionQueue()</span>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">queue/execution-worker.ts</code></td>
+            <td>Cria e gerencia o Worker BullMQ</td>
+            <td>
+              <span class="badge badge-teal">startExecutionWorker()</span>
+              <span class="badge badge-teal">stopExecutionWorker()</span>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">queue/execution-processor.ts</code></td>
+            <td>Funcao processadora chamada pelo Worker</td>
+            <td>
+              <span class="badge badge-teal">processExecutionJob()</span>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">orchestrator/recovery.ts</code></td>
+            <td>Recupera execucoes que ficaram em 'running' apos crash</td>
+            <td>
+              <span class="badge badge-teal">recoverStaleExecutions()</span>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">lib/redis.ts</code></td>
+            <td>Singletons de conexao Redis (general, subscriber, publisher)</td>
+            <td>
+              <span class="badge badge-teal">getRedis()</span>
+              <span class="badge badge-teal">getSubscriber()</span>
+              <span class="badge badge-teal">getPublisher()</span>
+              <span class="badge badge-teal">closeAllRedis()</span>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">triggers/trigger-scheduler.ts</code></td>
+            <td>Scheduler BullMQ para triggers cron (job repetivel a cada 30s)</td>
+            <td>
+              <span class="badge badge-teal">startTriggerScheduler()</span>
+              <span class="badge badge-teal">stopTriggerScheduler()</span>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">server.ts</code></td>
+            <td>Startup (Bull Board, worker, recovery) e graceful shutdown</td>
+            <td>
+              <span class="badge badge-gray">SIGINT/SIGTERM handlers</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="shared.js"></script>
+</body>
+</html>

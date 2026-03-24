@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>29 - Riscos & Melhorias | Orquetrador Claude</title>
+  <link rel="stylesheet" href="shared.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } },
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #0a0e1a; }
+    .glass { background: rgba(30,41,59,0.5); backdrop-filter: blur(12px); border: 1px solid rgba(148,163,184,0.1); }
+    .grid-bg { background-image: radial-gradient(circle at 1px 1px, rgba(148,163,184,0.05) 1px, transparent 0); background-size: 40px 40px; }
+    ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:#0a0e1a; } ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+
+    .risk-card { border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); background: var(--bg-card); transition: all 0.3s; }
+    .risk-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+    .risk-card.high { border-left: 4px solid #ef4444; }
+    .risk-card.medium { border-left: 4px solid #f59e0b; }
+    .risk-card.low { border-left: 4px solid #22c55e; }
+
+    .severity-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .severity-high { background: rgba(239,68,68,0.15); color: #f87171; }
+    .severity-medium { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .severity-low { background: rgba(34,197,94,0.15); color: #4ade80; }
+
+    .health-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+    .health-ring svg { transform: rotate(-90deg); }
+
+    .sprint-card { border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-card); overflow: hidden; transition: all 0.3s; }
+    .sprint-card:hover { border-color: rgba(148,163,184,0.3); transform: translateY(-2px); }
+    .sprint-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); }
+    .sprint-body { padding: 1.25rem 1.5rem; }
+    .sprint-1 .sprint-header { background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(245,158,11,0.1)); }
+    .sprint-2 .sprint-header { background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1)); }
+    .sprint-3 .sprint-header { background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(13,148,136,0.1)); }
+
+    .dep-card { border-radius: 10px; padding: 1.25rem; border: 1px solid var(--border-color); background: var(--bg-card); display: flex; gap: 1rem; align-items: flex-start; transition: all 0.3s; }
+    .dep-card:hover { border-color: rgba(148,163,184,0.2); }
+
+    .rec-item { display: flex; gap: 1rem; align-items: flex-start; padding: 1rem 1.25rem; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border-color); transition: all 0.3s; }
+    .rec-item:hover { border-color: rgba(13,148,136,0.3); }
+    .rec-number { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+
+    .progress-bar-custom { height: 10px; background: var(--bg-secondary); border-radius: 999px; overflow: hidden; }
+    .progress-fill-custom { height: 100%; border-radius: 999px; transition: width 1s ease; }
+
+    .metric-card { border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); background: var(--bg-card); text-align: center; transition: all 0.3s; }
+    .metric-card:hover { transform: translateY(-2px); border-color: rgba(148,163,184,0.3); }
+
+    .issue-row { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border-color); transition: all 0.3s; }
+    .issue-row:hover { border-color: rgba(245,158,11,0.3); }
+
+    .timeline-line { position: relative; padding-left: 2rem; }
+    .timeline-line::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: var(--border-color); }
+    .timeline-dot { position: absolute; left: 0; top: 4px; width: 16px; height: 16px; border-radius: 50%; border: 3px solid; background: var(--bg-primary); }
+
+    @keyframes countUp { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+    .animate-count { animation: countUp 0.6s ease-out forwards; }
+
+    .filter-btn { padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 500; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
+    .filter-btn:hover, .filter-btn.active { background: var(--bg-accent-subtle); color: var(--text-accent); border-color: var(--border-accent); }
+  </style>
+</head>
+<body class="min-h-screen grid-bg text-slate-200 antialiased">
+
+  <!-- Nav - rendered by shared.js -->
+
+  <div class="page-container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
+
+    <!-- Header -->
+    <header class="page-header" style="margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border-color);">
+      <div class="breadcrumb" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;font-size:0.875rem;color:var(--text-muted);">
+        <a href="index.html" style="color:var(--text-accent);text-decoration:none;">System Map</a>
+        <span>›</span>
+        <span>29 - Riscos & Melhorias</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:300px;">
+          <h1 style="font-size:2.5rem;font-weight:800;background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0.5rem;">
+            Riscos & Melhorias
+          </h1>
+          <p style="color:var(--text-secondary);font-size:1rem;line-height:1.7;max-width:700px;">
+            Analise completa de riscos de seguranca, issues tecnicas, roadmap de melhorias e recomendacoes prioritarias para o Orquetrador Claude. Health Score atual: <strong style="color:#fbbf24;">75/100</strong> (melhorado de 60/100 apos correcoes).
+          </p>
+        </div>
+        <!-- Health Score Ring -->
+        <div style="flex-shrink:0;text-align:center;">
+          <div class="health-ring">
+            <svg width="140" height="140" viewBox="0 0 140 140">
+              <circle cx="70" cy="70" r="60" fill="none" stroke="#1e293b" stroke-width="10"/>
+              <circle cx="70" cy="70" r="60" fill="none" stroke="url(#healthGrad)" stroke-width="10" stroke-linecap="round"
+                stroke-dasharray="377" stroke-dashoffset="94.25"/>
+              <defs>
+                <linearGradient id="healthGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#f59e0b"/>
+                  <stop offset="100%" stop-color="#22c55e"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <span style="font-size:2.2rem;font-weight:800;color:#fbbf24;" data-count="75">75</span>
+              <span style="font-size:0.7rem;color:var(--text-muted);margin-top:-2px;">/100</span>
+            </div>
+          </div>
+          <div style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-secondary);">Health Score</div>
+          <div style="font-size:0.7rem;color:#4ade80;margin-top:2px;">+15 desde ultima analise</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Quick Stats -->
+    <section style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:3rem;" class="stats-grid">
+      <div class="metric-card">
+        <div style="font-size:1.8rem;font-weight:800;color:#ef4444;" data-count="2">2</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.25rem;">Riscos Altos</div>
+      </div>
+      <div class="metric-card">
+        <div style="font-size:1.8rem;font-weight:800;color:#fbbf24;" data-count="3">3</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.25rem;">Riscos Medios</div>
+      </div>
+      <div class="metric-card">
+        <div style="font-size:1.8rem;font-weight:800;color:#4ade80;" data-count="2">2</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.25rem;">Riscos Baixos</div>
+      </div>
+      <div class="metric-card">
+        <div style="font-size:1.8rem;font-weight:800;color:#60a5fa;" data-count="3">3</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.25rem;">Sprints Planejados</div>
+      </div>
+      <div class="metric-card">
+        <div style="font-size:1.8rem;font-weight:800;color:#a78bfa;" data-count="5">5</div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.25rem;">Acoes Imediatas</div>
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- SECAO 1: Riscos de Seguranca -->
+    <!-- ============================================ -->
+    <section class="section" style="margin-bottom:3rem;">
+      <h2 class="section-title" style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+        <span style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:rgba(239,68,68,0.15);">🛡️</span>
+        Riscos de Seguranca
+      </h2>
+
+      <!-- Filters -->
+      <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+        <button class="filter-btn active" onclick="filterRisks('all')">Todos (7)</button>
+        <button class="filter-btn" onclick="filterRisks('high')">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:4px;"></span>Alto (2)
+        </button>
+        <button class="filter-btn" onclick="filterRisks('medium')">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:4px;"></span>Medio (3)
+        </button>
+        <button class="filter-btn" onclick="filterRisks('low')">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:4px;"></span>Baixo (2)
+        </button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1.25rem;" id="risk-grid">
+
+        <!-- HIGH: Token/Secret Exposure -->
+        <div class="risk-card high" data-severity="high">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <span class="severity-badge severity-high">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ef4444;"></span>
+              Alto
+            </span>
+            <span style="font-size:0.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">SEC-001</span>
+          </div>
+          <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:0.5rem;color:var(--text-primary);">Token/Secret Exposure</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1rem;">
+            stdout/stderr em traces de execucao podem conter secrets, tokens de API e credenciais. Dados sensiveis ficam visiveis nos logs e na interface de monitoramento.
+          </p>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Impacto</div>
+            <div style="font-size:0.8rem;color:#f87171;">Vazamento de credenciais, acesso nao autorizado a servicos externos</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Mitigacao</div>
+            <ul style="font-size:0.8rem;color:var(--text-accent);list-style:none;padding:0;margin:0;">
+              <li style="padding:2px 0;">→ Sanitizar output de traces antes de armazenar</li>
+              <li style="padding:2px 0;">→ Encriptar campos sensiveis com ENCRYPTION_KEY</li>
+              <li style="padding:2px 0;">→ Mascarar tokens nos logs (ex: sk-...xxxx)</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- HIGH: Sandbox Escape -->
+        <div class="risk-card high" data-severity="high">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <span class="severity-badge severity-high">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ef4444;"></span>
+              Alto
+            </span>
+            <span style="font-size:0.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">SEC-002</span>
+          </div>
+          <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:0.5rem;color:var(--text-primary);">Sandbox Escape</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1rem;">
+            Claude CLI tem acesso ao sistema mesmo dentro do sandbox. O usuario <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:0.8rem;">claude-sandbox</code> pode acessar areas nao previstas do filesystem.
+          </p>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Impacto</div>
+            <div style="font-size:0.8rem;color:#f87171;">Execucao de comandos arbitrarios, leitura de arquivos do sistema</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Mitigacao</div>
+            <ul style="font-size:0.8rem;color:var(--text-accent);list-style:none;padding:0;margin:0;">
+              <li style="padding:2px 0;">→ Auditar permissoes do sandbox periodicamente</li>
+              <li style="padding:2px 0;">→ Limitar acesso ao filesystem (chroot ou namespaces)</li>
+              <li style="padding:2px 0;">→ Implementar whitelist de comandos permitidos</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- MEDIUM: API Key Leakage -->
+        <div class="risk-card medium" data-severity="medium">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <span class="severity-badge severity-medium">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#f59e0b;"></span>
+              Medio
+            </span>
+            <span style="font-size:0.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">SEC-003</span>
+          </div>
+          <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:0.5rem;color:var(--text-primary);">API Key Leakage</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1rem;">
+            Chaves de API armazenadas em memoria e variaveis de ambiente podem ser expostas via dumps de memoria, logs de debug ou endpoints de diagnostico.
+          </p>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Impacto</div>
+            <div style="font-size:0.8rem;color:#fbbf24;">Uso indevido de API keys, custos inesperados</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Mitigacao</div>
+            <ul style="font-size:0.8rem;color:var(--text-accent);list-style:none;padding:0;margin:0;">
+              <li style="padding:2px 0;">→ Usar ENCRYPTION_KEY para encriptacao at-rest</li>
+              <li style="padding:2px 0;">→ Rotacionar keys periodicamente</li>
+              <li style="padding:2px 0;">→ Nunca logar valores de env vars sensiveis</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- MEDIUM: Rate Limiting Disabled -->
+        <div class="risk-card medium" data-severity="medium">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <span class="severity-badge severity-medium">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#f59e0b;"></span>
+              Medio
+            </span>
+            <span style="font-size:0.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">SEC-004</span>
+          </div>
+          <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:0.5rem;color:var(--text-primary);">Rate Limiting Desabilitado</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1rem;">
+            O rate limit global esta OFF em producao. A API esta vulneravel a ataques de forca bruta, DDoS e abuso de recursos.
+          </p>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Impacto</div>
+            <div style="font-size:0.8rem;color:#fbbf24;">Indisponibilidade do servico, consumo excessivo de recursos</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Mitigacao</div>
+            <ul style="font-size:0.8rem;color:var(--text-accent);list-style:none;padding:0;margin:0;">
+              <li style="padding:2px 0;">→ Habilitar @fastify/rate-limit em producao</li>
+              <li style="padding:2px 0;">→ Configurar limites por rota (auth: mais restrito)</li>
+              <li style="padding:2px 0;">→ Adicionar rate limit por IP e por usuario</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- MEDIUM: GitHub Token Storage -->
+        <div class="risk-card medium" data-severity="medium">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <span class="severity-badge severity-medium">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#f59e0b;"></span>
+              Medio
+            </span>
+            <span style="font-size:0.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">SEC-005</span>
+          </div>
+          <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:0.5rem;color:var(--text-primary);">GitHub Token Storage</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1rem;">
+            Tokens do GitHub armazenados como texto plano no banco de dados. Se o banco for comprometido, todos os tokens ficam expostos.
+          </p>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Impacto</div>
+            <div style="font-size:0.8rem;color:#fbbf24;">Acesso nao autorizado a repositorios, push malicioso</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Mitigacao</div>
+            <ul style="font-size:0.8rem;color:var(--text-accent);list-style:none;padding:0;margin:0;">
+              <li style="padding:2px 0;">→ Encriptar com ENCRYPTION_KEY (AES-256-GCM)</li>
+              <li style="padding:2px 0;">→ Usar tokens com escopo minimo necessario</li>
+              <li style="padding:2px 0;">→ Implementar rotacao automatica</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- LOW: CORS Configuration -->
+        <div class="risk-card low" data-severity="low">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <span class="severity-badge severity-low">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;"></span>
+              Baixo
+            </span>
+            <span style="font-size:0.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">SEC-006</span>
+          </div>
+          <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:0.5rem;color:var(--text-primary);">CORS Permissivo</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1rem;">
+            Configuracao CORS aceita multiplas origens. Embora nao seja wildcard, a lista e ampla e pode permitir origens nao desejadas.
+          </p>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Impacto</div>
+            <div style="font-size:0.8rem;color:#4ade80;">Potencial CSRF se origem maliciosa estiver na lista</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Mitigacao</div>
+            <ul style="font-size:0.8rem;color:var(--text-accent);list-style:none;padding:0;margin:0;">
+              <li style="padding:2px 0;">→ Restringir origens a dominios conhecidos</li>
+              <li style="padding:2px 0;">→ Usar validacao dinamica de origin</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- LOW: Webhook Secrets -->
+        <div class="risk-card low" data-severity="low">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <span class="severity-badge severity-low">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;"></span>
+              Baixo
+            </span>
+            <span style="font-size:0.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">SEC-007</span>
+          </div>
+          <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:0.5rem;color:var(--text-primary);">Webhook Secrets em Texto Plano</h3>
+          <p style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1rem;">
+            Secrets de webhooks armazenados sem encriptacao no banco. Comprometimento do banco expoe secrets de validacao de payloads.
+          </p>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Impacto</div>
+            <div style="font-size:0.8rem;color:#4ade80;">Falsificacao de payloads de webhook</div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:0.75rem 1rem;">
+            <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;letter-spacing:0.05em;">Mitigacao</div>
+            <ul style="font-size:0.8rem;color:var(--text-accent);list-style:none;padding:0;margin:0;">
+              <li style="padding:2px 0;">→ Encriptar secrets com ENCRYPTION_KEY</li>
+              <li style="padding:2px 0;">→ Implementar rotacao de secrets</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- SECAO 2: Issues Tecnicas Identificadas -->
+    <!-- ============================================ -->
+    <section class="section" style="margin-bottom:3rem;">
+      <h2 class="section-title" style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+        <span style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:rgba(245,158,11,0.15);">🔧</span>
+        Issues Tecnicas Identificadas
+      </h2>
+
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+
+        <div class="issue-row">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:1.1rem;">📄</span>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+              <span style="font-weight:600;font-size:0.95rem;">task-orchestrator.ts</span>
+              <span class="severity-badge severity-high" style="font-size:0.65rem;">1946 linhas</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);">Arquivo monolitico com toda a logica de orquestracao. Deveria ser quebrado em modulos menores por responsabilidade (scheduling, execution, state management).</p>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">Limite recomendado</div>
+            <div style="font-size:0.85rem;font-weight:600;color:#f87171;">~200 linhas</div>
+          </div>
+        </div>
+
+        <div class="issue-row">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:1.1rem;">📄</span>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+              <span style="font-weight:600;font-size:0.95rem;">base-system-prompt.ts</span>
+              <span class="severity-badge severity-medium" style="font-size:0.65rem;">33KB</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);">System prompt monolitico. Dificulta manutencao e versionamento. Idealmente deveria ser composto de secoes modulares.</p>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">Tipo</div>
+            <div style="font-size:0.85rem;font-weight:600;color:#fbbf24;">Monolitico</div>
+          </div>
+        </div>
+
+        <div class="issue-row">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:1.1rem;">🐛</span>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+              <span style="font-weight:600;font-size:0.95rem;">redis.ts & dag-executor.ts</span>
+              <span class="severity-badge severity-low" style="font-size:0.65rem;">TS Errors</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);">Erros de TypeScript pre-existentes. Nao bloqueiam a compilacao (build funciona), mas indicam inconsistencias de tipagem que podem causar bugs em runtime.</p>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">Status</div>
+            <div style="font-size:0.85rem;font-weight:600;color:#a78bfa;">Nao bloqueante</div>
+          </div>
+        </div>
+
+        <div class="issue-row">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:1.1rem;">🗃️</span>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+              <span style="font-weight:600;font-size:0.95rem;">Migration unica</span>
+              <span class="severity-badge severity-medium" style="font-size:0.65rem;">Estrutural</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);">Apenas um arquivo de migration existe. Sem migrations incrementais, rollbacks sao impossiveis e o historico de alteracoes do schema fica perdido.</p>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">Recomendacao</div>
+            <div style="font-size:0.85rem;font-weight:600;color:#60a5fa;">Incremental</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- SECAO 3: Metricas de Qualidade -->
+    <!-- ============================================ -->
+    <section class="section" style="margin-bottom:3rem;">
+      <h2 class="section-title" style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+        <span style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:rgba(34,197,94,0.15);">📊</span>
+        Metricas de Qualidade
+      </h2>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;" class="metrics-grid">
+
+        <!-- DB Health -->
+        <div class="metric-card" style="position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#22c55e);"></div>
+          <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">DB Health</div>
+          <div style="font-size:2.5rem;font-weight:800;color:#fbbf24;" data-count="75">75</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">/100</div>
+          <div class="progress-bar-custom">
+            <div class="progress-fill-custom" style="width:75%;background:linear-gradient(90deg,#f59e0b,#22c55e);"></div>
+          </div>
+        </div>
+
+        <!-- Estrutura de Dados -->
+        <div class="metric-card" style="position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#22c55e,#10b981);"></div>
+          <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">Estrutura de Dados</div>
+          <div style="font-size:2.5rem;font-weight:800;color:#4ade80;">100<span style="font-size:1.2rem;">%</span></div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">19/19 bugs corrigidos</div>
+          <div class="progress-bar-custom">
+            <div class="progress-fill-custom" style="width:100%;background:linear-gradient(90deg,#22c55e,#10b981);"></div>
+          </div>
+        </div>
+
+        <!-- Ghosts Ativos -->
+        <div class="metric-card" style="position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#a78bfa,#8b5cf6);"></div>
+          <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">Ghosts Ativos</div>
+          <div style="font-size:2.5rem;font-weight:800;color:#a78bfa;">14<span style="font-size:1.2rem;">/14</span></div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">Todos implementados</div>
+          <div class="progress-bar-custom">
+            <div class="progress-fill-custom" style="width:100%;background:linear-gradient(90deg,#a78bfa,#8b5cf6);"></div>
+          </div>
+        </div>
+
+        <!-- API Coverage -->
+        <div class="metric-card" style="position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#60a5fa,#3b82f6);"></div>
+          <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">API Coverage</div>
+          <div style="font-size:2.5rem;font-weight:800;color:#60a5fa;" data-count="138">138</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.75rem;">endpoints em 23 dominios</div>
+          <div class="progress-bar-custom">
+            <div class="progress-fill-custom" style="width:92%;background:linear-gradient(90deg,#60a5fa,#3b82f6);"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- SECAO 4: Roadmap de Melhorias -->
+    <!-- ============================================ -->
+    <section class="section" style="margin-bottom:3rem;">
+      <h2 class="section-title" style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+        <span style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:rgba(59,130,246,0.15);">🗺️</span>
+        Roadmap de Melhorias
+      </h2>
+
+      <!-- Sprint Timeline -->
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:2rem;position:relative;">
+        <!-- Timeline bar -->
+        <div style="position:absolute;top:50%;left:5%;right:5%;height:3px;background:var(--border-color);transform:translateY(-50%);z-index:0;"></div>
+
+        <div style="flex:1;text-align:center;position:relative;z-index:1;">
+          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#ef4444,#f59e0b);display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;font-size:1.2rem;font-weight:700;color:white;border:3px solid var(--bg-primary);">1</div>
+          <div style="font-size:0.85rem;font-weight:600;">Seguranca</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">Prioridade maxima</div>
+        </div>
+
+        <div style="flex:1;text-align:center;position:relative;z-index:1;">
+          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#8b5cf6);display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;font-size:1.2rem;font-weight:700;color:white;border:3px solid var(--bg-primary);">2</div>
+          <div style="font-size:0.85rem;font-weight:600;">Performance</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">Otimizacao</div>
+        </div>
+
+        <div style="flex:1;text-align:center;position:relative;z-index:1;">
+          <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#0d9488);display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;font-size:1.2rem;font-weight:700;color:white;border:3px solid var(--bg-primary);">3</div>
+          <div style="font-size:0.85rem;font-weight:600;">Qualidade</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">Estabilidade</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;" class="sprint-grid">
+
+        <!-- Sprint 1 -->
+        <div class="sprint-card sprint-1">
+          <div class="sprint-header">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Sprint 1</div>
+                <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">Seguranca</div>
+              </div>
+              <span class="severity-badge severity-high">Prioridade Alta</span>
+            </div>
+          </div>
+          <div class="sprint-body">
+            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.6rem;">
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#ef4444;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Implementar ENCRYPTION_KEY</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Para tokens e secrets at-rest</div>
+                </div>
+              </li>
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#f59e0b;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Habilitar rate limiting global</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">@fastify/rate-limit por rota</div>
+                </div>
+              </li>
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#f59e0b;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Sanitizar traces de execucao</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Remover secrets de stdout/stderr</div>
+                </div>
+              </li>
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#22c55e;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Restringir origens CORS</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Apenas dominios conhecidos</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Sprint 2 -->
+        <div class="sprint-card sprint-2">
+          <div class="sprint-header">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Sprint 2</div>
+                <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">Performance</div>
+              </div>
+              <span class="severity-badge severity-medium">Prioridade Media</span>
+            </div>
+          </div>
+          <div class="sprint-body">
+            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.6rem;">
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#3b82f6;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Quebrar task-orchestrator.ts</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">1946 linhas → modulos separados</div>
+                </div>
+              </li>
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#8b5cf6;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Connection pooling no DB</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Otimizar uso de conexoes Prisma</div>
+                </div>
+              </li>
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#8b5cf6;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Redis clustering</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Alta disponibilidade para cache</div>
+                </div>
+              </li>
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#3b82f6;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Execution timeout guardrails</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Limites por tipo de tarefa</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Sprint 3 -->
+        <div class="sprint-card sprint-3">
+          <div class="sprint-header">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Sprint 3</div>
+                <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">Qualidade</div>
+              </div>
+              <span class="severity-badge severity-low">Prioridade Normal</span>
+            </div>
+          </div>
+          <div class="sprint-body">
+            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.6rem;">
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#22c55e;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Migrations incrementais</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Historico de alteracoes do schema</div>
+                </div>
+              </li>
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#0d9488;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Corrigir erros TypeScript</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">redis.ts e dag-executor.ts</div>
+                </div>
+              </li>
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#0d9488;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Testes de integracao</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Cobertura de fluxos criticos</div>
+                </div>
+              </li>
+              <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.85rem;">
+                <span style="color:#22c55e;flex-shrink:0;margin-top:2px;">●</span>
+                <div>
+                  <div style="font-weight:500;">Melhorar mensagens de erro</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">Mensagens claras e acionaveis</div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- SECAO 5: Dependencias Criticas -->
+    <!-- ============================================ -->
+    <section class="section" style="margin-bottom:3rem;">
+      <h2 class="section-title" style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+        <span style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:rgba(139,92,246,0.15);">🔗</span>
+        Dependencias Criticas
+      </h2>
+
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1.25rem;" class="deps-grid">
+
+        <!-- PostgreSQL -->
+        <div class="dep-card">
+          <div style="width:48px;height:48px;border-radius:12px;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:1.4rem;">🐘</span>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+              <span style="font-weight:600;font-size:1rem;">PostgreSQL</span>
+              <span class="severity-badge severity-high" style="font-size:0.6rem;">SPOF</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;margin-bottom:0.5rem;">
+              Ponto unico de falha. Sem o banco, toda a aplicacao para. Nao ha replica configurada.
+            </p>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <span style="font-size:0.7rem;padding:2px 8px;border-radius:6px;background:rgba(59,130,246,0.1);color:#60a5fa;">Host: 217.216.81.188:54321</span>
+              <span style="font-size:0.7rem;padding:2px 8px;border-radius:6px;background:rgba(239,68,68,0.1);color:#f87171;">Sem replica</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Redis -->
+        <div class="dep-card">
+          <div style="width:48px;height:48px;border-radius:12px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:1.4rem;">⚡</span>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+              <span style="font-weight:600;font-size:1rem;">Redis</span>
+              <span class="severity-badge severity-medium" style="font-size:0.6rem;">Graceful Degradation</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;margin-bottom:0.5rem;">
+              Degradacao graciosa disponivel. Filas BullMQ param, mas a API continua funcionando sem cache.
+            </p>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <span style="font-size:0.7rem;padding:2px 8px;border-radius:6px;background:rgba(34,197,94,0.1);color:#4ade80;">Fallback disponivel</span>
+              <span style="font-size:0.7rem;padding:2px 8px;border-radius:6px;background:rgba(245,158,11,0.1);color:#fbbf24;">BullMQ depende</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Claude CLI -->
+        <div class="dep-card">
+          <div style="width:48px;height:48px;border-radius:12px;background:rgba(13,148,136,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:1.4rem;">🤖</span>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+              <span style="font-weight:600;font-size:1rem;">Claude CLI</span>
+              <span class="severity-badge severity-high" style="font-size:0.6rem;">Dependencia externa</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;margin-bottom:0.5rem;">
+              Motor de execucao depende do Claude CLI via Anthropic. Indisponibilidade da API Anthropic bloqueia todas as execucoes.
+            </p>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <span style="font-size:0.7rem;padding:2px 8px;border-radius:6px;background:rgba(13,148,136,0.1);color:var(--text-accent);">Sandbox isolado</span>
+              <span style="font-size:0.7rem;padding:2px 8px;border-radius:6px;background:rgba(239,68,68,0.1);color:#f87171;">Sem fallback</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- GitHub API -->
+        <div class="dep-card">
+          <div style="width:48px;height:48px;border-radius:12px;background:rgba(100,116,139,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:1.4rem;">🐙</span>
+          </div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+              <span style="font-weight:600;font-size:1rem;">GitHub API</span>
+              <span class="severity-badge severity-low" style="font-size:0.6rem;">Impacto parcial</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;margin-bottom:0.5rem;">
+              Usada para imports e sync de repositorios. Indisponibilidade afeta apenas funcionalidades de integracao Git, nao o core.
+            </p>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <span style="font-size:0.7rem;padding:2px 8px;border-radius:6px;background:rgba(34,197,94,0.1);color:#4ade80;">Core nao afetado</span>
+              <span style="font-size:0.7rem;padding:2px 8px;border-radius:6px;background:rgba(100,116,139,0.1);color:#94a3b8;">Rate limited</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- SECAO 6: Recomendacoes Imediatas -->
+    <!-- ============================================ -->
+    <section class="section" style="margin-bottom:3rem;">
+      <h2 class="section-title" style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+        <span style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:rgba(13,148,136,0.15);">🎯</span>
+        Recomendacoes Imediatas
+      </h2>
+
+      <p style="font-size:0.9rem;color:var(--text-secondary);margin-bottom:1.5rem;">
+        Lista priorizada de acoes que devem ser executadas o mais rapido possivel, ordenadas por impacto e urgencia.
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+
+        <!-- #1 -->
+        <div class="rec-item">
+          <div class="rec-number" style="background:linear-gradient(135deg,#ef4444,#f59e0b);color:white;">1</div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+              <span style="font-weight:600;font-size:0.95rem;">Habilitar Rate Limiting</span>
+              <span class="severity-badge severity-high" style="font-size:0.6rem;">Urgente</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;">
+              A API esta completamente aberta. Registrar e habilitar <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:0.8rem;">@fastify/rate-limit</code> com limites por rota. Rotas de auth devem ter limites mais restritivos (ex: 5 req/min para login).
+            </p>
+          </div>
+          <div style="flex-shrink:0;text-align:right;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">Esforco</div>
+            <div style="font-size:0.85rem;font-weight:600;color:#4ade80;">Baixo</div>
+          </div>
+        </div>
+
+        <!-- #2 -->
+        <div class="rec-item">
+          <div class="rec-number" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:white;">2</div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+              <span style="font-weight:600;font-size:0.95rem;">Encriptar Tokens Armazenados</span>
+              <span class="severity-badge severity-high" style="font-size:0.6rem;">Urgente</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;">
+              GitHub tokens e webhook secrets estao em texto plano no banco. Implementar encriptacao AES-256-GCM usando <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:0.8rem;">ENCRYPTION_KEY</code> do environment.
+            </p>
+          </div>
+          <div style="flex-shrink:0;text-align:right;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">Esforco</div>
+            <div style="font-size:0.85rem;font-weight:600;color:#fbbf24;">Medio</div>
+          </div>
+        </div>
+
+        <!-- #3 -->
+        <div class="rec-item">
+          <div class="rec-number" style="background:linear-gradient(135deg,#f59e0b,#22c55e);color:white;">3</div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+              <span style="font-weight:600;font-size:0.95rem;">Sanitizar Trace Output</span>
+              <span class="severity-badge severity-medium" style="font-size:0.6rem;">Importante</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;">
+              Adicionar filtro no engine de execucao para mascarar patterns sensiveis (API keys, tokens, senhas) antes de salvar stdout/stderr nos traces.
+            </p>
+          </div>
+          <div style="flex-shrink:0;text-align:right;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">Esforco</div>
+            <div style="font-size:0.85rem;font-weight:600;color:#fbbf24;">Medio</div>
+          </div>
+        </div>
+
+        <!-- #4 -->
+        <div class="rec-item">
+          <div class="rec-number" style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:white;">4</div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+              <span style="font-weight:600;font-size:0.95rem;">Health Check para Redis</span>
+              <span class="severity-badge severity-medium" style="font-size:0.6rem;">Importante</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;">
+              Adicionar endpoint <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:0.8rem;">/health/redis</code> que verifica conectividade e latencia do Redis. Integrar com monitoramento para alertas proativos.
+            </p>
+          </div>
+          <div style="flex-shrink:0;text-align:right;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">Esforco</div>
+            <div style="font-size:0.85rem;font-weight:600;color:#4ade80;">Baixo</div>
+          </div>
+        </div>
+
+        <!-- #5 -->
+        <div class="rec-item">
+          <div class="rec-number" style="background:linear-gradient(135deg,#22c55e,#0d9488);color:white;">5</div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.3rem;">
+              <span style="font-weight:600;font-size:0.95rem;">Quebrar Arquivos Grandes</span>
+              <span class="severity-badge severity-low" style="font-size:0.6rem;">Planejado</span>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);line-height:1.5;">
+              <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:0.8rem;">task-orchestrator.ts</code> (1946 linhas) e <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:0.8rem;">base-system-prompt.ts</code> (33KB) devem ser modularizados para facilitar manutencao e code review.
+            </p>
+          </div>
+          <div style="flex-shrink:0;text-align:right;">
+            <div style="font-size:0.7rem;color:var(--text-muted);">Esforco</div>
+            <div style="font-size:0.85rem;font-weight:600;color:#f87171;">Alto</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================ -->
+    <!-- SECAO 7: Resumo da Evolucao -->
+    <!-- ============================================ -->
+    <section class="section" style="margin-bottom:2rem;">
+      <h2 class="section-title" style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+        <span style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;background:rgba(34,197,94,0.15);">📈</span>
+        Evolucao do Health Score
+      </h2>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:2rem;">
+
+        <!-- Before/After comparison -->
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:2rem;align-items:center;margin-bottom:2rem;">
+          <!-- Before -->
+          <div style="text-align:center;">
+            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">Antes das Correcoes</div>
+            <div style="font-size:3.5rem;font-weight:800;color:#ef4444;">60</div>
+            <div style="font-size:0.85rem;color:var(--text-muted);">/100</div>
+            <div class="progress-bar-custom" style="margin-top:0.75rem;">
+              <div class="progress-fill-custom" style="width:60%;background:linear-gradient(90deg,#ef4444,#f59e0b);"></div>
+            </div>
+          </div>
+
+          <!-- Arrow -->
+          <div style="text-align:center;">
+            <div style="font-size:2rem;color:var(--text-accent);">→</div>
+            <div style="font-size:0.75rem;color:#4ade80;font-weight:600;">+15 pts</div>
+          </div>
+
+          <!-- After -->
+          <div style="text-align:center;">
+            <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.75rem;">Apos Correcoes</div>
+            <div style="font-size:3.5rem;font-weight:800;color:#fbbf24;">75</div>
+            <div style="font-size:0.85rem;color:var(--text-muted);">/100</div>
+            <div class="progress-bar-custom" style="margin-top:0.75rem;">
+              <div class="progress-fill-custom" style="width:75%;background:linear-gradient(90deg,#f59e0b,#22c55e);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- What improved -->
+        <div style="border-top:1px solid var(--border-color);padding-top:1.5rem;">
+          <div style="font-size:0.85rem;font-weight:600;margin-bottom:1rem;">O que melhorou:</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;" class="improved-grid">
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#4ade80;">✓</span>
+              <span>19/19 bugs de schema corrigidos</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#4ade80;">✓</span>
+              <span>14/14 ghosts implementados</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#4ade80;">✓</span>
+              <span>FKs e indexes completos</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#4ade80;">✓</span>
+              <span>Webhook ownership corrigido</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#4ade80;">✓</span>
+              <span>Trigger scheduler integrado</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#4ade80;">✓</span>
+              <span>Token encryption preparado</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- What remains -->
+        <div style="border-top:1px solid var(--border-color);padding-top:1.5rem;margin-top:1.5rem;">
+          <div style="font-size:0.85rem;font-weight:600;margin-bottom:1rem;">O que falta para 100:</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;" class="remaining-grid">
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#f87171;">✗</span>
+              <span>Rate limiting ativo</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#f87171;">✗</span>
+              <span>Tokens encriptados</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#f87171;">✗</span>
+              <span>Traces sanitizados</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#f87171;">✗</span>
+              <span>Migrations incrementais</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#f87171;">✗</span>
+              <span>Arquivos modularizados</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;">
+              <span style="color:#f87171;">✗</span>
+              <span>TS errors corrigidos</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="text-align:center;padding:2rem 0;border-top:1px solid var(--border-color);color:var(--text-muted);font-size:0.8rem;">
+      <p>Orquetrador Claude — System Map — Pagina 29: Riscos & Melhorias</p>
+      <p style="margin-top:0.25rem;">Ultima atualizacao: 24/03/2026</p>
+    </footer>
+
+  </div>
+
+  <script src="shared.js"></script>
+  <script>
+    // Risk filter
+    function filterRisks(severity) {
+      const cards = document.querySelectorAll('#risk-grid .risk-card');
+      const buttons = document.querySelectorAll('.filter-btn');
+
+      buttons.forEach(b => b.classList.remove('active'));
+      event.target.closest('.filter-btn').classList.add('active');
+
+      cards.forEach(card => {
+        if (severity === 'all' || card.dataset.severity === severity) {
+          card.style.display = '';
+          card.style.opacity = '0';
+          card.style.transform = 'translateY(10px)';
+          requestAnimationFrame(() => {
+            card.style.transition = 'all 0.3s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+          });
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Responsive grid adjustments
+    function adjustGrids() {
+      const width = window.innerWidth;
+      const statsGrid = document.querySelector('.stats-grid');
+      const metricsGrid = document.querySelector('.metrics-grid');
+      const sprintGrid = document.querySelector('.sprint-grid');
+      const depsGrid = document.querySelector('.deps-grid');
+      const improvedGrid = document.querySelector('.improved-grid');
+      const remainingGrid = document.querySelector('.remaining-grid');
+
+      if (width < 768) {
+        if (statsGrid) statsGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        if (metricsGrid) metricsGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        if (sprintGrid) sprintGrid.style.gridTemplateColumns = '1fr';
+        if (depsGrid) depsGrid.style.gridTemplateColumns = '1fr';
+        if (improvedGrid) improvedGrid.style.gridTemplateColumns = '1fr';
+        if (remainingGrid) remainingGrid.style.gridTemplateColumns = '1fr';
+        document.getElementById('risk-grid').style.gridTemplateColumns = '1fr';
+      } else if (width < 1200) {
+        if (statsGrid) statsGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        if (metricsGrid) metricsGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        if (sprintGrid) sprintGrid.style.gridTemplateColumns = '1fr';
+        if (depsGrid) depsGrid.style.gridTemplateColumns = '1fr';
+        if (improvedGrid) improvedGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        if (remainingGrid) remainingGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        document.getElementById('risk-grid').style.gridTemplateColumns = 'repeat(2, 1fr)';
+      } else {
+        if (statsGrid) statsGrid.style.gridTemplateColumns = 'repeat(5, 1fr)';
+        if (metricsGrid) metricsGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+        if (sprintGrid) sprintGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        if (depsGrid) depsGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+        if (improvedGrid) improvedGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        if (remainingGrid) remainingGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        document.getElementById('risk-grid').style.gridTemplateColumns = 'repeat(2, 1fr)';
+      }
+    }
+
+    window.addEventListener('resize', adjustGrids);
+    window.addEventListener('DOMContentLoaded', adjustGrids);
+  </script>
+
+</body>
+</html>
