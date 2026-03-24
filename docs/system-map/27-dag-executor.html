@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>27 - DAG Executor | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* DAG Visualization */
+    .dag-canvas {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2rem;
+      position: relative;
+      overflow-x: auto;
+    }
+
+    .dag-graph {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      min-width: 700px;
+      justify-content: center;
+    }
+
+    .dag-batch {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+      position: relative;
+    }
+
+    .dag-batch-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .dag-node {
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s;
+      cursor: default;
+      min-width: 120px;
+      justify-content: center;
+    }
+
+    .dag-node:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+      transform: scale(1.05);
+    }
+
+    .dag-node.parallel {
+      border-color: rgba(34, 197, 94, 0.5);
+      background: rgba(34, 197, 94, 0.05);
+    }
+
+    .dag-node.waiting {
+      border-color: rgba(245, 158, 11, 0.5);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    .dag-node.final {
+      border-color: rgba(139, 92, 246, 0.5);
+      background: rgba(139, 92, 246, 0.05);
+    }
+
+    .dag-connector {
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+
+    .dag-connector svg {
+      width: 60px;
+      height: 80px;
+      overflow: visible;
+    }
+
+    .dag-connector line, .dag-connector path {
+      stroke: var(--text-muted);
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .dag-connector .arrow {
+      fill: var(--text-muted);
+    }
+
+    /* Timeline */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+      padding-left: 2rem;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border-color);
+    }
+
+    .timeline-item {
+      position: relative;
+      padding: 1.25rem 0 1.25rem 2rem;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: -2rem;
+      top: 1.5rem;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-accent);
+      background: var(--bg-primary);
+      z-index: 1;
+    }
+
+    .timeline-dot.active {
+      background: var(--bg-accent);
+      box-shadow: 0 0 8px rgba(13, 148, 136, 0.5);
+    }
+
+    .timeline-content {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+    }
+
+    .timeline-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .timeline-desc {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    /* Batch execution bars */
+    .batch-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+
+    .batch-bar-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      min-width: 70px;
+    }
+
+    .batch-bar-track {
+      flex: 1;
+      height: 28px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .batch-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: width 0.6s ease;
+    }
+
+    .batch-bar-fill.green { background: rgba(34, 197, 94, 0.25); color: #4ade80; }
+    .batch-bar-fill.amber { background: rgba(245, 158, 11, 0.25); color: #fbbf24; }
+    .batch-bar-fill.purple { background: rgba(139, 92, 246, 0.25); color: #a78bfa; }
+
+    .batch-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      min-width: 50px;
+      text-align: right;
+    }
+
+    /* Method cards */
+    .method-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      transition: all 0.3s;
+    }
+
+    .method-card:hover {
+      border-color: rgba(13, 148, 136, 0.3);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .method-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .method-params {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: #c084fc;
+      margin-bottom: 0.5rem;
+    }
+
+    .method-return {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: #67e8f9;
+      margin-bottom: 0.75rem;
+    }
+
+    .method-desc {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    /* Cycle detection animation */
+    @keyframes cycleGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+      50% { box-shadow: 0 0 16px 4px rgba(239, 68, 68, 0.3); }
+    }
+
+    .cycle-warning {
+      animation: cycleGlow 2s ease-in-out infinite;
+      border-color: rgba(239, 68, 68, 0.5) !important;
+    }
+
+    /* Comparison highlight */
+    .comparison-row td:first-child {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .highlight-cell {
+      background: var(--bg-accent-subtle) !important;
+      font-weight: 500;
+    }
+
+    /* SSE event preview */
+    .sse-event {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      margin-bottom: 0.75rem;
+    }
+
+    .sse-event .event-type {
+      color: #fbbf24;
+      font-weight: 600;
+    }
+
+    .sse-event .event-key {
+      color: #67e8f9;
+    }
+
+    .sse-event .event-value {
+      color: #86efac;
+    }
+
+    .sse-event .event-bracket {
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <h1>DAG Executor</h1>
+    <p class="subtitle">Directed Acyclic Graph — execucao paralela de steps baseada em dependencias</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4" style="margin-bottom: 2.5rem;">
+    <div class="stat-box">
+      <div class="stat-value" data-count="105">0</div>
+      <div class="stat-label">Linhas de codigo</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="6">0</div>
+      <div class="stat-label">Metodos publicos</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="2">0</div>
+      <div class="stat-label">Eventos SSE</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="3">0</div>
+      <div class="stat-label">Batches no exemplo</div>
+    </div>
+  </div>
+
+  <!-- Section: O que e DAG -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">?</span>
+      O que e DAG
+    </h2>
+    <div class="card" style="cursor: default;">
+      <p class="card-desc" style="margin-bottom: 1rem;">
+        <strong>DAG</strong> significa <strong>Directed Acyclic Graph</strong> (Grafo Dirigido Aciclico). No contexto do Orquetrador, e o mecanismo que permite executar steps de um workflow em <strong>paralelo</strong> sempre que suas dependencias ja estiverem satisfeitas.
+      </p>
+      <div class="grid-3" style="margin-top: 1rem;">
+        <div style="text-align: center; padding: 1rem;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">D</div>
+          <div style="font-weight: 600; margin-bottom: 0.25rem;">Directed</div>
+          <div style="color: var(--text-secondary); font-size: 0.85rem;">Cada aresta tem direcao — step A deve rodar <em>antes</em> de step C</div>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">A</div>
+          <div style="font-weight: 600; margin-bottom: 0.25rem;">Acyclic</div>
+          <div style="color: var(--text-secondary); font-size: 0.85rem;">Sem ciclos — nenhum step pode depender de si mesmo (direta ou indiretamente)</div>
+        </div>
+        <div style="text-align: center; padding: 1rem;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">G</div>
+          <div style="font-weight: 600; margin-bottom: 0.25rem;">Graph</div>
+          <div style="color: var(--text-secondary); font-size: 0.85rem;">Estrutura de nos (steps) conectados por arestas (dependencias)</div>
+        </div>
+      </div>
+      <p class="card-desc" style="margin-top: 1.25rem;">
+        Steps sem dependencias rodam <strong>simultaneamente</strong>. Um step so inicia quando <strong>todos</strong> os steps de que ele depende estiverem completos. Isso reduz drasticamente o tempo total de execucao de workflows complexos.
+      </p>
+    </div>
+  </div>
+
+  <!-- Section: DAG Visual -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">G</span>
+      Visualizacao do Grafo
+    </h2>
+
+    <div class="dag-canvas" id="dagVisualization">
+      <div class="dag-graph">
+        <!-- Batch 1 -->
+        <div class="dag-batch">
+          <div class="dag-batch-label">Batch 1</div>
+          <div class="dag-node parallel" id="nodeA">
+            <span style="color: #4ade80;">A</span> Step A
+          </div>
+          <div class="dag-node parallel" id="nodeB">
+            <span style="color: #4ade80;">B</span> Step B
+          </div>
+          <div class="dag-node parallel" id="nodeD">
+            <span style="color: #4ade80;">D</span> Step D
+          </div>
+        </div>
+
+        <!-- Arrows 1 -> 2 -->
+        <div class="dag-connector">
+          <svg viewBox="0 0 60 140">
+            <defs>
+              <marker id="arrow1" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" class="arrow"/>
+              </marker>
+            </defs>
+            <!-- A -> C -->
+            <line x1="0" y1="30" x2="52" y2="70" marker-end="url(#arrow1)"/>
+            <!-- B -> C -->
+            <line x1="0" y1="70" x2="52" y2="70" marker-end="url(#arrow1)"/>
+          </svg>
+        </div>
+
+        <!-- Batch 2 -->
+        <div class="dag-batch">
+          <div class="dag-batch-label">Batch 2</div>
+          <div class="dag-node waiting" id="nodeC">
+            <span style="color: #fbbf24;">C</span> Step C
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">depende de A, B</div>
+        </div>
+
+        <!-- Arrows 2 -> 3 -->
+        <div class="dag-connector">
+          <svg viewBox="0 0 60 140">
+            <defs>
+              <marker id="arrow2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" class="arrow"/>
+              </marker>
+            </defs>
+            <!-- C -> E -->
+            <line x1="0" y1="30" x2="52" y2="50" marker-end="url(#arrow2)"/>
+            <!-- D -> E (from batch 1, represented here) -->
+            <line x1="0" y1="70" x2="52" y2="50" marker-end="url(#arrow2)" stroke-dasharray="4,4"/>
+          </svg>
+        </div>
+
+        <!-- Batch 3 -->
+        <div class="dag-batch">
+          <div class="dag-batch-label">Batch 3</div>
+          <div class="dag-node final" id="nodeE">
+            <span style="color: #a78bfa;">E</span> Step E
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">depende de C, D</div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div style="display: flex; gap: 1.5rem; justify-content: center; margin-top: 1.5rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+          <div style="width: 12px; height: 12px; border-radius: 3px; background: rgba(34,197,94,0.3); border: 1px solid rgba(34,197,94,0.6);"></div>
+          <span style="color: var(--text-secondary);">Sem dependencias (paralelo)</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+          <div style="width: 12px; height: 12px; border-radius: 3px; background: rgba(245,158,11,0.3); border: 1px solid rgba(245,158,11,0.6);"></div>
+          <span style="color: var(--text-secondary);">Aguardando dependencias</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+          <div style="width: 12px; height: 12px; border-radius: 3px; background: rgba(139,92,246,0.3); border: 1px solid rgba(139,92,246,0.6);"></div>
+          <span style="color: var(--text-secondary);">Step final</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+          <div style="width: 24px; height: 0; border-top: 2px dashed var(--text-muted);"></div>
+          <span style="color: var(--text-secondary);">Dependencia cross-batch</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Execution Timeline -->
+    <div style="margin-top: 1.5rem;">
+      <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-secondary);">Timeline de Execucao por Batch</h3>
+      <div class="batch-bar">
+        <div class="batch-bar-label">Batch 1</div>
+        <div class="batch-bar-track">
+          <div class="batch-bar-fill green" style="width: 60%;">A &nbsp; B &nbsp; D &nbsp; (paralelo)</div>
+        </div>
+        <div class="batch-time">~15s</div>
+      </div>
+      <div class="batch-bar">
+        <div class="batch-bar-label">Batch 2</div>
+        <div class="batch-bar-track">
+          <div class="batch-bar-fill amber" style="width: 35%;">C &nbsp; (aguarda A, B)</div>
+        </div>
+        <div class="batch-time">~10s</div>
+      </div>
+      <div class="batch-bar">
+        <div class="batch-bar-label">Batch 3</div>
+        <div class="batch-bar-track">
+          <div class="batch-bar-fill purple" style="width: 25%;">E &nbsp; (aguarda C, D)</div>
+        </div>
+        <div class="batch-time">~8s</div>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; font-size: 0.8rem; color: var(--text-muted);">
+        <span>Total DAG: ~33s (3 batches paralelos)</span>
+        <span>Sequencial seria: ~55s (5 steps em serie)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: DAGExecutor Class -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">C</span>
+      Classe DAGExecutor
+    </h2>
+
+    <div class="card" style="cursor: default; margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: var(--gradient-2);">F</div>
+        <div>
+          <div class="card-title">dag-executor.ts</div>
+          <div class="card-desc">105 linhas | backend/src/domains/execution/orchestrator/</div>
+        </div>
+      </div>
+      <p class="card-desc">
+        Classe responsavel por modelar o grafo de dependencias entre steps, validar a estrutura (sem ciclos ou refs invalidas), determinar quais steps estao prontos para execucao e rastrear outputs para injecao de contexto.
+      </p>
+    </div>
+
+    <!-- Internal State -->
+    <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Estado Interno</h3>
+    <div class="code-block" style="margin-bottom: 1.5rem;">
+<span class="keyword">private</span> graph: <span class="type">Map&lt;string, DagStep&gt;</span>  <span class="comment">// mapa stepId -> {step, index, dependsOn}</span>
+<span class="keyword">private</span> completed = <span class="keyword">new</span> <span class="type">Set&lt;string&gt;</span>()        <span class="comment">// IDs dos steps finalizados</span>
+<span class="keyword">private</span> outputs = <span class="keyword">new</span> <span class="type">Map&lt;string, string&gt;</span>()  <span class="comment">// stepId -> output (texto)</span>
+    </div>
+
+    <!-- Methods -->
+    <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Metodos</h3>
+    <div class="grid-2">
+      <div class="method-card">
+        <div class="method-name">constructor(steps)</div>
+        <div class="method-params">steps: WorkflowStep[]</div>
+        <div class="method-desc">Recebe o array de steps do workflow e constroi o grafo de dependencias. Para cada step, le o campo <code>dependsOn</code> (JSON array de IDs) e cria uma entrada no Map interno.</div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-name">validate()</div>
+        <div class="method-return">-&gt; { valid: boolean; error?: string }</div>
+        <div class="method-desc">Verifica integridade do grafo: (1) todas as refs de dependencia apontam para steps existentes, (2) nao existem ciclos (DFS com deteccao de back-edge). Retorna erro descritivo se falhar.</div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-name">getReadySteps()</div>
+        <div class="method-return">-&gt; DagStep[]</div>
+        <div class="method-desc">Retorna steps prontos para execucao: aqueles que ainda nao foram completados E cujas dependencias ja estao todas no set <code>completed</code>. Estes formam o proximo batch.</div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-name">markCompleted(stepId, output)</div>
+        <div class="method-params">stepId: string, output: string</div>
+        <div class="method-desc">Marca um step como finalizado e armazena seu output. Isso pode desbloquear novos steps cujas dependencias agora estao satisfeitas.</div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-name">getDependencyContext(stepId)</div>
+        <div class="method-return">-&gt; string</div>
+        <div class="method-desc">Retorna concatenacao dos outputs de todos os steps de que <code>stepId</code> depende. Formatado como <code>[Output from "Nome"]: texto</code>. Injetado no contexto da execucao do step.</div>
+      </div>
+
+      <div class="method-card">
+        <div class="method-name">isComplete()</div>
+        <div class="method-return">-&gt; boolean</div>
+        <div class="method-desc">Retorna <code>true</code> quando <code>completed.size === graph.size</code>, ou seja, todos os steps do grafo foram finalizados com sucesso.</div>
+      </div>
+    </div>
+
+    <!-- Properties -->
+    <h3 style="font-size: 1.1rem; font-weight: 600; margin: 1.5rem 0 1rem;">Propriedades</h3>
+    <div class="grid-2">
+      <div class="method-card">
+        <div class="method-name">totalSteps</div>
+        <div class="method-return">-&gt; number (getter)</div>
+        <div class="method-desc">Numero total de steps no grafo (<code>graph.size</code>).</div>
+      </div>
+      <div class="method-card">
+        <div class="method-name">completedCount</div>
+        <div class="method-return">-&gt; number (getter)</div>
+        <div class="method-desc">Numero de steps ja finalizados (<code>completed.size</code>).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Detection -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">D</span>
+      Deteccao de DAG
+    </h2>
+    <div class="card" style="cursor: default;">
+      <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+        <span class="badge badge-teal">Funcao exportada</span>
+        <code style="font-size: 0.9rem; color: var(--text-accent);">isDAGWorkflow(steps)</code>
+      </div>
+      <p class="card-desc" style="margin-bottom: 1rem;">
+        Determina se um workflow deve usar execucao DAG ou sequencial. Retorna <code>true</code> se <strong>qualquer</strong> step do array possuir <code>dependsOn</code> com pelo menos um elemento.
+      </p>
+      <div class="code-block">
+<span class="keyword">export function</span> <span class="type">isDAGWorkflow</span>(steps: <span class="type">WorkflowStep</span>[]): <span class="type">boolean</span> {
+  <span class="keyword">return</span> steps.<span class="type">some</span>(step => {
+    <span class="keyword">const</span> deps = step.dependsOn <span class="keyword">as</span> <span class="type">string</span>[] || []
+    <span class="keyword">return</span> <span class="type">Array</span>.isArray(deps) && deps.length > <span class="number">0</span>
+  })
+}
+      </div>
+      <div style="margin-top: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 250px; padding: 1rem; background: var(--bg-success); border-radius: 8px;">
+          <div style="font-weight: 600; font-size: 0.9rem; color: #4ade80; margin-bottom: 0.25rem;">Retorna true</div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary);">Pelo menos um step tem <code>dependsOn: ["id-1"]</code></div>
+        </div>
+        <div style="flex: 1; min-width: 250px; padding: 1rem; background: var(--bg-danger); border-radius: 8px;">
+          <div style="font-weight: 600; font-size: 0.9rem; color: #f87171; margin-bottom: 0.25rem;">Retorna false</div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary);">Todos os steps tem <code>dependsOn: []</code> ou ausente</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Execution Flow -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-3);">F</span>
+      Fluxo de Execucao
+    </h2>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot active"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">1. Detectar modo DAG</div>
+          <div class="timeline-desc">
+            <code>isDAGWorkflow(steps)</code> verifica se algum step possui <code>dependsOn</code>. Se false, usa execucao sequencial normal.
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot active"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">2. Construir grafo</div>
+          <div class="timeline-desc">
+            <code>new DAGExecutor(steps)</code> monta o <code>Map</code> interno com todos os steps e suas dependencias.
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot active"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">3. Validar DAG</div>
+          <div class="timeline-desc">
+            <code>validate()</code> checa refs invalidas e ciclos. Se falhar, a execucao e abortada com erro descritivo.
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot active"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">4. Loop de execucao</div>
+          <div class="timeline-desc">
+            Enquanto <code>!isComplete()</code>:
+            <br>a) <code>getReadySteps()</code> retorna steps com deps satisfeitas
+            <br>b) Emite evento SSE <code>dag_batch_start</code>
+            <br>c) Executa batch (steps rodam em paralelo ou sequencial, conforme config)
+            <br>d) <code>markCompleted(stepId, output)</code> para cada step finalizado
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot active"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">5. Injecao de contexto</div>
+          <div class="timeline-desc">
+            Antes de executar cada step, <code>getDependencyContext(stepId)</code> coleta outputs dos steps predecessores e injeta como contexto adicional na mensagem enviada ao Claude.
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot active"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">6. Conclusao</div>
+          <div class="timeline-desc">
+            <code>isComplete()</code> retorna true quando todos os steps estao no set <code>completed</code>. Workflow finalizado.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Dependency Context -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">C</span>
+      Contexto de Dependencias
+    </h2>
+
+    <div class="card" style="cursor: default;">
+      <p class="card-desc" style="margin-bottom: 1rem;">
+        O metodo <code>getDependencyContext(stepId)</code> permite que cada step tenha acesso aos resultados dos steps de que depende. O output e formatado e injetado como mensagem adicional no contexto da execucao.
+      </p>
+
+      <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem;">Formato do Contexto Injetado</h3>
+      <div class="code-block">
+<span class="comment">// Para Step E que depende de Step C e Step D:</span>
+
+[Output from <span class="string">"Step C"</span>]:
+Resultado da analise do modulo de autenticacao...
+
+[Output from <span class="string">"Step D"</span>]:
+Testes de integracao passaram com 98% de cobertura...
+      </div>
+
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 1.25rem 0 0.75rem;">Fluxo de Dados entre Steps</h3>
+      <div class="flow-container" style="justify-content: center;">
+        <div class="flow-node" style="border-color: rgba(34,197,94,0.4);">Step A executa</div>
+        <div class="flow-arrow">-&gt;</div>
+        <div class="flow-node" style="border-color: rgba(245,158,11,0.4);">output armazenado</div>
+        <div class="flow-arrow">-&gt;</div>
+        <div class="flow-node" style="border-color: rgba(59,130,246,0.4);">getDependencyContext()</div>
+        <div class="flow-arrow">-&gt;</div>
+        <div class="flow-node" style="border-color: rgba(139,92,246,0.4);">injeta no Step C</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Validation -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-3);">V</span>
+      Regras de Validacao
+    </h2>
+
+    <div class="grid-2">
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-danger);">1</div>
+          <div>
+            <div class="card-title">Dependencias Ausentes</div>
+          </div>
+        </div>
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          Todos os IDs referenciados em <code>dependsOn</code> devem existir como steps reais no workflow. Se um step referencia um ID inexistente, a validacao falha.
+        </p>
+        <div class="code-block">
+<span class="comment">// Erro retornado:</span>
+{
+  valid: <span class="keyword">false</span>,
+  error: <span class="string">'Step "Deploy" depends on unknown step ID "abc-123"'</span>
+}
+        </div>
+      </div>
+
+      <div class="card cycle-warning" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-danger);">2</div>
+          <div>
+            <div class="card-title">Deteccao de Ciclos</div>
+          </div>
+        </div>
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          Ciclos causariam loop infinito. A validacao usa <strong>DFS (Depth-First Search)</strong> com deteccao de back-edge via set <code>inStack</code>. Se um no ja no stack de recursao e revisitado, ha um ciclo.
+        </p>
+        <div class="code-block">
+<span class="comment">// Ciclo: A -> B -> C -> A</span>
+{
+  valid: <span class="keyword">false</span>,
+  error: <span class="string">'Cycle detected in step dependencies'</span>
+}
+        </div>
+      </div>
+    </div>
+
+    <!-- Cycle Detection Algorithm -->
+    <div style="margin-top: 1.5rem;">
+      <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Algoritmo de Deteccao de Ciclos (DFS)</h3>
+      <div class="code-block">
+<span class="keyword">const</span> visited = <span class="keyword">new</span> <span class="type">Set</span>&lt;<span class="type">string</span>&gt;()   <span class="comment">// nos ja totalmente processados</span>
+<span class="keyword">const</span> inStack = <span class="keyword">new</span> <span class="type">Set</span>&lt;<span class="type">string</span>&gt;()   <span class="comment">// nos na pilha de recursao atual</span>
+
+<span class="keyword">const</span> hasCycle = (id: <span class="type">string</span>): <span class="type">boolean</span> => {
+  <span class="keyword">if</span> (inStack.has(id)) <span class="keyword">return true</span>   <span class="comment">// back-edge = ciclo!</span>
+  <span class="keyword">if</span> (visited.has(id)) <span class="keyword">return false</span>  <span class="comment">// ja processado, sem ciclo</span>
+  visited.add(id)
+  inStack.add(id)
+  <span class="keyword">for</span> (<span class="keyword">const</span> dep <span class="keyword">of</span> node.dependsOn) {
+    <span class="keyword">if</span> (hasCycle(dep)) <span class="keyword">return true</span>
+  }
+  inStack.delete(id)  <span class="comment">// remove da pilha ao voltar</span>
+  <span class="keyword">return false</span>
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: SSE Events -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">E</span>
+      Eventos SSE
+    </h2>
+
+    <div class="grid-2">
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle);">1</div>
+          <div>
+            <div class="card-title">dag_batch_start</div>
+            <span class="badge badge-green">Emitido a cada batch</span>
+          </div>
+        </div>
+        <p class="card-desc" style="margin-bottom: 0.75rem;">Emitido quando um novo batch de steps inicia execucao. Permite ao frontend mostrar progresso do DAG em tempo real.</p>
+        <div class="sse-event">
+<span class="event-bracket">{</span>
+  <span class="event-key">"type"</span>: <span class="event-value">"dag_batch_start"</span>,
+  <span class="event-key">"data"</span>: <span class="event-bracket">{</span>
+    <span class="event-key">"steps"</span>: <span class="event-bracket">[</span><span class="event-value">"Step A"</span>, <span class="event-value">"Step B"</span>, <span class="event-value">"Step D"</span><span class="event-bracket">]</span>,
+    <span class="event-key">"batchNumber"</span>: <span class="event-type">1</span>
+  <span class="event-bracket">}</span>
+<span class="event-bracket">}</span>
+        </div>
+      </div>
+
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-warning);">2</div>
+          <div>
+            <div class="card-title">step_blocked</div>
+            <span class="badge badge-amber">Emitido quando step aguarda</span>
+          </div>
+        </div>
+        <p class="card-desc" style="margin-bottom: 0.75rem;">Emitido quando um step nao pode ser executado porque uma ou mais dependencias ainda nao foram completadas.</p>
+        <div class="sse-event">
+<span class="event-bracket">{</span>
+  <span class="event-key">"type"</span>: <span class="event-value">"step_blocked"</span>,
+  <span class="event-key">"data"</span>: <span class="event-bracket">{</span>
+    <span class="event-key">"stepName"</span>: <span class="event-value">"Step E"</span>,
+    <span class="event-key">"blockedBy"</span>: <span class="event-bracket">[</span><span class="event-value">"Step C"</span>, <span class="event-value">"Step D"</span><span class="event-bracket">]</span>
+  <span class="event-bracket">}</span>
+<span class="event-bracket">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: WorkflowStep.dependsOn -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">D</span>
+      WorkflowStep.dependsOn
+    </h2>
+
+    <div class="card" style="cursor: default;">
+      <p class="card-desc" style="margin-bottom: 1rem;">
+        Campo JSON no model <code>WorkflowStep</code> do Prisma. Armazena um array de IDs (UUIDs) de outros steps do mesmo workflow.
+      </p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Valor</th>
+              <th>Significado</th>
+              <th>Comportamento</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>[]</code> ou ausente</td>
+              <td>Sem dependencias</td>
+              <td>Step roda no primeiro batch disponivel</td>
+            </tr>
+            <tr>
+              <td><code>["uuid-1"]</code></td>
+              <td>Depende de 1 step</td>
+              <td>Roda apos uuid-1 completar</td>
+            </tr>
+            <tr>
+              <td><code>["uuid-1", "uuid-2"]</code></td>
+              <td>Depende de 2 steps</td>
+              <td>Roda apos AMBOS completarem</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 1.25rem 0 0.75rem;">Exemplo no Banco</h3>
+      <div class="code-block">
+<span class="comment">-- Step sem dependencias</span>
+<span class="keyword">INSERT INTO</span> workflow_step (id, name, dependsOn, ...)
+<span class="keyword">VALUES</span> (<span class="string">'step-a'</span>, <span class="string">'Analisar Codigo'</span>, <span class="string">'[]'</span>, ...);
+
+<span class="comment">-- Step com dependencias</span>
+<span class="keyword">INSERT INTO</span> workflow_step (id, name, dependsOn, ...)
+<span class="keyword">VALUES</span> (<span class="string">'step-c'</span>, <span class="string">'Gerar Relatorio'</span>, <span class="string">'["step-a", "step-b"]'</span>, ...);
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Sequential vs DAG -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-4);">S</span>
+      Sequencial vs DAG
+    </h2>
+
+    <div class="table-container" style="margin-bottom: 1.5rem;">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Sequencial</th>
+            <th>DAG</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="comparison-row">
+            <td>Ordem de Execucao</td>
+            <td><code>stepOrder</code> (campo numerico)</td>
+            <td class="highlight-cell">Grafo de dependencias</td>
+          </tr>
+          <tr class="comparison-row">
+            <td>Paralelismo</td>
+            <td>Nenhum (1 step por vez)</td>
+            <td class="highlight-cell">Sim (steps prontos rodam juntos)</td>
+          </tr>
+          <tr class="comparison-row">
+            <td>Passagem de Contexto</td>
+            <td>Output do step anterior</td>
+            <td class="highlight-cell">Outputs de todas as dependencias</td>
+          </tr>
+          <tr class="comparison-row">
+            <td>Configuracao</td>
+            <td><code>stepOrder: 1, 2, 3...</code></td>
+            <td class="highlight-cell"><code>dependsOn: ["id-1", "id-2"]</code></td>
+          </tr>
+          <tr class="comparison-row">
+            <td>Deteccao</td>
+            <td><code>isDAGWorkflow() = false</code></td>
+            <td class="highlight-cell"><code>isDAGWorkflow() = true</code></td>
+          </tr>
+          <tr class="comparison-row">
+            <td>Validacao Extra</td>
+            <td>Nenhuma</td>
+            <td class="highlight-cell">Ciclos + refs ausentes</td>
+          </tr>
+          <tr class="comparison-row">
+            <td>Eventos SSE</td>
+            <td><code>step_start</code>, <code>step_complete</code></td>
+            <td class="highlight-cell"><code>dag_batch_start</code>, <code>step_blocked</code></td>
+          </tr>
+          <tr class="comparison-row">
+            <td>Performance (5 steps)</td>
+            <td>~55s (em serie)</td>
+            <td class="highlight-cell">~33s (com batches paralelos)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Visual comparison -->
+    <div class="grid-2">
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-info);">S</div>
+          <div class="card-title">Modo Sequencial</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <div class="flow-node" style="border-color: rgba(59,130,246,0.4); width: 100%; justify-content: center;">Step 1</div>
+          <div style="text-align: center; color: var(--text-muted);">|</div>
+          <div class="flow-node" style="border-color: rgba(59,130,246,0.4); width: 100%; justify-content: center;">Step 2</div>
+          <div style="text-align: center; color: var(--text-muted);">|</div>
+          <div class="flow-node" style="border-color: rgba(59,130,246,0.4); width: 100%; justify-content: center;">Step 3</div>
+          <div style="text-align: center; color: var(--text-muted);">|</div>
+          <div class="flow-node" style="border-color: rgba(59,130,246,0.4); width: 100%; justify-content: center;">Step 4</div>
+          <div style="text-align: center; color: var(--text-muted);">|</div>
+          <div class="flow-node" style="border-color: rgba(59,130,246,0.4); width: 100%; justify-content: center;">Step 5</div>
+        </div>
+        <div style="text-align: center; margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">Tempo total: soma de todos os steps</div>
+      </div>
+
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle);">D</div>
+          <div class="card-title">Modo DAG</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem;">
+            <div class="flow-node" style="border-color: rgba(34,197,94,0.4); flex: 1; justify-content: center;">A</div>
+            <div class="flow-node" style="border-color: rgba(34,197,94,0.4); flex: 1; justify-content: center;">B</div>
+            <div class="flow-node" style="border-color: rgba(34,197,94,0.4); flex: 1; justify-content: center;">D</div>
+          </div>
+          <div style="text-align: center; color: var(--text-muted); font-size: 0.75rem;">batch 1 (paralelo)</div>
+          <div style="text-align: center; color: var(--text-muted);">|</div>
+          <div style="display: flex; justify-content: center;">
+            <div class="flow-node" style="border-color: rgba(245,158,11,0.4); width: 50%; justify-content: center;">C</div>
+          </div>
+          <div style="text-align: center; color: var(--text-muted); font-size: 0.75rem;">batch 2</div>
+          <div style="text-align: center; color: var(--text-muted);">|</div>
+          <div style="display: flex; justify-content: center;">
+            <div class="flow-node" style="border-color: rgba(139,92,246,0.4); width: 50%; justify-content: center;">E</div>
+          </div>
+          <div style="text-align: center; color: var(--text-muted); font-size: 0.75rem;">batch 3</div>
+        </div>
+        <div style="text-align: center; margin-top: 0.75rem; color: var(--text-muted); font-size: 0.85rem;">Tempo total: maior caminho critico</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Interface DagStep -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-2);">I</span>
+      Interface DagStep
+    </h2>
+    <div class="card" style="cursor: default;">
+      <p class="card-desc" style="margin-bottom: 1rem;">Tipo interno usado pelo DAGExecutor para representar cada no do grafo.</p>
+      <div class="code-block">
+<span class="keyword">interface</span> <span class="type">DagStep</span> {
+  step: <span class="type">WorkflowStep</span>   <span class="comment">// objeto completo do Prisma</span>
+  index: <span class="type">number</span>           <span class="comment">// posicao original no array</span>
+  dependsOn: <span class="type">string</span>[]     <span class="comment">// array de step IDs (UUIDs)</span>
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Uso no Processor -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--gradient-1);">U</span>
+      Uso no Execution Processor
+    </h2>
+
+    <div class="card" style="cursor: default;">
+      <p class="card-desc" style="margin-bottom: 1rem;">
+        O <code>execution-processor.ts</code> usa a deteccao para decidir entre os dois modos:
+      </p>
+      <div class="code-block">
+<span class="keyword">import</span> { DAGExecutor, isDAGWorkflow } <span class="keyword">from</span> <span class="string">'./orchestrator/dag-executor'</span>
+
+<span class="comment">// No processamento do job:</span>
+<span class="keyword">if</span> (isDAGWorkflow(steps)) {
+  <span class="keyword">const</span> dag = <span class="keyword">new</span> <span class="type">DAGExecutor</span>(steps)
+  <span class="keyword">const</span> validation = dag.validate()
+  <span class="keyword">if</span> (!validation.valid) {
+    <span class="keyword">throw new</span> <span class="type">Error</span>(<span class="string">`DAG invalido: ${validation.error}`</span>)
+  }
+  <span class="comment">// Loop de batches</span>
+  <span class="keyword">while</span> (!dag.isComplete()) {
+    <span class="keyword">const</span> ready = dag.getReadySteps()
+    <span class="comment">// executa batch...</span>
+    <span class="keyword">for</span> (<span class="keyword">const</span> step <span class="keyword">of</span> ready) {
+      <span class="keyword">const</span> ctx = dag.getDependencyContext(step.step.id)
+      <span class="comment">// executa step com contexto...</span>
+      dag.markCompleted(step.step.id, output)
+    }
+  }
+} <span class="keyword">else</span> {
+  <span class="comment">// execucao sequencial por stepOrder</span>
+}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="shared.js"></script>
+<script>
+  renderBreadcrumb(document.getElementById('breadcrumb'), [
+    { label: 'System Map', href: 'index.html' },
+    { label: '27 - DAG Executor' }
+  ]);
+</script>
+</body>
+</html>
