@@ -28,6 +28,7 @@ import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
 import { FastifyAdapter } from '@bull-board/fastify'
 import { closeAllRedis } from './lib/redis.js'
+import { startTriggerScheduler, stopTriggerScheduler } from './domains/triggers/trigger-scheduler.js'
 import { recoverStaleExecutions } from './domains/execution/orchestrator/recovery.js'
 import { startMetricsAggregation, stopMetricsAggregation } from './domains/execution/monitoring/metrics-aggregator.js'
 
@@ -195,6 +196,11 @@ async function start() {
       console.warn('[Server] Execution worker failed to start:', (err as Error).message)
     }
 
+    // Start trigger scheduler (polls every 30s for due scheduled executions)
+    try { startTriggerScheduler() } catch (err) {
+      console.warn('[Server] Trigger scheduler failed to start:', (err as Error).message)
+    }
+
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
@@ -236,6 +242,7 @@ signals.forEach((signal) => {
     }
 
     // 3. Shutdown infrastructure
+    try { await stopTriggerScheduler() } catch { /* ignore */ }
     try { await stopExecutionWorker() } catch { /* ignore */ }
     try { await closeExecutionQueue() } catch { /* ignore */ }
     try { await app.close() } catch { /* ignore */ }
