@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Error Handling | Orquetrador Claude — System Map</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+/* Error Handling specific styles */
+.error-level-card {
+  position: relative;
+  overflow: hidden;
+}
+.error-level-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+.error-level-card.level-http::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+.error-level-card.level-step::before { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+.error-level-card.level-exec::before { background: linear-gradient(90deg, #8b5cf6, #ec4899); }
+
+.error-class-card {
+  border-left: 4px solid;
+  padding-left: 1.25rem;
+}
+.error-class-card.status-400 { border-color: #fbbf24; }
+.error-class-card.status-401 { border-color: #f87171; }
+.error-class-card.status-403 { border-color: #ef4444; }
+.error-class-card.status-404 { border-color: #60a5fa; }
+.error-class-card.status-409 { border-color: #a78bfa; }
+
+.category-card {
+  position: relative;
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s;
+}
+.category-card:hover {
+  border-color: rgba(13, 148, 136, 0.3);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+.category-card .severity-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 12px 12px 0 0;
+}
+.severity-critical { background: #ef4444; }
+.severity-high { background: #f59e0b; }
+.severity-medium { background: #3b82f6; }
+.severity-low { background: #22c55e; }
+
+.handler-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.3s;
+}
+.handler-card:hover {
+  border-color: rgba(13, 148, 136, 0.3);
+  box-shadow: var(--shadow-glow);
+}
+.handler-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+/* Flowchart styles */
+.flowchart {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+.flow-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.flow-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 2px solid;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.flow-box:hover { transform: scale(1.05); }
+.flow-box.start { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #f87171; }
+.flow-box.classify { background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #60a5fa; }
+.flow-box.decision { background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; color: #fbbf24; border-radius: 2px; transform: rotate(0deg); }
+.flow-box.action { background: rgba(13, 148, 136, 0.15); border-color: #0d9488; color: #2dd4bf; }
+.flow-box.emit { background: rgba(139, 92, 246, 0.15); border-color: #8b5cf6; color: #a78bfa; }
+.flow-box.end { background: rgba(34, 197, 94, 0.15); border-color: #22c55e; color: #4ade80; }
+.flow-connector {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+.flow-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+.flow-vline {
+  width: 2px;
+  height: 20px;
+  background: var(--border-color);
+  position: relative;
+}
+.flow-vline::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: -4px;
+  border: 5px solid transparent;
+  border-top-color: var(--border-color);
+}
+.flow-branch {
+  display: flex;
+  gap: 1rem;
+  margin: 0.5rem 0 0.5rem 2.5rem;
+  padding: 1rem;
+  background: rgba(30, 41, 59, 0.4);
+  border-radius: 10px;
+  border: 1px dashed var(--border-color);
+}
+.flow-branch-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.flow-branch-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(100, 116, 139, 0.2);
+  color: var(--text-muted);
+}
+
+/* Handler mapping */
+.mapping-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+.mapping-row:hover { background: var(--bg-card-hover); }
+.mapping-source {
+  min-width: 180px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.mapping-arrow {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.mapping-target {
+  color: var(--text-secondary);
+  flex: 1;
+}
+.mapping-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* Recovery timeline */
+.recovery-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  padding-left: 2rem;
+}
+.recovery-timeline::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: var(--border-color);
+}
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 0;
+  position: relative;
+}
+.timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid;
+  background: var(--bg-primary);
+  position: absolute;
+  left: -2rem;
+  top: 1.25rem;
+  z-index: 1;
+  margin-left: 9px;
+}
+.timeline-dot.tl-blue { border-color: #3b82f6; }
+.timeline-dot.tl-amber { border-color: #f59e0b; }
+.timeline-dot.tl-red { border-color: #ef4444; }
+.timeline-dot.tl-green { border-color: #22c55e; }
+.timeline-dot.tl-purple { border-color: #8b5cf6; }
+.timeline-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  flex: 1;
+}
+.timeline-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+.timeline-desc {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* Frontend error section */
+.frontend-layer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  transition: all 0.3s;
+}
+.frontend-layer:hover {
+  border-color: rgba(13, 148, 136, 0.3);
+}
+.frontend-layer .layer-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* Shutdown steps */
+.shutdown-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.shutdown-step {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+.shutdown-step:hover {
+  border-color: rgba(13, 148, 136, 0.3);
+}
+.shutdown-step .step-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  border: 2px solid;
+}
+
+@media (max-width: 768px) {
+  .flow-branch { flex-direction: column; }
+  .handler-card { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">System Map</a>
+      <span>›</span>
+      <span>Error Handling</span>
+    </div>
+    <h1>Error Handling</h1>
+    <p class="subtitle">3 niveis de protecao: HTTP, Step e Execution — com categorizacao, handlers configuraveis e recovery automatico.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4" style="margin-bottom: 3rem;">
+    <div class="stat-box">
+      <div class="stat-value" data-count="3">3</div>
+      <div class="stat-label">Niveis de Handling</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="7">7</div>
+      <div class="stat-label">Error Categories</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="4">4</div>
+      <div class="stat-label">Step Handlers</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="5">5</div>
+      <div class="stat-label">HTTP Error Classes</div>
+    </div>
+  </div>
+
+  <!-- Section 1: 3 Levels -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">1</span>
+      3 Niveis de Error Handling
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">
+      O Orquetrador trata erros em 3 camadas distintas. Cada nivel captura falhas que o nivel anterior nao tratou.
+    </p>
+
+    <div class="grid-3">
+      <!-- HTTP Level -->
+      <div class="card error-level-card level-http">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">1</div>
+          <div>
+            <div class="card-title">HTTP Level</div>
+            <span class="badge badge-blue">Global Error Handler</span>
+          </div>
+        </div>
+        <div class="card-desc">
+          <p>Intercepta erros em TODAS as requisicoes HTTP antes de enviar a resposta.</p>
+          <br>
+          <strong style="color: var(--text-primary);">Arquivo:</strong>
+          <code style="color: #60a5fa; font-size: 0.8rem;">error-handler.ts</code>
+          <br><br>
+          <strong style="color: var(--text-primary);">Responsabilidade:</strong>
+          <ul style="margin-top: 0.5rem; padding-left: 1.2rem; list-style: disc;">
+            <li>Mapear erros custom para status HTTP</li>
+            <li>Formatar erros Zod para o cliente</li>
+            <li>Tratar erros do Prisma/Redis</li>
+            <li>Ocultar stack traces em producao</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Step Level -->
+      <div class="card error-level-card level-step">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-warning); color: #fbbf24;">2</div>
+          <div>
+            <div class="card-title">Step Level</div>
+            <span class="badge badge-amber">Step Error Handler</span>
+          </div>
+        </div>
+        <div class="card-desc">
+          <p>Cada step de um workflow tem um <code>errorHandler</code> configuravel que decide o que fazer quando o step falha.</p>
+          <br>
+          <strong style="color: var(--text-primary);">Arquivo:</strong>
+          <code style="color: #fbbf24; font-size: 0.8rem;">step-error-handler.ts</code>
+          <br><br>
+          <strong style="color: var(--text-primary);">Opcoes:</strong>
+          <ul style="margin-top: 0.5rem; padding-left: 1.2rem; list-style: disc;">
+            <li><code>fail</code> — para tudo</li>
+            <li><code>skip</code> — pula o step</li>
+            <li><code>fallback</code> — tenta alternativa</li>
+            <li><code>continue_next</code> — segue em frente</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Execution Level -->
+      <div class="card error-level-card level-exec">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">3</div>
+          <div>
+            <div class="card-title">Execution Level</div>
+            <span class="badge badge-purple">Recovery</span>
+          </div>
+        </div>
+        <div class="card-desc">
+          <p>Na inicializacao do servidor, detecta execucoes orfas (estado <code>running</code> sem processo ativo) e marca como failed.</p>
+          <br>
+          <strong style="color: var(--text-primary);">Arquivo:</strong>
+          <code style="color: #a78bfa; font-size: 0.8rem;">recovery.ts</code>
+          <br><br>
+          <strong style="color: var(--text-primary);">Mecanismo:</strong>
+          <ul style="margin-top: 0.5rem; padding-left: 1.2rem; list-style: disc;">
+            <li>Query stale em <code>ExecutionState</code></li>
+            <li>Marca como <code>failed</code> com metadata</li>
+            <li>Preserva metadata original</li>
+            <li>Log de quantas foram recuperadas</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: HTTP Error Classes -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--bg-danger); color: #f87171;">2</span>
+      HTTP Error Classes
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">
+      Classes de erro customizadas em <code>src/http/errors/</code>. Cada uma mapeia para um status HTTP especifico.
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div class="error-class-card card status-400">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">BadRequestError</span>
+            <span class="badge badge-amber" style="margin-left: 0.5rem;">400</span>
+          </div>
+          <code style="font-size: 0.8rem; color: var(--text-muted);">bad-request-error.ts</code>
+        </div>
+        <p class="card-desc" style="margin-top: 0.5rem;">Dados invalidos, campos obrigatorios faltando, formato incorreto. Usado em validacoes manuais.</p>
+      </div>
+
+      <div class="error-class-card card status-401">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">UnauthorizedError</span>
+            <span class="badge badge-red" style="margin-left: 0.5rem;">401</span>
+          </div>
+          <code style="font-size: 0.8rem; color: var(--text-muted);">unauthorized-error.ts</code>
+        </div>
+        <p class="card-desc" style="margin-top: 0.5rem;">Token JWT ausente, expirado ou invalido. Dispara auto-logout no frontend.</p>
+      </div>
+
+      <div class="error-class-card card status-403">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">ForbiddenError</span>
+            <span class="badge badge-red" style="margin-left: 0.5rem;">403</span>
+          </div>
+          <code style="font-size: 0.8rem; color: var(--text-muted);">forbidden-error.ts</code>
+        </div>
+        <p class="card-desc" style="margin-top: 0.5rem;">Autenticado mas sem permissao. Usado no middleware RBAC para roles insuficientes.</p>
+      </div>
+
+      <div class="error-class-card card status-404">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">NotFoundError</span>
+            <span class="badge badge-blue" style="margin-left: 0.5rem;">404</span>
+          </div>
+          <code style="font-size: 0.8rem; color: var(--text-muted);">not-found-error.ts</code>
+        </div>
+        <p class="card-desc" style="margin-top: 0.5rem;">Recurso nao encontrado. Tambem mapeado automaticamente de Prisma P2025.</p>
+      </div>
+
+      <div class="error-class-card card status-409">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <span style="font-weight: 700; color: var(--text-primary); font-size: 1rem;">ConflictError</span>
+            <span class="badge badge-purple" style="margin-left: 0.5rem;">409</span>
+          </div>
+          <code style="font-size: 0.8rem; color: var(--text-muted);">conflict-error.ts</code>
+        </div>
+        <p class="card-desc" style="margin-top: 0.5rem;">Conflito de unicidade (email duplicado, slug ja existente). Mapeado de Prisma P2002.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Global Error Handler -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--bg-info); color: #60a5fa;">3</span>
+      Global Error Handler
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">
+      Registrado como <code>app.setErrorHandler(errorHandler)</code> no Fastify. Centraliza TODA a logica de mapeamento de erros para respostas HTTP.
+    </p>
+
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-title" style="margin-bottom: 1rem;">Fluxo de decisao do error-handler.ts</div>
+      <div class="mapping-container">
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #fbbf24;">Z</span>
+            Zod Fastify Schema
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Valida schema do body/query/params. Retorna array de erros com <code>path</code> e <code>message</code>.</div>
+          <span class="mapping-status" style="background: rgba(245,158,11,0.15); color: #fbbf24;">400</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #fbbf24;">Z</span>
+            ZodError direto
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Erro Zod lancado manualmente no service. Formatado com <code>zod-validation-error</code>.</div>
+          <span class="mapping-status" style="background: rgba(245,158,11,0.15); color: #fbbf24;">422</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #f87171;">!</span>
+            BadRequestError
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Dados invalidos. Retorna <code>{ message }</code>.</div>
+          <span class="mapping-status" style="background: rgba(245,158,11,0.15); color: #fbbf24;">400</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #f87171;">!</span>
+            UnauthorizedError
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Nao autenticado. Retorna <code>{ message }</code>.</div>
+          <span class="mapping-status" style="background: rgba(239,68,68,0.15); color: #f87171;">401</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #f87171;">!</span>
+            ForbiddenError
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Sem permissao. Retorna <code>{ message }</code>.</div>
+          <span class="mapping-status" style="background: rgba(239,68,68,0.15); color: #f87171;">403</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #60a5fa;">?</span>
+            NotFoundError
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Recurso nao encontrado. Retorna <code>{ message }</code>.</div>
+          <span class="mapping-status" style="background: rgba(59,130,246,0.15); color: #60a5fa;">404</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #a78bfa;">⚡</span>
+            ConflictError
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Conflito de unicidade. Retorna <code>{ message }</code>.</div>
+          <span class="mapping-status" style="background: rgba(139,92,246,0.15); color: #a78bfa;">409</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #fbbf24;">⏱</span>
+            Rate Limit (429)
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Limite de requisicoes excedido (<code>@fastify/rate-limit</code> ou manual).</div>
+          <span class="mapping-status" style="background: rgba(245,158,11,0.15); color: #fbbf24;">429</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #60a5fa;">🗄</span>
+            Prisma P2025
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Registro nao encontrado no banco. Retorna <code>"Resource not found"</code>.</div>
+          <span class="mapping-status" style="background: rgba(59,130,246,0.15); color: #60a5fa;">404</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #f87171;">🗄</span>
+            Prisma P2002 / conn
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Violacao unique constraint ou banco indisponivel. <code>"Database temporarily unavailable"</code>.</div>
+          <span class="mapping-status" style="background: rgba(239,68,68,0.15); color: #f87171;">503</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #f87171;">📡</span>
+            Redis errors
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target">Redis down ou <code>MaxRetriesPerRequestError</code>. <code>"Service temporarily unavailable"</code>.</div>
+          <span class="mapping-status" style="background: rgba(239,68,68,0.15); color: #f87171;">503</span>
+        </div>
+        <div class="mapping-row">
+          <div class="mapping-source">
+            <span style="color: #64748b;">?</span>
+            Unhandled Error
+          </div>
+          <span class="mapping-arrow">→</span>
+          <div class="mapping-target"><code>"Internal server error"</code>. Stack trace somente em <code>NODE_ENV=development</code>.</div>
+          <span class="mapping-status" style="background: rgba(100,116,139,0.15); color: #94a3b8;">500</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom: 1rem;">Codigo: error-handler.ts (simplificado)</div>
+      <div class="code-block"><span class="keyword">export const</span> errorHandler = (error, _request, reply) => {
+  <span class="comment">// Zod schema validation from Fastify</span>
+  <span class="keyword">if</span> (hasZodFastifySchemaValidationErrors(error)) {
+    <span class="keyword">return</span> reply.status(<span class="number">400</span>).send({
+      message: <span class="string">'Validation error'</span>,
+      errors: error.validation.map(e => ({
+        message: e.message,
+        path: e.params.issue.path.join(<span class="string">'.'</span>)
+      }))
+    })
+  }
+
+  <span class="comment">// Custom error classes → mapped status</span>
+  <span class="keyword">if</span> (error <span class="keyword">instanceof</span> <span class="type">BadRequestError</span>)  reply.status(<span class="number">400</span>)
+  <span class="keyword">if</span> (error <span class="keyword">instanceof</span> <span class="type">UnauthorizedError</span>) reply.status(<span class="number">401</span>)
+  <span class="keyword">if</span> (error <span class="keyword">instanceof</span> <span class="type">ForbiddenError</span>)    reply.status(<span class="number">403</span>)
+  <span class="keyword">if</span> (error <span class="keyword">instanceof</span> <span class="type">NotFoundError</span>)     reply.status(<span class="number">404</span>)
+  <span class="keyword">if</span> (error <span class="keyword">instanceof</span> <span class="type">ConflictError</span>)    reply.status(<span class="number">409</span>)
+
+  <span class="comment">// Prisma P2025 → 404 | P2002/conn → 503</span>
+  <span class="comment">// Redis errors → 503</span>
+  <span class="comment">// Unhandled → 500 (no stack in production)</span>
+}</div>
+    </div>
+  </div>
+
+  <!-- Section 4: Error Categories -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">4</span>
+      Error Categories (Prisma Enum)
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">
+      O enum <code>ErrorCategory</code> no schema Prisma classifica erros de execucao. A funcao <code>classifyError()</code> em
+      <code>execution-monitor.ts</code> analisa o resultado, exit code e mensagem para determinar a categoria.
+    </p>
+
+    <div class="grid-3" style="margin-bottom: 1.5rem;">
+      <div class="category-card" data-category="timeout">
+        <div class="severity-bar severity-critical"></div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; margin-top: 0.5rem;">
+          <span style="font-size: 1.5rem;">⏱</span>
+          <div>
+            <div style="font-weight: 700; color: var(--text-primary);">timeout</div>
+            <span class="badge badge-red">Critico</span>
+          </div>
+        </div>
+        <p class="card-desc">Step excedeu o timeout (padrao: 5min). Tambem detectado se exitCode=137 (OOM/SIGKILL).</p>
+        <div style="margin-top: 0.75rem;">
+          <code style="font-size: 0.75rem; color: var(--text-muted);">Match: "timeout" | "excedeu o timeout" | exitCode 137</code>
+        </div>
+      </div>
+
+      <div class="category-card" data-category="rate_limit">
+        <div class="severity-bar severity-critical"></div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; margin-top: 0.5rem;">
+          <span style="font-size: 1.5rem;">🚦</span>
+          <div>
+            <div style="font-weight: 700; color: var(--text-primary);">rate_limit</div>
+            <span class="badge badge-red">Critico</span>
+          </div>
+        </div>
+        <p class="card-desc">API retornou 429 — limite de requisicoes por minuto atingido na API da Anthropic.</p>
+        <div style="margin-top: 0.75rem;">
+          <code style="font-size: 0.75rem; color: var(--text-muted);">Match: "rate limit" | "rate_limit" | "429"</code>
+        </div>
+      </div>
+
+      <div class="category-card" data-category="context_overflow">
+        <div class="severity-bar severity-high"></div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; margin-top: 0.5rem;">
+          <span style="font-size: 1.5rem;">📏</span>
+          <div>
+            <div style="font-weight: 700; color: var(--text-primary);">context_overflow</div>
+            <span class="badge badge-amber">Alto</span>
+          </div>
+        </div>
+        <p class="card-desc">Prompt longo demais para o modelo. Pode ser triggered por stop_reason=max_tokens.</p>
+        <div style="margin-top: 0.75rem;">
+          <code style="font-size: 0.75rem; color: var(--text-muted);">Match: "prompt is too long" | "context_length" | stopReason="max_tokens"</code>
+        </div>
+      </div>
+
+      <div class="category-card" data-category="budget_exceeded">
+        <div class="severity-bar severity-high"></div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; margin-top: 0.5rem;">
+          <span style="font-size: 1.5rem;">💰</span>
+          <div>
+            <div style="font-weight: 700; color: var(--text-primary);">budget_exceeded</div>
+            <span class="badge badge-amber">Alto</span>
+          </div>
+        </div>
+        <p class="card-desc">Orcamento de tokens diario ou mensal do usuario foi excedido.</p>
+        <div style="margin-top: 0.75rem;">
+          <code style="font-size: 0.75rem; color: var(--text-muted);">Match: "budget" | "limite diario" | "limite mensal"</code>
+        </div>
+      </div>
+
+      <div class="category-card" data-category="tool_error">
+        <div class="severity-bar severity-medium"></div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; margin-top: 0.5rem;">
+          <span style="font-size: 1.5rem;">🔧</span>
+          <div>
+            <div style="font-weight: 700; color: var(--text-primary);">tool_error</div>
+            <span class="badge badge-blue">Medio</span>
+          </div>
+        </div>
+        <p class="card-desc">Falha em um MCP server ou ferramenta. Geralmente transiente — pode ser retentado.</p>
+        <div style="margin-top: 0.75rem;">
+          <code style="font-size: 0.75rem; color: var(--text-muted);">Match: "tool" + ("error" | "failed")</code>
+        </div>
+      </div>
+
+      <div class="category-card" data-category="permission_denied">
+        <div class="severity-bar severity-medium"></div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; margin-top: 0.5rem;">
+          <span style="font-size: 1.5rem;">🔒</span>
+          <div>
+            <div style="font-weight: 700; color: var(--text-primary);">permission_denied</div>
+            <span class="badge badge-blue">Medio</span>
+          </div>
+        </div>
+        <p class="card-desc">Acesso negado — permissao do sandbox, filesystem ou Claude CLI bloqueou a acao.</p>
+        <div style="margin-top: 0.75rem;">
+          <code style="font-size: 0.75rem; color: var(--text-muted);">Match: "permission" | "forbidden" | "403"</code>
+        </div>
+      </div>
+
+      <div class="category-card" data-category="unknown">
+        <div class="severity-bar severity-low"></div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; margin-top: 0.5rem;">
+          <span style="font-size: 1.5rem;">❓</span>
+          <div>
+            <div style="font-weight: 700; color: var(--text-primary);">unknown</div>
+            <span class="badge badge-gray">Baixo</span>
+          </div>
+        </div>
+        <p class="card-desc">Erro que nao se encaixa em nenhuma categoria acima. Usado como fallback para <code>error</code> e <code>cancelled</code>.</p>
+        <div style="margin-top: 0.75rem;">
+          <code style="font-size: 0.75rem; color: var(--text-muted);">Match: resultStatus="error" | "cancelled" (sem match anterior)</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom: 1rem;">classifyError() — Logica de Classificacao</div>
+      <div class="code-block"><span class="keyword">export function</span> <span class="type">classifyError</span>(
+  resultStatus: <span class="type">string</span>,
+  exitCode?: <span class="type">number</span> | <span class="type">null</span>,
+  errorMessage?: <span class="type">string</span>,
+  stopReason?: <span class="type">string</span>,
+): <span class="type">ErrorCategory</span> | <span class="type">null</span> {
+  <span class="comment">// Resultados ok nao sao classificados</span>
+  <span class="keyword">if</span> (resultStatus === <span class="string">'success'</span> || <span class="string">'needs_input'</span> || <span class="string">'interrupted'</span>) <span class="keyword">return null</span>
+
+  <span class="keyword">const</span> msg = errorMessage?.toLowerCase() ?? <span class="string">''</span>
+
+  <span class="keyword">if</span> (msg.includes(<span class="string">'timeout'</span>))        → <span class="type">ErrorCategory</span>.timeout
+  <span class="keyword">if</span> (msg.includes(<span class="string">'rate limit'</span>))     → <span class="type">ErrorCategory</span>.rate_limit
+  <span class="keyword">if</span> (msg.includes(<span class="string">'prompt is too long'</span>)) → <span class="type">ErrorCategory</span>.context_overflow
+  <span class="keyword">if</span> (msg.includes(<span class="string">'budget'</span>))         → <span class="type">ErrorCategory</span>.budget_exceeded
+  <span class="keyword">if</span> (msg.includes(<span class="string">'permission'</span>))     → <span class="type">ErrorCategory</span>.permission_denied
+  <span class="keyword">if</span> (msg.includes(<span class="string">'tool'</span>) + <span class="string">'error'</span>) → <span class="type">ErrorCategory</span>.tool_error
+  <span class="keyword">if</span> (exitCode === <span class="number">137</span>)              → <span class="type">ErrorCategory</span>.timeout  <span class="comment">// OOM / SIGKILL</span>
+
+  <span class="keyword">return</span> <span class="type">ErrorCategory</span>.unknown  <span class="comment">// fallback</span>
+}</div>
+    </div>
+  </div>
+
+  <!-- Section 5: Step Error Handlers -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">5</span>
+      Step Error Handlers (StepErrorHandler Enum)
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">
+      Cada <code>WorkflowStep</code> tem um campo <code>errorHandler</code> (enum no Prisma) que define o comportamento quando o step falha.
+      A funcao <code>decideOnError()</code> retorna um <code>StepErrorDecision</code> com as flags de acao.
+    </p>
+
+    <div class="grid-2" style="margin-bottom: 2rem;">
+      <!-- FAIL -->
+      <div class="handler-card" style="border-left: 3px solid #ef4444;">
+        <div class="handler-icon" style="background: rgba(239,68,68,0.15); color: #f87171;">✋</div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-weight: 700; font-size: 1.05rem;">fail</span>
+            <span class="badge badge-red">Default</span>
+          </div>
+          <p class="card-desc">Para a execucao INTEIRA do workflow. Marca como failed.</p>
+          <div style="margin-top: 0.75rem; font-size: 0.8rem;">
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; color: var(--text-muted);">
+              <span>skipStep: <strong style="color: #f87171;">false</strong></span>
+              <span>continueAsSuccess: <strong style="color: #f87171;">false</strong></span>
+              <span>shouldRetryWithFallback: <strong style="color: #f87171;">false</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SKIP -->
+      <div class="handler-card" style="border-left: 3px solid #fbbf24;">
+        <div class="handler-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">⏭</div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-weight: 700; font-size: 1.05rem;">skip</span>
+            <span class="badge badge-amber">Tolerante</span>
+          </div>
+          <p class="card-desc">Pula este step e continua para o proximo. O step fica marcado como erro, mas o workflow segue.</p>
+          <div style="margin-top: 0.75rem; font-size: 0.8rem;">
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; color: var(--text-muted);">
+              <span>skipStep: <strong style="color: #4ade80;">true</strong></span>
+              <span>continueAsSuccess: <strong style="color: #f87171;">false</strong></span>
+              <span>shouldRetryWithFallback: <strong style="color: #f87171;">false</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FALLBACK -->
+      <div class="handler-card" style="border-left: 3px solid #8b5cf6;">
+        <div class="handler-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">🔄</div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-weight: 700; font-size: 1.05rem;">fallback</span>
+            <span class="badge badge-purple">Retry</span>
+          </div>
+          <p class="card-desc">Tenta novamente com prompt simplificado (<code>FALLBACK_MESSAGE</code>). Ultima tentativa antes de falhar.</p>
+          <div style="margin-top: 0.75rem; font-size: 0.8rem;">
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; color: var(--text-muted);">
+              <span>skipStep: <strong style="color: #f87171;">false</strong></span>
+              <span>continueAsSuccess: <strong style="color: #f87171;">false</strong></span>
+              <span>shouldRetryWithFallback: <strong style="color: #4ade80;">true</strong></span>
+            </div>
+          </div>
+          <div style="margin-top: 0.5rem;">
+            <code style="font-size: 0.75rem; color: var(--text-muted);">FALLBACK_MESSAGE = "Retry: a execucao anterior falhou. Tente novamente de forma mais simples."</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTINUE_NEXT -->
+      <div class="handler-card" style="border-left: 3px solid #22c55e;">
+        <div class="handler-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">▶</div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <span style="font-weight: 700; font-size: 1.05rem;">continue_next</span>
+            <span class="badge badge-green">Resiliente</span>
+          </div>
+          <p class="card-desc">Continua para o proximo step como se tivesse tido sucesso. Util para steps opcionais.</p>
+          <div style="margin-top: 0.75rem; font-size: 0.8rem;">
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; color: var(--text-muted);">
+              <span>skipStep: <strong style="color: #f87171;">false</strong></span>
+              <span>continueAsSuccess: <strong style="color: #4ade80;">true</strong></span>
+              <span>shouldRetryWithFallback: <strong style="color: #f87171;">false</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom: 1rem;">StepErrorDecision — Interface de Retorno</div>
+      <div class="code-block"><span class="keyword">export interface</span> <span class="type">StepErrorDecision</span> {
+  action: <span class="string">'fail'</span> | <span class="string">'skip'</span> | <span class="string">'continue_next'</span> | <span class="string">'fallback'</span>
+  skipStep: <span class="type">boolean</span>           <span class="comment">// true = pula este step</span>
+  continueAsSuccess: <span class="type">boolean</span>  <span class="comment">// true = trata como sucesso</span>
+  shouldRetryWithFallback: <span class="type">boolean</span> <span class="comment">// true = tenta com FALLBACK_MESSAGE</span>
+  logMessage: <span class="type">string</span>          <span class="comment">// mensagem descritiva para log</span>
+}</div>
+    </div>
+  </div>
+
+  <!-- Section 6: Error Decision Flow -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">6</span>
+      Error Decision Flow
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">
+      Fluxo completo desde a ocorrencia do erro ate a decisao final e atualizacao de estado.
+    </p>
+
+    <div class="flowchart">
+      <!-- Row 1: Error occurs -->
+      <div class="flow-row">
+        <div class="flow-box start">💥 Erro ocorre no Step</div>
+        <span class="flow-connector">→</span>
+        <div class="flow-box classify">📋 isStepError(result)?</div>
+        <span class="flow-connector">→</span>
+        <div class="flow-box classify">🏷 getErrorMessage(result)</div>
+      </div>
+
+      <div class="flow-vertical">
+        <div class="flow-vline"></div>
+      </div>
+
+      <!-- Row 2: Categorize -->
+      <div class="flow-row">
+        <div class="flow-box classify">🔍 classifyError()</div>
+        <span class="flow-connector">→</span>
+        <div class="flow-box decision">❓ Qual ErrorCategory?</div>
+      </div>
+
+      <div class="flow-branch">
+        <div class="flow-branch-item"><span class="flow-branch-label">timeout</span> Step excedeu limite</div>
+        <div class="flow-branch-item"><span class="flow-branch-label">rate_limit</span> API 429</div>
+        <div class="flow-branch-item"><span class="flow-branch-label">context_overflow</span> Prompt longo</div>
+        <div class="flow-branch-item"><span class="flow-branch-label">budget</span> Orcamento</div>
+        <div class="flow-branch-item"><span class="flow-branch-label">tool_error</span> MCP</div>
+        <div class="flow-branch-item"><span class="flow-branch-label">permission</span> Acesso</div>
+        <div class="flow-branch-item"><span class="flow-branch-label">unknown</span> Outros</div>
+      </div>
+
+      <div class="flow-vertical">
+        <div class="flow-vline"></div>
+      </div>
+
+      <!-- Row 3: Check handler -->
+      <div class="flow-row">
+        <div class="flow-box decision">⚙ resolveErrorHandler(step)</div>
+        <span class="flow-connector">→</span>
+        <div class="flow-box decision">❓ Qual handler?</div>
+      </div>
+
+      <div class="flow-branch">
+        <div class="flow-branch-item"><span class="flow-branch-label" style="background: rgba(239,68,68,0.2); color: #f87171;">fail</span> Para tudo</div>
+        <div class="flow-branch-item"><span class="flow-branch-label" style="background: rgba(245,158,11,0.2); color: #fbbf24;">skip</span> Pula step</div>
+        <div class="flow-branch-item"><span class="flow-branch-label" style="background: rgba(139,92,246,0.2); color: #a78bfa;">fallback</span> Retry simples</div>
+        <div class="flow-branch-item"><span class="flow-branch-label" style="background: rgba(34,197,94,0.2); color: #4ade80;">continue_next</span> Segue</div>
+      </div>
+
+      <div class="flow-vertical">
+        <div class="flow-vline"></div>
+      </div>
+
+      <!-- Row 4: Apply & Emit -->
+      <div class="flow-row">
+        <div class="flow-box action">✅ decideOnError() → StepErrorDecision</div>
+        <span class="flow-connector">→</span>
+        <div class="flow-box emit">📡 Emit SSE Event</div>
+        <span class="flow-connector">→</span>
+        <div class="flow-box end">💾 Update ExecutionState</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 7: Retry Logic -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">7</span>
+      Retry Logic
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">
+      Mecanismos de retry em diferentes camadas do sistema.
+    </p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">🔄</div>
+          <div class="card-title">Step Fallback Retry</div>
+        </div>
+        <div class="card-desc">
+          <p>Quando o handler e <code>fallback</code>, o TaskOrchestrator re-executa o step com a mensagem <code>FALLBACK_MESSAGE</code> como prompt simplificado.</p>
+          <br>
+          <div class="code-block" style="font-size: 0.8rem;"><span class="keyword">const</span> FALLBACK_MESSAGE = <span class="string">'Retry: a execucao anterior falhou. Tente novamente de forma mais simples.'</span></div>
+          <br>
+          <p>O retry acontece UMA vez. Se o fallback tambem falhar, o step e marcado como <code>failed</code>.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">📊</div>
+          <div class="card-title">Trace Persist Retry</div>
+        </div>
+        <div class="card-desc">
+          <p>O <code>ExecutionMonitor</code> tenta persistir o trace 3 vezes com backoff exponencial se o Prisma falhar.</p>
+          <br>
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <div class="stat-box" style="padding: 0.75rem; flex: 1; min-width: 80px;">
+              <div style="font-size: 1.2rem; font-weight: 800; color: #60a5fa;">1s</div>
+              <div style="font-size: 0.7rem; color: var(--text-muted);">1o retry</div>
+            </div>
+            <div class="stat-box" style="padding: 0.75rem; flex: 1; min-width: 80px;">
+              <div style="font-size: 1.2rem; font-weight: 800; color: #fbbf24;">4s</div>
+              <div style="font-size: 0.7rem; color: var(--text-muted);">2o retry</div>
+            </div>
+            <div class="stat-box" style="padding: 0.75rem; flex: 1; min-width: 80px;">
+              <div style="font-size: 1.2rem; font-weight: 800; color: #f87171;">9s</div>
+              <div style="font-size: 0.7rem; color: var(--text-muted);">3o retry</div>
+            </div>
+          </div>
+          <br>
+          <p>Formula: <code>attempt * attempt * 1000</code> ms (backoff quadratico).</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">🌐</div>
+          <div class="card-title">React Query Retry</div>
+        </div>
+        <div class="card-desc">
+          <p>No frontend, o TanStack React Query esta configurado com <code>retry: 1</code> para queries que falham.</p>
+          <br>
+          <p>Isso significa que cada query HTTP que falhar sera retentada automaticamente UMA vez antes de mostrar erro ao usuario.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">🏷</div>
+          <div class="card-title">retryCounts no ExecutionState</div>
+        </div>
+        <div class="card-desc">
+          <p>O campo <code>retryCounts</code> (JSON) no <code>ExecutionState</code> armazena quantas vezes cada step foi retentado.</p>
+          <br>
+          <div class="code-block" style="font-size: 0.8rem;"><span class="comment">// Formato do JSON:</span>
+{
+  <span class="string">"step-abc-123"</span>: <span class="number">1</span>,
+  <span class="string">"step-def-456"</span>: <span class="number">2</span>
+}</div>
+          <br>
+          <p>Permite tracking de retries por step ao longo de uma execucao.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 8: Recovery from Crashes -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(239,68,68,0.1); color: #f87171;">8</span>
+      Recovery from Crashes
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">
+      O arquivo <code>recovery.ts</code> implementa deteccao e limpeza de execucoes orfas na inicializacao do servidor.
+    </p>
+
+    <div class="recovery-timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot tl-blue"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">1. Servidor reinicia (startup)</div>
+          <div class="timeline-desc">O servidor foi reiniciado (crash, deploy, ou reinicio manual). A funcao <code>recoverStaleExecutions()</code> e chamada durante o boot.</div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot tl-amber"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">2. Query stale executions</div>
+          <div class="timeline-desc">
+            Busca no banco todos os <code>ExecutionState</code> com <code>state = 'running'</code>.
+            Se o servidor morreu, essas execucoes nao tem mais processo ativo — sao orfas.
+          </div>
+          <div class="code-block" style="margin-top: 0.75rem; font-size: 0.8rem;"><span class="keyword">const</span> staleExecutions = <span class="keyword">await</span> prisma.executionState.findMany({
+  where: { state: <span class="string">'running'</span> },
+  select: { id: <span class="keyword">true</span>, metadata: <span class="keyword">true</span> }
+})</div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot tl-red"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">3. Marca como failed</div>
+          <div class="timeline-desc">
+            Cada execucao orfa e atualizada para <code>state: 'failed'</code>. A metadata original e PRESERVADA, com campos adicionais:
+          </div>
+          <div class="code-block" style="margin-top: 0.75rem; font-size: 0.8rem;">metadata: {
+  ...existingMeta,   <span class="comment">// metadata original preservada</span>
+  recoveryError: <span class="string">'Server restarted during execution'</span>,
+  recoveryFailedAt: <span class="string">'2026-03-24T10:30:00.000Z'</span>
+}</div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <div class="timeline-dot tl-green"></div>
+        <div class="timeline-content">
+          <div class="timeline-title">4. Log e continua</div>
+          <div class="timeline-desc">
+            Loga quantas execucoes foram recuperadas: <code>[Recovery] Marked N stale executions as failed</code>.
+            Se o query ou update falhar, loga o erro mas NAO impede o servidor de iniciar.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 1.5rem; border-left: 3px solid #f59e0b;">
+      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+        <span style="font-size: 1.3rem;">⚠</span>
+        <strong>Importante</strong>
+      </div>
+      <div class="card-desc">
+        O recovery atual marca execucoes orfas como <strong>failed</strong> — nao tenta re-executar.
+        Isso previne loops infinitos de retry e garante que o estado do banco e consistente.
+        O usuario pode re-disparar a execucao manualmente se necessario.
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 9: Frontend Error Handling -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--bg-info); color: #60a5fa;">9</span>
+      Frontend Error Handling
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">
+      4 camadas de protecao no frontend React, desde o interceptor HTTP ate o error boundary.
+    </p>
+
+    <div class="frontend-layer">
+      <div class="layer-num" style="background: rgba(239,68,68,0.15); color: #f87171;">1</div>
+      <div style="flex: 1;">
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">Axios Interceptor — Auto Logout</div>
+        <div class="card-desc">
+          <code>api-client.ts</code>: intercepta TODA resposta. Se <code>status === 401</code>, remove o token do localStorage
+          e redireciona para <code>/login</code> (exceto se ja esta em /login ou /register).
+        </div>
+      </div>
+      <span class="badge badge-red">401 → logout</span>
+    </div>
+
+    <div class="frontend-layer">
+      <div class="layer-num" style="background: rgba(59,130,246,0.15); color: #60a5fa;">2</div>
+      <div style="flex: 1;">
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">React Query — Retry Automatico</div>
+        <div class="card-desc">
+          TanStack React Query com <code>retry: 1</code>. Queries que falham sao retentadas uma vez automaticamente.
+          Mutations nao sao retentadas por padrao.
+        </div>
+      </div>
+      <span class="badge badge-blue">retry: 1</span>
+    </div>
+
+    <div class="frontend-layer">
+      <div class="layer-num" style="background: rgba(245,158,11,0.15); color: #fbbf24;">3</div>
+      <div style="flex: 1;">
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">Toast Notifications — Sonner</div>
+        <div class="card-desc">
+          Erros de mutations e acoes do usuario sao exibidos via toast (Sonner).
+          Mensagens amigaveis derivadas da resposta da API (<code>error.response.data.message</code>).
+        </div>
+      </div>
+      <span class="badge badge-amber">toast.error</span>
+    </div>
+
+    <div class="frontend-layer">
+      <div class="layer-num" style="background: rgba(34,197,94,0.15); color: #4ade80;">4</div>
+      <div style="flex: 1;">
+        <div style="font-weight: 700; margin-bottom: 0.25rem;">Error Boundaries — Component Crash</div>
+        <div class="card-desc">
+          React Error Boundaries capturam erros de renderizacao que quebrariam a pagina inteira.
+          Exibem fallback UI ao inves de tela branca.
+        </div>
+      </div>
+      <span class="badge badge-green">fallback UI</span>
+    </div>
+
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-title" style="margin-bottom: 1rem;">api-client.ts — Interceptor de Resposta</div>
+      <div class="code-block"><span class="comment">// Response interceptor - handle errors</span>
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    <span class="comment">// Handle 401 - unauthorized → auto logout</span>
+    <span class="keyword">if</span> (error.response?.status === <span class="number">401</span>) {
+      localStorage.removeItem(<span class="string">'token'</span>)
+      <span class="keyword">if</span> (window.location.pathname !== <span class="string">'/login'</span>
+        && window.location.pathname !== <span class="string">'/register'</span>) {
+        window.location.href = <span class="string">'/login'</span>
+      }
+    }
+    <span class="keyword">return</span> Promise.reject(error)
+  }
+)</div>
+    </div>
+  </div>
+
+  <!-- Section 10: Graceful Shutdown -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(239,68,68,0.1); color: #f87171;">10</span>
+      Graceful Shutdown
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">
+      O servidor escuta <code>SIGINT</code> e <code>SIGTERM</code> e faz shutdown ordenado em 4 fases,
+      com timeout de drain de 30 segundos.
+    </p>
+
+    <div class="shutdown-steps">
+      <div class="shutdown-step">
+        <div class="step-num" style="background: rgba(239,68,68,0.1); border-color: #ef4444; color: #f87171;">1</div>
+        <div style="flex: 1;">
+          <div style="font-weight: 700; margin-bottom: 0.25rem;">Stop Accepting Work</div>
+          <div class="card-desc">
+            <code>projectPathLock.cleanup()</code> — libera locks de projeto.<br>
+            <code>stopMetricsAggregation()</code> — para coleta de metricas.
+          </div>
+        </div>
+        <span class="badge badge-red">Imediato</span>
+      </div>
+
+      <div class="shutdown-step">
+        <div class="step-num" style="background: rgba(245,158,11,0.1); border-color: #f59e0b; color: #fbbf24;">2</div>
+        <div style="flex: 1;">
+          <div style="font-weight: 700; margin-bottom: 0.25rem;">Drain Active Executions</div>
+          <div class="card-desc">
+            Loop que verifica <code>taskOrchestrator.getActiveCount()</code> a cada 2 segundos.<br>
+            Timeout maximo: <strong>30 segundos</strong> (<code>MAX_DRAIN_MS = 30_000</code>).<br>
+            Se exceder, forca shutdown com warning.
+          </div>
+        </div>
+        <span class="badge badge-amber">Max 30s</span>
+      </div>
+
+      <div class="shutdown-step">
+        <div class="step-num" style="background: rgba(59,130,246,0.1); border-color: #3b82f6; color: #60a5fa;">3</div>
+        <div style="flex: 1;">
+          <div style="font-weight: 700; margin-bottom: 0.25rem;">Shutdown Infrastructure</div>
+          <div class="card-desc">
+            Desliga em ordem:
+            <code>stopTriggerScheduler()</code> →
+            <code>stopExecutionWorker()</code> →
+            <code>closeExecutionQueue()</code> →
+            <code>app.close()</code> →
+            <code>closeAllRedis()</code>
+          </div>
+        </div>
+        <span class="badge badge-blue">Sequencial</span>
+      </div>
+
+      <div class="shutdown-step">
+        <div class="step-num" style="background: rgba(34,197,94,0.1); border-color: #22c55e; color: #4ade80;">4</div>
+        <div style="flex: 1;">
+          <div style="font-weight: 700; margin-bottom: 0.25rem;">Exit Process</div>
+          <div class="card-desc">
+            <code>process.exit(0)</code> — encerra o processo com codigo de sucesso.
+            Execucoes que ainda estavam rodando serao pegas pelo recovery no proximo startup.
+          </div>
+        </div>
+        <span class="badge badge-green">exit(0)</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-title" style="margin-bottom: 1rem;">server.ts — Graceful Shutdown (simplificado)</div>
+      <div class="code-block"><span class="keyword">const</span> signals = [<span class="string">'SIGINT'</span>, <span class="string">'SIGTERM'</span>]
+signals.forEach((signal) => {
+  process.on(signal, <span class="keyword">async</span> () => {
+    console.log(<span class="string">`${signal} received, shutting down gracefully...`</span>)
+
+    <span class="comment">// 1. Stop accepting new executions</span>
+    projectPathLock.cleanup()
+    stopMetricsAggregation()
+
+    <span class="comment">// 2. Wait for active executions to drain (max 30s)</span>
+    <span class="keyword">const</span> MAX_DRAIN_MS = <span class="number">30_000</span>
+    <span class="keyword">while</span> (taskOrchestrator.getActiveCount() > <span class="number">0</span>
+           && Date.now() - drainStart < MAX_DRAIN_MS) {
+      <span class="keyword">await</span> <span class="keyword">new</span> Promise(r => setTimeout(r, <span class="number">2000</span>))
+    }
+
+    <span class="comment">// 3. Shutdown infrastructure</span>
+    <span class="keyword">await</span> stopTriggerScheduler()
+    <span class="keyword">await</span> stopExecutionWorker()
+    <span class="keyword">await</span> closeExecutionQueue()
+    <span class="keyword">await</span> app.close()
+    <span class="keyword">await</span> closeAllRedis()
+
+    process.exit(<span class="number">0</span>)
+  })
+})</div>
+    </div>
+  </div>
+
+  <!-- Section: Complete Error Architecture -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(13,148,136,0.1); color: #2dd4bf;">⚡</span>
+      Arquitetura Completa de Errors
+    </h2>
+    <p class="card-desc" style="margin-bottom: 1.5rem;">Mapa de todos os arquivos envolvidos no error handling.</p>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Arquivo</th>
+            <th>Camada</th>
+            <th>Responsabilidade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code style="color: #60a5fa;">src/http/error-handler.ts</code></td>
+            <td><span class="badge badge-blue">HTTP</span></td>
+            <td>Global error handler do Fastify — mapeia erros para respostas HTTP</td>
+          </tr>
+          <tr>
+            <td><code style="color: #60a5fa;">src/http/errors/*.ts</code></td>
+            <td><span class="badge badge-blue">HTTP</span></td>
+            <td>Classes de erro custom (BadRequest, Unauthorized, Forbidden, NotFound, Conflict)</td>
+          </tr>
+          <tr>
+            <td><code style="color: #fbbf24;">src/domains/execution/orchestrator/step-error-handler.ts</code></td>
+            <td><span class="badge badge-amber">Step</span></td>
+            <td>Decide acao quando step falha (fail/skip/fallback/continue_next)</td>
+          </tr>
+          <tr>
+            <td><code style="color: #fbbf24;">src/domains/execution/monitoring/execution-monitor.ts</code></td>
+            <td><span class="badge badge-amber">Step</span></td>
+            <td>classifyError() — categoriza erros de execucao no enum ErrorCategory</td>
+          </tr>
+          <tr>
+            <td><code style="color: #a78bfa;">src/domains/execution/orchestrator/recovery.ts</code></td>
+            <td><span class="badge badge-purple">Recovery</span></td>
+            <td>recoverStaleExecutions() — marca execucoes orfas como failed no startup</td>
+          </tr>
+          <tr>
+            <td><code style="color: #a78bfa;">src/server.ts</code></td>
+            <td><span class="badge badge-purple">Recovery</span></td>
+            <td>Graceful shutdown com drain de 30s + signals SIGINT/SIGTERM</td>
+          </tr>
+          <tr>
+            <td><code style="color: #4ade80;">frontend/src/shared/lib/api-client.ts</code></td>
+            <td><span class="badge badge-green">Frontend</span></td>
+            <td>Axios interceptor — 401 auto-logout + request token injection</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="shared.js"></script>
+</body>
+</html>
