@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquitetura | Orquetrador Claude - System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* Architecture diagram */
+    .arch-diagram {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .arch-diagram::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--gradient-1);
+    }
+
+    /* Tier rows */
+    .tier-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .tier-label {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      padding: 0.5rem 0;
+      min-width: 24px;
+      text-align: center;
+    }
+    .tier-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    /* Diagram nodes */
+    .d-node {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .d-node:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+    .d-node.highlight-teal { border-color: rgba(13, 148, 136, 0.5); background: rgba(13, 148, 136, 0.08); }
+    .d-node.highlight-purple { border-color: rgba(139, 92, 246, 0.5); background: rgba(139, 92, 246, 0.08); }
+    .d-node.highlight-blue { border-color: rgba(59, 130, 246, 0.5); background: rgba(59, 130, 246, 0.08); }
+    .d-node.highlight-amber { border-color: rgba(245, 158, 11, 0.5); background: rgba(245, 158, 11, 0.08); }
+    .d-node.highlight-red { border-color: rgba(239, 68, 68, 0.5); background: rgba(239, 68, 68, 0.08); }
+    .d-node.highlight-green { border-color: rgba(34, 197, 94, 0.5); background: rgba(34, 197, 94, 0.08); }
+
+    /* Vertical connector */
+    .v-connector {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      margin: 0.75rem 0;
+    }
+    .v-connector .line {
+      width: 2px;
+      height: 24px;
+      background: linear-gradient(to bottom, var(--border-accent), var(--border-color));
+    }
+    .v-connector .arrow {
+      width: 0; height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid var(--border-color);
+    }
+    .v-connector .label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin: 2px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Domain grid */
+    .domain-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.75rem;
+    }
+    .domain-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s;
+      cursor: default;
+    }
+    .domain-chip:hover {
+      border-color: rgba(13, 148, 136, 0.4);
+      background: var(--bg-card-hover);
+      transform: translateY(-1px);
+    }
+    .domain-chip .chip-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    /* Pattern cards */
+    .pattern-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .pattern-card:hover {
+      border-color: rgba(13, 148, 136, 0.3);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+    .pattern-card .p-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+    }
+    .pattern-card .p-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .pattern-card .p-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Flow row (horizontal) */
+    .h-flow {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      padding: 1rem 0;
+    }
+    .h-flow .h-arrow {
+      color: var(--text-muted);
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .h-flow .h-label {
+      font-size: 0.65rem;
+      color: var(--text-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+
+    /* File tree */
+    .file-tree {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      padding: 1rem 1.25rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+    }
+    .file-tree .dir { color: #60a5fa; font-weight: 600; }
+    .file-tree .file { color: var(--text-primary); }
+    .file-tree .comment { color: var(--text-muted); font-style: italic; }
+
+    /* Section divider */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border-color);
+      margin: 2.5rem 0;
+    }
+
+    /* Grid for patterns */
+    .grid-patterns {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    @media (max-width: 1200px) { .grid-patterns { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) { .grid-patterns { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) {
+      .tier-label { writing-mode: horizontal-tb; transform: none; min-width: auto; }
+      .domain-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Nav injected by shared.js -->
+
+  <div class="page-container">
+    <!-- Header -->
+    <div class="page-header">
+      <div class="breadcrumb">
+        <a href="index.html">System Map</a>
+        <span>›</span>
+        <span>Arquitetura</span>
+      </div>
+      <h1>Arquitetura do Sistema</h1>
+      <p class="subtitle">Visao completa da arquitetura 3-tier, tech stack, dominios de negocio e padroes do Orquetrador Claude.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-4" style="margin-bottom: 2.5rem;">
+      <div class="stat-box">
+        <div class="stat-value" data-count="3">0</div>
+        <div class="stat-label">Camadas (Tiers)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="23">0</div>
+        <div class="stat-label">Dominios de Negocio</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="5">0</div>
+        <div class="stat-label">Servicos (Portas)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="9">0</div>
+        <div class="stat-label">Padroes Arquiteturais</div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- SECTION 1: Visao Geral da Arquitetura -->
+    <!-- ============================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x1f3d7;</span>
+        Visao Geral da Arquitetura
+      </h2>
+      <p class="card-desc" style="margin-bottom: 1.5rem;">
+        O Orquetrador Claude segue uma arquitetura <strong>3-tier</strong>: a camada de apresentacao (Frontend React SPA),
+        a camada de aplicacao (Backend Fastify API) e a camada de dados (PostgreSQL + Redis). Cada camada e independente,
+        comunicando-se por protocolos bem definidos.
+      </p>
+
+      <!-- Architecture Diagram -->
+      <div class="arch-diagram">
+        <!-- Client Tier -->
+        <div class="tier-row">
+          <div class="tier-label" style="color: #60a5fa;">CLIENT</div>
+          <div class="tier-content">
+            <div class="d-node highlight-blue">
+              <span>&#x1f310;</span> Browser
+            </div>
+            <span class="flow-arrow">&#x2192;</span>
+            <div class="d-node highlight-blue">
+              <span>&#x1f512;</span> HTTPS
+            </div>
+            <span class="flow-arrow">&#x2192;</span>
+            <div class="d-node highlight-blue">
+              <span>&#x269b;</span> React SPA <span class="badge badge-blue">:5173</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connector -->
+        <div class="v-connector">
+          <div class="line"></div>
+          <div class="label">Axios HTTP / SSE</div>
+          <div class="arrow"></div>
+        </div>
+
+        <!-- Application Tier -->
+        <div class="tier-row">
+          <div class="tier-label" style="color: var(--text-accent);">APP</div>
+          <div class="tier-content">
+            <div class="d-node highlight-teal">
+              <span>&#x26a1;</span> Fastify API <span class="badge badge-teal">:3333</span>
+            </div>
+            <span class="flow-arrow">&#x2194;</span>
+            <div class="d-node highlight-purple">
+              <span>&#x1f916;</span> MCP Server <span class="badge badge-purple">:3334</span>
+            </div>
+            <span class="flow-arrow">&#x2194;</span>
+            <div class="d-node highlight-amber">
+              <span>&#x2699;</span> Workers (BullMQ)
+            </div>
+          </div>
+        </div>
+
+        <!-- Connector -->
+        <div class="v-connector">
+          <div class="line"></div>
+          <div class="label">Prisma ORM / ioredis</div>
+          <div class="arrow"></div>
+        </div>
+
+        <!-- Data Tier -->
+        <div class="tier-row">
+          <div class="tier-label" style="color: #fbbf24;">DATA</div>
+          <div class="tier-content">
+            <div class="d-node highlight-amber">
+              <span>&#x1f5c4;</span> PostgreSQL <span class="badge badge-amber">:54321</span>
+            </div>
+            <div class="d-node highlight-red">
+              <span>&#x26a1;</span> Redis <span class="badge badge-red">:6379</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connector -->
+        <div class="v-connector">
+          <div class="line"></div>
+          <div class="label">sudo / sandbox</div>
+          <div class="arrow"></div>
+        </div>
+
+        <!-- External Tier -->
+        <div class="tier-row">
+          <div class="tier-label" style="color: #a78bfa;">EXT</div>
+          <div class="tier-content">
+            <div class="d-node highlight-purple">
+              <span>&#x1f9e0;</span> Claude CLI (Sandbox)
+            </div>
+            <div class="d-node highlight-green">
+              <span>&#x1f4c2;</span> Git Repos
+            </div>
+            <div class="d-node highlight-blue">
+              <span>&#x1f517;</span> Webhooks
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- ============================================== -->
+    <!-- SECTION 2: Tech Stack Completo -->
+    <!-- ============================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#x1f9f0;</span>
+        Tech Stack Completo
+      </h2>
+
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="tab-backend">Backend</button>
+          <button class="tab-btn" data-tab="tab-frontend">Frontend</button>
+          <button class="tab-btn" data-tab="tab-mcp">MCP Server</button>
+        </div>
+
+        <!-- Backend Tab -->
+        <div id="tab-backend" class="tab-content active">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Camada</th>
+                  <th>Tecnologia</th>
+                  <th>Versao</th>
+                  <th>Papel</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge badge-teal">Runtime</span></td>
+                  <td><strong>Node.js</strong> (ESM)</td>
+                  <td>20+</td>
+                  <td>Ambiente de execucao com ES Modules nativos</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-teal">Linguagem</span></td>
+                  <td><strong>TypeScript</strong></td>
+                  <td>5.7</td>
+                  <td>Tipagem estatica e DX</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-teal">Framework</span></td>
+                  <td><strong>Fastify</strong></td>
+                  <td>5</td>
+                  <td>HTTP framework de alta performance</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-teal">ORM</span></td>
+                  <td><strong>Prisma</strong></td>
+                  <td>6</td>
+                  <td>Acesso ao banco com type-safety</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-amber">Fila / Jobs</span></td>
+                  <td><strong>BullMQ</strong></td>
+                  <td>5</td>
+                  <td>Fila de tarefas assincronas via Redis</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-red">Cache / Broker</span></td>
+                  <td><strong>Redis</strong> (ioredis)</td>
+                  <td>-</td>
+                  <td>Cache, pub/sub, filas BullMQ</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-blue">Validacao</span></td>
+                  <td><strong>Zod</strong></td>
+                  <td>-</td>
+                  <td>Schema validation + type-provider</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-purple">Auth</span></td>
+                  <td><strong>JWT</strong> (@fastify/jwt)</td>
+                  <td>-</td>
+                  <td>Autenticacao via tokens JWT</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-blue">Docs API</span></td>
+                  <td><strong>Swagger</strong></td>
+                  <td>-</td>
+                  <td>@fastify/swagger + swagger-ui</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-green">Build</span></td>
+                  <td><strong>tsup</strong></td>
+                  <td>-</td>
+                  <td>Bundler para producao</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Frontend Tab -->
+        <div id="tab-frontend" class="tab-content">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Camada</th>
+                  <th>Tecnologia</th>
+                  <th>Versao</th>
+                  <th>Papel</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge badge-blue">Framework</span></td>
+                  <td><strong>React</strong></td>
+                  <td>18</td>
+                  <td>Biblioteca UI principal</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-blue">Build</span></td>
+                  <td><strong>Vite</strong></td>
+                  <td>6</td>
+                  <td>Dev server e bundler</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-purple">Estilo</span></td>
+                  <td><strong>Tailwind CSS</strong></td>
+                  <td>3.4</td>
+                  <td>Utility-first CSS + tailwindcss-animate + tailwind-merge</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-purple">Componentes</span></td>
+                  <td><strong>shadcn/ui</strong> + Radix UI</td>
+                  <td>-</td>
+                  <td>Componentes acessiveis e headless</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-teal">Icones</span></td>
+                  <td><strong>Lucide React</strong></td>
+                  <td>-</td>
+                  <td>Biblioteca de icones SVG</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-teal">Rotas</span></td>
+                  <td><strong>React Router DOM</strong></td>
+                  <td>7</td>
+                  <td>Roteamento client-side</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-amber">Estado Global</span></td>
+                  <td><strong>Zustand</strong></td>
+                  <td>5</td>
+                  <td>State management leve</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-amber">Estado Servidor</span></td>
+                  <td><strong>TanStack Query</strong></td>
+                  <td>5</td>
+                  <td>Data fetching, cache e sync</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-green">Formularios</span></td>
+                  <td><strong>React Hook Form</strong> + Zod</td>
+                  <td>7</td>
+                  <td>Formularios performaticos + validacao</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-green">HTTP</span></td>
+                  <td><strong>Axios</strong></td>
+                  <td>-</td>
+                  <td>Cliente HTTP com interceptors</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-blue">Graficos</span></td>
+                  <td><strong>Recharts</strong></td>
+                  <td>3</td>
+                  <td>Graficos e dashboards</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MCP Tab -->
+        <div id="tab-mcp" class="tab-content">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Camada</th>
+                  <th>Tecnologia</th>
+                  <th>Versao</th>
+                  <th>Papel</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge badge-purple">SDK</span></td>
+                  <td><strong>@modelcontextprotocol/sdk</strong></td>
+                  <td>1.27.0</td>
+                  <td>SDK oficial do protocolo MCP</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-purple">Transporte</span></td>
+                  <td><strong>StreamableHTTPServerTransport</strong></td>
+                  <td>-</td>
+                  <td>Transporte HTTP bidirecional com SSE</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-teal">Runtime</span></td>
+                  <td><strong>Node.js</strong> (ESM)</td>
+                  <td>20+</td>
+                  <td>Mesmo runtime do backend</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-teal">HTTP</span></td>
+                  <td><strong>Express</strong></td>
+                  <td>-</td>
+                  <td>Servidor HTTP base para transporte</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- ============================================== -->
+    <!-- SECTION 3: Dominios de Negocio -->
+    <!-- ============================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x1f3af;</span>
+        Dominios de Negocio
+        <span class="badge badge-blue" style="font-size: 0.75rem; margin-left: 0.5rem;">23 dominios</span>
+      </h2>
+      <p class="card-desc" style="margin-bottom: 1.25rem;">
+        Cada dominio encapsula um contexto de negocio isolado com suas rotas, servico, repositorio, schemas e tipos.
+      </p>
+
+      <div class="domain-grid">
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1f512;</span>
+          <span>auth</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1f504;</span>
+          <span>workflows</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1f4ac;</span>
+          <span>conversations</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x2699;</span>
+          <span>execution</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(13,148,136,0.15); color: #2dd4bf;">&#x1f9e0;</span>
+          <span>skills</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(236,72,153,0.15); color: #f472b6;">&#x1f916;</span>
+          <span>agents</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(239,68,68,0.15); color: #f87171;">&#x1f4cf;</span>
+          <span>rules</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(6,182,212,0.15); color: #22d3ee;">&#x1f5a5;</span>
+          <span>mcp-servers</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(168,85,247,0.15); color: #c084fc;">&#x1f9e9;</span>
+          <span>plugins</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1fa9d;</span>
+          <span>hooks</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x23f0;</span>
+          <span>triggers</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1fa9d;</span>
+          <span>webhooks</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(239,68,68,0.15); color: #f87171;">&#x1f511;</span>
+          <span>api-keys</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(251,191,36,0.15); color: #fbbf24;">&#x1f451;</span>
+          <span>admin</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(13,148,136,0.15); color: #2dd4bf;">&#x1f3f7;</span>
+          <span>tags</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1f4cb;</span>
+          <span>step-templates</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">&#x1f4ce;</span>
+          <span>attachments</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(236,72,153,0.15); color: #f472b6;">&#x1f4c2;</span>
+          <span>git</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(6,182,212,0.15); color: #22d3ee;">&#x1f4e6;</span>
+          <span>resources</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1f4e5;</span>
+          <span>import-repo</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1f49a;</span>
+          <span>health</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1f4ca;</span>
+          <span>monitoring</span>
+        </div>
+        <div class="domain-chip">
+          <span class="chip-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x1f4b0;</span>
+          <span>budget</span>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- ============================================== -->
+    <!-- SECTION 4: Padrao de Organizacao -->
+    <!-- ============================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">&#x1f4c1;</span>
+        Padrao de Organizacao
+      </h2>
+
+      <div class="grid-2">
+        <!-- Backend DDD -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#x2699;</div>
+            <div>
+              <div class="card-title">Backend — Domain-Driven Design</div>
+              <span class="badge badge-teal">src/domains/{domain}/</span>
+            </div>
+          </div>
+          <div class="file-tree">
+<span class="dir">src/domains/workflows/</span>
+├── <span class="file">routes.ts</span>        <span class="comment">// Definicao de rotas Fastify</span>
+├── <span class="file">service.ts</span>       <span class="comment">// Logica de negocio</span>
+├── <span class="file">repository.ts</span>    <span class="comment">// Queries Prisma ao banco</span>
+├── <span class="file">schema.ts</span>        <span class="comment">// Schemas Zod de validacao</span>
+└── <span class="file">types.ts</span>         <span class="comment">// Interfaces e tipos</span>
+          </div>
+        </div>
+
+        <!-- Frontend Feature-based -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">&#x269b;</div>
+            <div>
+              <div class="card-title">Frontend — Feature-Based</div>
+              <span class="badge badge-blue">src/features/{feature}/</span>
+            </div>
+          </div>
+          <div class="file-tree">
+<span class="dir">src/features/workflows/</span>
+├── <span class="file">api.ts</span>           <span class="comment">// Chamadas HTTP (Axios)</span>
+├── <span class="file">store.ts</span>         <span class="comment">// Estado (Zustand)</span>
+├── <span class="dir">hooks/</span>           <span class="comment">// React hooks customizados</span>
+├── <span class="dir">components/</span>      <span class="comment">// Componentes da feature</span>
+└── <span class="file">types.ts</span>         <span class="comment">// Interfaces e tipos</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- ============================================== -->
+    <!-- SECTION 5: Portas e Servicos -->
+    <!-- ============================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">&#x1f4e1;</span>
+        Portas e Servicos
+      </h2>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Servico</th>
+              <th>Porta</th>
+              <th>Protocolo</th>
+              <th>Dominio Publico</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Frontend</strong> (React SPA)</td>
+              <td><code class="mono">:5173</code></td>
+              <td><span class="badge badge-blue">HTTPS</span></td>
+              <td><code class="mono" style="font-size:0.8rem;">orquestrador.ddw1sl.easypanel.host</code></td>
+              <td><span class="status-dot active"></span> Ativo</td>
+            </tr>
+            <tr>
+              <td><strong>Backend API</strong> (Fastify)</td>
+              <td><code class="mono">:3333</code></td>
+              <td><span class="badge badge-teal">HTTPS</span></td>
+              <td><code class="mono" style="font-size:0.8rem;">orquestrador-api.ddw1sl.easypanel.host</code></td>
+              <td><span class="status-dot active"></span> Ativo</td>
+            </tr>
+            <tr>
+              <td><strong>MCP Server</strong></td>
+              <td><code class="mono">:3334</code></td>
+              <td><span class="badge badge-purple">HTTP/SSE</span></td>
+              <td><code class="mono" style="font-size:0.8rem;">orquestrador-mcp.ddw1sl.easypanel.host</code></td>
+              <td><span class="status-dot active"></span> Ativo</td>
+            </tr>
+            <tr>
+              <td><strong>PostgreSQL</strong></td>
+              <td><code class="mono">:54321</code></td>
+              <td><span class="badge badge-amber">TCP</span></td>
+              <td><span style="color: var(--text-muted);">Interno (217.216.81.188)</span></td>
+              <td><span class="status-dot active"></span> Ativo</td>
+            </tr>
+            <tr>
+              <td><strong>Redis</strong></td>
+              <td><code class="mono">:6379</code></td>
+              <td><span class="badge badge-red">TCP</span></td>
+              <td><span style="color: var(--text-muted);">Interno (localhost)</span></td>
+              <td><span class="status-dot active"></span> Ativo</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- ============================================== -->
+    <!-- SECTION 6: Fluxo de Comunicacao -->
+    <!-- ============================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(6,182,212,0.1); color: #22d3ee;">&#x1f500;</span>
+        Fluxos de Comunicacao
+      </h2>
+
+      <!-- Flow 1: Main request -->
+      <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">1</div>
+          <div class="card-title">Requisicao Principal (HTTP)</div>
+        </div>
+        <div class="h-flow">
+          <div class="d-node highlight-blue"><span>&#x1f310;</span> Browser</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">HTTPS</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-blue"><span>&#x269b;</span> React SPA</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">Axios</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-teal"><span>&#x26a1;</span> Fastify API</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">Prisma</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-amber"><span>&#x1f5c4;</span> PostgreSQL</div>
+        </div>
+      </div>
+
+      <!-- Flow 2: Job Queue -->
+      <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">2</div>
+          <div class="card-title">Fila de Jobs (Async)</div>
+        </div>
+        <div class="h-flow">
+          <div class="d-node highlight-teal"><span>&#x26a1;</span> Backend API</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">enqueue</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-red"><span>&#x26a1;</span> BullMQ / Redis</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">process</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-amber"><span>&#x2699;</span> Worker</div>
+        </div>
+      </div>
+
+      <!-- Flow 3: SSE -->
+      <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(13,148,136,0.1); color: var(--text-accent);">3</div>
+          <div class="card-title">Streaming em Tempo Real (SSE)</div>
+        </div>
+        <div class="h-flow">
+          <div class="d-node highlight-teal"><span>&#x26a1;</span> Backend API</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">SSE Stream</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-blue"><span>&#x269b;</span> React SPA</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">EventSource</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-blue"><span>&#x1f4bb;</span> UI Update</div>
+        </div>
+      </div>
+
+      <!-- Flow 4: Sandbox -->
+      <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">4</div>
+          <div class="card-title">Execucao Claude CLI (Sandbox)</div>
+        </div>
+        <div class="h-flow">
+          <div class="d-node highlight-teal"><span>&#x26a1;</span> Backend API</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">sudo -u claude-sandbox</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-purple"><span>&#x1f9e0;</span> Claude CLI</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">stdout/stderr</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-teal"><span>&#x26a1;</span> Backend</div>
+        </div>
+      </div>
+
+      <!-- Flow 5: MCP -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(236,72,153,0.1); color: #f472b6;">5</div>
+          <div class="card-title">MCP (Model Context Protocol)</div>
+        </div>
+        <div class="h-flow">
+          <div class="d-node highlight-purple"><span>&#x1f916;</span> MCP Client</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">HTTP/SSE</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-purple"><span>&#x1f916;</span> MCP Server</div>
+          <span class="h-arrow">&#x2192;</span>
+          <span class="h-label">HTTP</span>
+          <span class="h-arrow">&#x2192;</span>
+          <div class="d-node highlight-teal"><span>&#x26a1;</span> Backend API</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- ============================================== -->
+    <!-- SECTION 7: Padroes Arquiteturais -->
+    <!-- ============================================== -->
+    <div class="section">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(236,72,153,0.1); color: #f472b6;">&#x1f3db;</span>
+        Padroes Arquiteturais
+      </h2>
+      <p class="card-desc" style="margin-bottom: 1.25rem;">
+        O sistema adota 9 padroes arquiteturais que garantem escalabilidade, resiliencia e manutenibilidade.
+      </p>
+
+      <div class="grid-patterns">
+        <!-- Pattern 1 -->
+        <div class="pattern-card">
+          <div class="p-icon" style="background: rgba(13,148,136,0.15); color: #2dd4bf;">&#x1f5c3;</div>
+          <div class="p-title">Repository Pattern</div>
+          <div class="p-desc">
+            Camada de abstracao entre servicos e banco de dados. Cada dominio tem seu <code class="mono">repository.ts</code> que encapsula queries Prisma, facilitando testes e troca de ORM.
+          </div>
+          <span class="badge badge-teal" style="align-self: flex-start;">Data Access</span>
+        </div>
+
+        <!-- Pattern 2 -->
+        <div class="pattern-card">
+          <div class="p-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1f4e2;</div>
+          <div class="p-title">Event-Driven (EventEmitter)</div>
+          <div class="p-desc">
+            Componentes emitem eventos desacoplados via Node.js EventEmitter. Hooks, triggers e monitoramento escutam esses eventos sem acoplamento direto.
+          </div>
+          <span class="badge badge-blue" style="align-self: flex-start;">Messaging</span>
+        </div>
+
+        <!-- Pattern 3 -->
+        <div class="pattern-card">
+          <div class="p-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x1f680;</div>
+          <div class="p-title">Fire-and-Forget</div>
+          <div class="p-desc">
+            Operacoes nao-criticas (logging, metricas, notificacoes) sao disparadas sem aguardar resposta, mantendo a latencia do request principal baixa.
+          </div>
+          <span class="badge badge-amber" style="align-self: flex-start;">Performance</span>
+        </div>
+
+        <!-- Pattern 4 -->
+        <div class="pattern-card">
+          <div class="p-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1f6e1;</div>
+          <div class="p-title">Graceful Degradation</div>
+          <div class="p-desc">
+            Redis e opcional. Se indisponivel, o sistema continua operando sem cache, filas ou pub/sub. Funcionalidades degradam sem derrubar o servico.
+          </div>
+          <span class="badge badge-green" style="align-self: flex-start;">Resiliencia</span>
+        </div>
+
+        <!-- Pattern 5 -->
+        <div class="pattern-card">
+          <div class="p-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1f504;</div>
+          <div class="p-title">State Machines</div>
+          <div class="p-desc">
+            Workflows, execucoes e conversations seguem maquinas de estado com transicoes validas definidas. Garante consistencia e previne estados invalidos.
+          </div>
+          <span class="badge badge-purple" style="align-self: flex-start;">Consistencia</span>
+        </div>
+
+        <!-- Pattern 6 -->
+        <div class="pattern-card">
+          <div class="p-icon" style="background: rgba(239,68,68,0.15); color: #f87171;">&#x1f4e6;</div>
+          <div class="p-title">Async Job Queue (BullMQ)</div>
+          <div class="p-desc">
+            Tarefas pesadas (execucoes Claude, imports) sao enfileiradas no BullMQ via Redis. Workers processam em background com retry, backoff e dead-letter.
+          </div>
+          <span class="badge badge-red" style="align-self: flex-start;">Async Processing</span>
+        </div>
+
+        <!-- Pattern 7 -->
+        <div class="pattern-card">
+          <div class="p-icon" style="background: rgba(6,182,212,0.15); color: #22d3ee;">&#x1f4e1;</div>
+          <div class="p-title">SSE Streaming</div>
+          <div class="p-desc">
+            Server-Sent Events para streaming de output em tempo real. O frontend recebe tokens incrementais durante execucoes Claude sem polling.
+          </div>
+          <span class="badge badge-blue" style="align-self: flex-start;">Real-time</span>
+        </div>
+
+        <!-- Pattern 8 -->
+        <div class="pattern-card">
+          <div class="p-icon" style="background: rgba(236,72,153,0.15); color: #f472b6;">&#x1f6a8;</div>
+          <div class="p-title">Error Categories</div>
+          <div class="p-desc">
+            Erros sao categorizados (validation, auth, not-found, conflict, internal) com codigos e mensagens padronizados. Respostas HTTP consistentes em toda API.
+          </div>
+          <span class="badge badge-purple" style="align-self: flex-start;">Error Handling</span>
+        </div>
+
+        <!-- Pattern 9 -->
+        <div class="pattern-card">
+          <div class="p-icon" style="background: rgba(251,191,36,0.15); color: #fbbf24;">&#x1f4b0;</div>
+          <div class="p-title">Token Budgeting</div>
+          <div class="p-desc">
+            Controle de orcamento de tokens por workflow, execucao e usuario. Limites configurados previnem gastos excessivos com chamadas ao Claude.
+          </div>
+          <span class="badge badge-amber" style="align-self: flex-start;">Cost Control</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page-container -->
+
+  <script src="shared.js"></script>
+</body>
+</html>
