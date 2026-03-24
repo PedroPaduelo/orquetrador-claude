@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>14 - Agents | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    .agent-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+    }
+    .agent-diagram .layer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .agent-diagram .layer-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      width: 100%;
+      text-align: center;
+      margin-bottom: -0.25rem;
+    }
+    .agent-diagram .box {
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      text-align: center;
+      min-width: 120px;
+    }
+    .agent-diagram .box.highlight {
+      border-color: rgba(139,92,246,0.5);
+      background: rgba(139,92,246,0.08);
+      color: #c4b5fd;
+    }
+    .agent-diagram .box.teal {
+      border-color: rgba(13,148,136,0.5);
+      background: rgba(13,148,136,0.08);
+      color: var(--text-accent);
+    }
+    .agent-diagram .box.amber {
+      border-color: rgba(245,158,11,0.4);
+      background: rgba(245,158,11,0.08);
+      color: #fbbf24;
+    }
+    .agent-diagram .arrow-down {
+      display: flex;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+    }
+    .field-grid {
+      display: grid;
+      grid-template-columns: 160px 120px 1fr;
+      gap: 0;
+      font-size: 0.85rem;
+    }
+    .field-grid .fg-cell {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .field-grid .fg-header {
+      background: var(--bg-secondary);
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .field-grid .fg-name { color: #c4b5fd; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+    .field-grid .fg-type { color: #67e8f9; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+    .comparison-table td:first-child { font-weight: 500; }
+    .comparison-table .yes { color: #4ade80; }
+    .comparison-table .no { color: #64748b; }
+    .endpoint-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      transition: border-color 0.3s;
+    }
+    .endpoint-card:hover { border-color: rgba(13,148,136,0.3); }
+    .endpoint-card .method {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      margin-right: 0.5rem;
+    }
+    .method-get { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .method-post { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .method-put { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .method-delete { background: rgba(239,68,68,0.15); color: #f87171; }
+    .method-patch { background: rgba(139,92,246,0.15); color: #a78bfa; }
+    .endpoint-card .path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+    }
+    .endpoint-card .desc {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      margin-top: 0.35rem;
+    }
+    .mcp-tool-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .mcp-tool-item:last-child { border-bottom: none; }
+    .mcp-tool-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: #c4b5fd;
+      white-space: nowrap;
+      min-width: 140px;
+    }
+    .mcp-tool-desc { color: var(--text-secondary); font-size: 0.82rem; }
+    .component-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      transition: all 0.2s;
+    }
+    .component-chip:hover { border-color: rgba(13,148,136,0.4); }
+  </style>
+</head>
+<body>
+
+  <div class="page-container">
+
+    <div class="page-header">
+      <div class="breadcrumb">
+        <a href="index.html">System Map</a>
+        <span>&rsaquo;</span>
+        <span>14 &mdash; Agents</span>
+      </div>
+      <h1>Agents</h1>
+      <p class="subtitle">
+        Executores inteligentes com system prompts, controle de tools, modos de permissao e skills acopladas.
+        Mais poderosos que Skills &mdash; definem contextos completos de execucao.
+      </p>
+    </div>
+
+    <!-- ======== Stats ======== -->
+    <div class="grid-4 section">
+      <div class="stat-box">
+        <div class="stat-value" data-count="8">8</div>
+        <div class="stat-label">API Endpoints</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="7">7</div>
+        <div class="stat-label">MCP Tools</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="6">6</div>
+        <div class="stat-label">Frontend Components</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="20">20</div>
+        <div class="stat-label">Campos no Modelo</div>
+      </div>
+    </div>
+
+    <!-- ======== 1. O que sao Agents ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1F916;</div>
+        O que sao Agents
+      </h2>
+      <div class="card" style="margin-bottom: 1.25rem;">
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          Um <strong style="color: #c4b5fd;">Agent</strong> e um executor inteligente com seu proprio <em>system prompt</em>,
+          conjunto de tools permitidas/bloqueadas, modo de permissao e limite de turnos.
+          Diferente de uma Skill (que e um bloco de instrucao reutilizavel), o Agent define um <strong>contexto de execucao completo</strong>.
+        </p>
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          Agents podem ter <strong>Skills acopladas</strong> (relacao M:M via AgentSkill), herdar configuracoes de um <strong>Plugin</strong>,
+          e ser anexados a <strong>workflow steps</strong> via WorkflowStepAgent. No momento da execucao, o system prompt do Agent
+          e mesclado com os prompts das skills e o contexto do step.
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+          <span class="badge badge-purple">System Prompt</span>
+          <span class="badge badge-teal">Tool Control</span>
+          <span class="badge badge-blue">Permission Mode</span>
+          <span class="badge badge-amber">Max Turns</span>
+          <span class="badge badge-green">Skills (M:M)</span>
+          <span class="badge badge-gray">Plugin Origin</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== 2. Estrutura do Agent (Diagrama) ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1F3D7;</div>
+        Estrutura do Agent
+      </h2>
+
+      <div class="agent-diagram">
+        <div class="layer-label">Workflow Execution</div>
+        <div class="layer">
+          <div class="box amber">WorkflowStep</div>
+          <span style="color: var(--text-muted);">&xrarr;</span>
+          <div class="box amber">WorkflowStepAgent</div>
+          <span style="color: var(--text-muted);">&xrarr;</span>
+          <div class="box highlight">Agent</div>
+        </div>
+        <div class="arrow-down">&darr;</div>
+        <div class="layer-label">Agent Core</div>
+        <div class="layer">
+          <div class="box highlight">systemPrompt</div>
+          <div class="box highlight">tools[]</div>
+          <div class="box highlight">disallowedTools[]</div>
+          <div class="box highlight">permissionMode</div>
+          <div class="box highlight">maxTurns</div>
+          <div class="box highlight">model</div>
+        </div>
+        <div class="arrow-down">&darr;</div>
+        <div class="layer-label">Relacoes</div>
+        <div class="layer">
+          <div class="box teal">AgentSkill (M:M)</div>
+          <div class="box teal">Plugin (optional)</div>
+          <div class="box teal">User (owner)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== 3. Modelo de Dados ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(13,148,136,0.15); color: var(--text-accent);">&#x1F4BE;</div>
+        Modelo de Dados (Prisma)
+      </h2>
+
+      <div class="table-container" style="margin-bottom: 1.5rem;">
+        <div class="field-grid">
+          <div class="fg-cell fg-header">Campo</div>
+          <div class="fg-cell fg-header">Tipo</div>
+          <div class="fg-cell fg-header">Descricao</div>
+
+          <div class="fg-cell fg-name">id</div>
+          <div class="fg-cell fg-type">String (UUID)</div>
+          <div class="fg-cell">Identificador unico, gerado automaticamente</div>
+
+          <div class="fg-cell fg-name">name</div>
+          <div class="fg-cell fg-type">String</div>
+          <div class="fg-cell">Nome do agent. <strong>Unico por usuario</strong> (@@unique[name, userId])</div>
+
+          <div class="fg-cell fg-name">description</div>
+          <div class="fg-cell fg-type">String?</div>
+          <div class="fg-cell">Descricao opcional do que o agent faz</div>
+
+          <div class="fg-cell fg-name">systemPrompt</div>
+          <div class="fg-cell fg-type">String</div>
+          <div class="fg-cell">Prompt de sistema &mdash; instrucoes que definem personalidade e comportamento</div>
+
+          <div class="fg-cell fg-name">tools</div>
+          <div class="fg-cell fg-type">Json (String[])</div>
+          <div class="fg-cell">Array de tools permitidas (ex: ["Read", "Write", "Bash"])</div>
+
+          <div class="fg-cell fg-name">disallowedTools</div>
+          <div class="fg-cell fg-type">Json (String[])</div>
+          <div class="fg-cell">Array de tools bloqueadas &mdash; sobrescreve tools permitidas</div>
+
+          <div class="fg-cell fg-name">model</div>
+          <div class="fg-cell fg-type">String?</div>
+          <div class="fg-cell">Modelo opcional (ex: "claude-sonnet-4-5-20250514")</div>
+
+          <div class="fg-cell fg-name">permissionMode</div>
+          <div class="fg-cell fg-type">String</div>
+          <div class="fg-cell">"default", "acceptEdits" ou "fullAuto" &mdash; controla autonomia</div>
+
+          <div class="fg-cell fg-name">maxTurns</div>
+          <div class="fg-cell fg-type">Int?</div>
+          <div class="fg-cell">Limite de iteracoes por execucao</div>
+
+          <div class="fg-cell fg-name">enabled</div>
+          <div class="fg-cell fg-type">Boolean</div>
+          <div class="fg-cell">Se o agent esta ativo (default: true)</div>
+
+          <div class="fg-cell fg-name">isGlobal</div>
+          <div class="fg-cell fg-type">Boolean</div>
+          <div class="fg-cell">Se aparece em todos os workflows (default: false)</div>
+
+          <div class="fg-cell fg-name">source</div>
+          <div class="fg-cell fg-type">String</div>
+          <div class="fg-cell">"manual" (criado na UI) ou "imported" (via GitHub/URL)</div>
+
+          <div class="fg-cell fg-name">repoOwner</div>
+          <div class="fg-cell fg-type">String?</div>
+          <div class="fg-cell">Owner do repositorio GitHub (tracking)</div>
+
+          <div class="fg-cell fg-name">repoName</div>
+          <div class="fg-cell fg-type">String?</div>
+          <div class="fg-cell">Nome do repositorio GitHub</div>
+
+          <div class="fg-cell fg-name">repoBranch</div>
+          <div class="fg-cell fg-type">String?</div>
+          <div class="fg-cell">Branch (default: "main")</div>
+
+          <div class="fg-cell fg-name">repoPath</div>
+          <div class="fg-cell fg-type">String?</div>
+          <div class="fg-cell">Path do arquivo no repositorio</div>
+
+          <div class="fg-cell fg-name">lastSyncedAt</div>
+          <div class="fg-cell fg-type">DateTime?</div>
+          <div class="fg-cell">Ultima sincronizacao com GitHub</div>
+
+          <div class="fg-cell fg-name">userId</div>
+          <div class="fg-cell fg-type">String (FK)</div>
+          <div class="fg-cell">Dono do agent &rarr; User.id (onDelete: Cascade)</div>
+
+          <div class="fg-cell fg-name">pluginId</div>
+          <div class="fg-cell fg-type">String? (FK)</div>
+          <div class="fg-cell">Plugin de origem &rarr; Plugin.id (onDelete: SetNull)</div>
+        </div>
+      </div>
+
+      <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--text-primary);">Relacoes</h3>
+      <div class="grid-3" style="margin-bottom: 1.5rem;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1F517;</div>
+            <div class="card-title">AgentSkill (M:M)</div>
+          </div>
+          <p class="card-desc">
+            Tabela join <code>agent_skills</code>. Campos: <code>agentId</code>, <code>skillId</code>, <code>order</code>, <code>config</code> (Json).
+            Unique constraint [agentId, skillId]. Cascade em ambos os lados.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x2699;</div>
+            <div class="card-title">WorkflowStepAgent</div>
+          </div>
+          <p class="card-desc">
+            Tabela join <code>workflow_step_agents</code>. Liga Agent a um WorkflowStep. Campos: <code>stepId</code>, <code>agentId</code>, <code>order</code>, <code>config</code>.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1F9E9;</div>
+            <div class="card-title">Plugin (optional)</div>
+          </div>
+          <p class="card-desc">
+            Se importado de um Plugin, <code>pluginId</code> aponta para Plugin.id. onDelete: SetNull &mdash; agent sobrevive se plugin for removido.
+          </p>
+        </div>
+      </div>
+
+      <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--text-primary);">Indexes</h3>
+      <div class="code-block">
+<span class="keyword">@@unique</span>([name, userId])    <span class="comment">// Nome unico por usuario</span>
+<span class="keyword">@@index</span>([userId])           <span class="comment">// Busca por owner</span>
+<span class="keyword">@@index</span>([enabled])          <span class="comment">// Filtro por status</span>
+<span class="keyword">@@index</span>([pluginId])         <span class="comment">// Busca por plugin de origem</span>
+<span class="keyword">@@map</span>(<span class="string">"agents"</span>)             <span class="comment">// Tabela no banco</span>
+      </div>
+    </div>
+
+    <!-- ======== 4. CRUD Endpoints ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1F50C;</div>
+        API Endpoints (8)
+      </h2>
+
+      <div class="endpoint-card">
+        <div>
+          <span class="method method-get">GET</span>
+          <span class="path">/agents</span>
+        </div>
+        <div class="desc">Lista todos os agents do usuario. Retorna array com id, name, description, model, permissionMode, maxTurns, tools, enabled, isGlobal, pluginId, source, repoUrl, lastSyncedAt.</div>
+      </div>
+
+      <div class="endpoint-card">
+        <div>
+          <span class="method method-post">POST</span>
+          <span class="path">/agents</span>
+        </div>
+        <div class="desc">Cria novo agent. Body: name (obrigatorio), description, systemPrompt, tools[], disallowedTools[], model, permissionMode, maxTurns, skills[] (IDs), enabled, isGlobal. Retorna 201.</div>
+      </div>
+
+      <div class="endpoint-card">
+        <div>
+          <span class="method method-get">GET</span>
+          <span class="path">/agents/:id</span>
+        </div>
+        <div class="desc">Busca agent por ID com detalhes completos: systemPrompt, tools, disallowedTools, skills associadas, plugin, timestamps.</div>
+      </div>
+
+      <div class="endpoint-card">
+        <div>
+          <span class="method method-put">PUT</span>
+          <span class="path">/agents/:id</span>
+        </div>
+        <div class="desc">Atualiza agent. Todos os campos opcionais. Verifica ownership antes de alterar. Retorna id, name, updatedAt.</div>
+      </div>
+
+      <div class="endpoint-card">
+        <div>
+          <span class="method method-delete">DELETE</span>
+          <span class="path">/agents/:id</span>
+        </div>
+        <div class="desc">Remove agent. Verifica ownership. Retorna 204. Cascade remove AgentSkill e WorkflowStepAgent associados.</div>
+      </div>
+
+      <div class="endpoint-card">
+        <div>
+          <span class="method method-patch">PATCH</span>
+          <span class="path">/agents/:id/toggle</span>
+        </div>
+        <div class="desc">Alterna enabled/disabled. Retorna id e novo estado enabled.</div>
+      </div>
+
+      <div class="endpoint-card">
+        <div>
+          <span class="method method-post">POST</span>
+          <span class="path">/agents/import</span>
+        </div>
+        <div class="desc">Importa agent de URL (raw markdown) ou conteudo colado. Body: url?, content?, isGlobal. Faz parse do markdown, extrai system prompt e metadata. Retorna 201.</div>
+      </div>
+
+      <div class="endpoint-card">
+        <div>
+          <span class="method method-post">POST</span>
+          <span class="path">/agents/:id/resync</span>
+        </div>
+        <div class="desc">Re-sincroniza agent importado com a fonte GitHub. Atualiza systemPrompt, tools e metadata. Retorna id, name, lastSyncedAt.</div>
+      </div>
+    </div>
+
+    <!-- ======== 5. MCP Tools ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1F916;</div>
+        MCP Tools (7)
+      </h2>
+      <div class="card">
+        <div class="mcp-tool-item">
+          <span class="mcp-tool-name">agent_list</span>
+          <span class="mcp-tool-desc">Lista todos os agents configurados. Retorna array com id, name, description, model, enabled, isGlobal, permissionMode.</span>
+        </div>
+        <div class="mcp-tool-item">
+          <span class="mcp-tool-name">agent_get</span>
+          <span class="mcp-tool-desc">Busca agent por ID com detalhes completos: systemPrompt, tools, disallowedTools, skills associadas, model, permissionMode, maxTurns.</span>
+        </div>
+        <div class="mcp-tool-item">
+          <span class="mcp-tool-name">agent_create</span>
+          <span class="mcp-tool-desc">Cria agent com name, systemPrompt, tools, disallowedTools, model, permissionMode, maxTurns, skills (IDs), enabled, isGlobal.</span>
+        </div>
+        <div class="mcp-tool-item">
+          <span class="mcp-tool-name">agent_update</span>
+          <span class="mcp-tool-desc">Atualiza campos do agent. Todos opcionais. Recomendacao: use agent_get antes para ver estado atual.</span>
+        </div>
+        <div class="mcp-tool-item">
+          <span class="mcp-tool-name">agent_delete</span>
+          <span class="mcp-tool-desc">Remove agent por ID. Cascade nas relacoes AgentSkill e WorkflowStepAgent.</span>
+        </div>
+        <div class="mcp-tool-item">
+          <span class="mcp-tool-name">agent_toggle</span>
+          <span class="mcp-tool-desc">Alterna estado enabled/disabled de um agent.</span>
+        </div>
+        <div class="mcp-tool-item">
+          <span class="mcp-tool-name">agent_import</span>
+          <span class="mcp-tool-desc">Importa agent de URL (markdown raw) ou conteudo colado. Parse automatico de system prompt e metadata.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== 6. Agent vs Skill ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x2696;</div>
+        Agent vs Skill
+      </h2>
+      <div class="table-container comparison-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Skill</th>
+              <th>Agent</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>System Prompt</td>
+              <td class="no">Nao &mdash; usa body/frontmatter</td>
+              <td class="yes">Sim &mdash; campo dedicado systemPrompt</td>
+            </tr>
+            <tr>
+              <td>Tool Control</td>
+              <td>allowedTools[] apenas</td>
+              <td class="yes">tools[] + disallowedTools[]</td>
+            </tr>
+            <tr>
+              <td>Model Override</td>
+              <td class="yes">Sim</td>
+              <td class="yes">Sim</td>
+            </tr>
+            <tr>
+              <td>Permission Mode</td>
+              <td class="no">Nao</td>
+              <td class="yes">Sim &mdash; default, acceptEdits, fullAuto</td>
+            </tr>
+            <tr>
+              <td>Max Turns</td>
+              <td class="no">Nao</td>
+              <td class="yes">Sim &mdash; limita iteracoes</td>
+            </tr>
+            <tr>
+              <td>Pode conter Skills</td>
+              <td class="no">Nao</td>
+              <td class="yes">Sim &mdash; via AgentSkill (M:M)</td>
+            </tr>
+            <tr>
+              <td>Plugin Origin</td>
+              <td>Sim (pluginId)</td>
+              <td>Sim (pluginId)</td>
+            </tr>
+            <tr>
+              <td>GitHub Sync</td>
+              <td>Sim &mdash; fileManifest multi-arquivo</td>
+              <td>Sim &mdash; repoOwner/repoName/repoPath</td>
+            </tr>
+            <tr>
+              <td>Uso em Workflow</td>
+              <td>WorkflowStepSkill</td>
+              <td>WorkflowStepAgent</td>
+            </tr>
+            <tr>
+              <td>Global Flag</td>
+              <td>Sim (isGlobal)</td>
+              <td>Sim (isGlobal)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="color: var(--text-secondary); font-size: 0.82rem; margin-top: 0.75rem;">
+        <strong>Resumo:</strong> Uma Skill e um bloco de instrucao reutilizavel. Um Agent e um executor completo que pode incorporar multiplas Skills, controlar permissoes e limitar iteracoes.
+      </p>
+    </div>
+
+    <!-- ======== 7. Frontend Components ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">&#x1F5A5;</div>
+        Frontend Components
+      </h2>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1F4C7;</div>
+            <div class="card-title">AgentCard</div>
+          </div>
+          <p class="card-desc">Card visual com nome, descricao, model badge, status enabled/disabled e acoes rapidas (toggle, edit, delete).</p>
+          <div style="margin-top: 0.5rem;"><span class="badge badge-gray">agent-card.tsx</span></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1F4CB;</div>
+            <div class="card-title">AgentTable</div>
+          </div>
+          <p class="card-desc">Listagem tabular com colunas: name, model, permissionMode, tools count, enabled, acoes. Suporte a paginacao e search.</p>
+          <div style="margin-top: 0.5rem;"><span class="badge badge-gray">agent-table.tsx</span></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x1F4DD;</div>
+            <div class="card-title">AgentForm</div>
+          </div>
+          <p class="card-desc">Formulario completo: name, description, systemPrompt (textarea), tools (multi-select), model, permissionMode, maxTurns, skills picker.</p>
+          <div style="margin-top: 0.5rem;"><span class="badge badge-gray">agent-form.tsx</span></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(13,148,136,0.15); color: var(--text-accent);">&#x1F4AC;</div>
+            <div class="card-title">AgentModal</div>
+          </div>
+          <p class="card-desc">Dialog modal para criar/editar agent. Encapsula AgentForm com validacao Zod e submit via React Query mutation.</p>
+          <div style="margin-top: 0.5rem;"><span class="badge badge-gray">agent-modal.tsx</span></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(239,68,68,0.15); color: #f87171;">&#x1F4E5;</div>
+            <div class="card-title">ImportAgentDialog</div>
+          </div>
+          <p class="card-desc">Dialog para importar agent via URL de markdown ou colar conteudo. Preview do parse antes de confirmar.</p>
+          <div style="margin-top: 0.5rem;"><span class="badge badge-gray">import-agent-dialog.tsx</span></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">&#x1F4C1;</div>
+            <div class="card-title">AgentsPage (index)</div>
+          </div>
+          <p class="card-desc">Pagina principal que compoe AgentTable, AgentModal e ImportAgentDialog. Toggle view cards/table. Hooks: useAgents, store Zustand.</p>
+          <div style="margin-top: 0.5rem;"><span class="badge badge-gray">index.tsx</span></div>
+        </div>
+      </div>
+
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: var(--text-primary);">Arquitetura Frontend</h3>
+      <div class="code-block">
+src/features/agents/
+  components/
+    agent-card.tsx         <span class="comment">// Card visual individual</span>
+    agent-table.tsx        <span class="comment">// Listagem tabular</span>
+    agent-form.tsx         <span class="comment">// Formulario create/edit</span>
+    agent-modal.tsx        <span class="comment">// Dialog wrapper</span>
+    import-agent-dialog.tsx <span class="comment">// Import dialog</span>
+  hooks/
+    use-agents.ts          <span class="comment">// React Query hooks (CRUD)</span>
+  api.ts                   <span class="comment">// Axios calls para /agents</span>
+  store.ts                 <span class="comment">// Zustand store (modal state, filters)</span>
+  types.ts                 <span class="comment">// TypeScript interfaces</span>
+  index.tsx                <span class="comment">// Pagina principal</span>
+      </div>
+    </div>
+
+    <!-- ======== 8. Uso em Workflows ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">&#x2699;</div>
+        Uso em Workflows
+      </h2>
+      <div class="card" style="margin-bottom: 1.25rem;">
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          Agents sao anexados a <strong>WorkflowSteps</strong> via a tabela join <code>WorkflowStepAgent</code>.
+          Cada step pode ter multiplos agents (ordenados por <code>order</code>), e cada agent pode ser reutilizado em multiplos steps.
+        </p>
+        <p class="card-desc" style="margin-bottom: 1rem;">
+          Durante a execucao de um step, o sistema:
+        </p>
+      </div>
+
+      <div class="agent-diagram">
+        <div class="layer-label">Fluxo de Execucao do Agent em um Workflow Step</div>
+        <div class="layer">
+          <div class="box amber">1. Carrega WorkflowStep</div>
+        </div>
+        <div class="arrow-down">&darr;</div>
+        <div class="layer">
+          <div class="box amber">2. Busca agents via WorkflowStepAgent (order ASC)</div>
+        </div>
+        <div class="arrow-down">&darr;</div>
+        <div class="layer">
+          <div class="box highlight">3. Merge: systemPrompt + skills do agent</div>
+        </div>
+        <div class="arrow-down">&darr;</div>
+        <div class="layer">
+          <div class="box highlight">4. Aplica tools[] e disallowedTools[]</div>
+        </div>
+        <div class="arrow-down">&darr;</div>
+        <div class="layer">
+          <div class="box highlight">5. Define permissionMode e maxTurns</div>
+        </div>
+        <div class="arrow-down">&darr;</div>
+        <div class="layer">
+          <div class="box teal">6. Envia para Claude CLI com contexto completo</div>
+        </div>
+      </div>
+
+      <div class="code-block" style="margin-top: 1.25rem;">
+<span class="comment">// WorkflowStepAgent &mdash; tabela join</span>
+<span class="keyword">model</span> <span class="type">WorkflowStepAgent</span> {
+  id        <span class="type">String</span>       @id @default(uuid())
+  stepId    <span class="type">String</span>       @map(<span class="string">"step_id"</span>)
+  agentId   <span class="type">String</span>       @map(<span class="string">"agent_id"</span>)
+  order     <span class="type">Int</span>          @default(<span class="number">0</span>)
+  config    <span class="type">Json</span>?
+  step      <span class="type">WorkflowStep</span> @relation(...)
+  agent     <span class="type">Agent</span>        @relation(...)
+
+  @@unique([stepId, agentId])
+  @@index([agentId])
+  @@map(<span class="string">"workflow_step_agents"</span>)
+}
+      </div>
+    </div>
+
+    <!-- ======== 9. GitHub Integration ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">&#x1F4C2;</div>
+        GitHub Integration
+      </h2>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">&#x1F4E5;</div>
+            <div class="card-title">Import</div>
+          </div>
+          <p class="card-desc" style="margin-bottom: 0.75rem;">
+            POST <code>/agents/import</code> aceita URL de raw markdown ou conteudo direto.
+            O service faz parse do markdown, extrai metadata (nome, descricao, model, tools) e cria o agent com <code>source: "imported"</code>.
+          </p>
+          <p class="card-desc">
+            Campos GitHub preenchidos automaticamente: <code>repoOwner</code>, <code>repoName</code>, <code>repoBranch</code>, <code>repoPath</code>.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">&#x1F504;</div>
+            <div class="card-title">Re-sync</div>
+          </div>
+          <p class="card-desc" style="margin-bottom: 0.75rem;">
+            POST <code>/agents/:id/resync</code> re-busca o conteudo da fonte GitHub original.
+            Atualiza systemPrompt, tools, description e seta <code>lastSyncedAt</code>.
+          </p>
+          <p class="card-desc">
+            Mesmo padrao usado em Skills &mdash; tracking estruturado com campos <code>repoOwner</code>/<code>repoName</code>/<code>repoBranch</code>/<code>repoPath</code>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== 10. Usage Flow ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(13,148,136,0.15); color: var(--text-accent);">&#x1F680;</div>
+        Fluxo de Uso
+      </h2>
+
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="tab-create">Criar Agent</button>
+          <button class="tab-btn" data-tab="tab-import">Importar do GitHub</button>
+          <button class="tab-btn" data-tab="tab-workflow">Usar em Workflow</button>
+          <button class="tab-btn" data-tab="tab-mcp">Gerenciar via MCP</button>
+        </div>
+
+        <div id="tab-create" class="tab-content active">
+          <div class="card">
+            <ol style="color: var(--text-secondary); font-size: 0.88rem; line-height: 2; padding-left: 1.25rem;">
+              <li>Acesse a pagina <strong>Agents</strong> no frontend</li>
+              <li>Clique em <strong>"Novo Agent"</strong> &rarr; abre AgentModal</li>
+              <li>Preencha: nome, descricao, system prompt</li>
+              <li>Configure tools permitidas e bloqueadas</li>
+              <li>Selecione model, permissionMode e maxTurns</li>
+              <li>Associe Skills existentes (multi-select)</li>
+              <li>Salve &rarr; POST <code>/agents</code> &rarr; agent criado com <code>source: "manual"</code></li>
+            </ol>
+          </div>
+        </div>
+
+        <div id="tab-import" class="tab-content">
+          <div class="card">
+            <ol style="color: var(--text-secondary); font-size: 0.88rem; line-height: 2; padding-left: 1.25rem;">
+              <li>Clique em <strong>"Importar"</strong> &rarr; abre ImportAgentDialog</li>
+              <li>Cole a URL do raw markdown do GitHub (ou cole o conteudo)</li>
+              <li>Sistema faz parse: extrai nome, descricao, system prompt, tools</li>
+              <li>Preview mostra o que sera importado &rarr; confirme</li>
+              <li>POST <code>/agents/import</code> &rarr; agent criado com <code>source: "imported"</code></li>
+              <li>Campos GitHub preenchidos automaticamente para re-sync futuro</li>
+            </ol>
+          </div>
+        </div>
+
+        <div id="tab-workflow" class="tab-content">
+          <div class="card">
+            <ol style="color: var(--text-secondary); font-size: 0.88rem; line-height: 2; padding-left: 1.25rem;">
+              <li>Edite um Workflow &rarr; selecione um Step</li>
+              <li>Na aba "Agents" do step, adicione um ou mais agents</li>
+              <li>Defina a ordem de execucao (campo <code>order</code>)</li>
+              <li>Ao executar o workflow, o step carrega seus agents na ordem</li>
+              <li>System prompt do agent e mesclado com skills e contexto do step</li>
+              <li>Tools e permissionMode do agent sao aplicados na execucao Claude</li>
+            </ol>
+          </div>
+        </div>
+
+        <div id="tab-mcp" class="tab-content">
+          <div class="card">
+            <div class="code-block">
+<span class="comment">// Listar agents</span>
+agent_list
+
+<span class="comment">// Criar agent via MCP</span>
+agent_create {
+  <span class="string">"name"</span>: <span class="string">"Code Reviewer"</span>,
+  <span class="string">"systemPrompt"</span>: <span class="string">"Voce e um revisor de codigo..."</span>,
+  <span class="string">"tools"</span>: [<span class="string">"Read"</span>, <span class="string">"Grep"</span>, <span class="string">"Glob"</span>],
+  <span class="string">"model"</span>: <span class="string">"claude-sonnet-4-20250514"</span>,
+  <span class="string">"permissionMode"</span>: <span class="string">"default"</span>
+}
+
+<span class="comment">// Ver detalhes</span>
+agent_get { <span class="string">"id"</span>: <span class="string">"uuid-do-agent"</span> }
+
+<span class="comment">// Ativar/desativar</span>
+agent_toggle { <span class="string">"id"</span>: <span class="string">"uuid-do-agent"</span> }
+
+<span class="comment">// Importar de URL</span>
+agent_import { <span class="string">"url"</span>: <span class="string">"https://raw.githubusercontent.com/.../agent.md"</span> }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== Backend File Map ======== -->
+    <div class="section">
+      <h2 class="section-title">
+        <div class="icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">&#x1F4C1;</div>
+        Mapa de Arquivos
+      </h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem;">Backend</h3>
+          <div class="code-block">
+backend/src/domains/agents/
+  agents.routes.ts       <span class="comment">// 8 endpoints Fastify</span>
+  agents.service.ts      <span class="comment">// Logica: import, resync, parse</span>
+  agents.repository.ts   <span class="comment">// Prisma queries (CRUD + toggle)</span>
+
+backend/prisma/schema.prisma
+  <span class="comment">// model Agent { ... }</span>
+  <span class="comment">// model AgentSkill { ... }</span>
+  <span class="comment">// model WorkflowStepAgent { ... }</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem;">MCP Server</h3>
+          <div class="code-block">
+mcp-server/src/tools/agents.ts
+  <span class="comment">// 7 tools registradas:</span>
+  <span class="comment">// agent_list, agent_get, agent_create</span>
+  <span class="comment">// agent_update, agent_delete</span>
+  <span class="comment">// agent_toggle, agent_import</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="shared.js"></script>
+</body>
+</html>

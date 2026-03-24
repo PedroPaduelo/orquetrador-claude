@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>17 - Triggers | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<div class="page-container">
+
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">System Map</a>
+      <span>›</span>
+      <span>17 - Triggers</span>
+    </div>
+    <h1>Triggers</h1>
+    <p class="subtitle">Gatilhos automatizados para execucao de workflows. 5 tipos de trigger, scheduler com polling de 30s, integracao BullMQ + TaskOrchestrator.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4 section" style="margin-bottom: 2rem;">
+    <div class="stat-box">
+      <div class="stat-value" data-count="5">5</div>
+      <div class="stat-label">Tipos de Trigger</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="7">7</div>
+      <div class="stat-label">Endpoints</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="30">30</div>
+      <div class="stat-label">Poll Interval (s)</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="2">2</div>
+      <div class="stat-label">Modelos Prisma</div>
+    </div>
+  </div>
+
+  <!-- Section 1: O que sao Triggers -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">⏰</span>
+      O que sao Triggers
+    </h2>
+    <div class="card" style="cursor: default;">
+      <p class="card-desc" style="margin-bottom: 1rem;">
+        Triggers sao gatilhos automatizados que iniciam a execucao de workflows sem intervencao manual.
+        Cada trigger esta vinculado a um workflow e, quando ativado, cria uma <strong style="color: var(--text-accent);">ScheduledExecution</strong>,
+        que por sua vez gera uma <strong style="color: var(--text-accent);">Conversation</strong> e enfileira o job no <strong style="color: var(--text-accent);">BullMQ</strong>
+        para execucao pelo <strong style="color: var(--text-accent);">TaskOrchestrator</strong>.
+      </p>
+      <p class="card-desc">
+        O sistema suporta <strong>5 tipos de trigger</strong>, cada um com seu mecanismo de ativacao:
+        manual (usuario), cron (agendamento), webhook (chamada HTTP externa), event (evento nomeado) e git_push (push no GitHub).
+        Todos respeitam <strong>rate limiting</strong> configuravel (triggers/hora) e podem ser habilitados/desabilitados individualmente.
+      </p>
+    </div>
+  </div>
+
+  <!-- Section 2: 5 Trigger Types -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">⚡</span>
+      5 Tipos de Trigger
+    </h2>
+
+    <div class="grid-3" style="margin-bottom: 1.5rem;">
+
+      <!-- manual -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">👆</div>
+          <div>
+            <div class="card-title">manual</div>
+            <span class="badge badge-teal">user-initiated</span>
+          </div>
+        </div>
+        <p class="card-desc">Disparado pelo usuario via UI ou API. O endpoint <code class="mono" style="color: #67e8f9; font-size: 0.8rem;">POST /triggers/:id/fire</code> executa imediatamente.</p>
+        <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 6px; font-size: 0.8rem; color: var(--text-secondary);">
+          <strong style="color: var(--text-primary);">Campos:</strong> nenhum campo adicional obrigatorio
+        </div>
+      </div>
+
+      <!-- cron -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">🕐</div>
+          <div>
+            <div class="card-title">cron</div>
+            <span class="badge badge-blue">scheduled</span>
+          </div>
+        </div>
+        <p class="card-desc">Execucao agendada via expressao cron. Suporta timezone para agendamentos localizados. Reagenda automaticamente apos cada execucao.</p>
+        <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 6px; font-size: 0.8rem; color: var(--text-secondary);">
+          <strong style="color: var(--text-primary);">Campos:</strong> <code class="mono" style="color: #86efac;">cronExpr</code> (obrigatorio), <code class="mono" style="color: #86efac;">cronTimezone</code>
+        </div>
+      </div>
+
+      <!-- webhook_inbound -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">🪝</div>
+          <div>
+            <div class="card-title">webhook_inbound</div>
+            <span class="badge badge-amber">external</span>
+          </div>
+        </div>
+        <p class="card-desc">Chamada HTTP externa dispara o workflow. Um <code class="mono" style="color: #67e8f9; font-size: 0.8rem;">webhookSecret</code> (32 bytes hex) e gerado automaticamente na criacao para autenticacao.</p>
+        <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 6px; font-size: 0.8rem; color: var(--text-secondary);">
+          <strong style="color: var(--text-primary);">Campos:</strong> <code class="mono" style="color: #86efac;">webhookSecret</code> (auto-gerado, criptografado com AES)
+        </div>
+      </div>
+
+      <!-- event -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">📡</div>
+          <div>
+            <div class="card-title">event</div>
+            <span class="badge badge-purple">named-event</span>
+          </div>
+        </div>
+        <p class="card-desc">Evento nomeado interno dispara o workflow. Suporta filtro JSON para matchear somente eventos com payload especifico.</p>
+        <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 6px; font-size: 0.8rem; color: var(--text-secondary);">
+          <strong style="color: var(--text-primary);">Campos:</strong> <code class="mono" style="color: #86efac;">eventName</code> (obrigatorio), <code class="mono" style="color: #86efac;">eventFilter</code> (JSON)
+        </div>
+      </div>
+
+      <!-- git_push -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">📂</div>
+          <div>
+            <div class="card-title">git_push</div>
+            <span class="badge badge-green">github</span>
+          </div>
+        </div>
+        <p class="card-desc">Push no repositorio GitHub dispara o workflow automaticamente. Ideal para CI/CD pipelines e deploys automatizados.</p>
+        <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 6px; font-size: 0.8rem; color: var(--text-secondary);">
+          <strong style="color: var(--text-primary);">Campos:</strong> usa webhook do GitHub para detectar eventos push
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Comparison Table -->
+    <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--text-primary);">Comparacao entre Tipos</h3>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Ativacao</th>
+            <th>Campos Obrigatorios</th>
+            <th>Reagenda</th>
+            <th>Autenticacao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-teal">manual</span></td>
+            <td>POST /triggers/:id/fire</td>
+            <td>Nenhum</td>
+            <td>Nao</td>
+            <td>JWT do usuario</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-blue">cron</span></td>
+            <td>Scheduler (30s poll)</td>
+            <td><code class="mono" style="font-size: 0.8rem;">cronExpr</code></td>
+            <td>Sim (automatico)</td>
+            <td>Sistema</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-amber">webhook_inbound</span></td>
+            <td>HTTP externo</td>
+            <td>Nenhum (secret auto)</td>
+            <td>Nao</td>
+            <td>webhookSecret (AES)</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-purple">event</span></td>
+            <td>Evento interno</td>
+            <td><code class="mono" style="font-size: 0.8rem;">eventName</code></td>
+            <td>Nao</td>
+            <td>Sistema</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">git_push</span></td>
+            <td>GitHub webhook</td>
+            <td>Nenhum</td>
+            <td>Nao</td>
+            <td>GitHub signature</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 3: Modelo de Dados -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">🗄️</span>
+      Modelo de Dados
+    </h2>
+
+    <div class="grid-2">
+
+      <!-- WorkflowTrigger -->
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">⏰</div>
+          <div class="card-title">WorkflowTrigger</div>
+        </div>
+        <div class="table-container" style="font-size: 0.85rem;">
+          <table>
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Tipo</th>
+                <th>Descricao</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code class="mono">id</code></td>
+                <td><span class="badge badge-gray">String (CUID)</span></td>
+                <td>Identificador unico</td>
+              </tr>
+              <tr>
+                <td><code class="mono">workflowId</code></td>
+                <td><span class="badge badge-blue">FK → Workflow</span></td>
+                <td>Workflow associado</td>
+              </tr>
+              <tr>
+                <td><code class="mono">type</code></td>
+                <td><span class="badge badge-purple">TriggerType</span></td>
+                <td>manual | cron | webhook_inbound | event | git_push</td>
+              </tr>
+              <tr>
+                <td><code class="mono">cronExpr</code></td>
+                <td><span class="badge badge-gray">String?</span></td>
+                <td>Expressao cron (ex: <code class="mono" style="font-size: 0.75rem;">0 9 * * 1-5</code>)</td>
+              </tr>
+              <tr>
+                <td><code class="mono">cronTimezone</code></td>
+                <td><span class="badge badge-gray">String?</span></td>
+                <td>Timezone (ex: America/Sao_Paulo)</td>
+              </tr>
+              <tr>
+                <td><code class="mono">webhookSecret</code></td>
+                <td><span class="badge badge-amber">String? (AES)</span></td>
+                <td>Secret criptografado para webhooks</td>
+              </tr>
+              <tr>
+                <td><code class="mono">eventName</code></td>
+                <td><span class="badge badge-gray">String?</span></td>
+                <td>Nome do evento para trigger tipo event</td>
+              </tr>
+              <tr>
+                <td><code class="mono">eventFilter</code></td>
+                <td><span class="badge badge-gray">JSON?</span></td>
+                <td>Filtro de payload do evento</td>
+              </tr>
+              <tr>
+                <td><code class="mono">enabled</code></td>
+                <td><span class="badge badge-green">Boolean</span></td>
+                <td>Ativo/inativo (default: true)</td>
+              </tr>
+              <tr>
+                <td><code class="mono">rateLimit</code></td>
+                <td><span class="badge badge-gray">Int?</span></td>
+                <td>Maximo de triggers por hora</td>
+              </tr>
+              <tr>
+                <td><code class="mono">lastTriggeredAt</code></td>
+                <td><span class="badge badge-gray">DateTime?</span></td>
+                <td>Ultima execucao</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ScheduledExecution -->
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">📋</div>
+          <div class="card-title">ScheduledExecution</div>
+        </div>
+        <div class="table-container" style="font-size: 0.85rem;">
+          <table>
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Tipo</th>
+                <th>Descricao</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code class="mono">id</code></td>
+                <td><span class="badge badge-gray">String (CUID)</span></td>
+                <td>Identificador unico</td>
+              </tr>
+              <tr>
+                <td><code class="mono">triggerId</code></td>
+                <td><span class="badge badge-blue">FK → Trigger</span></td>
+                <td>Trigger que originou</td>
+              </tr>
+              <tr>
+                <td><code class="mono">status</code></td>
+                <td><span class="badge badge-purple">Enum</span></td>
+                <td>pending | running | completed | failed | cancelled</td>
+              </tr>
+              <tr>
+                <td><code class="mono">scheduledAt</code></td>
+                <td><span class="badge badge-gray">DateTime</span></td>
+                <td>Quando deve ser executado</td>
+              </tr>
+              <tr>
+                <td><code class="mono">executedAt</code></td>
+                <td><span class="badge badge-gray">DateTime?</span></td>
+                <td>Quando foi de fato executado</td>
+              </tr>
+              <tr>
+                <td><code class="mono">result</code></td>
+                <td><span class="badge badge-gray">JSON?</span></td>
+                <td>Resultado (conversationId, message)</td>
+              </tr>
+              <tr>
+                <td><code class="mono">errorMessage</code></td>
+                <td><span class="badge badge-gray">String?</span></td>
+                <td>Mensagem de erro se falhou</td>
+              </tr>
+              <tr>
+                <td><code class="mono">createdAt</code></td>
+                <td><span class="badge badge-gray">DateTime</span></td>
+                <td>Data de criacao</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Status badges -->
+        <div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+          <span class="badge badge-gray">⏳ pending</span>
+          <span class="badge badge-blue">▶ running</span>
+          <span class="badge badge-green">✓ completed</span>
+          <span class="badge badge-red">✕ failed</span>
+          <span class="badge badge-amber">⊘ cancelled</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section 4: Trigger Scheduler -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">⚙️</span>
+      Trigger Scheduler (Backend)
+    </h2>
+
+    <div class="card" style="cursor: default; margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(34,197,94,0.15); color: #4ade80;">🔄</div>
+        <div class="card-title">trigger-scheduler.ts</div>
+      </div>
+      <p class="card-desc" style="margin-bottom: 1rem;">
+        Worker BullMQ que roda como <strong>repeatable job</strong> a cada 30 segundos. Busca ScheduledExecutions pendentes
+        (<code class="mono" style="color: #67e8f9; font-size: 0.8rem;">status: pending, scheduledAt &lt;= now</code>), verifica rate limit,
+        cria conversation e delega execucao ao TaskOrchestrator.
+      </p>
+
+      <div class="grid-2" style="gap: 1rem;">
+
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
+          <h4 style="font-weight: 600; margin-bottom: 0.75rem; color: var(--text-accent); font-size: 0.9rem;">Ciclo de Execucao</h4>
+          <ol style="list-style: decimal; padding-left: 1.25rem; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8;">
+            <li>Busca execucoes due via <code class="mono" style="color: #67e8f9;">findDueScheduled()</code></li>
+            <li>Marca como <span class="badge badge-blue" style="font-size: 0.7rem;">running</span></li>
+            <li>Atualiza <code class="mono" style="color: #67e8f9;">lastTriggeredAt</code> no trigger</li>
+            <li>Verifica rate limit (count execucoes na ultima hora)</li>
+            <li>Busca workflow completo com steps</li>
+            <li>Cria <strong>Conversation</strong> com titulo <code class="mono" style="color: #86efac; font-size: 0.8rem;">[Trigger] nome - data</code></li>
+            <li>Executa via TaskOrchestrator (DAG, Sequential ou StepByStep)</li>
+            <li>Marca como <span class="badge badge-green" style="font-size: 0.7rem;">completed</span> ou <span class="badge badge-red" style="font-size: 0.7rem;">failed</span></li>
+            <li>Se cron: re-agenda proxima execucao via <code class="mono" style="color: #67e8f9;">scheduleCron()</code></li>
+          </ol>
+        </div>
+
+        <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem;">
+          <h4 style="font-weight: 600; margin-bottom: 0.75rem; color: var(--text-accent); font-size: 0.9rem;">Configuracao</h4>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 2;">
+            <div><strong style="color: var(--text-primary);">Queue name:</strong> <code class="mono" style="color: #86efac;">trigger-scheduler</code></div>
+            <div><strong style="color: var(--text-primary);">Poll interval:</strong> 30.000ms (30 segundos)</div>
+            <div><strong style="color: var(--text-primary);">Concurrency:</strong> 1 (serial)</div>
+            <div><strong style="color: var(--text-primary);">removeOnComplete:</strong> ultimos 50 jobs</div>
+            <div><strong style="color: var(--text-primary);">removeOnFail:</strong> ultimos 20 jobs</div>
+            <div><strong style="color: var(--text-primary);">Cron parser:</strong> cron-parser lib</div>
+            <div><strong style="color: var(--text-primary);">Startup:</strong> <code class="mono" style="color: #67e8f9;">startTriggerScheduler()</code> no server.ts</div>
+            <div><strong style="color: var(--text-primary);">Shutdown:</strong> <code class="mono" style="color: #67e8f9;">stopTriggerScheduler()</code> graceful</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Rate Limiting -->
+    <div class="card" style="cursor: default; margin-bottom: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">🛡️</div>
+        <div class="card-title">Rate Limiting</div>
+      </div>
+      <p class="card-desc" style="margin-bottom: 0.75rem;">
+        Cada trigger pode ter um <code class="mono" style="color: #67e8f9; font-size: 0.85rem;">rateLimit</code> (triggers/hora).
+        O scheduler conta execucoes com status <code class="mono" style="color: #86efac;">completed</code> ou <code class="mono" style="color: #86efac;">running</code>
+        na ultima hora. Se o limite for atingido, a execucao e marcada como <span class="badge badge-red" style="font-size: 0.7rem;">failed</span>
+        com mensagem <code class="mono" style="color: #f87171; font-size: 0.8rem;">Rate limit exceeded (N/hour)</code>.
+      </p>
+      <div class="code-block">
+<span class="keyword">async function</span> <span class="type">countRecentTriggers</span>(triggerId, rateLimit) {
+  <span class="keyword">const</span> oneHourAgo = <span class="keyword">new</span> <span class="type">Date</span>(Date.now() - <span class="number">60</span> * <span class="number">60</span> * <span class="number">1000</span>)
+  <span class="keyword">return</span> prisma.scheduledExecution.<span class="type">count</span>({
+    <span class="type">where</span>: {
+      triggerId,
+      executedAt: { gte: oneHourAgo },
+      status: { in: [<span class="string">'completed'</span>, <span class="string">'running'</span>] },
+    },
+  })
+}
+      </div>
+    </div>
+
+    <!-- Execution Messages -->
+    <div class="card" style="cursor: default;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">💬</div>
+        <div class="card-title">Mensagens por Tipo de Trigger</div>
+      </div>
+      <div class="table-container" style="font-size: 0.85rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Mensagem enviada ao TaskOrchestrator</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-blue">cron</span></td>
+              <td>Execucao agendada via cron trigger. Execute o workflow conforme configurado.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-amber">webhook_inbound</span></td>
+              <td>Execucao disparada via webhook inbound. Execute o workflow conforme configurado.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-purple">event</span></td>
+              <td>Execucao disparada pelo evento "{eventName}". Execute o workflow conforme configurado.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">git_push</span></td>
+              <td>Execucao disparada por git push. Execute o workflow conforme configurado.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-teal">manual</span></td>
+              <td>Execucao disparada manualmente via trigger. Execute o workflow conforme configurado.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Flow Diagram -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">🔄</span>
+      Fluxo de Execucao
+    </h2>
+
+    <div class="card" style="cursor: default;">
+      <h3 style="font-weight: 600; margin-bottom: 1rem; color: var(--text-primary); font-size: 1rem;">Fluxo Completo: Trigger ate Execucao</h3>
+      <div class="flow-container" style="justify-content: center;">
+        <div class="flow-node" style="border-color: rgba(13,148,136,0.5); background: rgba(13,148,136,0.1);">
+          ⏰ Trigger
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" style="border-color: rgba(59,130,246,0.5); background: rgba(59,130,246,0.1);">
+          🔄 Scheduler<br><span style="font-size: 0.7rem; color: var(--text-muted);">30s poll</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" style="border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.1);">
+          📋 ScheduledExecution<br><span style="font-size: 0.7rem; color: var(--text-muted);">pending → running</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" style="border-color: rgba(245,158,11,0.5); background: rgba(245,158,11,0.1);">
+          💬 Conversation<br><span style="font-size: 0.7rem; color: var(--text-muted);">[Trigger] nome</span>
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" style="border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.1);">
+          📦 BullMQ Queue
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" style="border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.1);">
+          ⚙️ Worker
+        </div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node" style="border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.15);">
+          ✅ Execute Workflow
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+        <h3 style="font-weight: 600; margin-bottom: 1rem; color: var(--text-primary); font-size: 1rem;">TaskOrchestrator: Decisao de Execucao</h3>
+        <div class="flow-container" style="justify-content: center;">
+          <div class="flow-node" style="border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.1);">
+            📋 Workflow
+          </div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node">
+            🔀 isDAGWorkflow?
+          </div>
+          <span class="flow-arrow">→</span>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <div class="flow-node" style="border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.1); font-size: 0.8rem;">
+              Sim → <strong>executeDAG()</strong>
+            </div>
+            <div class="flow-node" style="border-color: rgba(59,130,246,0.5); background: rgba(59,130,246,0.1); font-size: 0.8rem;">
+              Nao, sequential → <strong>executeSequential()</strong>
+            </div>
+            <div class="flow-node" style="border-color: rgba(245,158,11,0.5); background: rgba(245,158,11,0.1); font-size: 0.8rem;">
+              Nao, outro → <strong>executeStepByStep()</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+        <h3 style="font-weight: 600; margin-bottom: 1rem; color: var(--text-primary); font-size: 1rem;">Cron: Ciclo de Reagendamento</h3>
+        <div class="flow-container" style="justify-content: center;">
+          <div class="flow-node" style="border-color: rgba(59,130,246,0.5); background: rgba(59,130,246,0.1);">
+            🕐 Cron Trigger
+          </div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node">
+            📋 ScheduledExecution
+          </div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node" style="border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.1);">
+            ✅ Completed
+          </div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node" style="border-color: rgba(245,158,11,0.5); background: rgba(245,158,11,0.1);">
+            🔄 scheduleCron()
+          </div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-node" style="border-color: rgba(59,130,246,0.5); background: rgba(59,130,246,0.1);">
+            ⏳ Nova ScheduledExecution<br><span style="font-size: 0.7rem; color: var(--text-muted);">nextRunAt</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 6: Endpoints -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">🔌</span>
+      API Endpoints (7)
+    </h2>
+
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+
+      <!-- GET list -->
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-green">GET</span>
+            <code class="mono" style="font-size: 0.85rem;">/workflows/:workflowId/triggers</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">List triggers (paginated)</span>
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8;">
+            <div><strong style="color: var(--text-primary);">Auth:</strong> JWT (Bearer token)</div>
+            <div><strong style="color: var(--text-primary);">Params:</strong> <code class="mono">workflowId</code> (path)</div>
+            <div><strong style="color: var(--text-primary);">Query:</strong> <code class="mono">page</code>, <code class="mono">limit</code> (pagination)</div>
+            <div><strong style="color: var(--text-primary);">Response:</strong> <code class="mono">{ data: Trigger[], meta: { page, limit, total, totalPages } }</code></div>
+            <div><strong style="color: var(--text-primary);">Bonus:</strong> Inclui <code class="mono">scheduledCount</code> em cada trigger</div>
+          </div>
+          <div class="code-block" style="margin-top: 0.75rem;">
+<span class="comment">// Exemplo curl</span>
+curl -s <span class="string">"https://orquestrador-api.../workflows/WORKFLOW_ID/triggers?page=1&limit=10"</span> \
+  -H <span class="string">"Authorization: Bearer $TOKEN"</span> | jq .
+          </div>
+        </div>
+      </div>
+
+      <!-- GET detail -->
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-green">GET</span>
+            <code class="mono" style="font-size: 0.85rem;">/triggers/:id</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Get trigger detail</span>
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8;">
+            <div><strong style="color: var(--text-primary);">Auth:</strong> JWT (Bearer token)</div>
+            <div><strong style="color: var(--text-primary);">Params:</strong> <code class="mono">id</code> (trigger ID)</div>
+            <div><strong style="color: var(--text-primary);">Response:</strong> Trigger object completo (webhookSecret descriptografado)</div>
+            <div><strong style="color: var(--text-primary);">Ownership:</strong> Verifica <code class="mono">workflow.userId</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST create -->
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-blue">POST</span>
+            <code class="mono" style="font-size: 0.85rem;">/workflows/:workflowId/triggers</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Create trigger</span>
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8;">
+            <div><strong style="color: var(--text-primary);">Auth:</strong> JWT (Bearer token)</div>
+            <div><strong style="color: var(--text-primary);">Response:</strong> 201 Created</div>
+            <div><strong style="color: var(--text-primary);">Validacoes:</strong></div>
+            <ul style="padding-left: 1.25rem; list-style: disc;">
+              <li>cron → <code class="mono">cronExpr</code> obrigatorio</li>
+              <li>event → <code class="mono">eventName</code> obrigatorio</li>
+              <li>webhook_inbound → <code class="mono">webhookSecret</code> gerado automaticamente (32 bytes hex, AES encrypted)</li>
+            </ul>
+          </div>
+          <div class="code-block" style="margin-top: 0.75rem;">
+<span class="comment">// Body</span>
+{
+  <span class="string">"type"</span>: <span class="string">"cron"</span>,
+  <span class="string">"cronExpr"</span>: <span class="string">"0 9 * * 1-5"</span>,
+  <span class="string">"cronTimezone"</span>: <span class="string">"America/Sao_Paulo"</span>,
+  <span class="string">"rateLimit"</span>: <span class="number">10</span>,
+  <span class="string">"enabled"</span>: <span class="keyword">true</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <!-- PUT update -->
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-amber">PUT</span>
+            <code class="mono" style="font-size: 0.85rem;">/triggers/:id</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Update trigger</span>
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8;">
+            <div><strong style="color: var(--text-primary);">Auth:</strong> JWT (Bearer token)</div>
+            <div><strong style="color: var(--text-primary);">Ownership:</strong> Verifica em <code class="mono">$transaction</code> antes de atualizar</div>
+            <div><strong style="color: var(--text-primary);">Campos atualizaveis:</strong> cronExpr, cronTimezone, eventName, eventFilter, rateLimit, enabled</div>
+          </div>
+          <div class="code-block" style="margin-top: 0.75rem;">
+<span class="comment">// Body parcial</span>
+{
+  <span class="string">"cronExpr"</span>: <span class="string">"*/10 * * * *"</span>,
+  <span class="string">"enabled"</span>: <span class="keyword">false</span>
+}
+          </div>
+        </div>
+      </div>
+
+      <!-- DELETE -->
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-red">DELETE</span>
+            <code class="mono" style="font-size: 0.85rem;">/triggers/:id</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Delete trigger</span>
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8;">
+            <div><strong style="color: var(--text-primary);">Auth:</strong> JWT (Bearer token)</div>
+            <div><strong style="color: var(--text-primary);">Response:</strong> 204 No Content</div>
+            <div><strong style="color: var(--text-primary);">Ownership:</strong> Verifica em <code class="mono">$transaction</code> (findFirst + delete atomico)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET scheduled -->
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-green">GET</span>
+            <code class="mono" style="font-size: 0.85rem;">/triggers/:id/scheduled</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">List scheduled executions</span>
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8;">
+            <div><strong style="color: var(--text-primary);">Auth:</strong> JWT (Bearer token)</div>
+            <div><strong style="color: var(--text-primary);">Query:</strong> <code class="mono">page</code>, <code class="mono">limit</code></div>
+            <div><strong style="color: var(--text-primary);">Response:</strong> Paginated ScheduledExecution list (orderBy scheduledAt desc)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POST fire -->
+      <div class="accordion-item">
+        <div class="accordion-header">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span class="badge badge-blue">POST</span>
+            <code class="mono" style="font-size: 0.85rem;">/triggers/:id/fire</code>
+            <span style="color: var(--text-muted); font-size: 0.8rem;">Manually fire trigger</span>
+          </div>
+          <span class="accordion-arrow">▼</span>
+        </div>
+        <div class="accordion-body">
+          <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.8;">
+            <div><strong style="color: var(--text-primary);">Auth:</strong> JWT (Bearer token)</div>
+            <div><strong style="color: var(--text-primary);">Response:</strong> 201 (ScheduledExecution criada)</div>
+            <div><strong style="color: var(--text-primary);">Validacao:</strong> Trigger deve estar <code class="mono" style="color: #4ade80;">enabled: true</code></div>
+            <div><strong style="color: var(--text-primary);">Efeito:</strong> Cria ScheduledExecution com <code class="mono">scheduledAt: now</code> via <code class="mono">triggersService.fireNow()</code></div>
+          </div>
+          <div class="code-block" style="margin-top: 0.75rem;">
+<span class="comment">// Dispara manualmente</span>
+curl -s -X POST <span class="string">"https://orquestrador-api.../triggers/TRIGGER_ID/fire"</span> \
+  -H <span class="string">"Authorization: Bearer $TOKEN"</span> | jq .
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section 7: Cron Examples -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">🕐</span>
+      Exemplos de Cron
+    </h2>
+
+    <div class="grid-3">
+
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(59,130,246,0.15); color: #60a5fa;">📅</div>
+          <div class="card-title" style="font-size: 1rem;">Dias uteis as 9h</div>
+        </div>
+        <div class="code-block" style="text-align: center; font-size: 1.1rem; padding: 0.75rem;">
+          <span class="string">0 9 * * 1-5</span>
+        </div>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">
+          <div>minuto: <strong style="color: var(--text-secondary);">0</strong></div>
+          <div>hora: <strong style="color: var(--text-secondary);">9</strong></div>
+          <div>dia do mes: <strong style="color: var(--text-secondary);">* (qualquer)</strong></div>
+          <div>mes: <strong style="color: var(--text-secondary);">* (qualquer)</strong></div>
+          <div>dia da semana: <strong style="color: var(--text-secondary);">1-5 (seg-sex)</strong></div>
+        </div>
+      </div>
+
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">⚡</div>
+          <div class="card-title" style="font-size: 1rem;">A cada 5 minutos</div>
+        </div>
+        <div class="code-block" style="text-align: center; font-size: 1.1rem; padding: 0.75rem;">
+          <span class="string">*/5 * * * *</span>
+        </div>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">
+          <div>minuto: <strong style="color: var(--text-secondary);">*/5 (a cada 5)</strong></div>
+          <div>hora: <strong style="color: var(--text-secondary);">* (qualquer)</strong></div>
+          <div>dia do mes: <strong style="color: var(--text-secondary);">* (qualquer)</strong></div>
+          <div>mes: <strong style="color: var(--text-secondary);">* (qualquer)</strong></div>
+          <div>dia da semana: <strong style="color: var(--text-secondary);">* (qualquer)</strong></div>
+        </div>
+      </div>
+
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">📆</div>
+          <div class="card-title" style="font-size: 1rem;">1o dia do mes</div>
+        </div>
+        <div class="code-block" style="text-align: center; font-size: 1.1rem; padding: 0.75rem;">
+          <span class="string">0 0 1 * *</span>
+        </div>
+        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">
+          <div>minuto: <strong style="color: var(--text-secondary);">0</strong></div>
+          <div>hora: <strong style="color: var(--text-secondary);">0 (meia-noite)</strong></div>
+          <div>dia do mes: <strong style="color: var(--text-secondary);">1</strong></div>
+          <div>mes: <strong style="color: var(--text-secondary);">* (qualquer)</strong></div>
+          <div>dia da semana: <strong style="color: var(--text-secondary);">* (qualquer)</strong></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- More cron examples -->
+    <div class="card" style="cursor: default; margin-top: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">📖</div>
+        <div class="card-title">Referencia Rapida de Cron</div>
+      </div>
+      <div class="table-container" style="font-size: 0.85rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Expressao</th>
+              <th>Descricao</th>
+              <th>Frequencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code class="mono" style="color: #86efac;">* * * * *</code></td>
+              <td>A cada minuto</td>
+              <td><span class="badge badge-red">60x/hora</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="color: #86efac;">*/5 * * * *</code></td>
+              <td>A cada 5 minutos</td>
+              <td><span class="badge badge-amber">12x/hora</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="color: #86efac;">*/15 * * * *</code></td>
+              <td>A cada 15 minutos</td>
+              <td><span class="badge badge-blue">4x/hora</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="color: #86efac;">0 * * * *</code></td>
+              <td>A cada hora</td>
+              <td><span class="badge badge-green">24x/dia</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="color: #86efac;">0 9 * * 1-5</code></td>
+              <td>Dias uteis as 9h</td>
+              <td><span class="badge badge-green">5x/semana</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="color: #86efac;">0 0 * * *</code></td>
+              <td>Diariamente a meia-noite</td>
+              <td><span class="badge badge-green">1x/dia</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="color: #86efac;">0 0 * * 0</code></td>
+              <td>Domingos a meia-noite</td>
+              <td><span class="badge badge-teal">1x/semana</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="color: #86efac;">0 0 1 * *</code></td>
+              <td>Primeiro dia do mes</td>
+              <td><span class="badge badge-teal">1x/mes</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="color: #86efac;">0 8,12,18 * * *</code></td>
+              <td>3 vezes ao dia (8h, 12h, 18h)</td>
+              <td><span class="badge badge-green">3x/dia</span></td>
+            </tr>
+            <tr>
+              <td><code class="mono" style="color: #86efac;">30 2 * * 6</code></td>
+              <td>Sabados as 2:30</td>
+              <td><span class="badge badge-teal">1x/semana</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top: 0.75rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 6px; font-size: 0.8rem; color: var(--text-muted);">
+        <strong style="color: var(--text-primary);">Formato:</strong>
+        <code class="mono" style="color: #67e8f9;">minuto hora dia-mes mes dia-semana</code>
+        &nbsp;|&nbsp;
+        <strong style="color: var(--text-primary);">Timezone:</strong> configuravel via <code class="mono" style="color: #67e8f9;">cronTimezone</code> (default: UTC)
+        &nbsp;|&nbsp;
+        <strong style="color: var(--text-primary);">Parser:</strong> <code class="mono" style="color: #86efac;">cron-parser</code> library
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 8: Security -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: rgba(239,68,68,0.15); color: #f87171;">🔒</span>
+      Seguranca
+    </h2>
+
+    <div class="grid-3">
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(245,158,11,0.15); color: #fbbf24;">🔑</div>
+          <div class="card-title">Webhook Secret</div>
+        </div>
+        <p class="card-desc">
+          Gerado com <code class="mono" style="color: #67e8f9; font-size: 0.8rem;">crypto.randomBytes(32).toString('hex')</code>.
+          Armazenado criptografado com AES via <code class="mono" style="color: #67e8f9; font-size: 0.8rem;">encrypt()</code>.
+          Descriptografado com <code class="mono" style="color: #67e8f9; font-size: 0.8rem;">decrypt()</code> ao ler.
+        </p>
+      </div>
+
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">👤</div>
+          <div class="card-title">Ownership</div>
+        </div>
+        <p class="card-desc">
+          Todas as operacoes verificam <code class="mono" style="color: #67e8f9; font-size: 0.8rem;">workflow.userId</code>.
+          Update e Delete usam <code class="mono" style="color: #67e8f9; font-size: 0.8rem;">$transaction</code> para atomicidade
+          (findFirst + operacao no mesmo escopo).
+        </p>
+      </div>
+
+      <div class="card" style="cursor: default;">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.15); color: #a78bfa;">🛡️</div>
+          <div class="card-title">Rate Limit</div>
+        </div>
+        <p class="card-desc">
+          Configuravel por trigger (<code class="mono" style="color: #67e8f9; font-size: 0.8rem;">rateLimit</code> = max triggers/hora).
+          Contagem de execucoes completed/running na ultima hora.
+          Excedeu? Status <span class="badge badge-red" style="font-size: 0.7rem;">failed</span>.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Arquivos do Backend -->
+  <div class="section">
+    <h2 class="section-title">
+      <span class="icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">📁</span>
+      Arquivos Relevantes
+    </h2>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Arquivo</th>
+            <th>Responsabilidade</th>
+            <th>Linhas</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code class="mono" style="font-size: 0.8rem;">src/domains/triggers/triggers.routes.ts</code></td>
+            <td>7 endpoints, validacao Zod, auto-geracao webhookSecret</td>
+            <td><span class="badge badge-green">155</span></td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="font-size: 0.8rem;">src/domains/triggers/triggers.service.ts</code></td>
+            <td>fireNow(), scheduleCron() com cron-parser</td>
+            <td><span class="badge badge-green">~50</span></td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="font-size: 0.8rem;">src/domains/triggers/triggers.repository.ts</code></td>
+            <td>CRUD, paginacao, ownership, encrypt/decrypt, findDueScheduled</td>
+            <td><span class="badge badge-blue">199</span></td>
+          </tr>
+          <tr>
+            <td><code class="mono" style="font-size: 0.8rem;">src/domains/triggers/trigger-scheduler.ts</code></td>
+            <td>BullMQ worker, poll 30s, TaskOrchestrator integration</td>
+            <td><span class="badge badge-blue">211</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="shared.js"></script>
+</body>
+</html>
