@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>12 - Conversations | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* State Machine Diagram */
+    .state-machine {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 2rem;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+    .state-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .state-node {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 2px solid;
+      transition: all 0.3s;
+    }
+    .state-node:hover { transform: scale(1.05); }
+    .state-active { background: rgba(34,197,94,0.15); border-color: #22c55e; color: #4ade80; }
+    .state-completed { background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #60a5fa; }
+    .state-failed { background: rgba(239,68,68,0.15); border-color: #ef4444; color: #f87171; }
+    .state-archived { background: rgba(100,116,139,0.15); border-color: #64748b; color: #94a3b8; }
+    .state-paused { background: rgba(245,158,11,0.15); border-color: #f59e0b; color: #fbbf24; }
+    .state-arrow { color: var(--text-muted); font-size: 1.5rem; }
+
+    /* Chat Mockup */
+    .chat-mockup {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 700px;
+    }
+    .chat-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: rgba(13,148,136,0.1);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .chat-toolbar-title { font-weight: 600; font-size: 0.9rem; }
+    .chat-toolbar-badges { display: flex; gap: 0.5rem; }
+    .chat-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; max-height: 360px; overflow-y: auto; }
+    .chat-bubble {
+      max-width: 85%;
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: rgba(13,148,136,0.2);
+      border: 1px solid rgba(13,148,136,0.3);
+      color: var(--text-primary);
+    }
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+    .chat-bubble.system {
+      align-self: center;
+      background: rgba(139,92,246,0.1);
+      border: 1px solid rgba(139,92,246,0.2);
+      color: #a78bfa;
+      font-size: 0.8rem;
+      text-align: center;
+    }
+    .chat-input-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-card);
+    }
+    .chat-input-bar input {
+      flex: 1;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      font-family: inherit;
+      outline: none;
+    }
+    .chat-input-bar button {
+      background: var(--bg-accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    /* Timeline */
+    .timeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      padding: 1.5rem 1rem;
+      overflow-x: auto;
+    }
+    .timeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      min-width: 100px;
+      position: relative;
+    }
+    .timeline-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border: 2px solid;
+      z-index: 2;
+    }
+    .timeline-dot.done { background: rgba(34,197,94,0.2); border-color: #22c55e; color: #4ade80; }
+    .timeline-dot.current { background: rgba(59,130,246,0.2); border-color: #3b82f6; color: #60a5fa; animation: pulse 2s infinite; }
+    .timeline-dot.pending { background: var(--bg-card); border-color: var(--border-color); color: var(--text-muted); }
+    .timeline-label { font-size: 0.75rem; color: var(--text-secondary); text-align: center; white-space: nowrap; }
+    .timeline-connector {
+      width: 60px;
+      height: 2px;
+      background: var(--border-color);
+      flex-shrink: 0;
+    }
+    .timeline-connector.done { background: #22c55e; }
+
+    /* SSE Event Flow */
+    .sse-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 1rem;
+    }
+    .sse-event {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .sse-event .event-name {
+      background: rgba(13,148,136,0.15);
+      color: var(--text-accent);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      min-width: 130px;
+    }
+    .sse-event .event-desc {
+      color: var(--text-secondary);
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Entity Relation Diagram */
+    .er-diagram {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      justify-content: center;
+    }
+    .er-entity {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      min-width: 220px;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    .er-entity:hover {
+      border-color: rgba(13,148,136,0.4);
+      box-shadow: var(--shadow-glow);
+    }
+    .er-entity-header {
+      padding: 0.6rem 1rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .er-entity-body { padding: 0.5rem 0; }
+    .er-field {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 1rem;
+      font-size: 0.8rem;
+    }
+    .er-field .field-name { color: var(--text-primary); }
+    .er-field .field-type { color: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+    .er-field .field-key { color: #fbbf24; font-size: 0.7rem; font-weight: 600; }
+
+    /* Folder structure */
+    .folder-tree {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.8;
+      padding: 1rem;
+      color: var(--text-secondary);
+    }
+    .folder-tree .folder { color: #60a5fa; }
+    .folder-tree .file { color: var(--text-muted); }
+    .folder-tree .highlight { color: var(--text-accent); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <h1>Conversations</h1>
+      <p class="subtitle">Instancias de execucao ativas ligadas a workflows. Cada conversa possui mensagens, estados de execucao, traces, logs e sessoes Claude CLI.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-4" style="margin-bottom: 2.5rem;">
+      <div class="stat-box">
+        <div class="stat-value" data-count="6">0</div>
+        <div class="stat-label">Modelos de Dados</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="22">0</div>
+        <div class="stat-label">Endpoints API</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="15">0</div>
+        <div class="stat-label">SSE Events</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" data-count="4">0</div>
+        <div class="stat-label">Status Possiveis</div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 1: Visao Geral -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: var(--bg-accent-subtle);">💬</div>
+        Visao Geral
+      </div>
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-desc" style="font-size: 0.95rem; line-height: 1.8;">
+          <strong>Conversations</strong> sao instancias de execucao ativas associadas a um Workflow. Quando um usuario inicia uma nova conversa, o sistema cria um registro <code>Conversation</code> vinculado a um workflow e a uma pasta de projeto no disco.
+          <br><br>
+          Cada conversa contem:
+        </div>
+        <div class="grid-3" style="margin-top: 1rem;">
+          <div class="card" style="border-left: 3px solid #2dd4bf;">
+            <div class="card-header"><div class="card-icon" style="background: var(--bg-accent-subtle);">💬</div><div class="card-title">Messages</div></div>
+            <div class="card-desc">Mensagens user/assistant/system com metadados, contagem de tokens, anexos e selecao de contexto.</div>
+          </div>
+          <div class="card" style="border-left: 3px solid #8b5cf6;">
+            <div class="card-header"><div class="card-icon" style="background: rgba(139,92,246,0.1);">⚡</div><div class="card-title">Execution States</div></div>
+            <div class="card-desc">Estado da execucao atual: running, paused, completed, failed. Rastreio de step atual e tokens.</div>
+          </div>
+          <div class="card" style="border-left: 3px solid #f59e0b;">
+            <div class="card-header"><div class="card-icon" style="background: var(--bg-warning);">📊</div><div class="card-title">Traces & Logs</div></div>
+            <div class="card-desc">Cada chamada ao Claude CLI gera um trace com stdout/stderr, duracao, exit code e parsed events.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 2: Ciclo de Vida -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(34,197,94,0.1);">🔄</div>
+        Ciclo de Vida
+      </div>
+
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">State Machine</h3>
+        <div class="state-machine">
+          <div class="state-row">
+            <div class="state-node state-active">● active</div>
+            <div class="state-arrow">→</div>
+            <div class="state-node state-completed">✓ completed</div>
+          </div>
+          <div class="state-row">
+            <div class="state-node state-active">● active</div>
+            <div class="state-arrow">→</div>
+            <div class="state-node state-paused">⏸ paused</div>
+            <div class="state-arrow">→</div>
+            <div class="state-node state-active">● active (resumed)</div>
+          </div>
+          <div class="state-row">
+            <div class="state-node state-active">● active</div>
+            <div class="state-arrow">→</div>
+            <div class="state-node state-failed">✗ failed</div>
+          </div>
+          <div class="state-row">
+            <span style="color: var(--text-muted); font-size: 0.85rem;">qualquer status</span>
+            <div class="state-arrow">→</div>
+            <div class="state-node state-archived">📦 archived</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-icon" style="background: rgba(34,197,94,0.1);">🍴</div><div class="card-title">Fork (Branch)</div></div>
+          <div class="card-desc">
+            Cria uma nova conversa a partir de uma existente, copiando workflow e projectPath. O campo <code>parentId</code> referencia a conversa original. Util para testar abordagens alternativas sem perder o historico.
+          </div>
+          <div class="code-block" style="margin-top: 0.75rem;">
+<span class="keyword">POST</span> /conversations/:id/clone
+<span class="comment">// Response: nova conversa com parentId = :id</span>
+{
+  <span class="string">"id"</span>: <span class="string">"uuid-novo"</span>,
+  <span class="string">"workflowId"</span>: <span class="string">"mesmo-workflow"</span>,
+  <span class="string">"parentId"</span>: <span class="string">"uuid-original"</span>
+}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-icon" style="background: rgba(59,130,246,0.1);">📦</div><div class="card-title">Archive</div></div>
+          <div class="card-desc">
+            Conversas podem ser arquivadas via o campo <code>isArchived</code>. Conversas arquivadas nao aparecem nas listagens padrao mas continuam acessiveis para consulta e export.
+          </div>
+          <div class="code-block" style="margin-top: 0.75rem;">
+<span class="keyword">PATCH</span> /conversations/:id
+{
+  <span class="string">"isArchived"</span>: <span class="keyword">true</span>
+}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 3: Modelo de Dados -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.1);">🗄️</div>
+        Modelo de Dados
+      </div>
+
+      <div class="er-diagram">
+        <!-- Conversation -->
+        <div class="er-entity" style="border-top: 3px solid #2dd4bf;">
+          <div class="er-entity-header" style="background: rgba(13,148,136,0.1); color: var(--text-accent);">Conversation</div>
+          <div class="er-entity-body">
+            <div class="er-field"><span class="field-key">PK</span><span class="field-name">id</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-name">title</span><span class="field-type">String?</span></div>
+            <div class="er-field"><span class="field-name">projectPath</span><span class="field-type">String?</span></div>
+            <div class="er-field"><span class="field-name">status</span><span class="field-type">ConversationStatus</span></div>
+            <div class="er-field"><span class="field-name">totalTokensUsed</span><span class="field-type">Int</span></div>
+            <div class="er-field"><span class="field-name">totalCostUsd</span><span class="field-type">Float?</span></div>
+            <div class="er-field"><span class="field-name">lastMessageAt</span><span class="field-type">DateTime?</span></div>
+            <div class="er-field"><span class="field-name">isArchived</span><span class="field-type">Boolean</span></div>
+            <div class="er-field"><span class="field-name">tags</span><span class="field-type">Json ([])</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">parentId</span><span class="field-type">uuid? (self)</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">userId</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">workflowId</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">currentStepId</span><span class="field-type">uuid?</span></div>
+          </div>
+        </div>
+
+        <!-- Message -->
+        <div class="er-entity" style="border-top: 3px solid #3b82f6;">
+          <div class="er-entity-header" style="background: rgba(59,130,246,0.1); color: #60a5fa;">Message</div>
+          <div class="er-entity-body">
+            <div class="er-field"><span class="field-key">PK</span><span class="field-name">id</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-name">role</span><span class="field-type">String</span></div>
+            <div class="er-field"><span class="field-name">content</span><span class="field-type">String</span></div>
+            <div class="er-field"><span class="field-name">selectedForContext</span><span class="field-type">Boolean</span></div>
+            <div class="er-field"><span class="field-name">metadata</span><span class="field-type">Json?</span></div>
+            <div class="er-field"><span class="field-name">tokenCount</span><span class="field-type">Int?</span></div>
+            <div class="er-field"><span class="field-name">model</span><span class="field-type">String?</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">conversationId</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">stepId</span><span class="field-type">uuid?</span></div>
+          </div>
+        </div>
+
+        <!-- MessageAttachment -->
+        <div class="er-entity" style="border-top: 3px solid #f59e0b;">
+          <div class="er-entity-header" style="background: rgba(245,158,11,0.1); color: #fbbf24;">MessageAttachment</div>
+          <div class="er-entity-body">
+            <div class="er-field"><span class="field-key">PK</span><span class="field-name">id</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-name">filename</span><span class="field-type">String</span></div>
+            <div class="er-field"><span class="field-name">mimeType</span><span class="field-type">String</span></div>
+            <div class="er-field"><span class="field-name">size</span><span class="field-type">Int (bytes)</span></div>
+            <div class="er-field"><span class="field-name">path</span><span class="field-type">String (relative)</span></div>
+            <div class="er-field"><span class="field-name">projectPath</span><span class="field-type">String (absolute)</span></div>
+            <div class="er-field"><span class="field-name">url</span><span class="field-type">String</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">messageId</span><span class="field-type">uuid</span></div>
+          </div>
+        </div>
+
+        <!-- MessageFeedback -->
+        <div class="er-entity" style="border-top: 3px solid #ec4899;">
+          <div class="er-entity-header" style="background: rgba(236,72,153,0.1); color: #f472b6;">MessageFeedback</div>
+          <div class="er-entity-body">
+            <div class="er-field"><span class="field-key">PK</span><span class="field-name">id</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-name">rating</span><span class="field-type">Int (1-5)</span></div>
+            <div class="er-field"><span class="field-name">comment</span><span class="field-type">String?</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">messageId</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">conversationId</span><span class="field-type">uuid</span></div>
+          </div>
+        </div>
+
+        <!-- ConversationSession -->
+        <div class="er-entity" style="border-top: 3px solid #8b5cf6;">
+          <div class="er-entity-header" style="background: rgba(139,92,246,0.1); color: #a78bfa;">ConversationSession</div>
+          <div class="er-entity-body">
+            <div class="er-field"><span class="field-key">PK</span><span class="field-name">id</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-name">claudeSessionId</span><span class="field-type">String</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">conversationId</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">stepId</span><span class="field-type">uuid</span></div>
+            <div class="er-field" style="color: var(--text-muted); font-size: 0.75rem; padding-top: 0.25rem;">@@unique([conversationId, stepId])</div>
+          </div>
+        </div>
+
+        <!-- StepMemory -->
+        <div class="er-entity" style="border-top: 3px solid #22c55e;">
+          <div class="er-entity-header" style="background: rgba(34,197,94,0.1); color: #4ade80;">StepMemory</div>
+          <div class="er-entity-body">
+            <div class="er-field"><span class="field-key">PK</span><span class="field-name">id</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-name">content</span><span class="field-type">String (resumo)</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">conversationId</span><span class="field-type">uuid</span></div>
+            <div class="er-field"><span class="field-key">FK</span><span class="field-name">stepId</span><span class="field-type">uuid</span></div>
+            <div class="er-field" style="color: var(--text-muted); font-size: 0.75rem; padding-top: 0.25rem;">@@unique([conversationId, stepId])</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Enum -->
+      <div class="card" style="margin-top: 1.5rem;">
+        <h3 style="margin-bottom: 0.75rem;">ConversationStatus (enum)</h3>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <span class="badge badge-green">active</span>
+          <span class="badge badge-blue">completed</span>
+          <span class="badge badge-red">failed</span>
+          <span class="badge badge-gray">archived</span>
+        </div>
+        <p class="card-desc" style="margin-top: 0.75rem;">
+          <strong>role</strong> (Message): <code>user</code> | <code>assistant</code> | <code>system</code>
+        </p>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 4: Chat Interface (Frontend) -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(59,130,246,0.1);">🖥️</div>
+        Chat Interface (Frontend)
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <h3 style="margin-bottom: 0.75rem;">Componentes Principais</h3>
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span class="badge badge-teal">ChatContainer</span>
+                <span class="card-desc" style="font-size: 0.85rem;">Wrapper principal do chat com header, body e input</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span class="badge badge-blue">MessageBubble</span>
+                <span class="card-desc" style="font-size: 0.85rem;">Renderiza cada mensagem (user/assistant/system)</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span class="badge badge-purple">MessageInput</span>
+                <span class="card-desc" style="font-size: 0.85rem;">Textarea com envio, upload de imagens e atalhos</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span class="badge badge-amber">ExecutionTimeline</span>
+                <span class="card-desc" style="font-size: 0.85rem;">Barra de steps com progresso visual</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span class="badge badge-green">StreamingStatus</span>
+                <span class="card-desc" style="font-size: 0.85rem;">Indicador de execucao ativa com animacao</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span class="badge badge-red">ImageUploader</span>
+                <span class="card-desc" style="font-size: 0.85rem;">Upload de imagens como anexos via multipart</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span class="badge badge-gray">UsageStatsDialog</span>
+                <span class="card-desc" style="font-size: 0.85rem;">Modal com estatisticas de tokens, custo e performance</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Execution Timeline Mockup -->
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem;">Execution Timeline</h3>
+            <div class="timeline">
+              <div class="timeline-step">
+                <div class="timeline-dot done">✓</div>
+                <div class="timeline-label">Setup</div>
+              </div>
+              <div class="timeline-connector done"></div>
+              <div class="timeline-step">
+                <div class="timeline-dot done">✓</div>
+                <div class="timeline-label">Backend</div>
+              </div>
+              <div class="timeline-connector done"></div>
+              <div class="timeline-step">
+                <div class="timeline-dot current">3</div>
+                <div class="timeline-label">Frontend</div>
+              </div>
+              <div class="timeline-connector"></div>
+              <div class="timeline-step">
+                <div class="timeline-dot pending">4</div>
+                <div class="timeline-label">Deploy</div>
+              </div>
+            </div>
+            <p class="card-desc">Clicavel em modo <code>step_by_step</code>: o usuario pode navegar entre steps com advance, go_back e jump_to.</p>
+          </div>
+        </div>
+
+        <!-- Chat Mockup -->
+        <div>
+          <div class="chat-mockup">
+            <div class="chat-toolbar">
+              <div class="chat-toolbar-title">Meu Projeto - Step 3: Frontend</div>
+              <div class="chat-toolbar-badges">
+                <span class="badge badge-green" style="font-size: 0.7rem;">● Executando</span>
+                <span class="badge badge-gray" style="font-size: 0.7rem;">1.2k tokens</span>
+              </div>
+            </div>
+            <div class="chat-body">
+              <div class="chat-bubble system">Step 3: Frontend iniciado</div>
+              <div class="chat-bubble user">Crie a tela de login com validacao usando React Hook Form e Zod</div>
+              <div class="chat-bubble assistant">
+                Vou criar a tela de login. Primeiro, vou configurar o formulario com React Hook Form integrado ao Zod...<br><br>
+                <span style="color: var(--text-muted); font-size: 0.8rem;">📄 src/features/auth/LoginForm.tsx - criado</span><br>
+                <span style="color: var(--text-muted); font-size: 0.8rem;">📄 src/features/auth/auth.schema.ts - criado</span>
+              </div>
+              <div class="chat-bubble user">Adicione dark mode toggle no header</div>
+              <div class="chat-bubble assistant" style="opacity: 0.7;">
+                <span style="animation: pulse 1.5s infinite;">Escrevendo codigo...</span>
+              </div>
+            </div>
+            <div class="chat-input-bar">
+              <input type="text" placeholder="Digite sua mensagem..." disabled>
+              <button disabled>Enviar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 5: Execution Flow -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(245,158,11,0.1);">⚡</div>
+        Execution Flow
+      </div>
+
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 style="margin-bottom: 0.75rem;">Fluxo de Mensagem (SSE)</h3>
+        <div class="flow-container">
+          <div class="flow-node" style="border-color: #3b82f6;">📝 User envia mensagem</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node" style="border-color: #8b5cf6;">🔌 POST /conversations/:id/messages/stream</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node" style="border-color: #f59e0b;">🔄 TaskOrchestrator</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node" style="border-color: #22c55e;">🤖 Claude CLI</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node" style="border-color: #2dd4bf;">📡 SSE Events</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-bottom: 0.75rem;">SSE Events</h3>
+          <div class="sse-flow">
+            <div class="sse-event"><span class="event-name">step_start</span><span class="event-desc">Step iniciou execucao</span></div>
+            <div class="sse-event"><span class="event-name">stream</span><span class="event-desc">Texto parcial do Claude (streaming)</span></div>
+            <div class="sse-event"><span class="event-name">step_complete</span><span class="event-desc">Step finalizou com sucesso</span></div>
+            <div class="sse-event"><span class="event-name">step_error</span><span class="event-desc">Erro durante execucao do step</span></div>
+            <div class="sse-event"><span class="event-name">message_saved</span><span class="event-desc">Mensagem persistida no banco</span></div>
+            <div class="sse-event"><span class="event-name">complete</span><span class="event-desc">Workflow inteiro finalizado</span></div>
+            <div class="sse-event"><span class="event-name">cancelled</span><span class="event-desc">Execucao cancelada pelo usuario</span></div>
+            <div class="sse-event"><span class="event-name">execution_paused</span><span class="event-desc">Execucao pausada (ask_user)</span></div>
+            <div class="sse-event"><span class="event-name">execution_resumed</span><span class="event-desc">Execucao retomada apos pausa</span></div>
+            <div class="sse-event"><span class="event-name">user_interrupt</span><span class="event-desc">Interrupcao do usuario mid-execution</span></div>
+            <div class="sse-event"><span class="event-name">dag_batch_start</span><span class="event-desc">Batch de steps DAG iniciou</span></div>
+            <div class="sse-event"><span class="event-name">validation_failed</span><span class="event-desc">Validacao de step falhou</span></div>
+            <div class="sse-event"><span class="event-name">condition_retry</span><span class="event-desc">Retry automatico por condicao</span></div>
+            <div class="sse-event"><span class="event-name">condition_jump</span><span class="event-desc">Jump para outro step por condicao</span></div>
+            <div class="sse-event"><span class="event-name">context_reset</span><span class="event-desc">Contexto resetado (compactacao)</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom: 0.75rem;">Controles de Execucao</h3>
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="accordion-item open">
+              <div class="accordion-header">
+                <span>⏸ Pause / Resume</span>
+                <span class="accordion-arrow">▼</span>
+              </div>
+              <div class="accordion-body">
+                <p class="card-desc">A execucao pausa automaticamente quando o Claude CLI emite um evento <code>ask_user</code>. O frontend exibe a pergunta e o usuario pode responder. O endpoint <code>POST /messages/stream</code> detecta a pausa e retoma automaticamente com a resposta do usuario.</p>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <div class="accordion-header">
+                <span>🛑 Cancel</span>
+                <span class="accordion-arrow">▼</span>
+              </div>
+              <div class="accordion-body">
+                <p class="card-desc"><code>POST /conversations/:id/cancel</code> - Cancela a execucao ativa. O processo Claude CLI e terminado via signal e o SSE emite <code>cancelled</code>.</p>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <div class="accordion-header">
+                <span>💬 Interrupt</span>
+                <span class="accordion-arrow">▼</span>
+              </div>
+              <div class="accordion-body">
+                <p class="card-desc"><code>POST /conversations/:id/interrupt</code> - Envia mensagem durante execucao ativa. Util para redirecionar o Claude sem cancelar. O texto e injetado via stdin no processo.</p>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <div class="accordion-header">
+                <span>👀 Watch</span>
+                <span class="accordion-arrow">▼</span>
+              </div>
+              <div class="accordion-body">
+                <p class="card-desc"><code>GET /conversations/:id/watch</code> - SSE read-only para observar uma execucao ativa sem iniciar uma nova. Util para multiplas abas ou monitoramento.</p>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin-top: 1.5rem; margin-bottom: 0.75rem;">Step Navigation (step_by_step mode)</h3>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <code style="color: var(--text-accent); font-size: 0.8rem; min-width: 180px;">POST /:id/advance-step</code>
+              <span class="card-desc" style="font-size: 0.85rem;">Avanca para o proximo step</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <code style="color: var(--text-accent); font-size: 0.8rem; min-width: 180px;">POST /:id/go-back-step</code>
+              <span class="card-desc" style="font-size: 0.85rem;">Volta para o step anterior</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <code style="color: var(--text-accent); font-size: 0.8rem; min-width: 180px;">POST /:id/jump-to-step</code>
+              <span class="card-desc" style="font-size: 0.85rem;">Pula direto para qualquer step (body: { stepId })</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 6: Project Folders -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(34,197,94,0.1);">📁</div>
+        Project Folders
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-bottom: 0.75rem;">Estrutura de Diretorios</h3>
+          <div class="folder-tree">
+            <span class="folder">/workspace/temp-orquestrador/</span><br>
+            &nbsp;&nbsp;<span class="folder">users/</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">{userId}/</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="folder">projetos/</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">meu-saas/</span> <span class="file">← projectPath da conversa</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">loja-virtual/</span><br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="highlight">api-pagamentos/</span>
+          </div>
+          <p class="card-desc" style="margin-top: 0.75rem;">
+            Cada conversa e vinculada a um <code>projectPath</code> no disco. O Claude CLI opera dentro dessa pasta, lendo e escrevendo arquivos do projeto.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom: 0.75rem;">GET /folders</h3>
+          <div class="code-block">
+<span class="keyword">GET</span> /folders
+<span class="comment">// Lista pastas de projeto do usuario logado</span>
+<span class="comment">// Response:</span>
+[
+  {
+    <span class="string">"name"</span>: <span class="string">"meu-saas"</span>,
+    <span class="string">"path"</span>: <span class="string">"/workspace/temp-orquestrador/users/abc123/projetos/meu-saas"</span>,
+    <span class="string">"conversationsCount"</span>: <span class="number">3</span>
+  },
+  {
+    <span class="string">"name"</span>: <span class="string">"loja-virtual"</span>,
+    <span class="string">"path"</span>: <span class="string">"/workspace/temp-orquestrador/users/abc123/projetos/loja-virtual"</span>,
+    <span class="string">"conversationsCount"</span>: <span class="number">1</span>
+  }
+]
+          </div>
+          <p class="card-desc" style="margin-top: 0.75rem;">
+            O diretorio base e configuravel via <code>PROJECT_BASE_PATH</code> (default: <code>/workspace/temp-orquestrador</code>). Os diretorios sao criados automaticamente com <code>mkdirSync({ recursive: true })</code>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 7: Endpoints -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(13,148,136,0.1);">🔌</div>
+        Endpoints API
+      </div>
+
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="Filtrar endpoints..." data-search-target="endpoints-table">
+      </div>
+
+      <div class="table-container">
+        <table id="endpoints-table">
+          <thead>
+            <tr>
+              <th>Metodo</th>
+              <th>Rota</th>
+              <th>Descricao</th>
+              <th>Tag</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Conversations CRUD -->
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/folders</code></td>
+              <td>Listar pastas de projeto do usuario</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td><code>/conversations</code></td>
+              <td>Criar nova conversa</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/conversations</code></td>
+              <td>Listar todas as conversas (filtro por workflowId)</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/conversations/:id</code></td>
+              <td>Obter conversa com mensagens e workflow</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-amber">PATCH</span></td>
+              <td><code>/conversations/:id</code></td>
+              <td>Atualizar titulo da conversa</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-red">DELETE</span></td>
+              <td><code>/conversations/:id</code></td>
+              <td>Deletar conversa</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-red">DELETE</span></td>
+              <td><code>/conversations/batch</code></td>
+              <td>Deletar multiplas conversas (body: { ids[] })</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td><code>/conversations/:id/clone</code></td>
+              <td>Clonar conversa (fork com parentId)</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <!-- Step Navigation -->
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td><code>/conversations/:id/advance-step</code></td>
+              <td>Avancar para o proximo step</td>
+              <td><span class="badge badge-purple">Steps</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td><code>/conversations/:id/go-back-step</code></td>
+              <td>Voltar para o step anterior</td>
+              <td><span class="badge badge-purple">Steps</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td><code>/conversations/:id/jump-to-step</code></td>
+              <td>Pular para qualquer step (body: { stepId })</td>
+              <td><span class="badge badge-purple">Steps</span></td>
+            </tr>
+            <!-- Execution -->
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td><code>/conversations/:id/messages/stream</code></td>
+              <td>Enviar mensagem e receber SSE stream</td>
+              <td><span class="badge badge-teal">Messages</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td><code>/conversations/:id/interrupt</code></td>
+              <td>Interromper execucao com mensagem do usuario</td>
+              <td><span class="badge badge-teal">Messages</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td><code>/conversations/:id/cancel</code></td>
+              <td>Cancelar execucao ativa</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/conversations/:id/watch</code></td>
+              <td>SSE read-only para observar execucao ativa</td>
+              <td><span class="badge badge-teal">Messages</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/conversations/:id/messages</code></td>
+              <td>Listar mensagens (filtro por stepId)</td>
+              <td><span class="badge badge-teal">Messages</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/conversations/:id/status</code></td>
+              <td>Status de execucao (isExecuting, isPaused, pausedInfo)</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/conversations/:id/execution-status</code></td>
+              <td>Status real-time (active, paused, stepIndex)</td>
+              <td><span class="badge badge-teal">Messages</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/conversations/:id/token-usage</code></td>
+              <td>Uso de tokens por step</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/conversations/:id/execution-stats</code></td>
+              <td>Estatisticas detalhadas (tokens, custo, tools, steps)</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/conversations/:id/suggestions</code></td>
+              <td>Sugestoes AI de proximos passos</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/conversations/:id/traces</code></td>
+              <td>Listar execution traces da conversa</td>
+              <td><span class="badge badge-teal">Messages</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/traces/:traceId</code></td>
+              <td>Detalhe completo de um trace (stdout, stderr, events)</td>
+              <td><span class="badge badge-teal">Messages</span></td>
+            </tr>
+            <!-- Messages -->
+            <tr>
+              <td><span class="badge badge-amber">PUT</span></td>
+              <td><code>/messages/:id/select</code></td>
+              <td>Toggle selecao de mensagem para contexto</td>
+              <td><span class="badge badge-teal">Messages</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-amber">PUT</span></td>
+              <td><code>/messages/:id/actions</code></td>
+              <td>Atualizar metadata de acoes da mensagem</td>
+              <td><span class="badge badge-teal">Messages</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-red">DELETE</span></td>
+              <td><code>/messages/:id</code></td>
+              <td>Deletar mensagem</td>
+              <td><span class="badge badge-teal">Messages</span></td>
+            </tr>
+            <!-- Sessions -->
+            <tr>
+              <td><span class="badge badge-red">DELETE</span></td>
+              <td><code>/conversations/:id/sessions/:stepId</code></td>
+              <td>Resetar sessao Claude CLI de um step</td>
+              <td><span class="badge badge-gray">Conversations</span></td>
+            </tr>
+            <!-- Feedback -->
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td><code>/messages/:messageId/feedback</code></td>
+              <td>Adicionar feedback (rating 1-5) a mensagem</td>
+              <td><span class="badge badge-red" style="background: rgba(236,72,153,0.1); color: #f472b6; border-color: rgba(236,72,153,0.3);">Feedback</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">GET</span></td>
+              <td><code>/messages/:messageId/feedback</code></td>
+              <td>Obter feedback de uma mensagem</td>
+              <td><span class="badge badge-red" style="background: rgba(236,72,153,0.1); color: #f472b6; border-color: rgba(236,72,153,0.3);">Feedback</span></td>
+            </tr>
+            <!-- Attachments -->
+            <tr>
+              <td><span class="badge badge-blue">POST</span></td>
+              <td><code>/conversations/:id/attachments</code></td>
+              <td>Upload de imagens (multipart)</td>
+              <td><span class="badge badge-amber">Attachments</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 8: Fork & Clone -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.1);">🍴</div>
+        Fork & Clone
+      </div>
+
+      <div class="card">
+        <div class="grid-2">
+          <div>
+            <h3 style="margin-bottom: 0.75rem;">Como funciona</h3>
+            <div class="card-desc" style="line-height: 1.8;">
+              O clone cria uma nova conversa com:
+              <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                <li>Mesmo <code>workflowId</code> da conversa original</li>
+                <li>Mesmo <code>projectPath</code></li>
+                <li><code>parentId</code> apontando para a conversa original</li>
+                <li>Titulo com sufixo "(clone)"</li>
+                <li>Historico de mensagens NAO e copiado (comeca limpo)</li>
+                <li><code>currentStepId</code> resetado para o primeiro step</li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <h3 style="margin-bottom: 0.75rem;">Diagrama de Relacionamento</h3>
+            <div style="background: var(--bg-secondary); border-radius: 10px; padding: 1.5rem; border: 1px solid var(--border-color);">
+              <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                <div class="diagram-box" style="border-color: #3b82f6;">📝 Conversa Original (parent)</div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <div style="width: 2px; height: 30px; background: var(--border-color);"></div>
+                </div>
+                <div style="display: flex; gap: 1.5rem;">
+                  <div class="diagram-box" style="border-color: #8b5cf6;">🍴 Clone 1 (parentId = original)</div>
+                  <div class="diagram-box" style="border-color: #8b5cf6;">🍴 Clone 2 (parentId = original)</div>
+                </div>
+              </div>
+            </div>
+            <p class="card-desc" style="margin-top: 0.75rem;">
+              O campo <code>children</code> no model Conversation permite navegar de parent para clones via <code>@relation("ConversationParent")</code>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 9: Export -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(59,130,246,0.1);">📤</div>
+        Export
+      </div>
+
+      <div class="card">
+        <div class="card-desc" style="margin-bottom: 1rem;">
+          A funcionalidade de export permite extrair todos os dados de uma conversa em formato JSON para backup, analise ou migracao.
+        </div>
+        <div class="code-block">
+<span class="keyword">POST</span> /conversations/:id/export
+<span class="comment">// Response: JSON com todos os dados da conversa</span>
+{
+  <span class="string">"conversation"</span>: {
+    <span class="string">"id"</span>: <span class="string">"uuid"</span>,
+    <span class="string">"title"</span>: <span class="string">"Meu Projeto SaaS"</span>,
+    <span class="string">"status"</span>: <span class="string">"completed"</span>,
+    <span class="string">"totalTokensUsed"</span>: <span class="number">45230</span>,
+    <span class="string">"totalCostUsd"</span>: <span class="number">0.18</span>,
+    <span class="string">"tags"</span>: [<span class="string">"saas"</span>, <span class="string">"react"</span>],
+    <span class="string">"messages"</span>: [ <span class="comment">/* array de mensagens */</span> ],
+    <span class="string">"traces"</span>: [ <span class="comment">/* array de execution traces */</span> ],
+    <span class="string">"sessions"</span>: [ <span class="comment">/* array de sessions */</span> ],
+    <span class="string">"stepMemories"</span>: [ <span class="comment">/* array de step memories */</span> ]
+  },
+  <span class="string">"exportedAt"</span>: <span class="string">"2026-03-24T10:00:00Z"</span>
+}
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 10: Memory Management -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(34,197,94,0.1);">🧠</div>
+        Memory Management
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-icon" style="background: rgba(34,197,94,0.1);">📝</div><div class="card-title">StepMemory</div></div>
+          <div class="card-desc">
+            Cada par <code>(conversationId, stepId)</code> pode ter um <code>StepMemory</code> associado. Este registro contem um resumo compactado do contexto acumulado da conversa ate aquele step.
+            <br><br>
+            Quando a conversa fica longa demais para o contexto do Claude, o sistema compacta as mensagens antigas em um resumo e salva como StepMemory. Nas proximas execucoes, o StepMemory e injetado no system prompt para manter a continuidade.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-icon" style="background: rgba(245,158,11,0.1);">🔄</div><div class="card-title">Compactacao de Contexto</div></div>
+          <div class="card-desc" style="line-height: 1.8;">
+            O fluxo de compactacao funciona assim:
+            <ol style="margin-top: 0.5rem; padding-left: 1.5rem;">
+              <li>Mensagens se acumulam durante a conversa</li>
+              <li>Quando o total de tokens excede o limite, o <code>MemoryManager</code> e acionado</li>
+              <li>Mensagens antigas sao resumidas via Claude API</li>
+              <li>O resumo e salvo como <code>StepMemory</code></li>
+              <li>Mensagens antigas marcadas como <code>selectedForContext = false</code></li>
+              <li>SSE emite evento <code>context_reset</code></li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.5rem;">
+        <h3 style="margin-bottom: 0.75rem;">Fluxo de Compactacao</h3>
+        <div class="flow-container">
+          <div class="flow-node" style="border-color: #f59e0b;">📊 Token limit excedido</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node" style="border-color: #8b5cf6;">🧠 MemoryManager</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node" style="border-color: #3b82f6;">🤖 Claude resume msgs</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node" style="border-color: #22c55e;">💾 Salva StepMemory</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node" style="border-color: #2dd4bf;">📡 context_reset</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION 11: Sessions -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(139,92,246,0.1);">🔗</div>
+        Sessions (Claude CLI)
+      </div>
+
+      <div class="card">
+        <div class="grid-2">
+          <div>
+            <h3 style="margin-bottom: 0.75rem;">ConversationSession</h3>
+            <div class="card-desc" style="line-height: 1.8;">
+              Cada combinacao <code>(conversationId, stepId)</code> tem uma sessao Claude CLI associada. O <code>claudeSessionId</code> permite retomar o contexto do Claude entre execucoes.
+              <br><br>
+              Quando o usuario envia uma nova mensagem no mesmo step, o sistema passa o <code>--resume</code> flag com o token da sessao anterior, mantendo todo o contexto (arquivos lidos, historico de ferramentas, etc.).
+              <br><br>
+              O endpoint <code>DELETE /conversations/:id/sessions/:stepId</code> permite resetar a sessao de um step especifico, forcando o Claude a comecar do zero naquele step.
+            </div>
+          </div>
+          <div>
+            <h3 style="margin-bottom: 0.75rem;">Fluxo de Resume</h3>
+            <div style="background: var(--bg-secondary); border-radius: 10px; padding: 1.5rem; border: 1px solid var(--border-color);">
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <span class="badge badge-teal" style="min-width: 24px; justify-content: center;">1</span>
+                  <span class="card-desc" style="font-size: 0.85rem;">Mensagem chega no step X</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <span class="badge badge-teal" style="min-width: 24px; justify-content: center;">2</span>
+                  <span class="card-desc" style="font-size: 0.85rem;">SessionManager busca sessao para (conv, stepX)</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <span class="badge badge-teal" style="min-width: 24px; justify-content: center;">3</span>
+                  <span class="card-desc" style="font-size: 0.85rem;">Se existe: <code>--resume {claudeSessionId}</code></span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <span class="badge badge-teal" style="min-width: 24px; justify-content: center;">4</span>
+                  <span class="card-desc" style="font-size: 0.85rem;">Se nao: nova sessao, salva o ID no banco</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <span class="badge badge-teal" style="min-width: 24px; justify-content: center;">5</span>
+                  <span class="card-desc" style="font-size: 0.85rem;">Trace registra <code>resumeTokenOut</code> para proxima vez</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION: Execution Stats Detail -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(245,158,11,0.1);">📊</div>
+        Execution Stats (Detalhamento)
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom: 0.75rem;">GET /conversations/:id/execution-stats</h3>
+        <div class="card-desc" style="margin-bottom: 1rem;">
+          Retorna estatisticas detalhadas de uma conversa incluindo tokens (input, output, cache), custo estimado, performance, uso de ferramentas e breakdown por step.
+        </div>
+
+        <div class="tabs-container">
+          <div class="tabs-header">
+            <button class="tab-btn active" data-tab="tab-tokens">Tokens</button>
+            <button class="tab-btn" data-tab="tab-cost">Custo</button>
+            <button class="tab-btn" data-tab="tab-performance">Performance</button>
+            <button class="tab-btn" data-tab="tab-tools">Tools</button>
+            <button class="tab-btn" data-tab="tab-steps-breakdown">Steps</button>
+          </div>
+
+          <div id="tab-tokens" class="tab-content active">
+            <div class="code-block">
+<span class="string">"tokens"</span>: {
+  <span class="string">"input"</span>: <span class="number">32000</span>,
+  <span class="string">"output"</span>: <span class="number">12500</span>,
+  <span class="string">"cacheCreation"</span>: <span class="number">5000</span>,
+  <span class="string">"cacheRead"</span>: <span class="number">18000</span>,
+  <span class="string">"total"</span>: <span class="number">67500</span>
+}
+            </div>
+          </div>
+
+          <div id="tab-cost" class="tab-content">
+            <div class="code-block">
+<span class="string">"cost"</span>: {
+  <span class="string">"estimatedUsd"</span>: <span class="number">0.24</span>,
+  <span class="string">"totalCostUsd"</span>: <span class="number">0.18</span>
+}
+            </div>
+          </div>
+
+          <div id="tab-performance" class="tab-content">
+            <div class="code-block">
+<span class="string">"performance"</span>: {
+  <span class="string">"totalDurationMs"</span>: <span class="number">45200</span>,
+  <span class="string">"apiDurationMs"</span>: <span class="number">38000</span>,
+  <span class="string">"numTurns"</span>: <span class="number">8</span>
+}
+            </div>
+          </div>
+
+          <div id="tab-tools" class="tab-content">
+            <div class="code-block">
+<span class="string">"tools"</span>: {
+  <span class="string">"webSearchRequests"</span>: <span class="number">2</span>,
+  <span class="string">"webFetchRequests"</span>: <span class="number">5</span>
+}
+            </div>
+          </div>
+
+          <div id="tab-steps-breakdown" class="tab-content">
+            <div class="code-block">
+<span class="string">"steps"</span>: [
+  {
+    <span class="string">"stepId"</span>: <span class="string">"uuid"</span>,
+    <span class="string">"stepName"</span>: <span class="string">"Setup"</span>,
+    <span class="string">"inputTokens"</span>: <span class="number">8000</span>,
+    <span class="string">"outputTokens"</span>: <span class="number">3200</span>,
+    <span class="string">"totalTokens"</span>: <span class="number">11200</span>,
+    <span class="string">"durationMs"</span>: <span class="number">12000</span>,
+    <span class="string">"actionsCount"</span>: <span class="number">5</span>,
+    <span class="string">"exitCode"</span>: <span class="number">0</span>,
+    <span class="string">"resultStatus"</span>: <span class="string">"success"</span>
+  }
+]
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION: AI Suggestions -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(236,72,153,0.1);">🤖</div>
+        AI Suggestions
+      </div>
+
+      <div class="card">
+        <div class="grid-2">
+          <div>
+            <h3 style="margin-bottom: 0.75rem;">GET /conversations/:id/suggestions</h3>
+            <div class="card-desc" style="line-height: 1.8;">
+              Gera sugestoes de proximos passos baseadas no historico da conversa usando Claude Haiku. Analisa:
+              <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                <li>System prompt do step atual e do workflow inteiro</li>
+                <li>Ultimas 20 mensagens da conversa</li>
+                <li>Ferramentas usadas na ultima execucao</li>
+                <li>Objetivo original do usuario (primeira mensagem)</li>
+              </ul>
+              <br>
+              Retorna exatamente 4 sugestoes com <code>text</code> (instrucao para colar no chat) e <code>description</code> (justificativa).
+            </div>
+          </div>
+          <div>
+            <div class="code-block">
+<span class="keyword">GET</span> /conversations/:id/suggestions
+<span class="comment">// Response:</span>
+{
+  <span class="string">"suggestions"</span>: [
+    {
+      <span class="string">"text"</span>: <span class="string">"Crie os testes de integracao para a API de autenticacao"</span>,
+      <span class="string">"description"</span>: <span class="string">"API criada, proximo passo e validar com testes"</span>
+    },
+    {
+      <span class="string">"text"</span>: <span class="string">"Implemente o middleware de rate limiting"</span>,
+      <span class="string">"description"</span>: <span class="string">"Seguranca essencial antes de ir para producao"</span>
+    }
+  ]
+}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- SECTION: Source Files -->
+    <!-- ============================================ -->
+    <div class="section">
+      <div class="section-title">
+        <div class="icon" style="background: rgba(100,116,139,0.1);">📂</div>
+        Arquivos Fonte
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 style="margin-bottom: 0.75rem;">Backend</h3>
+          <div style="display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem;">
+            <code style="color: var(--text-accent);">src/domains/conversations/conversations.routes.ts</code>
+            <code style="color: var(--text-accent);">src/domains/conversations/conversations.service.ts</code>
+            <code style="color: var(--text-accent);">src/domains/conversations/conversations.repository.ts</code>
+            <code style="color: var(--text-accent);">src/domains/conversations/feedback.routes.ts</code>
+            <code style="color: var(--text-accent);">src/domains/execution/execution.routes.ts</code>
+            <code style="color: var(--text-accent);">src/domains/execution/messages.repository.ts</code>
+            <code style="color: var(--text-accent);">src/domains/execution/memory/memory-manager.ts</code>
+            <code style="color: var(--text-accent);">src/domains/execution/session/session-manager.ts</code>
+            <code style="color: var(--text-accent);">src/domains/attachments/attachments.routes.ts</code>
+            <code style="color: var(--text-accent);">src/domains/attachments/upload-service.ts</code>
+            <code style="color: var(--text-accent);">prisma/schema.prisma</code>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom: 0.75rem;">Frontend (Componentes Chave)</h3>
+          <div style="display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem;">
+            <code style="color: #60a5fa;">features/conversations/</code>
+            <code style="color: #60a5fa;">&nbsp;&nbsp;components/ChatContainer.tsx</code>
+            <code style="color: #60a5fa;">&nbsp;&nbsp;components/MessageBubble.tsx</code>
+            <code style="color: #60a5fa;">&nbsp;&nbsp;components/MessageInput.tsx</code>
+            <code style="color: #60a5fa;">&nbsp;&nbsp;components/ExecutionTimeline.tsx</code>
+            <code style="color: #60a5fa;">&nbsp;&nbsp;components/StreamingStatus.tsx</code>
+            <code style="color: #60a5fa;">&nbsp;&nbsp;components/ImageUploader.tsx</code>
+            <code style="color: #60a5fa;">&nbsp;&nbsp;components/UsageStatsDialog.tsx</code>
+            <code style="color: #60a5fa;">&nbsp;&nbsp;hooks/useConversation.ts</code>
+            <code style="color: #60a5fa;">&nbsp;&nbsp;hooks/useSSEStream.ts</code>
+            <code style="color: #60a5fa;">&nbsp;&nbsp;api/conversations.api.ts</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="shared.js"></script>
+</body>
+</html>
