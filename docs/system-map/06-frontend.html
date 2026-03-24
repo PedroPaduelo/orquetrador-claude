@@ -1,1261 +1,1660 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Frontend — Arquitetura | Orquetrador Claude</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            surface: { 50: '#f8fafc', 100: '#f1f5f9', 700: '#1e293b', 800: '#0f172a', 900: '#020617' },
-            accent: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
-            cyan: { 400: '#22d3ee', 500: '#06b6d4' },
-            emerald: { 400: '#34d399', 500: '#10b981' },
-            amber: { 400: '#fbbf24', 500: '#f59e0b' },
-            rose: { 400: '#fb7185', 500: '#f43f5e' },
-          }
-        }
-      }
-    }
-  </script>
+  <title>06 - Frontend | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-    body { font-family: 'Inter', system-ui, sans-serif; }
-    code, .mono { font-family: 'JetBrains Mono', monospace; }
-    * { scrollbar-width: thin; scrollbar-color: #334155 #0f172a; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-
-    .glow-indigo { box-shadow: 0 0 20px rgba(99, 102, 241, 0.15), 0 0 60px rgba(99, 102, 241, 0.05); }
-    .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.15), 0 0 60px rgba(6, 182, 212, 0.05); }
-    .glow-emerald { box-shadow: 0 0 20px rgba(16, 185, 129, 0.15), 0 0 60px rgba(16, 185, 129, 0.05); }
-    .glow-amber { box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), 0 0 60px rgba(245, 158, 11, 0.05); }
-    .glow-rose { box-shadow: 0 0 20px rgba(244, 63, 94, 0.15), 0 0 60px rgba(244, 63, 94, 0.05); }
-
-    .section-card {
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.6) 100%);
-      border: 1px solid rgba(99, 102, 241, 0.1);
-      transition: all 0.3s ease;
+    /* Route Map */
+    .route-map {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
     }
-    .section-card:hover { border-color: rgba(99, 102, 241, 0.25); }
-
-    .tree-line { position: relative; }
-    .tree-line::before {
-      content: '';
-      position: absolute;
-      left: -20px;
-      top: 0;
-      bottom: 0;
-      width: 1px;
-      background: linear-gradient(to bottom, rgba(99,102,241,0.4), rgba(99,102,241,0.1));
-    }
-    .tree-line::after {
-      content: '';
-      position: absolute;
-      left: -20px;
-      top: 14px;
-      width: 16px;
-      height: 1px;
-      background: rgba(99,102,241,0.4);
-    }
-
-    .route-node {
-      transition: all 0.2s ease;
-      cursor: default;
-    }
-    .route-node:hover {
-      transform: translateX(4px);
-      filter: brightness(1.2);
-    }
-
-    .flow-arrow {
-      display: inline-flex;
+    .route-row {
+      display: grid;
+      grid-template-columns: 200px 200px 1fr;
+      gap: 1rem;
       align-items: center;
-      color: #64748b;
-      margin: 0 4px;
+      padding: 0.65rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      transition: background 0.2s;
     }
-    .flow-arrow::after {
-      content: '\2192';
-      font-size: 1.1em;
+    .route-row:hover { background: var(--bg-card-hover); }
+    .route-row:last-child { border-bottom: none; }
+    .route-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text-accent);
+      font-weight: 500;
+    }
+    .route-component {
+      font-size: 0.85rem;
+      color: #c084fc;
+      font-weight: 500;
+    }
+    .route-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .route-row-header {
+      background: var(--bg-secondary);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-color);
+      border-radius: 12px 12px 0 0;
+    }
+    .route-row-header:hover { background: var(--bg-secondary); }
+    .route-group-label {
+      grid-column: 1 / -1;
+      padding: 0.6rem 1rem;
+      background: rgba(13, 148, 136, 0.06);
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--text-accent);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    .pulse-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.3); }
-    }
-
-    .collapsible-content {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.4s ease;
-    }
-    .collapsible-content.open {
-      max-height: 5000px;
-    }
-
-    .nav-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      border: 2px solid #475569;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    .nav-dot.active {
-      border-color: #6366f1;
-      background: #6366f1;
-      box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
-    }
-
+    /* Store Cards */
     .store-card {
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(99,102,241,0.15);
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 16px;
+      padding: 1.25rem;
       transition: all 0.3s;
     }
     .store-card:hover {
-      border-color: rgba(99,102,241,0.35);
+      border-color: rgba(13, 148, 136, 0.3);
+      box-shadow: var(--shadow-glow);
       transform: translateY(-2px);
     }
-
-    .ascii-box {
-      background: rgba(2, 6, 23, 0.8);
-      border: 1px solid rgba(99,102,241,0.2);
+    .store-name {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .store-state, .store-actions {
+      margin-top: 0.6rem;
+    }
+    .store-state-title, .store-actions-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+    .store-item {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      line-height: 1.5;
-      letter-spacing: 0.02em;
-      color: #94a3b8;
-      white-space: pre;
-      overflow-x: auto;
-      padding: 24px;
-      border-radius: 12px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      padding: 0.15rem 0;
+    }
+    .store-item .type {
+      color: #67e8f9;
+      font-size: 0.72rem;
+    }
+    .store-item .fn {
+      color: #fbbf24;
     }
 
-    .flow-step {
-      position: relative;
-      padding: 10px 16px;
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid rgba(99,102,241,0.2);
-      border-radius: 8px;
-      font-size: 0.85rem;
-      color: #e2e8f0;
-      transition: all 0.2s;
+    /* Feature Tree */
+    .tree {
+      padding-left: 0;
+      list-style: none;
     }
-    .flow-step:hover { border-color: rgba(99,102,241,0.5); }
-
-    .connector-h {
-      width: 32px;
-      height: 2px;
-      background: linear-gradient(to right, rgba(99,102,241,0.5), rgba(99,102,241,0.2));
+    .tree li {
       position: relative;
-      flex-shrink: 0;
+      padding-left: 1.75rem;
+      line-height: 2;
     }
-    .connector-h::after {
+    .tree li::before {
       content: '';
       position: absolute;
-      right: 0;
-      top: -3px;
-      border: solid rgba(99,102,241,0.5);
-      border-width: 0 2px 2px 0;
-      padding: 3px;
-      transform: rotate(-45deg);
+      left: 0.5rem;
+      top: 0;
+      bottom: 0.85rem;
+      width: 1px;
+      background: var(--border-color);
+    }
+    .tree li::after {
+      content: '';
+      position: absolute;
+      left: 0.5rem;
+      top: 1rem;
+      width: 0.8rem;
+      height: 1px;
+      background: var(--border-color);
+    }
+    .tree li:last-child::before {
+      bottom: calc(100% - 1rem);
+    }
+    .tree .folder {
+      color: #fbbf24;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .tree .file {
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
     }
 
-    .grid-bg {
-      background-image:
-        linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-    }
-
-    .tag {
-      display: inline-flex;
+    /* SSE Phase Flow */
+    .phase-flow {
+      display: flex;
       align-items: center;
-      padding: 2px 8px;
-      border-radius: 4px;
+      gap: 0;
+      flex-wrap: wrap;
+      padding: 1rem 0;
+    }
+    .phase-node {
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.6rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-align: center;
+      min-width: 120px;
+      transition: all 0.3s;
+    }
+    .phase-node:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+    }
+    .phase-node.active-phase {
+      border-color: var(--border-accent);
+      background: var(--bg-accent-subtle);
+    }
+    .phase-arrow {
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      padding: 0 0.35rem;
+    }
+    .phase-label {
       font-size: 0.7rem;
-      font-weight: 500;
-      letter-spacing: 0.03em;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
     }
 
-    .hero-gradient {
-      background: radial-gradient(ellipse at 30% 0%, rgba(99,102,241,0.12) 0%, transparent 60%),
-                  radial-gradient(ellipse at 70% 100%, rgba(6,182,212,0.08) 0%, transparent 50%);
+    /* Component Grid */
+    .comp-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .comp-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      transition: all 0.2s;
+    }
+    .comp-chip:hover {
+      border-color: var(--border-accent);
+      background: var(--bg-accent-subtle);
+      color: var(--text-accent);
+    }
+
+    /* Wizard Steps */
+    .wizard-flow {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+    }
+    .wizard-step {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 1.25rem;
+      position: relative;
+      transition: all 0.3s;
+    }
+    .wizard-step:first-child { border-radius: 12px 0 0 12px; }
+    .wizard-step:last-child { border-radius: 0 12px 12px 0; }
+    .wizard-step:hover {
+      border-color: var(--border-accent);
+      z-index: 1;
+    }
+    .wizard-step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .wizard-step-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.4rem;
+    }
+    .wizard-step-desc {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .wizard-connector {
+      width: 0;
+      height: 0;
+      border-top: 20px solid transparent;
+      border-bottom: 20px solid transparent;
+      border-left: 14px solid var(--border-color);
+      align-self: center;
+      margin: 0 -1px;
+      z-index: 2;
+    }
+
+    /* SSE Event Table */
+    .event-tag {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      background: rgba(139, 92, 246, 0.1);
+      color: #a78bfa;
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      border-radius: 4px;
+    }
+
+    /* Color vars diagram */
+    .color-swatch {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+    }
+    .swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    /* API Config */
+    .config-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .config-row:last-child { border-bottom: none; }
+    .config-key {
+      font-weight: 500;
+      font-size: 0.88rem;
+    }
+    .config-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text-accent);
+    }
+
+    @media (max-width: 900px) {
+      .route-row { grid-template-columns: 1fr; gap: 0.25rem; }
+      .route-row-header { display: none; }
+      .wizard-flow { flex-direction: column; }
+      .wizard-step { border-radius: 12px !important; }
+      .wizard-connector { display: none; }
+      .phase-flow { justify-content: center; }
     }
   </style>
 </head>
-<body class="bg-surface-900 text-slate-300 min-h-screen grid-bg">
+<body>
 
-<nav class="sticky top-0 z-50" style="background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);border-bottom:1px solid rgba(148,163,184,0.1)">
-  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-    <a href="index.html" class="flex items-center gap-2 text-white font-semibold text-sm hover:text-blue-400 transition">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4"/></svg>
-      Orquetrador Claude
-    </a>
-    <div class="hidden lg:flex items-center gap-1 text-xs">
-      <a href="01-visao-geral.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">01 Visão Geral</a>
-      <a href="02-fluxo-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">02 Fluxo</a>
-      <a href="03-banco-de-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">03 DB</a>
-      <a href="04-api-endpoints.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">04 API</a>
-      <a href="05-motor-execucao.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav05">05 Execução</a>
-      <a href="06-frontend.html" class="px-2.5 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 font-semibold" id="nav06">06 Frontend</a>
-      <a href="07-seguranca.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">07 Segurança</a>
-      <a href="08-integracoes.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">08 Integrações</a>
-      <a href="09-mcp-server.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">09 MCP</a>
-      <a href="10-tempo-real-filas.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition">10 Real-time</a>
-        <a href="11-db-scan-melhorias.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav11">11 DB Scan</a>
-        <a href="12-estrutura-dados.html" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition" id="nav12">12 Estrutura</a>
+<div class="page-container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="breadcrumb">
+      <a href="index.html">System Map</a>
+      <span>›</span>
+      <span>06 - Frontend</span>
+    </div>
+    <h1>Frontend</h1>
+    <p class="subtitle">React 18 + Vite 6 + TypeScript 5.7 — Interface completa do Orquetrador Claude</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid-4" style="margin-bottom: 2.5rem;">
+    <div class="stat-box">
+      <div class="stat-value" data-count="18">18</div>
+      <div class="stat-label">Rotas</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="8">8</div>
+      <div class="stat-label">Zustand Stores</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="23">23</div>
+      <div class="stat-label">Componentes UI</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="16">16</div>
+      <div class="stat-label">Eventos SSE</div>
     </div>
   </div>
-</nav>
 
-  <!-- Navigation Side Dots -->
-  <nav class="fixed right-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-3" id="sideNav">
-    <div class="nav-dot active" data-section="header" title="Topo"></div>
-    <div class="nav-dot" data-section="routes" title="Route Map"></div>
-    <div class="nav-dot" data-section="hierarchy" title="Component Hierarchy"></div>
-    <div class="nav-dot" data-section="stores" title="State Management"></div>
-    <div class="nav-dot" data-section="dataflow" title="Data Flow"></div>
-    <div class="nav-dot" data-section="userflows" title="User Flows"></div>
-    <div class="nav-dot" data-section="components" title="UI Components"></div>
-    <div class="nav-dot" data-section="layout" title="Conversation Layout"></div>
-  </nav>
+  <!-- ================================================ -->
+  <!-- SECTION 1: Tech Stack -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-1);">&#9881;</div>
+      Tech Stack
+    </div>
 
-  <!-- ======================= HEADER ======================= -->
-  <header id="header" class="hero-gradient border-b border-slate-800/60">
-    <div class="max-w-7xl mx-auto px-6 py-16">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg">F</div>
-        <span class="text-xs font-medium tracking-widest uppercase text-indigo-400">06 / System Map</span>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#9883;</div>
+          <div>
+            <div class="card-title">Core</div>
+          </div>
+        </div>
+        <div class="card-desc">
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.25rem;">
+            <span class="badge badge-teal">React 18</span>
+            <span class="badge badge-teal">Vite 6</span>
+            <span class="badge badge-teal">TypeScript 5.7</span>
+          </div>
+        </div>
       </div>
-      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3 tracking-tight">
-        Frontend <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">&mdash; Arquitetura</span>
-      </h1>
-      <p class="text-lg text-slate-400 max-w-2xl">
-        React 18 + Vite 6 + Tailwind CSS + shadcn/ui &mdash; Single-page app com SSE streaming, 8 Zustand stores e 17+ rotas protegidas.
-      </p>
-      <div class="flex flex-wrap gap-3 mt-6">
-        <span class="tag bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">React 18</span>
-        <span class="tag bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Vite 6</span>
-        <span class="tag bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Tailwind CSS</span>
-        <span class="tag bg-amber-500/20 text-amber-300 border border-amber-500/30">Zustand 5</span>
-        <span class="tag bg-rose-500/20 text-rose-300 border border-rose-500/30">TanStack Query</span>
-        <span class="tag bg-purple-500/20 text-purple-300 border border-purple-500/30">React Router 7</span>
-        <span class="tag bg-sky-500/20 text-sky-300 border border-sky-500/30">shadcn/ui</span>
-        <span class="tag bg-orange-500/20 text-orange-300 border border-orange-500/30">SSE Streaming</span>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#9733;</div>
+          <div>
+            <div class="card-title">UI & Estilos</div>
+          </div>
+        </div>
+        <div class="card-desc">
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.25rem;">
+            <span class="badge badge-purple">Tailwind CSS 3.4</span>
+            <span class="badge badge-purple">shadcn/ui</span>
+            <span class="badge badge-purple">Radix UI</span>
+            <span class="badge badge-purple">Lucide React</span>
+            <span class="badge badge-purple">Recharts 3</span>
+            <span class="badge badge-purple">Sonner</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#8644;</div>
+          <div>
+            <div class="card-title">Estado & Dados</div>
+          </div>
+        </div>
+        <div class="card-desc">
+          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.25rem;">
+            <span class="badge badge-blue">Zustand 5</span>
+            <span class="badge badge-blue">TanStack Query 5</span>
+            <span class="badge badge-blue">React Router 7</span>
+            <span class="badge badge-blue">React Hook Form</span>
+            <span class="badge badge-blue">Zod</span>
+            <span class="badge badge-blue">Axios</span>
+          </div>
+        </div>
       </div>
     </div>
-  </header>
-
-  <main class="max-w-7xl mx-auto px-6 py-12 space-y-16">
-
-    <!-- ======================= 1. ROUTE MAP ======================= -->
-    <section id="routes">
-      <div class="section-card rounded-2xl p-8 glow-indigo">
-        <button onclick="toggleSection('routes-content')" class="w-full text-left flex items-center justify-between group">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-sm font-bold">1</div>
-            <h2 class="text-2xl font-bold text-white group-hover:text-indigo-300 transition-colors">Route Map</h2>
-            <span class="tag bg-slate-700/50 text-slate-400">17 rotas</span>
-          </div>
-          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-routes-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-
-        <div class="collapsible-content open mt-8" id="routes-content">
-          <!-- Public Routes -->
-          <div class="mb-8">
-            <div class="flex items-center gap-2 mb-4">
-              <div class="pulse-dot bg-rose-400"></div>
-              <h3 class="text-sm font-semibold uppercase tracking-wider text-rose-400">Public Routes</h3>
-              <div class="flex-1 h-px bg-gradient-to-r from-rose-500/30 to-transparent"></div>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 ml-6">
-              <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-rose-500/5 border border-rose-500/15">
-                <div class="w-2 h-2 rounded-full bg-rose-400"></div>
-                <code class="text-rose-300 text-sm font-medium">/login</code>
-                <span class="text-slate-500 text-xs ml-auto">Login Page</span>
-              </div>
-              <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-rose-500/5 border border-rose-500/15">
-                <div class="w-2 h-2 rounded-full bg-rose-400"></div>
-                <code class="text-rose-300 text-sm font-medium">/register</code>
-                <span class="text-slate-500 text-xs ml-auto">Register Page</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Protected Routes -->
-          <div>
-            <div class="flex items-center gap-2 mb-4">
-              <div class="pulse-dot bg-emerald-400"></div>
-              <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400">Protected Routes</h3>
-              <span class="tag bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 ml-2">AppLayout + Sidebar</span>
-              <div class="flex-1 h-px bg-gradient-to-r from-emerald-500/30 to-transparent"></div>
-            </div>
-
-            <!-- Route Tree -->
-            <div class="ml-6 space-y-1.5">
-              <!-- Dashboard -->
-              <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/15">
-                <div class="w-2 h-2 rounded-full bg-indigo-400"></div>
-                <code class="text-indigo-300 text-sm font-medium">/</code>
-                <span class="text-slate-400 text-xs">Dashboard</span>
-                <div class="ml-auto flex gap-1.5">
-                  <span class="tag bg-slate-700/60 text-slate-400">stats</span>
-                  <span class="tag bg-slate-700/60 text-slate-400">charts</span>
-                  <span class="tag bg-slate-700/60 text-slate-400">alerts</span>
-                  <span class="tag bg-slate-700/60 text-slate-400">recent</span>
-                </div>
-              </div>
-
-              <!-- Conversations group -->
-              <div class="pl-4 border-l-2 border-cyan-500/20 ml-2 space-y-1.5 mt-2">
-                <div class="text-xs text-cyan-400/60 uppercase tracking-wider font-semibold mb-2 -ml-2">Conversations</div>
-                <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/15">
-                  <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
-                  <code class="text-cyan-300 text-sm font-medium">/conversations</code>
-                  <span class="text-slate-400 text-xs">List</span>
-                  <div class="ml-auto flex gap-1.5">
-                    <span class="tag bg-slate-700/60 text-slate-400">grid/table</span>
-                    <span class="tag bg-slate-700/60 text-slate-400">search</span>
-                    <span class="tag bg-slate-700/60 text-slate-400">filter</span>
-                    <span class="tag bg-slate-700/60 text-slate-400">pagination</span>
-                  </div>
-                </div>
-                <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-cyan-500/5 border border-cyan-500/15">
-                  <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
-                  <code class="text-cyan-300 text-sm font-medium">/conversations/:id</code>
-                  <span class="text-slate-400 text-xs">Chat Interface</span>
-                  <div class="ml-auto flex gap-1.5">
-                    <span class="tag bg-orange-500/20 text-orange-300 border border-orange-500/20">SSE</span>
-                    <span class="tag bg-slate-700/60 text-slate-400">steps</span>
-                    <span class="tag bg-slate-700/60 text-slate-400">attachments</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Workflows group -->
-              <div class="pl-4 border-l-2 border-amber-500/20 ml-2 space-y-1.5 mt-3">
-                <div class="text-xs text-amber-400/60 uppercase tracking-wider font-semibold mb-2 -ml-2">Workflows</div>
-                <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/15">
-                  <div class="w-2 h-2 rounded-full bg-amber-400"></div>
-                  <code class="text-amber-300 text-sm font-medium">/workflows</code>
-                  <span class="text-slate-400 text-xs">List</span>
-                </div>
-                <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/15">
-                  <div class="w-2 h-2 rounded-full bg-amber-400"></div>
-                  <code class="text-amber-300 text-sm font-medium">/workflows/new</code>
-                  <span class="text-slate-400 text-xs">Wizard</span>
-                  <span class="tag bg-amber-500/20 text-amber-300 border border-amber-500/20 ml-auto">3 phases</span>
-                </div>
-                <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/15">
-                  <div class="w-2 h-2 rounded-full bg-amber-400"></div>
-                  <code class="text-amber-300 text-sm font-medium">/workflows/:id/edit</code>
-                  <span class="text-slate-400 text-xs">Edit Workflow</span>
-                </div>
-              </div>
-
-              <!-- Executions -->
-              <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-purple-500/5 border border-purple-500/15 mt-3">
-                <div class="w-2 h-2 rounded-full bg-purple-400"></div>
-                <code class="text-purple-300 text-sm font-medium">/executions</code>
-                <span class="text-slate-400 text-xs">Monitor</span>
-                <span class="tag bg-purple-500/20 text-purple-300 border border-purple-500/20 ml-auto">tabs by state</span>
-              </div>
-
-              <!-- Agent Chat -->
-              <div class="route-node flex items-center gap-3 p-3 rounded-lg bg-purple-500/5 border border-purple-500/15">
-                <div class="w-2 h-2 rounded-full bg-purple-400"></div>
-                <code class="text-purple-300 text-sm font-medium">/workflow-chat</code>
-                <span class="text-slate-400 text-xs">Agent Chat</span>
-              </div>
-
-              <!-- Config group -->
-              <div class="pl-4 border-l-2 border-emerald-500/20 ml-2 space-y-1.5 mt-3">
-                <div class="text-xs text-emerald-400/60 uppercase tracking-wider font-semibold mb-2 -ml-2">Configuration</div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
-                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                    <code class="text-emerald-300 text-xs">/mcp-servers</code>
-                  </div>
-                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
-                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                    <code class="text-emerald-300 text-xs">/skills</code>
-                  </div>
-                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
-                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                    <code class="text-emerald-300 text-xs">/agents</code>
-                  </div>
-                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
-                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                    <code class="text-emerald-300 text-xs">/rules</code>
-                  </div>
-                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
-                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                    <code class="text-emerald-300 text-xs">/plugins</code>
-                  </div>
-                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
-                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                    <code class="text-emerald-300 text-xs">/hooks</code>
-                  </div>
-                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
-                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                    <code class="text-emerald-300 text-xs">/webhooks</code>
-                  </div>
-                  <div class="route-node flex items-center gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/15">
-                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                    <code class="text-emerald-300 text-xs">/step-templates</code>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Settings & Admin -->
-              <div class="flex gap-1.5 mt-3">
-                <div class="route-node flex-1 flex items-center gap-3 p-3 rounded-lg bg-slate-500/5 border border-slate-500/15">
-                  <div class="w-2 h-2 rounded-full bg-slate-400"></div>
-                  <code class="text-slate-300 text-sm font-medium">/settings</code>
-                  <span class="text-slate-500 text-xs">Git, API Keys, Budget</span>
-                </div>
-                <div class="route-node flex-1 flex items-center gap-3 p-3 rounded-lg bg-rose-500/5 border border-rose-500/15">
-                  <div class="w-2 h-2 rounded-full bg-rose-400"></div>
-                  <code class="text-rose-300 text-sm font-medium">/admin/users</code>
-                  <span class="text-slate-500 text-xs">Admin Panel</span>
-                  <span class="tag bg-rose-500/20 text-rose-300 border border-rose-500/20 ml-auto">admin</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ======================= 2. COMPONENT HIERARCHY ======================= -->
-    <section id="hierarchy">
-      <div class="section-card rounded-2xl p-8 glow-cyan">
-        <button onclick="toggleSection('hierarchy-content')" class="w-full text-left flex items-center justify-between group">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-sm font-bold">2</div>
-            <h2 class="text-2xl font-bold text-white group-hover:text-cyan-300 transition-colors">Component Hierarchy</h2>
-          </div>
-          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-hierarchy-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-
-        <div class="collapsible-content open mt-8" id="hierarchy-content">
-          <!-- Visual Tree -->
-          <div class="relative overflow-x-auto pb-4">
-            <div class="min-w-[700px]">
-              <!-- Level 0: App -->
-              <div class="flex justify-center mb-6">
-                <div class="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/20">
-                  &lt;App /&gt;
-                </div>
-              </div>
-              <div class="flex justify-center mb-6">
-                <div class="w-px h-6 bg-gradient-to-b from-indigo-500/50 to-cyan-500/50"></div>
-              </div>
-
-              <!-- Level 1: AppRoutes -->
-              <div class="flex justify-center mb-6">
-                <div class="px-5 py-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-semibold text-sm">
-                  &lt;AppRoutes /&gt;
-                  <span class="text-cyan-500/60 text-xs ml-2">React Router</span>
-                </div>
-              </div>
-              <div class="flex justify-center mb-6">
-                <div class="flex items-end gap-16">
-                  <div class="w-px h-6 bg-rose-500/30"></div>
-                  <div class="w-px h-6 bg-emerald-500/30"></div>
-                </div>
-              </div>
-
-              <!-- Level 2: Split -->
-              <div class="flex justify-center gap-12 mb-6">
-                <!-- Public branch -->
-                <div class="text-center">
-                  <div class="px-4 py-2 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-300 text-sm font-medium mb-3">
-                    Public Routes
-                  </div>
-                  <div class="flex gap-2">
-                    <div class="px-3 py-1.5 rounded-md bg-rose-500/5 border border-rose-500/15 text-rose-400/80 text-xs mono">LoginPage</div>
-                    <div class="px-3 py-1.5 rounded-md bg-rose-500/5 border border-rose-500/15 text-rose-400/80 text-xs mono">RegisterPage</div>
-                  </div>
-                </div>
-
-                <!-- Protected branch -->
-                <div class="text-center">
-                  <div class="px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-sm font-medium mb-3">
-                    &lt;AppLayout /&gt;
-                    <span class="text-emerald-500/60 text-xs ml-1">Protected</span>
-                  </div>
-                  <div class="flex justify-center gap-8">
-                    <!-- Sidebar -->
-                    <div class="text-center">
-                      <div class="px-3 py-1.5 rounded-md bg-slate-700/50 border border-slate-600/30 text-slate-300 text-xs mono mb-2">&lt;Sidebar /&gt;</div>
-                      <div class="text-[10px] text-slate-500">collapsible</div>
-                    </div>
-                    <!-- Outlet / Pages -->
-                    <div class="text-center">
-                      <div class="px-3 py-1.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs mono mb-2">&lt;Outlet /&gt;</div>
-                      <div class="flex flex-wrap gap-1 max-w-[300px] justify-center">
-                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">Dashboard</div>
-                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">ConversationsList</div>
-                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">ChatInterface</div>
-                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">WorkflowsList</div>
-                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">WorkflowWizard</div>
-                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">Executions</div>
-                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">Settings</div>
-                        <div class="px-2 py-1 rounded bg-slate-800/80 text-[10px] text-slate-400 border border-slate-700/50">+ 10 more</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Legend -->
-          <div class="mt-6 pt-4 border-t border-slate-800/60 flex flex-wrap gap-4 text-xs text-slate-500">
-            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-indigo-500/30 border border-indigo-500/40"></div> Core / Root</div>
-            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-cyan-500/30 border border-cyan-500/40"></div> Router</div>
-            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-rose-500/30 border border-rose-500/40"></div> Public</div>
-            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-emerald-500/30 border border-emerald-500/40"></div> Protected Layout</div>
-            <div class="flex items-center gap-2"><div class="w-3 h-3 rounded bg-slate-700/60 border border-slate-600/40"></div> Pages</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ======================= 3. STATE MANAGEMENT ======================= -->
-    <section id="stores">
-      <div class="section-card rounded-2xl p-8 glow-amber">
-        <button onclick="toggleSection('stores-content')" class="w-full text-left flex items-center justify-between group">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 text-sm font-bold">3</div>
-            <h2 class="text-2xl font-bold text-white group-hover:text-amber-300 transition-colors">State Management</h2>
-            <span class="tag bg-amber-500/10 text-amber-400 border border-amber-500/20">8 Zustand Stores</span>
-          </div>
-          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-stores-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-
-        <div class="collapsible-content open mt-8" id="stores-content">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            <!-- useAuthStore -->
-            <div class="store-card glow-indigo">
-              <div class="flex items-center gap-2 mb-3">
-                <div class="w-6 h-6 rounded-md bg-indigo-500/20 flex items-center justify-center">
-                  <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                </div>
-                <h4 class="font-bold text-indigo-300 text-sm">useAuthStore</h4>
-                <span class="tag bg-indigo-500/10 text-indigo-400 ml-auto">core</span>
-              </div>
-              <div class="space-y-1">
-                <div class="flex items-start gap-2">
-                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">state</span>
-                  <div class="flex flex-wrap gap-1">
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">user</code>
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">token</code>
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">isAuthenticated</code>
-                  </div>
-                </div>
-                <div class="flex items-start gap-2">
-                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">actions</span>
-                  <div class="flex flex-wrap gap-1">
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">login()</code>
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">logout()</code>
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">checkAuth()</code>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- useConversationsStore -->
-            <div class="store-card glow-cyan">
-              <div class="flex items-center gap-2 mb-3">
-                <div class="w-6 h-6 rounded-md bg-cyan-500/20 flex items-center justify-center">
-                  <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                </div>
-                <h4 class="font-bold text-cyan-300 text-sm">useConversationsStore</h4>
-                <span class="tag bg-orange-500/10 text-orange-400 ml-auto">SSE</span>
-              </div>
-              <div class="space-y-1">
-                <div class="flex items-start gap-2">
-                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">state</span>
-                  <div class="flex flex-wrap gap-1">
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">streaming</code>
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">stepStatuses</code>
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">pausedInfo</code>
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">actionsCache</code>
-                  </div>
-                </div>
-                <div class="flex items-start gap-2">
-                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">actions</span>
-                  <div class="flex flex-wrap gap-1">
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">setStreaming()</code>
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">updateStep()</code>
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">setPaused()</code>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- useWorkflowsStore -->
-            <div class="store-card glow-amber">
-              <div class="flex items-center gap-2 mb-3">
-                <div class="w-6 h-6 rounded-md bg-amber-500/20 flex items-center justify-center">
-                  <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
-                </div>
-                <h4 class="font-bold text-amber-300 text-sm">useWorkflowsStore</h4>
-                <span class="tag bg-amber-500/10 text-amber-400 ml-auto">wizard</span>
-              </div>
-              <div class="space-y-1">
-                <div class="flex items-start gap-2">
-                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">state</span>
-                  <div class="flex flex-wrap gap-1">
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">wizardPhase</code>
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">formSteps</code>
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">basicInfo</code>
-                  </div>
-                </div>
-                <div class="flex items-start gap-2">
-                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">actions</span>
-                  <div class="flex flex-wrap gap-1">
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">setPhase()</code>
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">addStep()</code>
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">reset()</code>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- useMcpServersStore -->
-            <div class="store-card glow-emerald">
-              <div class="flex items-center gap-2 mb-3">
-                <div class="w-6 h-6 rounded-md bg-emerald-500/20 flex items-center justify-center">
-                  <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
-                </div>
-                <h4 class="font-bold text-emerald-300 text-sm">useMcpServersStore</h4>
-              </div>
-              <div class="space-y-1">
-                <div class="flex items-start gap-2">
-                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">state</span>
-                  <div class="flex flex-wrap gap-1">
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">modalOpen</code>
-                    <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">editingItem</code>
-                  </div>
-                </div>
-                <div class="flex items-start gap-2">
-                  <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-10">actions</span>
-                  <div class="flex flex-wrap gap-1">
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">openModal()</code>
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">closeModal()</code>
-                    <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">setEditing()</code>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- CRUD Stores group -->
-            <div class="md:col-span-2 store-card" style="border-color: rgba(148, 163, 184, 0.12);">
-              <div class="flex items-center gap-2 mb-3">
-                <div class="w-6 h-6 rounded-md bg-slate-600/30 flex items-center justify-center">
-                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                </div>
-                <h4 class="font-bold text-slate-300 text-sm">CRUD Stores</h4>
-                <span class="text-xs text-slate-500">Same modal + editing pattern</span>
-              </div>
-              <div class="flex flex-wrap gap-2">
-                <code class="text-xs text-purple-300 bg-purple-500/10 px-2 py-1 rounded border border-purple-500/15">useSkillsStore</code>
-                <code class="text-xs text-sky-300 bg-sky-500/10 px-2 py-1 rounded border border-sky-500/15">useAgentsStore</code>
-                <code class="text-xs text-pink-300 bg-pink-500/10 px-2 py-1 rounded border border-pink-500/15">useRulesStore</code>
-                <code class="text-xs text-orange-300 bg-orange-500/10 px-2 py-1 rounded border border-orange-500/15">usePluginsStore</code>
-                <code class="text-xs text-teal-300 bg-teal-500/10 px-2 py-1 rounded border border-teal-500/15">useHooksStore</code>
-              </div>
-              <div class="mt-3 pt-3 border-t border-slate-800/50 flex items-start gap-2">
-                <span class="text-[10px] text-slate-600 mt-0.5 shrink-0 w-14">pattern</span>
-                <div class="flex flex-wrap gap-1">
-                  <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">modalOpen: boolean</code>
-                  <code class="text-xs text-slate-400 bg-slate-800/60 px-1.5 py-0.5 rounded">editingItem: T | null</code>
-                  <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">openModal()</code>
-                  <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">closeModal()</code>
-                  <code class="text-xs text-emerald-400/70 bg-emerald-500/5 px-1.5 py-0.5 rounded">setEditing(item)</code>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ======================= 4. DATA FLOW ======================= -->
-    <section id="dataflow">
-      <div class="section-card rounded-2xl p-8 glow-emerald">
-        <button onclick="toggleSection('dataflow-content')" class="w-full text-left flex items-center justify-between group">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm font-bold">4</div>
-            <h2 class="text-2xl font-bold text-white group-hover:text-emerald-300 transition-colors">Data Flow Pattern</h2>
-          </div>
-          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-dataflow-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-
-        <div class="collapsible-content open mt-8" id="dataflow-content">
-          <!-- Standard Flow -->
-          <div class="mb-8">
-            <div class="flex items-center gap-2 mb-4">
-              <div class="pulse-dot bg-emerald-400"></div>
-              <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400">Standard Request Flow</h3>
-            </div>
-            <div class="overflow-x-auto pb-2">
-              <div class="flex items-center gap-0 min-w-[700px]">
-                <div class="flow-step border-indigo-500/30 bg-indigo-500/5">
-                  <div class="text-[10px] text-indigo-400 mb-0.5">trigger</div>
-                  <div class="font-medium text-indigo-300">User Action</div>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step border-cyan-500/30 bg-cyan-500/5">
-                  <div class="text-[10px] text-cyan-400 mb-0.5">hook</div>
-                  <div class="font-medium text-cyan-300">React Query / Zustand</div>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step border-amber-500/30 bg-amber-500/5">
-                  <div class="text-[10px] text-amber-400 mb-0.5">network</div>
-                  <div class="font-medium text-amber-300">API Call (Axios)</div>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step border-emerald-500/30 bg-emerald-500/5">
-                  <div class="text-[10px] text-emerald-400 mb-0.5">response</div>
-                  <div class="font-medium text-emerald-300">Backend Response</div>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step border-purple-500/30 bg-purple-500/5">
-                  <div class="text-[10px] text-purple-400 mb-0.5">update</div>
-                  <div class="font-medium text-purple-300">Store / Cache</div>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step border-rose-500/30 bg-rose-500/5">
-                  <div class="text-[10px] text-rose-400 mb-0.5">render</div>
-                  <div class="font-medium text-rose-300">Component Re-render</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- SSE Flow -->
-          <div>
-            <div class="flex items-center gap-2 mb-4">
-              <div class="pulse-dot bg-orange-400"></div>
-              <h3 class="text-sm font-semibold uppercase tracking-wider text-orange-400">Real-time SSE Flow</h3>
-              <span class="tag bg-orange-500/10 text-orange-400 border border-orange-500/20 ml-2">Server-Sent Events</span>
-            </div>
-            <div class="overflow-x-auto pb-2">
-              <div class="flex items-center gap-0 min-w-[500px]">
-                <div class="flow-step border-orange-500/30 bg-orange-500/5">
-                  <div class="text-[10px] text-orange-400 mb-0.5">server</div>
-                  <div class="font-medium text-orange-300">SSE Events</div>
-                  <div class="text-[10px] text-slate-500 mt-0.5">EventSource stream</div>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step border-cyan-500/30 bg-cyan-500/5">
-                  <div class="text-[10px] text-cyan-400 mb-0.5">handler</div>
-                  <div class="font-medium text-cyan-300">handleEvent()</div>
-                  <div class="text-[10px] text-slate-500 mt-0.5">parse + dispatch</div>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step border-purple-500/30 bg-purple-500/5">
-                  <div class="text-[10px] text-purple-400 mb-0.5">state</div>
-                  <div class="font-medium text-purple-300">Store Updates</div>
-                  <div class="text-[10px] text-slate-500 mt-0.5">Zustand setState</div>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step border-emerald-500/30 bg-emerald-500/5 relative">
-                  <div class="text-[10px] text-emerald-400 mb-0.5">ui</div>
-                  <div class="font-medium text-emerald-300">Live UI</div>
-                  <div class="text-[10px] text-slate-500 mt-0.5">streaming text, steps</div>
-                  <div class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tech Stack Legend -->
-          <div class="mt-8 p-4 rounded-xl bg-slate-800/30 border border-slate-700/30">
-            <div class="text-xs text-slate-500 mb-2 font-medium">Key Libraries</div>
-            <div class="flex flex-wrap gap-3 text-xs">
-              <div class="flex items-center gap-1.5">
-                <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
-                <span class="text-slate-400"><strong class="text-cyan-300">TanStack Query</strong> &mdash; server state, caching, pagination</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <div class="w-2 h-2 rounded-full bg-amber-400"></div>
-                <span class="text-slate-400"><strong class="text-amber-300">Zustand</strong> &mdash; client state, UI state</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
-                <span class="text-slate-400"><strong class="text-emerald-300">Axios</strong> &mdash; HTTP client, interceptors</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <div class="w-2 h-2 rounded-full bg-orange-400"></div>
-                <span class="text-slate-400"><strong class="text-orange-300">SSE Client</strong> &mdash; custom EventSource wrapper</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ======================= 5. KEY USER FLOWS ======================= -->
-    <section id="userflows">
-      <div class="section-card rounded-2xl p-8 glow-rose">
-        <button onclick="toggleSection('userflows-content')" class="w-full text-left flex items-center justify-between group">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center text-rose-400 text-sm font-bold">5</div>
-            <h2 class="text-2xl font-bold text-white group-hover:text-rose-300 transition-colors">Key User Flows</h2>
-            <span class="tag bg-slate-700/50 text-slate-400">5 flows</span>
-          </div>
-          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-userflows-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-
-        <div class="collapsible-content open mt-8 space-y-6" id="userflows-content">
-
-          <!-- Login Flow -->
-          <div class="p-5 rounded-xl bg-indigo-500/5 border border-indigo-500/15">
-            <div class="flex items-center gap-2 mb-4">
-              <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-              <h4 class="font-bold text-indigo-300 text-sm">Login Flow</h4>
-            </div>
-            <div class="overflow-x-auto">
-              <div class="flex items-center gap-0 min-w-[600px]">
-                <div class="flow-step text-xs border-indigo-500/25">Form Submit</div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-indigo-500/25 mono">POST /auth/login</div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-indigo-500/25">Store Token<br><span class="text-[10px] text-slate-500">useAuthStore</span></div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-indigo-500/25">Set Axios Header</div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-emerald-500/25 bg-emerald-500/5 text-emerald-300">Redirect /</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Create Workflow -->
-          <div class="p-5 rounded-xl bg-amber-500/5 border border-amber-500/15">
-            <div class="flex items-center gap-2 mb-4">
-              <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-              <h4 class="font-bold text-amber-300 text-sm">Create Workflow</h4>
-            </div>
-            <div class="overflow-x-auto">
-              <div class="flex items-center gap-0 min-w-[700px]">
-                <div class="flow-step text-xs border-amber-500/25">
-                  Phase 1<br><span class="text-[10px] text-slate-500">Basic Info</span>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-amber-500/25">
-                  Phase 2<br><span class="text-[10px] text-slate-500">Define Steps</span>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-amber-500/25">
-                  Phase 3<br><span class="text-[10px] text-slate-500">Review + Confirm</span>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-amber-500/25 mono">POST /workflows</div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-emerald-500/25 bg-emerald-500/5 text-emerald-300">Redirect /workflows</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Start Conversation -->
-          <div class="p-5 rounded-xl bg-cyan-500/5 border border-cyan-500/15">
-            <div class="flex items-center gap-2 mb-4">
-              <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-              <h4 class="font-bold text-cyan-300 text-sm">Start Conversation</h4>
-            </div>
-            <div class="overflow-x-auto">
-              <div class="flex items-center gap-0 min-w-[700px]">
-                <div class="flow-step text-xs border-cyan-500/25">Open Dialog</div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-cyan-500/25">Select Workflow<br><span class="text-[10px] text-slate-500">+ project folder</span></div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-cyan-500/25 mono">POST /conversations</div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-emerald-500/25 bg-emerald-500/5 text-emerald-300">Navigate to Chat<br><span class="text-[10px] text-slate-500">/conversations/:id</span></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Send Message (SSE) -->
-          <div class="p-5 rounded-xl bg-orange-500/5 border border-orange-500/15">
-            <div class="flex items-center gap-2 mb-4">
-              <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              <h4 class="font-bold text-orange-300 text-sm">Send Message (SSE Streaming)</h4>
-              <span class="tag bg-orange-500/10 text-orange-400 border border-orange-500/20">real-time</span>
-            </div>
-            <div class="overflow-x-auto">
-              <div class="flex items-center gap-0 min-w-[800px]">
-                <div class="flow-step text-xs border-orange-500/25">Type Message</div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-orange-500/25">Open SSE Stream<br><span class="text-[10px] text-slate-500">EventSource</span></div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-orange-500/25 relative">
-                  Live Updates<br><span class="text-[10px] text-slate-500">token by token</span>
-                  <div class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-orange-400 animate-ping"></div>
-                </div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-orange-500/25">Step Status Updates<br><span class="text-[10px] text-slate-500">panel refresh</span></div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-emerald-500/25 bg-emerald-500/5 text-emerald-300">Message Saved<br><span class="text-[10px] text-slate-500">stream complete</span></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Interrupt Flow -->
-          <div class="p-5 rounded-xl bg-rose-500/5 border border-rose-500/15">
-            <div class="flex items-center gap-2 mb-4">
-              <svg class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <h4 class="font-bold text-rose-300 text-sm">Interrupt Execution</h4>
-              <span class="tag bg-rose-500/10 text-rose-400 border border-rose-500/20">destructive</span>
-            </div>
-            <div class="overflow-x-auto">
-              <div class="flex items-center gap-0 min-w-[600px]">
-                <div class="flow-step text-xs border-rose-500/25">Click Interrupt</div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-rose-500/25 mono">POST /interrupt</div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-rose-500/25">Kill Process<br><span class="text-[10px] text-slate-500">backend SIGTERM</span></div>
-                <div class="connector-h"></div>
-                <div class="flow-step text-xs border-amber-500/25 bg-amber-500/5 text-amber-300">Resume Option<br><span class="text-[10px] text-slate-500">or start new</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ======================= 6. UI COMPONENT LIBRARY ======================= -->
-    <section id="components">
-      <div class="section-card rounded-2xl p-8" style="box-shadow: 0 0 20px rgba(168, 85, 247, 0.12);">
-        <button onclick="toggleSection('components-content')" class="w-full text-left flex items-center justify-between group">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 text-sm font-bold">6</div>
-            <h2 class="text-2xl font-bold text-white group-hover:text-purple-300 transition-colors">UI Component Library</h2>
-          </div>
-          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-components-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-
-        <div class="collapsible-content open mt-8" id="components-content">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-            <!-- shadcn/ui -->
-            <div class="p-5 rounded-xl bg-slate-800/30 border border-slate-700/30">
-              <div class="flex items-center gap-2 mb-4">
-                <div class="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-[10px] font-bold text-white">ui</div>
-                <h4 class="font-bold text-white text-sm">shadcn/ui + Radix</h4>
-              </div>
-              <div class="space-y-1.5">
-                <div class="flex flex-wrap gap-1.5">
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Button</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Input</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Card</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Dialog</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Select</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Tabs</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Badge</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Textarea</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Tooltip</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">DropdownMenu</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">ScrollArea</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Switch</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Separator</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Skeleton</span>
-                  <span class="px-2 py-1 rounded-md bg-slate-700/40 text-slate-300 text-xs border border-slate-600/30 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all cursor-default">Label</span>
-                </div>
-              </div>
-              <div class="mt-3 pt-3 border-t border-slate-700/30">
-                <span class="text-[10px] text-slate-500">src/shared/components/ui/</span>
-              </div>
-            </div>
-
-            <!-- Custom Components -->
-            <div class="p-5 rounded-xl bg-slate-800/30 border border-slate-700/30">
-              <div class="flex items-center gap-2 mb-4">
-                <div class="w-5 h-5 rounded bg-cyan-500/20 flex items-center justify-center">
-                  <svg class="w-3 h-3 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
-                </div>
-                <h4 class="font-bold text-white text-sm">Custom Components</h4>
-              </div>
-              <div class="space-y-2">
-                <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
-                  <code class="text-xs text-cyan-300">SearchBar</code>
-                  <span class="text-[10px] text-slate-500 ml-auto">debounced input</span>
-                </div>
-                <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
-                  <code class="text-xs text-cyan-300">FilterBar</code>
-                  <span class="text-[10px] text-slate-500 ml-auto">multi-select filters</span>
-                </div>
-                <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
-                  <code class="text-xs text-cyan-300">Pagination</code>
-                  <span class="text-[10px] text-slate-500 ml-auto">useSearchPagination</span>
-                </div>
-                <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
-                  <code class="text-xs text-cyan-300">ConfirmDialog</code>
-                  <span class="text-[10px] text-slate-500 ml-auto">destructive actions</span>
-                </div>
-                <div class="flex items-center gap-2 p-2 rounded-lg bg-cyan-500/5 border border-cyan-500/10">
-                  <code class="text-xs text-cyan-300">EmptyState</code>
-                  <span class="text-[10px] text-slate-500 ml-auto">icon + message + CTA</span>
-                </div>
-              </div>
-              <div class="mt-3 pt-3 border-t border-slate-700/30">
-                <span class="text-[10px] text-slate-500">src/shared/components/common/</span>
-              </div>
-            </div>
-
-            <!-- Layout -->
-            <div class="p-5 rounded-xl bg-slate-800/30 border border-slate-700/30">
-              <div class="flex items-center gap-2 mb-4">
-                <div class="w-5 h-5 rounded bg-emerald-500/20 flex items-center justify-center">
-                  <svg class="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
-                </div>
-                <h4 class="font-bold text-white text-sm">Layout Components</h4>
-              </div>
-              <div class="space-y-2">
-                <div class="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-                  <div class="flex items-center gap-2 mb-1">
-                    <code class="text-xs text-emerald-300 font-bold">Sidebar</code>
-                    <span class="tag bg-emerald-500/10 text-emerald-400 text-[10px]">collapsible</span>
-                  </div>
-                  <div class="text-[10px] text-slate-500">Navigation links, user menu, collapse toggle. Persists state in localStorage.</div>
-                </div>
-                <div class="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-                  <div class="flex items-center gap-2 mb-1">
-                    <code class="text-xs text-emerald-300 font-bold">AppLayout</code>
-                  </div>
-                  <div class="text-[10px] text-slate-500">Sidebar + main content area (Outlet). Handles auth check, redirects unauthenticated.</div>
-                </div>
-                <div class="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-                  <div class="flex items-center gap-2 mb-1">
-                    <code class="text-xs text-emerald-300 font-bold">PageHeader</code>
-                  </div>
-                  <div class="text-[10px] text-slate-500">Title, breadcrumbs, action buttons. Consistent across all pages.</div>
-                </div>
-              </div>
-              <div class="mt-3 pt-3 border-t border-slate-700/30">
-                <span class="text-[10px] text-slate-500">src/shared/components/layout/</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ======================= 7. CONVERSATION DETAIL LAYOUT ======================= -->
-    <section id="layout">
-      <div class="section-card rounded-2xl p-8" style="box-shadow: 0 0 20px rgba(14, 165, 233, 0.12);">
-        <button onclick="toggleSection('layout-content')" class="w-full text-left flex items-center justify-between group">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-sky-500/20 flex items-center justify-center text-sky-400 text-sm font-bold">7</div>
-            <h2 class="text-2xl font-bold text-white group-hover:text-sky-300 transition-colors">Conversation Detail Layout</h2>
-          </div>
-          <svg class="w-5 h-5 text-slate-500 transition-transform section-chevron" id="chevron-layout-content" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-
-        <div class="collapsible-content open mt-8" id="layout-content">
-          <!-- ASCII Mockup -->
-          <div class="ascii-box mb-6">
-<span class="text-sky-400">+-----------------------------------------------------------+-------------+</span>
-<span class="text-sky-400">|</span> <span class="text-amber-300">Header:</span> Conversation Title  <span class="text-slate-500">|</span>  Workflow Name    <span class="text-sky-400">|</span>  <span class="text-emerald-300">Actions</span>   <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>         <span class="text-slate-600">status badge</span>         <span class="text-slate-500">|</span>  <span class="text-slate-600">step X of Y</span>       <span class="text-sky-400">|</span>  <span class="text-rose-400">[Interrupt]</span><span class="text-sky-400">|</span>
-<span class="text-sky-400">+-----------------------------------------------------------+</span>  <span class="text-emerald-400">[Resume]</span>  <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>                                                           <span class="text-sky-400">|</span>  <span class="text-slate-400">[Delete]</span>  <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>  <span class="text-indigo-400">+------------------------------------------+</span>          <span class="text-sky-400">+-------------+</span>
-<span class="text-sky-400">|</span>  <span class="text-indigo-400">|</span> <span class="text-cyan-300">USER</span>                                     <span class="text-indigo-400">|</span>          <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>  <span class="text-indigo-400">|</span> Create a REST API for user management     <span class="text-indigo-400">|</span>          <span class="text-sky-400">|</span> <span class="text-amber-300">Step Panel</span>  <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>  <span class="text-indigo-400">+------------------------------------------+</span>          <span class="text-sky-400">|</span>  <span class="text-slate-600">(toggle)</span>  <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>                                                           <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>          <span class="text-purple-400">+------------------------------------------+</span> <span class="text-sky-400">|</span> <span class="text-emerald-400">Step 1</span> <span class="text-slate-500">Done</span>  <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>          <span class="text-purple-400">|</span> <span class="text-emerald-300">ASSISTANT</span>                               <span class="text-purple-400">|</span> <span class="text-sky-400">|</span> <span class="text-amber-400">Step 2</span> <span class="text-amber-300">Run.</span>  <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>          <span class="text-purple-400">|</span> I'll create the API with the following    <span class="text-purple-400">|</span> <span class="text-sky-400">|</span> <span class="text-slate-500">Step 3</span> <span class="text-slate-600">Wait</span>  <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>          <span class="text-purple-400">|</span> endpoints: GET /users, POST /users...     <span class="text-purple-400">|</span> <span class="text-sky-400">|</span> <span class="text-slate-500">Step 4</span> <span class="text-slate-600">Wait</span>  <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>          <span class="text-purple-400">|</span> <span class="text-orange-300 animate-pulse">|</span> <span class="text-slate-600">streaming...</span>                       <span class="text-purple-400">|</span> <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>          <span class="text-purple-400">+------------------------------------------+</span> <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
-<span class="text-sky-400">|</span>                                                           <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
-<span class="text-sky-400">+-----------------------------------------------------------+-------------+</span>
-<span class="text-sky-400">|</span> <span class="text-slate-400">[</span><span class="text-slate-300"> Type your message...                         </span><span class="text-slate-400">]</span> <span class="text-indigo-400">[Send]</span> <span class="text-rose-400">[Cancel]</span> <span class="text-sky-400">|</span>             <span class="text-sky-400">|</span>
-<span class="text-sky-400">+-----------------------------------------------------------+-------------+</span></div>
-
-          <!-- Layout Breakdown -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="p-4 rounded-xl bg-amber-500/5 border border-amber-500/15">
-              <h5 class="text-xs font-bold text-amber-300 uppercase tracking-wider mb-2">Header Bar</h5>
-              <ul class="space-y-1 text-xs text-slate-400">
-                <li class="flex items-start gap-1.5"><span class="text-amber-400 mt-0.5">*</span> Conversation title (editable)</li>
-                <li class="flex items-start gap-1.5"><span class="text-amber-400 mt-0.5">*</span> Workflow name badge</li>
-                <li class="flex items-start gap-1.5"><span class="text-amber-400 mt-0.5">*</span> Status indicator (active/paused/done)</li>
-                <li class="flex items-start gap-1.5"><span class="text-amber-400 mt-0.5">*</span> Step counter (X of Y)</li>
-              </ul>
-            </div>
-
-            <div class="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/15">
-              <h5 class="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-2">Messages Area</h5>
-              <ul class="space-y-1 text-xs text-slate-400">
-                <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">*</span> Auto-scroll to bottom</li>
-                <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">*</span> User bubbles (right-aligned)</li>
-                <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">*</span> Assistant bubbles (left-aligned)</li>
-                <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">*</span> Streaming content with cursor</li>
-                <li class="flex items-start gap-1.5"><span class="text-indigo-400 mt-0.5">*</span> Markdown rendering</li>
-              </ul>
-            </div>
-
-            <div class="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
-              <h5 class="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-2">Step Panel</h5>
-              <ul class="space-y-1 text-xs text-slate-400">
-                <li class="flex items-start gap-1.5"><span class="text-emerald-400 mt-0.5">*</span> Toggleable sidebar</li>
-                <li class="flex items-start gap-1.5"><span class="text-emerald-400 mt-0.5">*</span> Step list with live status</li>
-                <li class="flex items-start gap-1.5"><span class="text-emerald-400 mt-0.5">*</span> Color-coded: done/running/waiting</li>
-                <li class="flex items-start gap-1.5"><span class="text-emerald-400 mt-0.5">*</span> Expand for step details</li>
-              </ul>
-            </div>
-
-            <div class="p-4 rounded-xl bg-sky-500/5 border border-sky-500/15">
-              <h5 class="text-xs font-bold text-sky-300 uppercase tracking-wider mb-2">Input Bar</h5>
-              <ul class="space-y-1 text-xs text-slate-400">
-                <li class="flex items-start gap-1.5"><span class="text-sky-400 mt-0.5">*</span> Textarea with auto-resize</li>
-                <li class="flex items-start gap-1.5"><span class="text-sky-400 mt-0.5">*</span> Send button (Ctrl+Enter)</li>
-                <li class="flex items-start gap-1.5"><span class="text-sky-400 mt-0.5">*</span> Cancel button (while streaming)</li>
-                <li class="flex items-start gap-1.5"><span class="text-sky-400 mt-0.5">*</span> Attachment support</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Component File Map -->
-          <div class="mt-6 p-4 rounded-xl bg-slate-800/30 border border-slate-700/30">
-            <div class="text-xs text-slate-500 mb-3 font-medium">Component File Map</div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mono">
-              <div class="flex items-center gap-2 text-slate-400">
-                <div class="w-1.5 h-1.5 rounded-full bg-sky-400"></div>
-                <span class="text-sky-300">ConversationDetailPage.tsx</span>
-                <span class="text-slate-600 ml-auto">orchestrator</span>
-              </div>
-              <div class="flex items-center gap-2 text-slate-400">
-                <div class="w-1.5 h-1.5 rounded-full bg-amber-400"></div>
-                <span class="text-amber-300">ChatHeader.tsx</span>
-                <span class="text-slate-600 ml-auto">header bar</span>
-              </div>
-              <div class="flex items-center gap-2 text-slate-400">
-                <div class="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
-                <span class="text-indigo-300">MessageList.tsx</span>
-                <span class="text-slate-600 ml-auto">message area</span>
-              </div>
-              <div class="flex items-center gap-2 text-slate-400">
-                <div class="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-                <span class="text-purple-300">MessageBubble.tsx</span>
-                <span class="text-slate-600 ml-auto">user/assistant</span>
-              </div>
-              <div class="flex items-center gap-2 text-slate-400">
-                <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-                <span class="text-emerald-300">StepPanel.tsx</span>
-                <span class="text-slate-600 ml-auto">right sidebar</span>
-              </div>
-              <div class="flex items-center gap-2 text-slate-400">
-                <div class="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
-                <span class="text-cyan-300">ChatInput.tsx</span>
-                <span class="text-slate-600 ml-auto">input bar</span>
-              </div>
-              <div class="flex items-center gap-2 text-slate-400">
-                <div class="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
-                <span class="text-orange-300">useConversationSSE.ts</span>
-                <span class="text-slate-600 ml-auto">SSE hook</span>
-              </div>
-              <div class="flex items-center gap-2 text-slate-400">
-                <div class="w-1.5 h-1.5 rounded-full bg-rose-400"></div>
-                <span class="text-rose-300">useConversationActions.ts</span>
-                <span class="text-slate-600 ml-auto">mutations</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-
-  <script>
-    // Toggle sections
-    function toggleSection(id) {
-      const el = document.getElementById(id);
-      const chevron = document.getElementById('chevron-' + id);
-      if (el) {
-        el.classList.toggle('open');
-        if (chevron) {
-          chevron.style.transform = el.classList.contains('open') ? 'rotate(0deg)' : 'rotate(-90deg)';
-        }
-      }
-    }
-
-    // Side navigation
-    const sections = ['header', 'routes', 'hierarchy', 'stores', 'dataflow', 'userflows', 'components', 'layout'];
-    const dots = document.querySelectorAll('.nav-dot');
-
-    dots.forEach((dot, i) => {
-      dot.addEventListener('click', () => {
-        const target = document.getElementById(sections[i]);
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    });
-
-    // Update active dot on scroll
-    function updateActiveNav() {
-      let current = 0;
-      sections.forEach((id, i) => {
-        const el = document.getElementById(id);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.top <= 200) current = i;
-        }
-      });
-      dots.forEach((dot, i) => {
-        dot.classList.toggle('active', i === current);
-      });
-    }
-
-    window.addEventListener('scroll', updateActiveNav, { passive: true });
-    updateActiveNav();
-
-    // Smooth page load animation
-    document.querySelectorAll('.section-card').forEach((card, i) => {
-      card.style.opacity = '0';
-      card.style.transform = 'translateY(20px)';
-      card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-      setTimeout(() => {
-        card.style.opacity = '1';
-        card.style.transform = 'translateY(0)';
-      }, 100 + i * 80);
-    });
-  </script>
-
-<footer class="border-t border-slate-800 py-6 mt-10">
-  <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-slate-500">
-    <a href="05-motor-execucao.html" class="hover:text-white transition">&larr; 05 Motor de Execução</a>
-    <span class="text-slate-600">Orquetrador Claude</span>
-    <a href="07-seguranca.html" class="hover:text-white transition">07 Segurança &rarr;</a>
   </div>
-</footer>
 
+  <!-- ================================================ -->
+  <!-- SECTION 2: 18 Rotas -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-4);">&#128268;</div>
+      18 Rotas da Aplicacao
+    </div>
+
+    <div class="search-box" style="max-width:400px;">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" placeholder="Filtrar rotas..." data-search-target="routes-table">
+    </div>
+
+    <div class="table-container" style="border-radius: 12px;">
+      <div id="routes-table">
+        <div class="route-row route-row-header">
+          <span>Rota</span>
+          <span>Componente</span>
+          <span>Descricao</span>
+        </div>
+
+        <!-- Core -->
+        <div class="route-group-label">&#127968; Core</div>
+        <div class="route-row">
+          <span class="route-path">/</span>
+          <span class="route-component">Dashboard</span>
+          <span class="route-desc">Stats em tempo real, graficos de execucoes, alertas e metricas de uso</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/login</span>
+          <span class="route-component">LoginPage</span>
+          <span class="route-desc">Autenticacao com email/senha</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/register</span>
+          <span class="route-component">RegisterPage</span>
+          <span class="route-desc">Cadastro de novo usuario</span>
+        </div>
+
+        <!-- Conversations -->
+        <div class="route-group-label">&#128172; Conversas</div>
+        <div class="route-row">
+          <span class="route-path">/conversations</span>
+          <span class="route-component">ConversationsList</span>
+          <span class="route-desc">Lista de conversas com busca, filtros e paginacao</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/conversations/:id</span>
+          <span class="route-component">ConversationDetail</span>
+          <span class="route-desc">Chat interface com streaming SSE em tempo real</span>
+        </div>
+
+        <!-- Workflows -->
+        <div class="route-group-label">&#9881; Workflows</div>
+        <div class="route-row">
+          <span class="route-path">/workflows</span>
+          <span class="route-component">WorkflowsList</span>
+          <span class="route-desc">Lista de workflows com status e acoes rapidas</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/workflows/new</span>
+          <span class="route-component">WorkflowWizard</span>
+          <span class="route-desc">Wizard de 3 fases para criacao de workflow</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/workflows/:id/edit</span>
+          <span class="route-component">WorkflowWizard</span>
+          <span class="route-desc">Edicao de workflow existente com pre-carregamento</span>
+        </div>
+
+        <!-- Executions -->
+        <div class="route-group-label">&#9654; Execucoes</div>
+        <div class="route-row">
+          <span class="route-path">/executions</span>
+          <span class="route-component">ExecutionHistory</span>
+          <span class="route-desc">Historico de todas as execucoes com timeline e logs</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/workflow-chat</span>
+          <span class="route-component">WorkflowChat</span>
+          <span class="route-desc">Agente conversacional para criacao/execucao de workflows</span>
+        </div>
+
+        <!-- Resources -->
+        <div class="route-group-label">&#128230; Recursos</div>
+        <div class="route-row">
+          <span class="route-path">/mcp-servers</span>
+          <span class="route-component">McpServersPage</span>
+          <span class="route-desc">Gerenciamento de servidores MCP conectados</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/skills</span>
+          <span class="route-component">SkillsPage</span>
+          <span class="route-desc">Biblioteca de skills reutilizaveis</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/agents</span>
+          <span class="route-component">AgentsPage</span>
+          <span class="route-desc">Configuracao de agentes Claude</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/rules</span>
+          <span class="route-component">RulesPage</span>
+          <span class="route-desc">Regras de negocio e restricoes para execucoes</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/plugins</span>
+          <span class="route-component">PluginsPage</span>
+          <span class="route-desc">Plugins para estender funcionalidades</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/hooks</span>
+          <span class="route-component">HooksPage</span>
+          <span class="route-desc">Hooks de lifecycle (pre/post execution)</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/webhooks</span>
+          <span class="route-component">WebhooksPage</span>
+          <span class="route-desc">Webhooks de entrada e saida para integracoes</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/step-templates</span>
+          <span class="route-component">StepTemplatesPage</span>
+          <span class="route-desc">Templates reutilizaveis de steps para workflows</span>
+        </div>
+
+        <!-- Admin -->
+        <div class="route-group-label">&#128272; Configuracao & Admin</div>
+        <div class="route-row">
+          <span class="route-path">/settings</span>
+          <span class="route-component">SettingsPage</span>
+          <span class="route-desc">API keys, budget de tokens, integracao Git</span>
+        </div>
+        <div class="route-row">
+          <span class="route-path">/admin/users</span>
+          <span class="route-component">AdminUsersPage</span>
+          <span class="route-desc">Gerenciamento de usuarios (admin only)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visual Route Map -->
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128506;</div>
+        <div class="card-title">Mapa Visual de Rotas</div>
+      </div>
+      <div style="padding: 0.5rem; overflow-x: auto;">
+        <svg viewBox="0 0 900 420" style="width:100%;max-width:900px;min-width:600px;" xmlns="http://www.w3.org/2000/svg">
+          <!-- Root -->
+          <rect x="370" y="10" width="160" height="36" rx="8" fill="#0d9488" fill-opacity="0.2" stroke="#0d9488" stroke-width="1.5"/>
+          <text x="450" y="33" text-anchor="middle" fill="#2dd4bf" font-size="13" font-weight="600" font-family="Inter, sans-serif">App Router</text>
+
+          <!-- Lines from root -->
+          <line x1="410" y1="46" x2="100" y2="80" stroke="#1e293b" stroke-width="1"/>
+          <line x1="430" y1="46" x2="300" y2="80" stroke="#1e293b" stroke-width="1"/>
+          <line x1="450" y1="46" x2="450" y2="80" stroke="#1e293b" stroke-width="1"/>
+          <line x1="470" y1="46" x2="610" y2="80" stroke="#1e293b" stroke-width="1"/>
+          <line x1="490" y1="46" x2="790" y2="80" stroke="#1e293b" stroke-width="1"/>
+
+          <!-- Group: Auth -->
+          <rect x="20" y="80" width="160" height="30" rx="6" fill="#8b5cf6" fill-opacity="0.15" stroke="#8b5cf6" stroke-width="1"/>
+          <text x="100" y="100" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600" font-family="Inter, sans-serif">Auth (public)</text>
+          <line x1="60" y1="110" x2="60" y2="135" stroke="#1e293b" stroke-width="1"/>
+          <line x1="140" y1="110" x2="140" y2="135" stroke="#1e293b" stroke-width="1"/>
+          <rect x="15" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="60" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/login</text>
+          <rect x="115" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="160" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/register</text>
+
+          <!-- Group: Core -->
+          <rect x="225" y="80" width="160" height="30" rx="6" fill="#0d9488" fill-opacity="0.15" stroke="#0d9488" stroke-width="1"/>
+          <text x="305" y="100" text-anchor="middle" fill="#2dd4bf" font-size="11" font-weight="600" font-family="Inter, sans-serif">Core</text>
+          <line x1="265" y1="110" x2="265" y2="135" stroke="#1e293b" stroke-width="1"/>
+          <line x1="345" y1="110" x2="345" y2="135" stroke="#1e293b" stroke-width="1"/>
+          <rect x="220" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="265" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/</text>
+          <rect x="320" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="365" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/settings</text>
+
+          <!-- Group: Conversations & Workflows -->
+          <rect x="370" y="80" width="160" height="30" rx="6" fill="#3b82f6" fill-opacity="0.15" stroke="#3b82f6" stroke-width="1"/>
+          <text x="450" y="100" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="600" font-family="Inter, sans-serif">Conversations</text>
+          <line x1="420" y1="110" x2="420" y2="135" stroke="#1e293b" stroke-width="1"/>
+          <line x1="480" y1="110" x2="480" y2="135" stroke="#1e293b" stroke-width="1"/>
+          <rect x="375" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="420" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/conversations</text>
+          <rect x="475" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="520" y="153" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono, monospace">/conversations/:id</text>
+
+          <!-- Group: Workflows -->
+          <rect x="530" y="80" width="160" height="30" rx="6" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="1"/>
+          <text x="610" y="100" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600" font-family="Inter, sans-serif">Workflows</text>
+          <line x1="570" y1="110" x2="570" y2="135" stroke="#1e293b" stroke-width="1"/>
+          <line x1="610" y1="110" x2="610" y2="135" stroke="#1e293b" stroke-width="1"/>
+          <line x1="650" y1="110" x2="650" y2="135" stroke="#1e293b" stroke-width="1"/>
+          <rect x="530" y="135" width="80" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="570" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/workflows</text>
+          <rect x="615" y="135" width="76" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="653" y="153" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono, monospace">/new /edit</text>
+
+          <!-- Group: Resources -->
+          <rect x="710" y="80" width="170" height="30" rx="6" fill="#ef4444" fill-opacity="0.12" stroke="#ef4444" stroke-width="1"/>
+          <text x="795" y="100" text-anchor="middle" fill="#f87171" font-size="11" font-weight="600" font-family="Inter, sans-serif">Resources (8)</text>
+
+          <!-- Resource children - 2 cols -->
+          <line x1="750" y1="110" x2="750" y2="135" stroke="#1e293b" stroke-width="1"/>
+          <line x1="840" y1="110" x2="840" y2="135" stroke="#1e293b" stroke-width="1"/>
+
+          <rect x="705" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="750" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/skills</text>
+          <rect x="800" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="845" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/agents</text>
+
+          <rect x="705" y="168" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="750" y="186" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/rules</text>
+          <rect x="800" y="168" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="845" y="186" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/plugins</text>
+
+          <rect x="705" y="201" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="750" y="219" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/hooks</text>
+          <rect x="800" y="201" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="845" y="219" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/webhooks</text>
+
+          <rect x="705" y="234" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="750" y="252" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono, monospace">/mcp-servers</text>
+          <rect x="800" y="234" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
+          <text x="845" y="252" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono, monospace">/step-templates</text>
+
+          <!-- Extra: executions, workflow-chat, admin -->
+          <line x1="450" y1="46" x2="450" y2="300" stroke="#1e293b" stroke-width="1" stroke-dasharray="4,3"/>
+
+          <rect x="20" y="290" width="860" height="30" rx="6" fill="rgba(100,116,139,0.08)" stroke="#1e293b"/>
+          <text x="450" y="310" text-anchor="middle" fill="#64748b" font-size="11" font-weight="500" font-family="Inter, sans-serif">Rotas extras: /executions | /workflow-chat | /admin/users</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- SECTION 3: Zustand Stores -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-2);">&#128202;</div>
+      8 Zustand Stores
+    </div>
+
+    <div class="grid-2">
+      <!-- Auth Store -->
+      <div class="store-card" style="border-left: 3px solid #0d9488;">
+        <div class="store-name">
+          <span style="color: var(--text-accent);">&#128274;</span>
+          Auth Store
+        </div>
+        <div class="store-state">
+          <div class="store-state-title">Estado</div>
+          <div class="store-item">user <span class="type">User | null</span></div>
+          <div class="store-item">token <span class="type">string | null</span></div>
+          <div class="store-item">isAuthenticated <span class="type">boolean</span></div>
+        </div>
+        <div class="store-actions">
+          <div class="store-actions-title">Acoes</div>
+          <div class="store-item"><span class="fn">login()</span> — autentica e salva token</div>
+          <div class="store-item"><span class="fn">logout()</span> — limpa estado e redireciona</div>
+          <div class="store-item"><span class="fn">checkAuth()</span> — valida token no servidor</div>
+        </div>
+      </div>
+
+      <!-- Conversations Store -->
+      <div class="store-card" style="border-left: 3px solid #3b82f6;">
+        <div class="store-name">
+          <span style="color: #60a5fa;">&#128172;</span>
+          Conversations Store
+        </div>
+        <div class="store-state">
+          <div class="store-state-title">Estado</div>
+          <div class="store-item">isStreaming <span class="type">boolean</span></div>
+          <div class="store-item">streamingPhase <span class="type">StreamPhase</span></div>
+          <div class="store-item">content <span class="type">string</span></div>
+          <div class="store-item">actions <span class="type">Action[]</span></div>
+          <div class="store-item">isPaused <span class="type">boolean</span></div>
+          <div class="store-item">stepStatuses <span class="type">Map&lt;string, Status&gt;</span></div>
+        </div>
+        <div class="store-actions">
+          <div class="store-actions-title">Acoes</div>
+          <div class="store-item"><span class="fn">startStream()</span> — inicia SSE connection</div>
+          <div class="store-item"><span class="fn">pauseStream()</span> / <span class="fn">resumeStream()</span></div>
+          <div class="store-item"><span class="fn">cancelExecution()</span></div>
+        </div>
+      </div>
+
+      <!-- Workflows Store -->
+      <div class="store-card" style="border-left: 3px solid #f59e0b;">
+        <div class="store-name">
+          <span style="color: #fbbf24;">&#9881;</span>
+          Workflows Store
+        </div>
+        <div class="store-state">
+          <div class="store-state-title">Estado</div>
+          <div class="store-item">currentPhase <span class="type">1 | 2 | 3</span></div>
+          <div class="store-item">basicInfo <span class="type">WorkflowBasicInfo</span></div>
+          <div class="store-item">formSteps <span class="type">StepConfig[]</span></div>
+          <div class="store-item">selectedStepIndex <span class="type">number</span></div>
+        </div>
+        <div class="store-actions">
+          <div class="store-actions-title">Acoes</div>
+          <div class="store-item"><span class="fn">setPhase()</span> — navega entre fases do wizard</div>
+          <div class="store-item"><span class="fn">addStep()</span> / <span class="fn">removeStep()</span></div>
+          <div class="store-item"><span class="fn">reorderSteps()</span></div>
+        </div>
+      </div>
+
+      <!-- Agents Store -->
+      <div class="store-card" style="border-left: 3px solid #8b5cf6;">
+        <div class="store-name">
+          <span style="color: #a78bfa;">&#129302;</span>
+          Agents Store
+        </div>
+        <div class="store-state">
+          <div class="store-state-title">Estado</div>
+          <div class="store-item">isModalOpen <span class="type">boolean</span></div>
+          <div class="store-item">editingResource <span class="type">Agent | null</span></div>
+        </div>
+        <div class="store-actions">
+          <div class="store-actions-title">Acoes</div>
+          <div class="store-item"><span class="fn">openModal()</span> / <span class="fn">closeModal()</span></div>
+          <div class="store-item"><span class="fn">setEditing()</span></div>
+        </div>
+      </div>
+
+      <!-- Skills Store -->
+      <div class="store-card" style="border-left: 3px solid #06b6d4;">
+        <div class="store-name">
+          <span style="color: #22d3ee;">&#129504;</span>
+          Skills Store
+        </div>
+        <div class="store-state">
+          <div class="store-state-title">Estado</div>
+          <div class="store-item">isModalOpen <span class="type">boolean</span></div>
+          <div class="store-item">editingResource <span class="type">Skill | null</span></div>
+        </div>
+        <div class="store-actions">
+          <div class="store-actions-title">Acoes</div>
+          <div class="store-item"><span class="fn">openModal()</span> / <span class="fn">closeModal()</span></div>
+          <div class="store-item"><span class="fn">setEditing()</span></div>
+        </div>
+      </div>
+
+      <!-- Rules Store -->
+      <div class="store-card" style="border-left: 3px solid #f43f5e;">
+        <div class="store-name">
+          <span style="color: #fb7185;">&#128208;</span>
+          Rules Store
+        </div>
+        <div class="store-state">
+          <div class="store-state-title">Estado</div>
+          <div class="store-item">isModalOpen <span class="type">boolean</span></div>
+          <div class="store-item">editingResource <span class="type">Rule | null</span></div>
+        </div>
+        <div class="store-actions">
+          <div class="store-actions-title">Acoes</div>
+          <div class="store-item"><span class="fn">openModal()</span> / <span class="fn">closeModal()</span></div>
+          <div class="store-item"><span class="fn">setEditing()</span></div>
+        </div>
+      </div>
+
+      <!-- Plugins Store -->
+      <div class="store-card" style="border-left: 3px solid #10b981;">
+        <div class="store-name">
+          <span style="color: #34d399;">&#129513;</span>
+          Plugins Store
+        </div>
+        <div class="store-state">
+          <div class="store-state-title">Estado</div>
+          <div class="store-item">isModalOpen <span class="type">boolean</span></div>
+          <div class="store-item">editingResource <span class="type">Plugin | null</span></div>
+        </div>
+        <div class="store-actions">
+          <div class="store-actions-title">Acoes</div>
+          <div class="store-item"><span class="fn">openModal()</span> / <span class="fn">closeModal()</span></div>
+          <div class="store-item"><span class="fn">setEditing()</span></div>
+        </div>
+      </div>
+
+      <!-- Hooks/MCP Store -->
+      <div class="store-card" style="border-left: 3px solid #64748b;">
+        <div class="store-name">
+          <span style="color: #94a3b8;">&#128268;</span>
+          Hooks & MCP Servers Store
+        </div>
+        <div class="store-state">
+          <div class="store-state-title">Estado</div>
+          <div class="store-item">isModalOpen <span class="type">boolean</span></div>
+          <div class="store-item">editingResource <span class="type">Hook | McpServer | null</span></div>
+        </div>
+        <div class="store-actions">
+          <div class="store-actions-title">Acoes</div>
+          <div class="store-item"><span class="fn">openModal()</span> / <span class="fn">closeModal()</span></div>
+          <div class="store-item"><span class="fn">setEditing()</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Store Interaction Diagram -->
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128260;</div>
+        <div class="card-title">Fluxo de Dados: Stores + React Query</div>
+      </div>
+      <div style="padding: 0.75rem 0;">
+        <svg viewBox="0 0 800 200" style="width:100%;max-width:800px;" xmlns="http://www.w3.org/2000/svg">
+          <!-- API -->
+          <rect x="10" y="75" width="120" height="50" rx="10" fill="#0d9488" fill-opacity="0.15" stroke="#0d9488" stroke-width="1.5"/>
+          <text x="70" y="105" text-anchor="middle" fill="#2dd4bf" font-size="12" font-weight="600" font-family="Inter, sans-serif">Backend API</text>
+
+          <!-- Arrow API -> React Query -->
+          <line x1="130" y1="100" x2="190" y2="100" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+          <text x="160" y="92" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">Axios</text>
+
+          <!-- React Query -->
+          <rect x="190" y="60" width="150" height="80" rx="10" fill="#3b82f6" fill-opacity="0.12" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="265" y="90" text-anchor="middle" fill="#60a5fa" font-size="12" font-weight="600" font-family="Inter, sans-serif">React Query</text>
+          <text x="265" y="108" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">cache + refetch</text>
+          <text x="265" y="122" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">staleTime: 30s</text>
+
+          <!-- Arrow React Query -> Components -->
+          <line x1="340" y1="85" x2="410" y2="55" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+          <line x1="340" y1="100" x2="410" y2="100" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+          <line x1="340" y1="115" x2="410" y2="145" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+          <!-- Components -->
+          <rect x="410" y="30" width="140" height="36" rx="8" fill="#8b5cf6" fill-opacity="0.12" stroke="#8b5cf6" stroke-width="1"/>
+          <text x="480" y="53" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="500" font-family="Inter, sans-serif">Page Components</text>
+
+          <rect x="410" y="82" width="140" height="36" rx="8" fill="#8b5cf6" fill-opacity="0.12" stroke="#8b5cf6" stroke-width="1"/>
+          <text x="480" y="105" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="500" font-family="Inter, sans-serif">Feature Components</text>
+
+          <rect x="410" y="132" width="140" height="36" rx="8" fill="#8b5cf6" fill-opacity="0.12" stroke="#8b5cf6" stroke-width="1"/>
+          <text x="480" y="155" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="500" font-family="Inter, sans-serif">UI Components</text>
+
+          <!-- Arrow Components <-> Zustand -->
+          <line x1="550" y1="100" x2="620" y2="100" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+          <text x="585" y="92" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">subscribe</text>
+
+          <!-- Zustand -->
+          <rect x="620" y="60" width="160" height="80" rx="10" fill="#f59e0b" fill-opacity="0.12" stroke="#f59e0b" stroke-width="1.5"/>
+          <text x="700" y="90" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="600" font-family="Inter, sans-serif">Zustand Stores</text>
+          <text x="700" y="108" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">UI state, forms</text>
+          <text x="700" y="122" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">streaming, auth</text>
+
+          <!-- SSE arrow -->
+          <line x1="70" y1="75" x2="70" y2="20" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <line x1="70" y1="20" x2="700" y2="20" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowgreen)"/>
+          <text x="385" y="14" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="500" font-family="Inter, sans-serif">SSE Stream (real-time updates)</text>
+
+          <defs>
+            <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#1e293b"/>
+            </marker>
+            <marker id="arrowgreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#22c55e"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- SECTION 4: Feature Organization -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-1);">&#128193;</div>
+      Feature Organization
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128449;</div>
+          <div class="card-title">Estrutura por Feature</div>
+        </div>
+        <div style="padding: 0.25rem 0;">
+          <ul class="tree">
+            <li>
+              <span class="folder">src/features/{feature}/</span>
+              <ul class="tree">
+                <li><span class="folder">api/</span>
+                  <ul class="tree">
+                    <li><span class="file">{feature}.api.ts</span> — chamadas HTTP (Axios)</li>
+                  </ul>
+                </li>
+                <li><span class="folder">components/</span>
+                  <ul class="tree">
+                    <li><span class="file">FeatureList.tsx</span></li>
+                    <li><span class="file">FeatureForm.tsx</span></li>
+                    <li><span class="file">FeatureCard.tsx</span></li>
+                  </ul>
+                </li>
+                <li><span class="folder">hooks/</span>
+                  <ul class="tree">
+                    <li><span class="file">use-{feature}.ts</span> — React Query hooks</li>
+                  </ul>
+                </li>
+                <li><span class="folder">store/</span>
+                  <ul class="tree">
+                    <li><span class="file">{feature}.store.ts</span> — Zustand</li>
+                  </ul>
+                </li>
+                <li><span class="folder">types/</span>
+                  <ul class="tree">
+                    <li><span class="file">{feature}.types.ts</span></li>
+                  </ul>
+                </li>
+                <li><span class="file">{Feature}Page.tsx</span> — pagina principal</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#127760;</div>
+          <div class="card-title">Shared (src/shared/)</div>
+        </div>
+        <div style="padding: 0.25rem 0;">
+          <ul class="tree">
+            <li>
+              <span class="folder">src/shared/</span>
+              <ul class="tree">
+                <li><span class="folder">components/</span>
+                  <ul class="tree">
+                    <li><span class="folder">ui/</span> — 23 componentes shadcn/ui
+                      <ul class="tree">
+                        <li><span class="file">button.tsx, input.tsx, card.tsx...</span></li>
+                      </ul>
+                    </li>
+                    <li><span class="folder">common/</span> — compostos reutilizaveis
+                      <ul class="tree">
+                        <li><span class="file">page-header.tsx</span></li>
+                        <li><span class="file">data-table.tsx</span></li>
+                        <li><span class="file">confirm-dialog.tsx</span></li>
+                        <li><span class="file">empty-state.tsx</span></li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+                <li><span class="folder">hooks/</span>
+                  <ul class="tree">
+                    <li><span class="file">useSearchPagination.ts</span></li>
+                    <li><span class="file">use-sse-stream.ts</span></li>
+                  </ul>
+                </li>
+                <li><span class="folder">lib/</span>
+                  <ul class="tree">
+                    <li><span class="file">axios.ts</span> — instancia configurada</li>
+                    <li><span class="file">utils.ts</span> — cn(), formatters</li>
+                    <li><span class="file">query-client.ts</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features list -->
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#128204;</div>
+        <div class="card-title">Features Implementadas</div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+        <span class="badge badge-teal">auth</span>
+        <span class="badge badge-blue">conversations</span>
+        <span class="badge badge-amber">workflows</span>
+        <span class="badge badge-purple">executions</span>
+        <span class="badge badge-green">skills</span>
+        <span class="badge badge-red">agents</span>
+        <span class="badge badge-gray">rules</span>
+        <span class="badge badge-teal">plugins</span>
+        <span class="badge badge-blue">hooks</span>
+        <span class="badge badge-amber">webhooks</span>
+        <span class="badge badge-purple">mcp-servers</span>
+        <span class="badge badge-green">step-templates</span>
+        <span class="badge badge-red">settings</span>
+        <span class="badge badge-gray">admin</span>
+        <span class="badge badge-teal">dashboard</span>
+        <span class="badge badge-blue">workflow-chat</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- SECTION 5: SSE Streaming -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-3);">&#128225;</div>
+      SSE Streaming (Tempo Real)
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#9889;</div>
+          <div class="card-title">use-sse-stream.ts</div>
+        </div>
+        <div class="card-desc">
+          Hook principal que gerencia a conexao SSE com o backend. Recebe a URL de streaming e retorna estado reativo com fase atual, conteudo e controles.
+        </div>
+        <div style="margin-top: 1rem;">
+          <div class="code-block">
+<span class="keyword">const</span> { phase, content, actions, isStreaming, isPaused } = <span class="fn">useSSEStream</span>({
+  <span class="string">url</span>: <span class="string">`/api/executions/${id}/stream`</span>,
+  <span class="string">onEvent</span>: (event) => handleEvent(event),
+  <span class="string">autoReconnect</span>: <span class="keyword">true</span>,
+})
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128260;</div>
+          <div class="card-title">Funcionalidades</div>
+        </div>
+        <div class="card-desc" style="line-height: 2;">
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Auto-reconnect on page refresh (watchExecution)</div>
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Interrupt/cancel support via API</div>
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Pause/resume streaming</div>
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Step status tracking em tempo real</div>
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Error recovery com retry</div>
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> 16 tipos de eventos SSE processados</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Streaming Phases -->
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: var(--bg-success); color: #4ade80;">&#128336;</div>
+        <div class="card-title">Fases do Streaming</div>
+      </div>
+      <div class="phase-flow" style="justify-content: center;">
+        <div class="phase-node" style="border-color: #64748b;">
+          <div style="font-size: 1.1rem;">&#9898;</div>
+          <div>idle</div>
+          <div class="phase-label">Aguardando</div>
+        </div>
+        <div class="phase-arrow">&#8594;</div>
+        <div class="phase-node" style="border-color: #f59e0b;">
+          <div style="font-size: 1.1rem;">&#9881;</div>
+          <div>preparing</div>
+          <div class="phase-label">Config steps</div>
+        </div>
+        <div class="phase-arrow">&#8594;</div>
+        <div class="phase-node" style="border-color: #3b82f6;">
+          <div style="font-size: 1.1rem;">&#128268;</div>
+          <div>connecting</div>
+          <div class="phase-label">Abrindo SSE</div>
+        </div>
+        <div class="phase-arrow">&#8594;</div>
+        <div class="phase-node" style="border-color: #8b5cf6;">
+          <div style="font-size: 1.1rem;">&#129504;</div>
+          <div>ai_thinking</div>
+          <div class="phase-label">Claude processando</div>
+        </div>
+        <div class="phase-arrow">&#8594;</div>
+        <div class="phase-node active-phase">
+          <div style="font-size: 1.1rem;">&#9889;</div>
+          <div>streaming</div>
+          <div class="phase-label">Dados fluindo</div>
+        </div>
+        <div class="phase-arrow">&#8594;</div>
+        <div class="phase-node" style="border-color: #22c55e;">
+          <div style="font-size: 1.1rem;">&#10004;</div>
+          <div>idle</div>
+          <div class="phase-label">Completo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 16 SSE Events -->
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128276;</div>
+        <div class="card-title">16 Eventos SSE Processados</div>
+      </div>
+
+      <div class="table-container" style="margin-top: 0.75rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Evento</th>
+              <th>Descricao</th>
+              <th>Acao no Frontend</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="event-tag">execution:started</span></td>
+              <td>Execucao iniciou</td>
+              <td>Define fase = connecting, mostra timeline</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">execution:progress</span></td>
+              <td>Progresso geral</td>
+              <td>Atualiza barra de progresso</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">execution:completed</span></td>
+              <td>Todas as steps finalizaram</td>
+              <td>Define fase = idle, mostra resultado final</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">execution:failed</span></td>
+              <td>Execucao falhou</td>
+              <td>Mostra erro, habilita retry</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">execution:cancelled</span></td>
+              <td>Usuario cancelou</td>
+              <td>Limpa streaming, volta ao idle</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">step:started</span></td>
+              <td>Step individual iniciou</td>
+              <td>Marca step como "running" na timeline</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">step:progress</span></td>
+              <td>Progresso do step</td>
+              <td>Atualiza % do step individual</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">step:completed</span></td>
+              <td>Step finalizou com sucesso</td>
+              <td>Marca step como "done", mostra output</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">step:failed</span></td>
+              <td>Step falhou</td>
+              <td>Marca step como "failed" com erro</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">step:skipped</span></td>
+              <td>Step pulado (condicao nao atendida)</td>
+              <td>Marca step como "skipped" na timeline</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">stream:chunk</span></td>
+              <td>Chunk de texto do Claude</td>
+              <td>Appenda texto ao conteudo de streaming</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">stream:action</span></td>
+              <td>Acao executada pelo Claude</td>
+              <td>Adiciona acao a lista de acoes</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">stream:thinking</span></td>
+              <td>Claude processando</td>
+              <td>Define fase = ai_thinking</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">token:usage</span></td>
+              <td>Consumo de tokens</td>
+              <td>Atualiza metricas de custo</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">heartbeat</span></td>
+              <td>Keep-alive da conexao</td>
+              <td>Reseta timeout de desconexao</td>
+            </tr>
+            <tr>
+              <td><span class="event-tag">error</span></td>
+              <td>Erro generico</td>
+              <td>Mostra toast de erro, tenta reconectar</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- SECTION 6: shadcn/ui Components -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-2);">&#127912;</div>
+      23 Componentes shadcn/ui
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-chip">&#128316; Button</div>
+      <div class="comp-chip">&#9998; Input</div>
+      <div class="comp-chip">&#127991; Label</div>
+      <div class="comp-chip">&#128196; Card</div>
+      <div class="comp-chip">&#128194; Dialog</div>
+      <div class="comp-chip">&#9660; Select</div>
+      <div class="comp-chip">&#128209; Tabs</div>
+      <div class="comp-chip">&#127991; Badge</div>
+      <div class="comp-chip">&#9745; Checkbox</div>
+      <div class="comp-chip">&#8860; Switch</div>
+      <div class="comp-chip">&#9888; Alert</div>
+      <div class="comp-chip">&#128680; AlertDialog</div>
+      <div class="comp-chip">&#9617; Skeleton</div>
+      <div class="comp-chip">&#128220; ScrollArea</div>
+      <div class="comp-chip">&#9473; Separator</div>
+      <div class="comp-chip">&#9608; Progress</div>
+      <div class="comp-chip">&#128100; Avatar</div>
+      <div class="comp-chip">&#128172; Tooltip</div>
+      <div class="comp-chip">&#9660; Collapsible</div>
+      <div class="comp-chip">&#9644; Slider</div>
+      <div class="comp-chip">&#9776; DropdownMenu</div>
+      <div class="comp-chip">&#128276; Sonner</div>
+      <div class="comp-chip">&#9998; Textarea</div>
+    </div>
+
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128736;</div>
+        <div class="card-title">Composicao de Componentes</div>
+      </div>
+      <div style="padding: 0.5rem 0;">
+        <svg viewBox="0 0 750 220" style="width:100%;max-width:750px;" xmlns="http://www.w3.org/2000/svg">
+          <!-- Radix Primitives -->
+          <rect x="10" y="160" width="730" height="45" rx="10" fill="rgba(100,116,139,0.08)" stroke="#1e293b"/>
+          <text x="375" y="187" text-anchor="middle" fill="#64748b" font-size="12" font-weight="600" font-family="Inter, sans-serif">Radix UI Primitives (headless, accessible)</text>
+
+          <!-- shadcn/ui layer -->
+          <rect x="40" y="95" width="670" height="45" rx="10" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.3)"/>
+          <text x="375" y="122" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="600" font-family="Inter, sans-serif">shadcn/ui — 23 componentes estilizados com Tailwind CSS</text>
+
+          <!-- Arrows up -->
+          <line x1="375" y1="160" x2="375" y2="140" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+          <!-- Feature Components -->
+          <rect x="80" y="30" width="180" height="45" rx="10" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.3)"/>
+          <text x="170" y="57" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="600" font-family="Inter, sans-serif">Feature Components</text>
+
+          <rect x="290" y="30" width="180" height="45" rx="10" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)"/>
+          <text x="380" y="57" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600" font-family="Inter, sans-serif">Common Components</text>
+
+          <rect x="500" y="30" width="180" height="45" rx="10" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.3)"/>
+          <text x="590" y="57" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="600" font-family="Inter, sans-serif">Page Components</text>
+
+          <!-- Arrows down -->
+          <line x1="170" y1="75" x2="270" y2="95" stroke="#1e293b" stroke-width="1" marker-end="url(#arrowhead)"/>
+          <line x1="380" y1="75" x2="375" y2="95" stroke="#1e293b" stroke-width="1" marker-end="url(#arrowhead)"/>
+          <line x1="590" y1="75" x2="490" y2="95" stroke="#1e293b" stroke-width="1" marker-end="url(#arrowhead)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- SECTION 7: Dark Mode -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: linear-gradient(135deg, #1e293b, #475569);">&#127763;</div>
+      Dark Mode
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">&#127912;</div>
+          <div class="card-title">Implementacao</div>
+        </div>
+        <div class="card-desc" style="line-height: 2;">
+          <div><span class="badge badge-teal">CSS class-based</span> — <code class="mono" style="font-size:0.82rem;color:#67e8f9;">darkMode: 'class'</code> no Tailwind</div>
+          <div><span class="badge badge-purple">CSS Variables</span> — variaveis separadas para light/dark</div>
+          <div><span class="badge badge-blue">localStorage</span> — persistencia da preferencia</div>
+          <div><span class="badge badge-amber">Toggle</span> — botao no header para alternar</div>
+          <div><span class="badge badge-green">Default: Dark</span> — dark mode e o padrao inicial</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#127912;</div>
+          <div class="card-title">Paleta de Cores</div>
+        </div>
+        <div style="padding: 0.25rem 0;">
+          <div class="color-swatch">
+            <div class="swatch" style="background: hsl(173, 80%, 40%);"></div>
+            <div>
+              <div style="font-weight:600;font-size:0.88rem;">Primary — Teal</div>
+              <div style="color:var(--text-muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">hsl(173, 80%, 40%) — 173deg</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="swatch" style="background: #0a0e1a;"></div>
+            <div>
+              <div style="font-weight:600;font-size:0.88rem;">Background Dark</div>
+              <div style="color:var(--text-muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">#0a0e1a</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="swatch" style="background: #1a1f2e;"></div>
+            <div>
+              <div style="font-weight:600;font-size:0.88rem;">Card Background</div>
+              <div style="color:var(--text-muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">#1a1f2e</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="swatch" style="background: #f1f5f9;"></div>
+            <div>
+              <div style="font-weight:600;font-size:0.88rem;">Text Primary</div>
+              <div style="color:var(--text-muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">#f1f5f9</div>
+            </div>
+          </div>
+          <div class="color-swatch">
+            <div class="swatch" style="background: #2dd4bf;"></div>
+            <div>
+              <div style="font-weight:600;font-size:0.88rem;">Text Accent</div>
+              <div style="color:var(--text-muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">#2dd4bf</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CSS Variables Code -->
+    <div class="card" style="margin-top: 1.5rem;">
+      <div class="card-header">
+        <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128196;</div>
+        <div class="card-title">CSS Variables (globals.css)</div>
+      </div>
+      <div class="code-block" style="margin-top: 0.5rem;">
+<span class="comment">/* Light mode */</span>
+<span class="keyword">:root</span> {
+  <span class="string">--background</span>: 0 0% 100%;
+  <span class="string">--foreground</span>: 222.2 84% 4.9%;
+  <span class="string">--primary</span>: 173 80% 40%;     <span class="comment">/* Teal */</span>
+  <span class="string">--primary-foreground</span>: 0 0% 100%;
+  <span class="string">--card</span>: 0 0% 100%;
+  <span class="string">--border</span>: 214.3 31.8% 91.4%;
+}
+
+<span class="comment">/* Dark mode */</span>
+<span class="keyword">.dark</span> {
+  <span class="string">--background</span>: 222.2 84% 4.9%;
+  <span class="string">--foreground</span>: 210 40% 98%;
+  <span class="string">--primary</span>: 173 80% 40%;     <span class="comment">/* Teal (same hue) */</span>
+  <span class="string">--primary-foreground</span>: 0 0% 100%;
+  <span class="string">--card</span>: 222.2 84% 6.9%;
+  <span class="string">--border</span>: 217.2 32.6% 17.5%;
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- SECTION 8: API Integration -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-4);">&#128268;</div>
+      API Integration
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128229;</div>
+          <div class="card-title">Axios Instance</div>
+        </div>
+        <div class="card-desc">Instancia centralizada com base URL do backend, interceptors de autenticacao (inject token no header) e interceptor de resposta para tratamento de erros.</div>
+        <div class="code-block" style="margin-top: 0.75rem; font-size: 0.8rem;">
+<span class="keyword">const</span> api = axios.<span class="fn">create</span>({
+  <span class="string">baseURL</span>: API_URL,
+  <span class="string">headers</span>: { <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span> }
+})
+
+<span class="comment">// Request interceptor</span>
+api.interceptors.request.<span class="fn">use</span>((config) => {
+  <span class="keyword">const</span> token = localStorage.<span class="fn">getItem</span>(<span class="string">'token'</span>)
+  <span class="keyword">if</span> (token) config.headers.Authorization = <span class="string">`Bearer ${token}`</span>
+  <span class="keyword">return</span> config
+})
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#128259;</div>
+          <div class="card-title">React Query Config</div>
+        </div>
+        <div style="margin-top: 0.5rem;">
+          <div class="config-row">
+            <span class="config-key">staleTime</span>
+            <span class="config-val">30s</span>
+          </div>
+          <div class="config-row">
+            <span class="config-key">gcTime</span>
+            <span class="config-val">5min</span>
+          </div>
+          <div class="config-row">
+            <span class="config-key">retry</span>
+            <span class="config-val">1</span>
+          </div>
+          <div class="config-row">
+            <span class="config-key">refetchOnWindowFocus</span>
+            <span class="config-val">true</span>
+          </div>
+          <div class="config-row">
+            <span class="config-key">refetchOnReconnect</span>
+            <span class="config-val">true</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-danger); color: #f87171;">&#128274;</div>
+          <div class="card-title">401 Handling</div>
+        </div>
+        <div class="card-desc">Quando o backend retorna 401 (token expirado ou invalido):</div>
+        <div style="margin-top: 0.75rem;">
+          <div class="flow-container" style="padding: 0.5rem 0; flex-wrap: wrap;">
+            <div class="flow-node" style="font-size: 0.8rem;">
+              <span style="color: #f87171;">&#128680;</span> 401 Response
+            </div>
+            <span class="flow-arrow" style="font-size: 1rem;">&#8594;</span>
+            <div class="flow-node" style="font-size: 0.8rem;">
+              <span style="color: #fbbf24;">&#128465;</span> Clear token
+            </div>
+            <span class="flow-arrow" style="font-size: 1rem;">&#8594;</span>
+            <div class="flow-node" style="font-size: 0.8rem;">
+              <span style="color: #a78bfa;">&#128260;</span> Reset auth store
+            </div>
+            <span class="flow-arrow" style="font-size: 1rem;">&#8594;</span>
+            <div class="flow-node" style="font-size: 0.8rem;">
+              <span style="color: #2dd4bf;">&#128682;</span> Redirect /login
+            </div>
+          </div>
+        </div>
+        <div class="code-block" style="margin-top: 0.5rem; font-size: 0.78rem;">
+<span class="comment">// Response interceptor</span>
+api.interceptors.response.<span class="fn">use</span>(
+  (res) => res,
+  (error) => {
+    <span class="keyword">if</span> (error.response?.status === <span class="number">401</span>) {
+      useAuthStore.<span class="fn">getState</span>().<span class="fn">logout</span>()
+      window.location.href = <span class="string">'/login'</span>
+    }
+    <span class="keyword">return</span> Promise.<span class="fn">reject</span>(error)
+  }
+)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- SECTION 9: Workflow Wizard -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-1);">&#129497;</div>
+      Workflow Wizard
+    </div>
+
+    <p class="card-desc" style="margin-bottom: 1.25rem;">
+      Formulario de 3 fases para criacao e edicao de workflows. Cada fase valida antes de avancar.
+      O estado e mantido no Workflows Store (Zustand) para persistir entre navegacoes.
+    </p>
+
+    <!-- 3-Phase Wizard -->
+    <div class="wizard-flow">
+      <div class="wizard-step" style="border-left: 3px solid #0d9488;">
+        <div class="wizard-step-num" style="background: var(--bg-accent-subtle); color: var(--text-accent);">1</div>
+        <div class="wizard-step-title">Basic Info</div>
+        <div class="wizard-step-desc">
+          Nome, descricao, tags, agente padrao, modelo de IA, prioridade e configuracao geral do workflow.
+        </div>
+        <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+          <span class="badge badge-teal">Nome</span>
+          <span class="badge badge-teal">Descricao</span>
+          <span class="badge badge-teal">Tags</span>
+          <span class="badge badge-teal">Agent</span>
+          <span class="badge badge-teal">Model</span>
+          <span class="badge badge-teal">Priority</span>
+        </div>
+      </div>
+      <div class="wizard-connector"></div>
+      <div class="wizard-step" style="border-left: 3px solid #3b82f6;">
+        <div class="wizard-step-num" style="background: var(--bg-info); color: #60a5fa;">2</div>
+        <div class="wizard-step-title">Step Builder</div>
+        <div class="wizard-step-desc">
+          Construtor visual de steps com drag-and-drop. Cada step define: prompt, agent, skills, rules, timeout e dependencias.
+        </div>
+        <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+          <span class="badge badge-blue">Add Step</span>
+          <span class="badge badge-blue">Reorder</span>
+          <span class="badge badge-blue">Config</span>
+          <span class="badge badge-blue">Dependencies</span>
+          <span class="badge badge-blue">Templates</span>
+        </div>
+      </div>
+      <div class="wizard-connector"></div>
+      <div class="wizard-step" style="border-left: 3px solid #8b5cf6;">
+        <div class="wizard-step-num" style="background: rgba(139,92,246,0.1); color: #a78bfa;">3</div>
+        <div class="wizard-step-title">Review</div>
+        <div class="wizard-step-desc">
+          Revisao final com preview visual do fluxo, validacao de dependencias, estimativa de tokens e confirmacao.
+        </div>
+        <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
+          <span class="badge badge-purple">Flow Preview</span>
+          <span class="badge badge-purple">Validation</span>
+          <span class="badge badge-purple">Token Est.</span>
+          <span class="badge badge-purple">Save</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wizard Architecture -->
+    <div class="grid-2" style="margin-top: 1.5rem;">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128065;</div>
+          <div class="card-title">Visual Flow Preview</div>
+        </div>
+        <div class="card-desc">
+          Na fase de Review, o wizard renderiza um preview visual do workflow com:
+        </div>
+        <div style="margin-top: 0.75rem; line-height: 2;">
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Nodes representando cada step</div>
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Setas de dependencia entre steps</div>
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Cores por status (pending, ready)</div>
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Tooltip com detalhes do step</div>
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Deteccao de ciclos/erros</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#128204;</div>
+          <div class="card-title">Resource Selection Panel</div>
+        </div>
+        <div class="card-desc">
+          Painel lateral no Step Builder para selecionar recursos por step:
+        </div>
+        <div style="margin-top: 0.75rem; line-height: 2;">
+          <div><span class="badge badge-teal" style="margin-right:0.3rem;">&#129302;</span> Agents — seleciona agente para o step</div>
+          <div><span class="badge badge-blue" style="margin-right:0.3rem;">&#129504;</span> Skills — associa skills ao step</div>
+          <div><span class="badge badge-amber" style="margin-right:0.3rem;">&#128208;</span> Rules — aplica regras de negocio</div>
+          <div><span class="badge badge-purple" style="margin-right:0.3rem;">&#129513;</span> Plugins — estende funcionalidade</div>
+          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#128268;</span> MCP Servers — ferramentas externas</div>
+          <div><span class="badge badge-red" style="margin-right:0.3rem;">&#128195;</span> Step Templates — templates prontos</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- Summary / Architecture Overview -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-1);">&#128200;</div>
+      Visao Geral da Arquitetura Frontend
+    </div>
+
+    <div class="card">
+      <div style="padding: 0.5rem; overflow-x: auto;">
+        <svg viewBox="0 0 900 340" style="width:100%;max-width:900px;min-width:600px;" xmlns="http://www.w3.org/2000/svg">
+          <!-- Browser -->
+          <rect x="20" y="10" width="860" height="40" rx="8" fill="rgba(100,116,139,0.08)" stroke="#1e293b"/>
+          <text x="450" y="35" text-anchor="middle" fill="#94a3b8" font-size="13" font-weight="600" font-family="Inter, sans-serif">Browser (React 18 SPA)</text>
+
+          <!-- React Router -->
+          <rect x="350" y="65" width="200" height="32" rx="6" fill="rgba(13,148,136,0.1)" stroke="#0d9488"/>
+          <text x="450" y="86" text-anchor="middle" fill="#2dd4bf" font-size="11" font-weight="600" font-family="Inter, sans-serif">React Router 7 — 18 rotas</text>
+
+          <!-- Arrow down -->
+          <line x1="450" y1="97" x2="450" y2="115" stroke="#1e293b" stroke-width="1.5"/>
+
+          <!-- Pages -->
+          <rect x="150" y="115" width="600" height="35" rx="6" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.3)"/>
+          <text x="450" y="137" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="500" font-family="Inter, sans-serif">Page Components (Dashboard, Conversations, Workflows, Settings...)</text>
+
+          <!-- Arrows down to 3 layers -->
+          <line x1="250" y1="150" x2="150" y2="175" stroke="#1e293b" stroke-width="1"/>
+          <line x1="450" y1="150" x2="450" y2="175" stroke="#1e293b" stroke-width="1"/>
+          <line x1="650" y1="150" x2="750" y2="175" stroke="#1e293b" stroke-width="1"/>
+
+          <!-- Zustand -->
+          <rect x="40" y="175" width="220" height="55" rx="8" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)"/>
+          <text x="150" y="198" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600" font-family="Inter, sans-serif">Zustand Stores (8)</text>
+          <text x="150" y="216" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">auth, conversations, workflows...</text>
+
+          <!-- React Query -->
+          <rect x="290" y="175" width="320" height="55" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.3)"/>
+          <text x="450" y="198" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="600" font-family="Inter, sans-serif">TanStack React Query 5</text>
+          <text x="450" y="216" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">staleTime: 30s | gcTime: 5min | retry: 1</text>
+
+          <!-- shadcn/ui -->
+          <rect x="640" y="175" width="220" height="55" rx="8" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.3)"/>
+          <text x="750" y="198" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600" font-family="Inter, sans-serif">shadcn/ui (23 components)</text>
+          <text x="750" y="216" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">Radix + Tailwind CSS 3.4</text>
+
+          <!-- Arrow down from React Query -->
+          <line x1="450" y1="230" x2="450" y2="255" stroke="#1e293b" stroke-width="1.5"/>
+
+          <!-- Axios + SSE -->
+          <rect x="200" y="255" width="210" height="40" rx="8" fill="rgba(13,148,136,0.1)" stroke="#0d9488"/>
+          <text x="305" y="280" text-anchor="middle" fill="#2dd4bf" font-size="11" font-weight="600" font-family="Inter, sans-serif">Axios (HTTP Client)</text>
+
+          <rect x="440" y="255" width="210" height="40" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.3)"/>
+          <text x="545" y="280" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="600" font-family="Inter, sans-serif">SSE Stream (16 events)</text>
+
+          <!-- Arrow down to Backend -->
+          <line x1="305" y1="295" x2="400" y2="315" stroke="#1e293b" stroke-width="1.5"/>
+          <line x1="545" y1="295" x2="480" y2="315" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+          <!-- Backend -->
+          <rect x="340" y="315" width="220" height="32" rx="6" fill="rgba(239,68,68,0.08)" stroke="rgba(239,68,68,0.3)"/>
+          <text x="450" y="336" text-anchor="middle" fill="#f87171" font-size="11" font-weight="600" font-family="Inter, sans-serif">Fastify Backend (port 3333)</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="shared.js"></script>
 </body>
 </html>
