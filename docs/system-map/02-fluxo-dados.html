@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>02 - Fluxo de Dados | Orquetrador Claude System Map</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    /* State Machine Diagrams */
+    .state-machine {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      position: relative;
+      overflow-x: auto;
+    }
+
+    .state-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .state-row:last-child { margin-bottom: 0; }
+
+    .state-node {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 2px solid;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .state-node:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .state-initial {
+      background: rgba(100,116,139,0.15);
+      border-color: rgba(100,116,139,0.4);
+      color: #94a3b8;
+    }
+
+    .state-active {
+      background: rgba(34,197,94,0.12);
+      border-color: rgba(34,197,94,0.4);
+      color: #4ade80;
+    }
+
+    .state-running {
+      background: rgba(59,130,246,0.12);
+      border-color: rgba(59,130,246,0.4);
+      color: #60a5fa;
+    }
+
+    .state-paused {
+      background: rgba(245,158,11,0.12);
+      border-color: rgba(245,158,11,0.4);
+      color: #fbbf24;
+    }
+
+    .state-completed {
+      background: rgba(13,148,136,0.12);
+      border-color: rgba(13,148,136,0.4);
+      color: #2dd4bf;
+    }
+
+    .state-failed {
+      background: rgba(239,68,68,0.12);
+      border-color: rgba(239,68,68,0.4);
+      color: #f87171;
+    }
+
+    .state-archived {
+      background: rgba(139,92,246,0.12);
+      border-color: rgba(139,92,246,0.4);
+      color: #a78bfa;
+    }
+
+    .state-cancelled {
+      background: rgba(251,191,36,0.12);
+      border-color: rgba(251,191,36,0.4);
+      color: #fbbf24;
+    }
+
+    .arrow {
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+
+    .arrow-down {
+      display: flex;
+      justify-content: center;
+      margin: 0.5rem 0;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+    }
+
+    .arrow-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+      display: block;
+      margin-top: -0.25rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .branch-container {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .branch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Transition info */
+    .transition-table td:first-child {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* Flow steps */
+    .flow-step {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .flow-step:last-child { border-bottom: none; }
+
+    .flow-step-num {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .flow-step-content {
+      flex: 1;
+    }
+
+    .flow-step-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .flow-step-desc {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    .flow-step-code {
+      margin-top: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-accent);
+      background: var(--bg-primary);
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    /* SSE Event grid */
+    .sse-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .sse-event {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.85rem;
+      transition: all 0.3s;
+    }
+
+    .sse-event:hover {
+      border-color: rgba(13,148,136,0.3);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-2px);
+    }
+
+    .sse-event-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .sse-event-desc {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .sse-event-meta {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Pipeline visualization */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+      padding: 1rem 0;
+    }
+
+    .pipeline-node {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.3s;
+    }
+
+    .pipeline-node:hover {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .pipeline-arrow {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* Trigger flow */
+    .trigger-timeline {
+      position: relative;
+      padding-left: 2rem;
+    }
+
+    .trigger-timeline::before {
+      content: '';
+      position: absolute;
+      left: 0.75rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--bg-accent), rgba(13,148,136,0.2));
+    }
+
+    .trigger-step {
+      position: relative;
+      padding: 0.75rem 0;
+      padding-left: 1.5rem;
+    }
+
+    .trigger-step::before {
+      content: '';
+      position: absolute;
+      left: -1.65rem;
+      top: 1.1rem;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--bg-accent);
+      border: 2px solid var(--bg-primary);
+    }
+
+    .trigger-step-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .trigger-step-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    /* Sub-step inside main flow */
+    .sub-steps {
+      margin-left: 1.5rem;
+      border-left: 2px solid var(--border-color);
+      padding-left: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .sub-step {
+      padding: 0.4rem 0;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .sub-step-bullet {
+      color: var(--text-accent);
+      font-weight: 700;
+      min-width: 8px;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 0.75rem 1rem;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid;
+    }
+
+    @media (max-width: 768px) {
+      .state-row { flex-direction: column; }
+      .branch-container { flex-direction: column; align-items: center; }
+      .sse-grid { grid-template-columns: 1fr; }
+      .pipeline { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="breadcrumb">
+        <a href="index.html">System Map</a>
+        <span>›</span>
+        <span>02 - Fluxo de Dados</span>
+      </div>
+      <h1>Fluxo de Dados</h1>
+      <p class="subtitle">Ciclos de vida das entidades, fluxo end-to-end de execucao, eventos em tempo real, controle de tokens e trigger scheduler.</p>
+    </div>
+
+    <!-- ==================== -->
+    <!-- SECTION 1: Workflow Lifecycle -->
+    <!-- ==================== -->
+    <div class="section" id="workflow-lifecycle">
+      <h2 class="section-title">
+        <span class="icon" style="background: var(--bg-accent-subtle);">📋</span>
+        1. Ciclo de Vida do Workflow
+      </h2>
+
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-desc" style="margin-bottom: 1rem;">
+          Um Workflow representa uma sequencia (ou DAG) de steps a serem executados. Tem tres estados possiveis, controlados pelo enum <code>WorkflowStatus</code>.
+        </div>
+
+        <div class="state-machine">
+          <div class="state-row">
+            <div class="state-node state-initial">📝 Draft</div>
+            <span class="arrow">→</span>
+            <div class="state-node state-active">✅ Active</div>
+            <span class="arrow">→</span>
+            <div class="state-node state-archived">📦 Archived</div>
+          </div>
+          <div style="display:flex; justify-content:center; margin-top:0.5rem;">
+            <span style="font-size:0.75rem; color:var(--text-muted);">← pode voltar de Archived para Active</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Descricao</th>
+                  <th>Acoes Permitidas</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge badge-gray">draft</span></td>
+                  <td>Workflow em construcao. Steps podem ser adicionados/removidos/reordenados.</td>
+                  <td>Editar steps, editar config, ativar (→ active)</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-green">active</span></td>
+                  <td>Workflow pronto para execucao. Conversations podem ser criadas a partir dele.</td>
+                  <td>Executar, criar conversation, editar steps, arquivar (→ archived)</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-purple">archived</span></td>
+                  <td>Workflow descontinuado. Nao aceita novas execucoes, mas o historico e mantido.</td>
+                  <td>Visualizar, reativar (→ active), excluir permanentemente</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- SECTION 2: Conversation Lifecycle -->
+    <!-- ==================== -->
+    <div class="section" id="conversation-lifecycle">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(59,130,246,0.1);">💬</span>
+        2. Ciclo de Vida da Conversation
+      </h2>
+
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-desc" style="margin-bottom: 1rem;">
+          Uma Conversation e uma instancia de interacao com um Workflow. Controlada pelo enum <code>ConversationStatus</code>. Suporta fork via <code>parentId</code>.
+        </div>
+
+        <div class="state-machine">
+          <div class="state-row">
+            <div class="state-node state-active">💬 Active</div>
+          </div>
+
+          <div class="arrow-down">↓</div>
+          <span class="arrow-label">mensagem → execucao → resultado</span>
+
+          <div class="branch-container">
+            <div class="branch">
+              <div class="arrow-down">↓</div>
+              <span class="arrow-label">sucesso / finalizada pelo usuario</span>
+              <div class="state-node state-completed">✅ Completed</div>
+            </div>
+            <div class="branch">
+              <div class="arrow-down">↓</div>
+              <span class="arrow-label">erro critico nao-recuperavel</span>
+              <div class="state-node state-failed">❌ Failed</div>
+            </div>
+            <div class="branch">
+              <div class="arrow-down">↓</div>
+              <span class="arrow-label">desativada manualmente</span>
+              <div class="state-node state-archived">📦 Archived</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">Fork de Conversations</h3>
+          <div class="card-desc">
+            Qualquer conversation pode ser "forkada" criando uma nova conversation com <code>parentId</code> apontando para a original. A relacao e mantida via <code>@relation("ConversationParent")</code>. O fork herda o historico de mensagens ate o ponto do fork, mas segue um caminho independente a partir dai.
+          </div>
+          <div class="state-machine" style="margin-top:1rem; padding:1.25rem;">
+            <div class="state-row">
+              <div class="state-node state-active" style="font-size:0.8rem;">Conversation A <span style="color:var(--text-muted)">(parent)</span></div>
+              <span class="arrow" style="font-size:1rem;">──fork──→</span>
+              <div class="state-node state-active" style="font-size:0.8rem;">Conversation B <span style="color:var(--text-muted)">(parentId: A)</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Descricao</th>
+                  <th>Transicao</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge badge-green">active</span></td>
+                  <td>Conversation em andamento. Aceita novas mensagens e execucoes.</td>
+                  <td>→ completed, → failed, → archived</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-teal">completed</span></td>
+                  <td>Conversation finalizada com sucesso. Apenas leitura.</td>
+                  <td>Terminal (pode ser forked)</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-red">failed</span></td>
+                  <td>Conversation falhou. Erro critico no workflow ou na engine.</td>
+                  <td>Terminal (pode ser forked)</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-purple">archived</span></td>
+                  <td>Conversation desativada manualmente pelo usuario.</td>
+                  <td>Terminal</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- SECTION 3: Execution Lifecycle -->
+    <!-- ==================== -->
+    <div class="section" id="execution-lifecycle">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(245,158,11,0.1);">⚙️</span>
+        3. Ciclo de Vida da Execution
+      </h2>
+
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-desc" style="margin-bottom: 1rem;">
+          Cada mensagem enviada em uma conversation gera um <code>ExecutionState</code>. Controlado pelo enum <code>ExecutionStateStatus</code> com 6 estados possiveis.
+        </div>
+
+        <div class="state-machine">
+          <!-- Main flow -->
+          <div class="state-row">
+            <div class="state-node state-initial">📥 Queued</div>
+            <span class="arrow">→</span>
+            <div class="state-node state-running">🔄 Running</div>
+          </div>
+
+          <div style="display:flex; justify-content:center; gap:3rem; flex-wrap:wrap; margin:1rem 0;">
+            <div style="text-align:center;">
+              <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:0.4rem;">↕ pause/resume</div>
+              <div class="state-node state-paused">⏸ Paused</div>
+            </div>
+          </div>
+
+          <div class="arrow-down">↓ resultado final</div>
+
+          <div class="branch-container">
+            <div class="branch">
+              <div class="state-node state-completed">✅ Completed</div>
+              <span style="font-size:0.7rem; color:var(--text-muted); margin-top:0.3rem;">todos steps ok</span>
+            </div>
+            <div class="branch">
+              <div class="state-node state-failed">❌ Failed</div>
+              <span style="font-size:0.7rem; color:var(--text-muted); margin-top:0.3rem;">erro nao-recuperavel</span>
+            </div>
+            <div class="branch">
+              <div class="state-node state-cancelled">🚫 Cancelled</div>
+              <span style="font-size:0.7rem; color:var(--text-muted); margin-top:0.3rem;">cancelado pelo usuario</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">Transicoes e Triggers</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>De</th>
+                  <th>Para</th>
+                  <th>Trigger</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge badge-gray">queued</span></td>
+                  <td><span class="badge badge-blue">running</span></td>
+                  <td>Worker pega o job da fila BullMQ e inicia o TaskOrchestrator</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-blue">running</span></td>
+                  <td><span class="badge badge-amber">paused</span></td>
+                  <td>Usuario envia PUT /executions/:id/pause ou step retorna <code>needsUserInput: true</code></td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-amber">paused</span></td>
+                  <td><span class="badge badge-blue">running</span></td>
+                  <td>Usuario envia PUT /executions/:id/resume com nova mensagem</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-blue">running</span></td>
+                  <td><span class="badge badge-teal">completed</span></td>
+                  <td>Todos os steps terminaram com sucesso (ou skip)</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-blue">running</span></td>
+                  <td><span class="badge badge-red">failed</span></td>
+                  <td>Step falha e errorHandling = "fail" (ou max retries atingido)</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-blue">running</span></td>
+                  <td><span class="badge badge-amber">cancelled</span></td>
+                  <td>Usuario envia DELETE /executions/:id ou timeout global</td>
+                </tr>
+                <tr>
+                  <td><span class="badge badge-amber">paused</span></td>
+                  <td><span class="badge badge-amber">cancelled</span></td>
+                  <td>Usuario cancela enquanto execucao esta pausada</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- SECTION 4: End-to-End Execution Flow -->
+    <!-- ==================== -->
+    <div class="section" id="e2e-flow">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(139,92,246,0.1);">🔀</span>
+        4. Fluxo Completo de Execucao (End-to-End)
+      </h2>
+
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-desc" style="margin-bottom: 1.25rem;">
+          Desde o momento em que o usuario envia uma mensagem ate a conclusao da execucao, todos os componentes do sistema participam em sequencia.
+        </div>
+
+        <!-- Phase A: Request -->
+        <div style="margin-bottom:2rem;">
+          <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+            <span style="background: var(--gradient-1); color:white; padding:0.2rem 0.6rem; border-radius:6px; font-size:0.8rem;">A</span>
+            Entrada da Mensagem
+          </h3>
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-1);">1</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Usuario envia mensagem</div>
+              <div class="flow-step-desc">Frontend faz request para o backend via SSE.</div>
+              <div class="flow-step-code">POST /api/conversations/:id/messages/stream</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-1);">2</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Mensagem salva no banco</div>
+              <div class="flow-step-desc">A mensagem do usuario e persistida como <code>Message</code> com <code>role: 'user'</code> associada a conversation e ao step atual.</div>
+            </div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-1);">3</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">ExecutionState atualizado para 'running'</div>
+              <div class="flow-step-desc">O <code>executionStateManager</code> cria ou atualiza o registro com <code>state: 'running'</code>, incrementa <code>currentStepIndex</code>.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase B: Step Execution Loop -->
+        <div style="margin-bottom:2rem;">
+          <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+            <span style="background: var(--gradient-4); color:white; padding:0.2rem 0.6rem; border-radius:6px; font-size:0.8rem;">B</span>
+            Loop de Execucao dos Steps
+          </h3>
+          <div class="card-desc" style="margin-bottom:1rem; font-size:0.85rem;">
+            Para cada <code>WorkflowStep</code> (sequencial ou via DAG), o <code>TaskOrchestrator</code> executa o seguinte pipeline:
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">4</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Avaliar skip conditions</div>
+              <div class="flow-step-desc">
+                O metodo <code>evaluateSkipCondition()</code> verifica se o step deve ser pulado. Condicoes suportadas:
+              </div>
+              <div class="sub-steps">
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <code>empty_input</code> — pula se a mensagem estiver vazia</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <code>contains:keyword</code> — pula se contem a keyword</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <code>not_contains:keyword</code> — pula se NAO contem</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <code>step_index > N</code> — pula baseado no indice</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <code>true</code> / <code>false</code> — literal</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">5</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Construir contexto</div>
+              <div class="flow-step-desc">
+                Monta o contexto de execucao combinando:
+              </div>
+              <div class="sub-steps">
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>System prompt:</strong> prompt base + step.systemPrompt + memoria salva</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>Resume token:</strong> recuperado do <code>SessionManager</code> para continuar sessao do Claude</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>Attachments:</strong> arquivos enviados pelo usuario</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>Git config:</strong> configura user.name/email e GitHub token no workspace</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">6</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Compactar mensagens antigas (Memory Manager)</div>
+              <div class="flow-step-desc">
+                Se o contexto ficar muito longo ("prompt_too_long"), o <code>MemoryManager</code> e acionado: resume a conversa, salva o sumario como memoria, limpa a sessao e recria com contexto compacto.
+              </div>
+              <div class="flow-step-code">memoryManager.summarizeAndSave(conversationId, stepId)</div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">7</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Executar ClaudeCodeEngine</div>
+              <div class="flow-step-desc">
+                Chama <code>engine.execute()</code> que spawna o processo <code>claude</code> CLI com <code>sudo -u claude-sandbox</code>. A engine roda em isolamento, recebendo o prompt e retornando streaming JSON events.
+              </div>
+              <div class="flow-step-code">ClaudeCodeEngine.execute({ message, systemPrompt, resumeToken, ... })</div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">8</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Parsear streaming output</div>
+              <div class="flow-step-desc">
+                O <code>StreamParser</code> recebe chunks JSON do stdout do processo e emite eventos tipados: <code>content</code>, <code>action</code>, <code>metadata</code>. O <code>ExecutionMonitor</code> coleta metricas em tempo real.
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">9</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Salvar ExecutionTrace</div>
+              <div class="flow-step-desc">
+                O monitor faz <code>flush()</code> ao final do step, criando um <code>ExecutionTrace</code> com: timing (startedAt, completedAt, durationMs), tokens (input/output), stdout acumulado, stderr, status, exitCode, signal.
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">10</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Extrair ExecutionToolCalls</div>
+              <div class="flow-step-desc">
+                O <code>ToolCallExtractor</code> analisa o conteudo das <code>actions</code> e extrai todas as chamadas de ferramentas (Read, Write, Bash, etc.) com seus argumentos e resultados. Salvas como <code>ExecutionToolCall</code>.
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">11</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Salvar Message (assistant)</div>
+              <div class="flow-step-desc">
+                O conteudo gerado pelo Claude e salvo como <code>Message</code> com <code>role: 'assistant'</code>, incluindo metadata com actions, sessionId (resume token) e stepName.
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">12</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Executar validators</div>
+              <div class="flow-step-desc">
+                Se o step tem <code>ValidatorConfig</code>, o <code>runValidators()</code> executa as validacoes no output. Se falhar, emite <code>validation_failed</code> via SSE.
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">13</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Avaliar conditions (retry, jump, complete)</div>
+              <div class="flow-step-desc">
+                O <code>ConditionsEvaluator</code> analisa o <code>StepConditions</code> do step:
+              </div>
+              <div class="sub-steps">
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>retry:</strong> re-executa o step (com backoff exponencial, ate maxRetries)</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>jump:</strong> pula para outro step pelo nome/indice</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>complete:</strong> finaliza a execucao antecipadamente</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">14</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Tratar erros (errorHandling)</div>
+              <div class="flow-step-desc">
+                O <code>StepErrorHandler</code> decide o que fazer baseado em <code>step.errorHandling</code>:
+              </div>
+              <div class="sub-steps">
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>fail:</strong> para tudo, execution → failed</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>skip:</strong> pula o step e continua com o proximo</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>continue_next:</strong> registra erro e continua para o proximo step</div>
+                <div class="sub-step"><span class="sub-step-bullet">-</span> <strong>fallback:</strong> executa com FALLBACK_MESSAGE definido</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-4);">15</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Emitir SSE events para frontend</div>
+              <div class="flow-step-desc">
+                A cada etapa, o <code>orchestratorEvents</code> emite eventos via EventEmitter, que sao convertidos em SSE e enviados ao frontend em tempo real.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase C: Finalization -->
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+            <span style="background: var(--gradient-2); color:white; padding:0.2rem 0.6rem; border-radius:6px; font-size:0.8rem;">C</span>
+            Finalizacao
+          </h3>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-2);">16</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Criar ExecutionAggregate</div>
+              <div class="flow-step-desc">
+                <code>createOrUpdateAggregate()</code> consolida todos os traces da execucao em um unico registro <code>ExecutionAggregate</code> com totais de tokens, custo, duracao e status.
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-2);">17</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Atualizar DailyExecutionMetrics</div>
+              <div class="flow-step-desc">
+                Metricas diarias sao incrementadas: totalExecutions, successCount/failureCount, tokens, custo, duracoes (avg, p50, p95). Atualizadas atomicamente.
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-2);">18</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">Dispatch webhooks</div>
+              <div class="flow-step-desc">
+                O <code>webhooksService</code> verifica se existem webhooks configurados para o evento e dispara para cada URL registrada. Cria <code>WebhookDelivery</code> com status (pending → success/failed).
+              </div>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <div class="flow-step-num" style="background: var(--gradient-2);">19</div>
+            <div class="flow-step-content">
+              <div class="flow-step-title">ExecutionState → completed/failed</div>
+              <div class="flow-step-desc">
+                O estado final e atualizado. O evento <code>execution:complete</code> (ou <code>execution:cancelled</code>) e emitido via SSE, sinalizando ao frontend que a execucao terminou.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visual Pipeline Summary -->
+        <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--border-color);">
+          <h3 style="font-size:0.95rem; font-weight:600; margin-bottom:0.75rem; color:var(--text-secondary);">Pipeline Resumido</h3>
+          <div class="pipeline">
+            <div class="pipeline-node" style="border-color:rgba(13,148,136,0.3); color:var(--text-accent);">POST message</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">Save to DB</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">State → running</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node" style="border-color:rgba(59,130,246,0.3); color:#60a5fa;">For each Step</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">Skip?</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">Build Context</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node" style="border-color:rgba(139,92,246,0.3); color:#a78bfa;">Claude Engine</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">Parse Stream</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">Save Trace</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">Validate</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">Conditions</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node" style="border-color:rgba(245,158,11,0.3); color:#fbbf24;">Errors?</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">SSE Event</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node" style="border-color:rgba(34,197,94,0.3); color:#4ade80;">Aggregate</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">Metrics</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node">Webhooks</div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-node" style="border-color:rgba(13,148,136,0.3); color:var(--text-accent);">Done</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- SECTION 5: Real-Time SSE Events -->
+    <!-- ==================== -->
+    <div class="section" id="sse-events">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(6,182,212,0.1);">📡</span>
+        5. Fluxo de Dados em Tempo Real (SSE Events)
+      </h2>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-desc" style="margin-bottom:1rem;">
+          O backend emite eventos via Server-Sent Events (SSE) atraves do endpoint <code>GET /api/conversations/:id/messages/stream</code>. O frontend consome esses eventos para atualizar a UI em tempo real. Todos os eventos sao filtrados por <code>conversationId</code>.
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background: rgba(13,148,136,0.2); border-color: rgba(13,148,136,0.6);"></div>
+            <span>Step lifecycle</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: rgba(59,130,246,0.2); border-color: rgba(59,130,246,0.6);"></div>
+            <span>Data / Content</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: rgba(245,158,11,0.2); border-color: rgba(245,158,11,0.6);"></div>
+            <span>Conditions / Flow</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.6);"></div>
+            <span>Errors / Cancellation</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: rgba(139,92,246,0.2); border-color: rgba(139,92,246,0.6);"></div>
+            <span>Execution state</span>
+          </div>
+        </div>
+
+        <div class="sse-grid">
+          <!-- Step lifecycle -->
+          <div class="sse-event" style="border-left: 3px solid rgba(13,148,136,0.5);">
+            <div class="sse-event-name" style="color: var(--text-accent);">step_start</div>
+            <div class="sse-event-desc">Inicio de um step. Contem stepId, stepName, stepIndex.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-teal">emitter: TaskOrchestrator</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(59,130,246,0.5);">
+            <div class="sse-event-name" style="color: #60a5fa;">stream</div>
+            <div class="sse-event-desc">Chunk de conteudo ou acao em tempo real. Tipo: content | action.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-blue">emitter: StreamParser</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(13,148,136,0.5);">
+            <div class="sse-event-name" style="color: var(--text-accent);">step_complete</div>
+            <div class="sse-event-desc">Step concluido com sucesso. Contem resultado, tokens usados, duracao.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-teal">emitter: TaskOrchestrator</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(239,68,68,0.5);">
+            <div class="sse-event-name" style="color: #f87171;">step_error</div>
+            <div class="sse-event-desc">Erro durante execucao do step. Contem error message e step info.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-red">emitter: TaskOrchestrator</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(59,130,246,0.5);">
+            <div class="sse-event-name" style="color: #60a5fa;">message_saved</div>
+            <div class="sse-event-desc">Mensagem (user ou assistant) persistida no banco. Contem messageId, role, content.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-blue">emitter: TaskOrchestrator</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(245,158,11,0.5);">
+            <div class="sse-event-name" style="color: #fbbf24;">condition_retry</div>
+            <div class="sse-event-desc">Step vai ser re-executado por condicao de retry. Contem attempt number.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-amber">emitter: ConditionsEvaluator</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(245,158,11,0.5);">
+            <div class="sse-event-name" style="color: #fbbf24;">condition_jump</div>
+            <div class="sse-event-desc">Execucao vai pular para outro step. Contem target step name/index.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-amber">emitter: ConditionsEvaluator</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(245,158,11,0.5);">
+            <div class="sse-event-name" style="color: #fbbf24;">context_reset</div>
+            <div class="sse-event-desc">Contexto foi compactado (prompt_too_long). Memoria salva, sessao reiniciada.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-amber">emitter: MemoryManager</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(139,92,246,0.5);">
+            <div class="sse-event-name" style="color: #a78bfa;">execution_paused</div>
+            <div class="sse-event-desc">Execucao foi pausada. Aguardando input do usuario ou acao manual.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-purple">emitter: ExecutionState</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(139,92,246,0.5);">
+            <div class="sse-event-name" style="color: #a78bfa;">execution_resumed</div>
+            <div class="sse-event-desc">Execucao retomada apos pausa. Contem nova mensagem do usuario.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-purple">emitter: ExecutionState</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(59,130,246,0.5);">
+            <div class="sse-event-name" style="color: #60a5fa;">dag_batch_start</div>
+            <div class="sse-event-desc">Batch de steps do DAG iniciado. Contem lista de stepIds sendo executados em paralelo.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-blue">emitter: DAGExecutor</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(239,68,68,0.5);">
+            <div class="sse-event-name" style="color: #f87171;">validation_failed</div>
+            <div class="sse-event-desc">Validador do step falhou. Contem detalhes do que falhou na validacao.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-red">emitter: ValidatorRunner</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(239,68,68,0.5);">
+            <div class="sse-event-name" style="color: #f87171;">cancelled</div>
+            <div class="sse-event-desc">Execucao cancelada pelo usuario ou por timeout global.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-red">emitter: ExecutionState</span>
+            </div>
+          </div>
+
+          <div class="sse-event" style="border-left: 3px solid rgba(13,148,136,0.5);">
+            <div class="sse-event-name" style="color: var(--text-accent);">complete</div>
+            <div class="sse-event-desc">Execucao finalizada (sucesso ou falha). Sinal de encerramento do stream SSE.</div>
+            <div class="sse-event-meta">
+              <span class="badge badge-teal">emitter: TaskOrchestrator</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">Mapeamento Interno → SSE</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Evento Interno (EventEmitter)</th>
+                  <th>Evento SSE</th>
+                  <th>Componente Emissor</th>
+                  <th>Consumido por</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>step:start</code></td><td><code>step_start</code></td><td>TaskOrchestrator</td><td>Frontend (step progress bar)</td></tr>
+                <tr><td><code>step:stream</code></td><td><code>stream</code></td><td>StreamParser via Orchestrator</td><td>Frontend (chat messages)</td></tr>
+                <tr><td><code>step:complete</code></td><td><code>step_complete</code></td><td>TaskOrchestrator</td><td>Frontend (step status)</td></tr>
+                <tr><td><code>step:error</code></td><td><code>step_error</code></td><td>TaskOrchestrator</td><td>Frontend (error display)</td></tr>
+                <tr><td><code>message:saved</code></td><td><code>message_saved</code></td><td>TaskOrchestrator</td><td>Frontend (message list refresh)</td></tr>
+                <tr><td><code>condition:retry</code></td><td><code>condition_retry</code></td><td>ConditionsEvaluator</td><td>Frontend (retry indicator)</td></tr>
+                <tr><td><code>condition:jump</code></td><td><code>condition_jump</code></td><td>ConditionsEvaluator</td><td>Frontend (flow indicator)</td></tr>
+                <tr><td><code>context:reset</code></td><td><code>context_reset</code></td><td>MemoryManager</td><td>Frontend (notification)</td></tr>
+                <tr><td><code>execution:paused</code></td><td><code>execution_paused</code></td><td>ExecutionStateManager</td><td>Frontend (pause UI)</td></tr>
+                <tr><td><code>execution:resumed</code></td><td><code>execution_resumed</code></td><td>ExecutionStateManager</td><td>Frontend (resume UI)</td></tr>
+                <tr><td><code>dag:batch_start</code></td><td><code>dag_batch_start</code></td><td>DAGExecutor</td><td>Frontend (parallel indicator)</td></tr>
+                <tr><td><code>validation:failed</code></td><td><code>validation_failed</code></td><td>ValidatorRunner</td><td>Frontend (validation error)</td></tr>
+                <tr><td><code>execution:cancelled</code></td><td><code>cancelled</code></td><td>ExecutionStateManager</td><td>Frontend (cancel state)</td></tr>
+                <tr><td><code>execution:complete</code></td><td><code>complete</code></td><td>TaskOrchestrator</td><td>Frontend (close stream)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- SECTION 6: Token & Cost Flow -->
+    <!-- ==================== -->
+    <div class="section" id="tokens-flow">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(245,158,11,0.1);">💰</span>
+        6. Fluxo de Tokens e Custos
+      </h2>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-desc" style="margin-bottom:1.25rem;">
+          O rastreamento de tokens e custos acontece em multiplas camadas, desde a granularidade por-execucao ate agregacoes diarias e por hora.
+        </div>
+
+        <!-- Pipeline visual -->
+        <div style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">Pipeline de Rastreamento</h3>
+          <div class="state-machine" style="padding:1.5rem;">
+            <div class="state-row" style="flex-wrap: wrap;">
+              <div class="state-node state-running" style="font-size:0.8rem;">ExecutionTrace<br><span style="font-size:0.7rem; color:var(--text-muted);">inputTokens, outputTokens, costUsd</span></div>
+              <span class="arrow">→</span>
+              <div class="state-node state-active" style="font-size:0.8rem;">TokenUsageHistory<br><span style="font-size:0.7rem; color:var(--text-muted);">audit trail por execucao</span></div>
+              <span class="arrow">→</span>
+              <div class="state-node state-paused" style="font-size:0.8rem;">HourlyTokenUsage<br><span style="font-size:0.7rem; color:var(--text-muted);">tokens por hora + modelo</span></div>
+              <span class="arrow">→</span>
+              <div class="state-node state-completed" style="font-size:0.8rem;">DailyExecutionMetrics<br><span style="font-size:0.7rem; color:var(--text-muted);">totais diarios consolidados</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Token Usage History -->
+        <div style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">TokenUsageHistory (Audit Trail)</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Campo</th>
+                  <th>Tipo</th>
+                  <th>Descricao</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>inputTokens</code></td><td>Int</td><td>Tokens consumidos no prompt</td></tr>
+                <tr><td><code>outputTokens</code></td><td>Int</td><td>Tokens gerados na resposta</td></tr>
+                <tr><td><code>totalCostUsd</code></td><td>Float?</td><td>Custo em USD da operacao</td></tr>
+                <tr><td><code>model</code></td><td>String?</td><td>Modelo usado (claude-sonnet, etc.)</td></tr>
+                <tr><td><code>executionId</code></td><td>String?</td><td>Referencia a execucao que gerou o uso</td></tr>
+                <tr><td><code>userId</code></td><td>String</td><td>Dono do consumo (FK → User)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Hourly Token Usage -->
+        <div style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">HourlyTokenUsage (Observability)</h3>
+          <div class="card-desc">
+            Agregacao por hora, agrupada por <code>(hour, userId, model)</code>. Permite graficos de uso por hora e identificacao de picos.
+          </div>
+          <div class="table-container" style="margin-top:0.75rem;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Campo</th>
+                  <th>Tipo</th>
+                  <th>Descricao</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>hour</code></td><td>DateTime</td><td>Hora truncada (ex: 2026-03-24T14:00:00Z)</td></tr>
+                <tr><td><code>tokens</code></td><td>Int</td><td>Total de tokens nessa hora</td></tr>
+                <tr><td><code>costUsd</code></td><td>Float</td><td>Custo total nessa hora</td></tr>
+                <tr><td><code>model</code></td><td>String?</td><td>Modelo (unique constraint com hour + userId)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- DailyExecutionMetrics -->
+        <div style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">DailyExecutionMetrics (Consolidacao Diaria)</h3>
+          <div class="card-desc">
+            Um registro por dia com todas as metricas agregadas. Usado para dashboards e relatorios.
+          </div>
+          <div class="table-container" style="margin-top:0.75rem;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Campo</th>
+                  <th>Descricao</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>totalExecutions</code></td><td>Numero total de execucoes no dia</td></tr>
+                <tr><td><code>successCount / failureCount</code></td><td>Contadores de sucesso e falha</td></tr>
+                <tr><td><code>totalInputTokens / totalOutputTokens</code></td><td>Tokens totais consumidos</td></tr>
+                <tr><td><code>totalCostUsd</code></td><td>Custo total em USD</td></tr>
+                <tr><td><code>avgDurationMs / p50DurationMs / p95DurationMs</code></td><td>Metricas de duracao</td></tr>
+                <tr><td><code>uniqueWorkflows / uniqueUsers</code></td><td>Contadores de entidades unicas</td></tr>
+                <tr><td><code>errorBreakdown</code></td><td>JSON com contagem por tipo de erro</td></tr>
+                <tr><td><code>modelBreakdown</code></td><td>JSON com contagem por modelo</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Budget Check -->
+        <div>
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">UserTokenBudget (Controle de Orcamento)</h3>
+          <div class="card-desc" style="margin-bottom:1rem;">
+            Cada usuario tem um orcamento de tokens configuravel. Antes de cada execucao, o sistema verifica se o usuario ainda tem saldo disponivel.
+          </div>
+
+          <div class="grid-2">
+            <div class="stat-box">
+              <div class="stat-value" style="font-size:1.5rem;">5M</div>
+              <div class="stat-label">dailyLimit (default)</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value" style="font-size:1.5rem;">100M</div>
+              <div class="stat-label">monthlyLimit (default)</div>
+            </div>
+          </div>
+
+          <div class="table-container" style="margin-top:1rem;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Campo</th>
+                  <th>Descricao</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>dailyLimit / monthlyLimit</code></td><td>Limites configurados (tokens)</td></tr>
+                <tr><td><code>currentDailyUsage / currentMonthlyUsage</code></td><td>Contadores atuais (resetados periodicamente)</td></tr>
+                <tr><td><code>lastDailyResetAt / lastMonthlyResetAt</code></td><td>Timestamps do ultimo reset</td></tr>
+                <tr><td><code>dailyCostLimitUsd / monthlyCostLimitUsd</code></td><td>Limites opcionais por custo em USD</td></tr>
+                <tr>
+                  <td><code>overagePolicy</code></td>
+                  <td>
+                    Politica quando o limite e atingido:
+                    <div style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                      <span class="badge badge-red">block — bloqueia execucao</span>
+                      <span class="badge badge-amber">warn — permite mas avisa</span>
+                      <span class="badge badge-green">allow — permite sem restricao</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:1.25rem;">
+            <h4 style="font-size:0.9rem; font-weight:600; margin-bottom:0.5rem;">Fluxo de Budget Check</h4>
+            <div class="state-machine" style="padding:1.25rem;">
+              <div class="state-row" style="flex-wrap:wrap;">
+                <div class="state-node state-initial" style="font-size:0.8rem;">Nova Execucao</div>
+                <span class="arrow">→</span>
+                <div class="state-node state-running" style="font-size:0.8rem;">Verifica UserTokenBudget</div>
+                <span class="arrow">→</span>
+                <div class="state-node state-paused" style="font-size:0.8rem;">overagePolicy?</div>
+              </div>
+              <div style="margin-top:1rem;" class="branch-container">
+                <div class="branch">
+                  <span class="arrow-label">block</span>
+                  <div class="state-node state-failed" style="font-size:0.8rem;">Rejeita Execucao</div>
+                </div>
+                <div class="branch">
+                  <span class="arrow-label">warn</span>
+                  <div class="state-node state-paused" style="font-size:0.8rem;">Executa + Alerta</div>
+                </div>
+                <div class="branch">
+                  <span class="arrow-label">allow</span>
+                  <div class="state-node state-active" style="font-size:0.8rem;">Executa Normal</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== -->
+    <!-- SECTION 7: Trigger Scheduler Flow -->
+    <!-- ==================== -->
+    <div class="section" id="trigger-scheduler">
+      <h2 class="section-title">
+        <span class="icon" style="background: rgba(236,72,153,0.1);">⏰</span>
+        7. Fluxo de Dados do Trigger Scheduler
+      </h2>
+
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-desc" style="margin-bottom:1.25rem;">
+          O Trigger Scheduler permite agendar execucoes automaticas de workflows com base em expressoes cron. O worker roda a cada 30 segundos verificando execucoes pendentes.
+        </div>
+
+        <!-- State Machine: ScheduledExecution -->
+        <div style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">Ciclo de Vida da ScheduledExecution</h3>
+          <div class="state-machine">
+            <div class="state-row">
+              <div class="state-node state-initial">📋 Pending</div>
+              <span class="arrow">→</span>
+              <div class="state-node state-running">🔄 Running</div>
+            </div>
+            <div class="arrow-down">↓</div>
+            <div class="branch-container">
+              <div class="branch">
+                <div class="state-node state-completed">✅ Completed</div>
+              </div>
+              <div class="branch">
+                <div class="state-node state-failed">❌ Failed</div>
+              </div>
+              <div class="branch">
+                <div class="state-node state-cancelled">🚫 Cancelled</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline do fluxo -->
+        <div style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">Fluxo End-to-End do Trigger Cron</h3>
+
+          <div class="trigger-timeline">
+            <div class="trigger-step">
+              <div class="trigger-step-title">1. WorkflowTrigger Criado</div>
+              <div class="trigger-step-desc">
+                Admin cria um trigger com <code>type: 'cron'</code>, <code>cronExpr: '0 9 * * *'</code> (ex: todo dia as 9h) e associa a um workflow. Armazena timezone opcional.
+              </div>
+            </div>
+
+            <div class="trigger-step">
+              <div class="trigger-step-title">2. scheduleCron()</div>
+              <div class="trigger-step-desc">
+                O metodo <code>triggersService.scheduleCron(triggerId)</code> calcula a proxima execucao via <code>parseNextCron()</code> e cria um registro <code>ScheduledExecution</code> com <code>status: 'pending'</code> e <code>scheduledAt</code> no futuro.
+              </div>
+            </div>
+
+            <div class="trigger-step">
+              <div class="trigger-step-title">3. Worker Poll (cada 30s)</div>
+              <div class="trigger-step-desc">
+                O scheduler worker roda periodicamente (setInterval 30s), chamando <code>triggersService.processScheduledExecutions()</code>. Busca todos os <code>ScheduledExecution</code> com <code>status: 'pending'</code> e <code>scheduledAt &lt;= now</code>.
+              </div>
+            </div>
+
+            <div class="trigger-step">
+              <div class="trigger-step-title">4. Status → running</div>
+              <div class="trigger-step-desc">
+                Para cada execucao devida, atualiza <code>status: 'running'</code> e <code>executedAt: now</code>. Tambem atualiza o <code>lastTriggeredAt</code> do <code>WorkflowTrigger</code>.
+              </div>
+            </div>
+
+            <div class="trigger-step">
+              <div class="trigger-step-title">5. Criar Conversation + Enqueue</div>
+              <div class="trigger-step-desc">
+                Cria uma nova <code>Conversation</code> para o workflow associado e enfileira a execucao na fila BullMQ (<code>execution-queue</code>). O job contem conversationId, workflowId e metadata do trigger.
+              </div>
+            </div>
+
+            <div class="trigger-step">
+              <div class="trigger-step-title">6. ExecutionWorker Processa</div>
+              <div class="trigger-step-desc">
+                O <code>ExecutionWorker</code> pega o job da fila e executa via <code>TaskOrchestrator</code> — o mesmo fluxo de execucao descrito na secao 4 acima.
+              </div>
+            </div>
+
+            <div class="trigger-step">
+              <div class="trigger-step-title">7. Status → completed/failed</div>
+              <div class="trigger-step-desc">
+                Ao final, o <code>ScheduledExecution</code> e atualizado com status final (<code>completed</code> ou <code>failed</code>) e o campo <code>result</code> contem o JSON do resultado ou <code>errorMessage</code>.
+              </div>
+            </div>
+
+            <div class="trigger-step">
+              <div class="trigger-step-title">8. Re-agendar (se recorrente)</div>
+              <div class="trigger-step-desc">
+                Se o trigger e recorrente (cron), <code>scheduleCron()</code> e chamado novamente para criar a proxima <code>ScheduledExecution</code> baseada na expressao cron.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WorkflowTrigger model -->
+        <div style="margin-bottom:1.5rem;">
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">Modelo WorkflowTrigger</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Campo</th>
+                  <th>Tipo</th>
+                  <th>Descricao</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>type</code></td><td>String</td><td>Tipo do trigger: "cron", "webhook", "manual"</td></tr>
+                <tr><td><code>cronExpr</code></td><td>String?</td><td>Expressao cron de 5 campos (ex: "0 9 * * *")</td></tr>
+                <tr><td><code>cronTimezone</code></td><td>String?</td><td>Timezone para calculo (ex: "America/Sao_Paulo")</td></tr>
+                <tr><td><code>webhookSecret</code></td><td>String?</td><td>Secret para validacao de webhook trigger</td></tr>
+                <tr><td><code>enabled</code></td><td>Boolean</td><td>Se o trigger esta ativo (default: true)</td></tr>
+                <tr><td><code>lastTriggeredAt</code></td><td>DateTime?</td><td>Ultima vez que o trigger disparou</td></tr>
+                <tr><td><code>config</code></td><td>Json</td><td>Configuracao extra em JSON livre</td></tr>
+                <tr><td><code>workflowId</code></td><td>String</td><td>FK para o workflow associado</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div>
+          <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">Acoes Disponiveis</h3>
+          <div class="grid-3" style="margin-bottom:0;">
+            <div class="card" style="border-left: 3px solid rgba(13,148,136,0.5);">
+              <div class="card-header">
+                <div class="card-icon" style="background: var(--bg-accent-subtle); font-size:1rem;">▶️</div>
+                <div class="card-title" style="font-size:0.95rem;">fireNow(triggerId)</div>
+              </div>
+              <div class="card-desc">Executa o trigger imediatamente, independente do cron. Cria ScheduledExecution com scheduledAt = now.</div>
+            </div>
+            <div class="card" style="border-left: 3px solid rgba(239,68,68,0.5);">
+              <div class="card-header">
+                <div class="card-icon" style="background: var(--bg-danger); font-size:1rem;">⏹️</div>
+                <div class="card-title" style="font-size:0.95rem;">cancelScheduled(triggerId)</div>
+              </div>
+              <div class="card-desc">Cancela todas as ScheduledExecutions pendentes de um trigger. Marca como <code>cancelled</code>.</div>
+            </div>
+            <div class="card" style="border-left: 3px solid rgba(59,130,246,0.5);">
+              <div class="card-header">
+                <div class="card-icon" style="background: var(--bg-info); font-size:1rem;">📅</div>
+                <div class="card-title" style="font-size:0.95rem;">scheduleCron(triggerId)</div>
+              </div>
+              <div class="card-desc">Calcula a proxima execucao e cria ScheduledExecution com status pending.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer navigation -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:2rem 0; border-top:1px solid var(--border-color); margin-top:2rem;">
+      <a href="01-visao-geral.html" style="color:var(--text-accent); text-decoration:none; font-size:0.9rem; display:flex; align-items:center; gap:0.5rem;">
+        ← 01 - Visao Geral
+      </a>
+      <a href="index.html" style="color:var(--text-secondary); text-decoration:none; font-size:0.85rem;">
+        System Map
+      </a>
+      <a href="03-banco-dados.html" style="color:var(--text-accent); text-decoration:none; font-size:0.9rem; display:flex; align-items:center; gap:0.5rem;">
+        03 - Banco de Dados →
+      </a>
+    </div>
+
+  </div>
+
+  <script src="shared.js"></script>
+</body>
+</html>
