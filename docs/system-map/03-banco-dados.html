@@ -1,1177 +1,1036 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>03 - Banco de Dados | Orquetrador Claude System Map</title>
-  <link rel="stylesheet" href="shared.css">
+  <title>03 - Banco de Dados | Orquetrador Claude</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+        },
+      },
+    }
+  </script>
   <style>
-    .erd-container {
-      overflow: auto;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      background: var(--bg-secondary);
-      position: relative;
-      max-height: 80vh;
-    }
-    .erd-canvas {
-      min-width: 100%;
-      padding: 2rem;
-      display: grid;
-      gap: 1.5rem;
-    }
-    .group-section {
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 1.25rem;
-      background: var(--bg-primary);
-    }
-    .group-section-title {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 2px solid;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .group-tables {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 0.75rem;
-    }
-    .tbl-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      overflow: hidden;
-      transition: all 0.25s;
-      cursor: pointer;
-    }
-    .tbl-card:hover { border-color: rgba(13,148,136,0.5); box-shadow: 0 0 15px rgba(13,148,136,0.1); }
-    .tbl-card.highlight { border-color: #2dd4bf; box-shadow: 0 0 20px rgba(13,148,136,0.2); }
-    .tbl-card.dimmed { opacity: 0.3; }
-    .tbl-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.6rem 0.85rem;
-      border-bottom: 1px solid var(--border-color);
-      background: rgba(13,148,136,0.05);
-    }
-    .tbl-name {
-      font-weight: 700;
-      font-size: 0.85rem;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-accent);
-    }
-    .tbl-meta {
-      display: flex;
-      gap: 0.4rem;
-      align-items: center;
-    }
-    .tbl-meta .badge { font-size: 0.65rem; padding: 0.1rem 0.45rem; }
-    .tbl-fields {
-      padding: 0;
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.35s ease, padding 0.35s ease;
-    }
-    .tbl-card.open .tbl-fields {
-      max-height: 2000px;
-      padding: 0.5rem 0;
-    }
-    .tbl-field {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.25rem 0.85rem;
-      font-size: 0.78rem;
-      transition: background 0.15s;
-    }
-    .tbl-field:hover { background: rgba(255,255,255,0.02); }
-    .tbl-field-name {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-primary);
-      min-width: 140px;
-    }
-    .tbl-field-type {
-      font-family: 'JetBrains Mono', monospace;
-      color: #67e8f9;
-      font-size: 0.72rem;
-    }
-    .tbl-field-badge {
-      font-size: 0.6rem;
-      padding: 0.05rem 0.35rem;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-    .badge-pk { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
-    .badge-fk { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
-    .badge-uq { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
-    .badge-opt { color: var(--text-muted); font-size: 0.6rem; }
-    .tbl-relations {
-      padding: 0.5rem 0.85rem;
-      border-top: 1px solid var(--border-color);
-    }
-    .tbl-rel {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.72rem;
-      color: var(--text-secondary);
-      padding: 0.15rem 0;
-    }
-    .tbl-rel-arrow { color: var(--text-accent); font-weight: 700; }
-    .tbl-rel-target {
-      font-family: 'JetBrains Mono', monospace;
-      color: #a78bfa;
-      cursor: pointer;
-    }
-    .tbl-rel-target:hover { color: #c4b5fd; text-decoration: underline; }
-    .tbl-preview {
-      padding: 0.5rem 0.85rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.3rem;
-    }
-    .tbl-preview-field {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.68rem;
-      color: var(--text-muted);
-      background: rgba(255,255,255,0.03);
-      padding: 0.1rem 0.4rem;
-      border-radius: 4px;
-    }
-    /* Stats */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    .stat-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 1rem;
-      text-align: center;
-    }
-    .stat-num {
-      font-size: 2rem;
-      font-weight: 800;
-      font-family: 'JetBrains Mono', monospace;
-    }
-    .stat-lbl { color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.2rem; }
-    /* Toolbar */
-    .toolbar {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 1.5rem;
-    }
-    .toolbar-search {
-      flex: 1;
-      min-width: 200px;
-      padding: 0.6rem 1rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      color: var(--text-primary);
-      font-size: 0.85rem;
-      font-family: inherit;
-      outline: none;
-    }
-    .toolbar-search:focus { border-color: var(--border-accent); }
-    .toolbar-btn {
-      padding: 0.5rem 0.85rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      color: var(--text-secondary);
-      font-size: 0.78rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: inherit;
-      white-space: nowrap;
-    }
-    .toolbar-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-    .toolbar-btn.active { background: rgba(13,148,136,0.15); color: #2dd4bf; border-color: rgba(13,148,136,0.3); }
-    /* Enum grid */
-    .enum-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1rem;
-    }
-    .enum-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .enum-name {
-      padding: 0.6rem 0.85rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 600;
-      font-size: 0.82rem;
-      color: #fbbf24;
-      background: rgba(251,191,36,0.05);
-      border-bottom: 1px solid var(--border-color);
-    }
-    .enum-values { padding: 0.5rem 0.85rem; }
-    .enum-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.72rem;
-      color: #86efac;
-      padding: 0.15rem 0;
-    }
-    /* Tabs */
-    .view-tabs {
-      display: flex;
-      gap: 0.25rem;
-      border-bottom: 1px solid var(--border-color);
-      margin-bottom: 1.5rem;
-    }
-    .view-tab {
-      padding: 0.7rem 1.25rem;
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      font-size: 0.9rem;
-      font-weight: 500;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      font-family: inherit;
-      transition: all 0.2s;
-    }
-    .view-tab:hover { color: var(--text-primary); }
-    .view-tab.active { color: var(--text-accent); border-bottom-color: var(--bg-accent); }
-    .view-panel { display: none; }
-    .view-panel.active { display: block; }
-    /* Relationship map */
-    .rel-map-table { width: 100%; }
-    .rel-map-table th { font-size: 0.75rem; }
-    .rel-map-table td { font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; }
-    .rel-type { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px; }
-    .rel-1n { background: rgba(59,130,246,0.15); color: #60a5fa; }
-    .rel-11 { background: rgba(34,197,94,0.15); color: #4ade80; }
-    .rel-nm { background: rgba(245,158,11,0.15); color: #fbbf24; }
-    @media (max-width: 768px) {
-      .group-tables { grid-template-columns: 1fr; }
-      .enum-grid { grid-template-columns: 1fr; }
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-    }
+    body { font-family: 'Inter', sans-serif; background: #0f172a; }
+    .glass { background: rgba(30,41,59,0.5); backdrop-filter: blur(12px); border: 1px solid rgba(148,163,184,0.1); }
+    .fade-in { opacity:0; transform:translateY(30px); transition: all 0.7s ease-out; }
+    .fade-in.visible { opacity:1; transform:translateY(0); }
+    .gradient-text { background: linear-gradient(135deg,#22c55e,#06b6d4,#3b82f6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .grid-bg { background-image: radial-gradient(circle at 1px 1px, rgba(148,163,184,0.05) 1px, transparent 0); background-size: 40px 40px; }
+    ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:#0f172a; } ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+    .group-card { transition: all 0.3s ease; }
+    .group-card:hover { transform: translateY(-2px); }
+    .table-card { transition: all 0.3s ease; cursor: pointer; }
+    .table-card:hover { border-color: rgba(34,197,94,0.4); }
+    .table-card .fields { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+    .table-card.open .fields { max-height: 2000px; }
+    .table-card .chevron { transition: transform 0.3s; }
+    .table-card.open .chevron { transform: rotate(180deg); }
+    .search-glow:focus { box-shadow: 0 0 20px rgba(34,197,94,0.2); }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
   </style>
 </head>
-<body>
-  <div class="page-container">
-    <div class="page-header">
-      <div class="breadcrumb">
-        <a href="index.html">System Map</a><span>›</span><span>Banco de Dados</span>
+<body class="min-h-screen grid-bg text-slate-200 antialiased">
+
+  <!-- Nav rendered by shared.js -->
+
+  <!-- Header -->
+  <header class="relative overflow-hidden">
+    <div class="absolute top-10 left-10 w-72 h-72 bg-green-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-20 right-20 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl"></div>
+    <div class="max-w-7xl mx-auto px-6 pt-16 pb-12 relative">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="text-xs font-mono text-green-400/60 bg-green-500/10 px-2 py-1 rounded">03</span>
+        <span class="text-xs text-slate-500">Banco de Dados</span>
       </div>
-      <h1>Banco de Dados — Schema Visual</h1>
-      <p class="subtitle">Mapa completo das 47 tabelas, 15 enums e ~60 relacionamentos do PostgreSQL via Prisma ORM</p>
+      <h1 class="text-4xl md:text-5xl font-bold mb-4">
+        <span class="gradient-text">Banco de Dados</span>
+      </h1>
+      <p class="text-lg text-slate-400 max-w-2xl">PostgreSQL + Prisma ORM — 47 tabelas, 15 enums, 9 domínios, ~60 FKs e índices otimizados.</p>
+
+      <!-- Stats -->
+      <div class="flex flex-wrap gap-4 mt-8">
+        <div class="glass rounded-xl px-5 py-3 text-center">
+          <div class="text-2xl font-bold text-green-400">47</div>
+          <div class="text-xs text-slate-500">Tabelas</div>
+        </div>
+        <div class="glass rounded-xl px-5 py-3 text-center">
+          <div class="text-2xl font-bold text-yellow-400">15</div>
+          <div class="text-xs text-slate-500">Enums</div>
+        </div>
+        <div class="glass rounded-xl px-5 py-3 text-center">
+          <div class="text-2xl font-bold text-cyan-400">9</div>
+          <div class="text-xs text-slate-500">Domínios</div>
+        </div>
+        <div class="glass rounded-xl px-5 py-3 text-center">
+          <div class="text-2xl font-bold text-blue-400">6</div>
+          <div class="text-xs text-slate-500">Join Tables</div>
+        </div>
+        <div class="glass rounded-xl px-5 py-3 text-center">
+          <div class="text-2xl font-bold text-purple-400">~60</div>
+          <div class="text-xs text-slate-500">Foreign Keys</div>
+        </div>
+        <div class="glass rounded-xl px-5 py-3 text-center">
+          <div class="text-2xl font-bold text-amber-400">3</div>
+          <div class="text-xs text-slate-500">Redis Connections</div>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="mt-8 max-w-md">
+        <input type="text" id="searchInput" placeholder="Buscar tabela ou campo..." class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-green-500/50 search-glow transition">
+      </div>
+    </div>
+  </header>
+
+  <!-- ER Diagram Overview -->
+  <section class="max-w-7xl mx-auto px-6 mb-16 fade-in">
+    <h2 class="text-2xl font-bold mb-6 text-white">Diagrama de Relacionamentos</h2>
+    <div class="glass rounded-2xl p-8 overflow-x-auto">
+      <div class="min-w-[900px] flex flex-col items-center gap-8">
+        <!-- Core row -->
+        <div class="flex items-center gap-8">
+          <div class="bg-blue-500/20 border border-blue-500/30 rounded-xl px-6 py-4 text-center">
+            <div class="font-bold text-blue-400">User</div>
+            <div class="text-xs text-slate-500">owner de tudo</div>
+          </div>
+          <div class="text-slate-600">→ possui →</div>
+          <div class="bg-purple-500/20 border border-purple-500/30 rounded-xl px-6 py-4 text-center">
+            <div class="font-bold text-purple-400">Workflow</div>
+            <div class="text-xs text-slate-500">1:N steps</div>
+          </div>
+          <div class="text-slate-600">→ contém →</div>
+          <div class="bg-amber-500/20 border border-amber-500/30 rounded-xl px-6 py-4 text-center">
+            <div class="font-bold text-amber-400">WorkflowStep</div>
+            <div class="text-xs text-slate-500">config + prompts</div>
+          </div>
+        </div>
+        <!-- Middle row -->
+        <div class="flex items-center gap-8">
+          <div class="bg-cyan-500/20 border border-cyan-500/30 rounded-xl px-6 py-4 text-center">
+            <div class="font-bold text-cyan-400">Conversation</div>
+            <div class="text-xs text-slate-500">user + workflow</div>
+          </div>
+          <div class="text-slate-600">→ gera →</div>
+          <div class="bg-green-500/20 border border-green-500/30 rounded-xl px-6 py-4 text-center">
+            <div class="font-bold text-green-400">Message</div>
+            <div class="text-xs text-slate-500">role + content</div>
+          </div>
+          <div class="text-slate-600">→ tracked by →</div>
+          <div class="bg-rose-500/20 border border-rose-500/30 rounded-xl px-6 py-4 text-center">
+            <div class="font-bold text-rose-400">ExecutionState</div>
+            <div class="text-xs text-slate-500">state machine</div>
+          </div>
+          <div class="text-slate-600">→ logged in →</div>
+          <div class="bg-orange-500/20 border border-orange-500/30 rounded-xl px-6 py-4 text-center">
+            <div class="font-bold text-orange-400">ExecutionTrace</div>
+            <div class="text-xs text-slate-500">monitoring</div>
+          </div>
+        </div>
+        <!-- Bottom row -->
+        <div class="flex items-center gap-6 flex-wrap justify-center">
+          <div class="bg-emerald-500/20 border border-emerald-500/30 rounded-lg px-4 py-2 text-center text-sm">
+            <div class="font-semibold text-emerald-400">Skill</div>
+          </div>
+          <div class="bg-emerald-500/20 border border-emerald-500/30 rounded-lg px-4 py-2 text-center text-sm">
+            <div class="font-semibold text-emerald-400">Agent</div>
+          </div>
+          <div class="bg-emerald-500/20 border border-emerald-500/30 rounded-lg px-4 py-2 text-center text-sm">
+            <div class="font-semibold text-emerald-400">Rule</div>
+          </div>
+          <div class="bg-violet-500/20 border border-violet-500/30 rounded-lg px-4 py-2 text-center text-sm">
+            <div class="font-semibold text-violet-400">McpServer</div>
+          </div>
+          <div class="bg-violet-500/20 border border-violet-500/30 rounded-lg px-4 py-2 text-center text-sm">
+            <div class="font-semibold text-violet-400">Plugin</div>
+          </div>
+          <div class="bg-red-500/20 border border-red-500/30 rounded-lg px-4 py-2 text-center text-sm">
+            <div class="font-semibold text-red-400">Hook</div>
+          </div>
+          <div class="bg-yellow-500/20 border border-yellow-500/30 rounded-lg px-4 py-2 text-center text-sm">
+            <div class="font-semibold text-yellow-400">Webhook</div>
+          </div>
+          <div class="bg-slate-500/20 border border-slate-500/30 rounded-lg px-4 py-2 text-center text-sm">
+            <div class="font-semibold text-slate-400">ApiKey</div>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500 text-center">Todos conectados a <span class="text-blue-400">User</span> • Steps conectados via 5 join tables a Skills, Agents, Rules, MCP Servers e Hooks</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tables by Domain -->
+  <main class="max-w-7xl mx-auto px-6 pb-20" id="tables-container">
+
+    <!-- CORE -->
+    <div class="domain-group mb-12 fade-in" data-domain="core">
+      <h2 class="text-xl font-bold text-blue-400 mb-4 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-blue-400"></span> Core — Usuários e Workflows
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <!-- User -->
+        <div class="table-card glass rounded-xl p-5" data-table="user" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">User</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Usuário do sistema. Owner de todos os recursos.</p>
+          <div class="flex flex-wrap gap-1 mb-2">
+            <span class="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">RBAC</span>
+            <span class="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400">12 relações</span>
+          </div>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">id</span><span class="text-slate-500">String @id uuid</span></div>
+              <div class="flex justify-between"><span class="text-green-400">email</span><span class="text-slate-500">String @unique</span></div>
+              <div class="flex justify-between"><span class="text-green-400">passwordHash</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">name</span><span class="text-slate-500">String?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">githubToken</span><span class="text-slate-500">String?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">role</span><span class="text-slate-500">String (admin|developer|viewer)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">createdAt</span><span class="text-slate-500">DateTime</span></div>
+              <div class="flex justify-between"><span class="text-green-400">updatedAt</span><span class="text-slate-500">DateTime</span></div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">
+              <span class="text-blue-400">Has many:</span> workflows, conversations, mcpServers, skills, agents, rules, plugins, hooks, apiKeys, webhooks, promptVersions, gitAccounts
+            </div>
+          </div>
+        </div>
+
+        <!-- Workflow -->
+        <div class="table-card glass rounded-xl p-5" data-table="workflow" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">Workflow</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Workflow com tipo sequential, dag ou step_by_step.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">id</span><span class="text-slate-500">String @id uuid</span></div>
+              <div class="flex justify-between"><span class="text-green-400">name</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">description</span><span class="text-slate-500">String?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">type</span><span class="text-slate-500">String (sequential|dag|step_by_step)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">userId</span><span class="text-slate-500">String FK → User</span></div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">
+              <span class="text-blue-400">Has many:</span> steps, conversations
+              <br><span class="text-purple-400">Belongs to:</span> User
+            </div>
+          </div>
+        </div>
+
+        <!-- WorkflowStep -->
+        <div class="table-card glass rounded-xl p-5" data-table="workflowstep" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">WorkflowStep</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Step individual com prompts, conditions, validators, modelo e dependências DAG.</p>
+          <div class="flex flex-wrap gap-1 mb-2">
+            <span class="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400">15+ campos</span>
+            <span class="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">5 joins</span>
+          </div>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">id</span><span class="text-slate-500">String @id uuid</span></div>
+              <div class="flex justify-between"><span class="text-green-400">workflowId</span><span class="text-slate-500">FK → Workflow</span></div>
+              <div class="flex justify-between"><span class="text-green-400">name</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">baseUrl</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">stepOrder</span><span class="text-slate-500">Int</span></div>
+              <div class="flex justify-between"><span class="text-green-400">systemPrompt</span><span class="text-slate-500">String?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">useBasePrompt</span><span class="text-slate-500">Boolean (true)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">conditions</span><span class="text-slate-500">String JSON</span></div>
+              <div class="flex justify-between"><span class="text-green-400">maxRetries</span><span class="text-slate-500">Int (0)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">dependsOn</span><span class="text-slate-500">String JSON[] (DAG)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">validators</span><span class="text-slate-500">String JSON[]</span></div>
+              <div class="flex justify-between"><span class="text-green-400">backend</span><span class="text-slate-500">String (claude)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">model</span><span class="text-slate-500">String?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">outputVariables</span><span class="text-slate-500">String JSON[]</span></div>
+              <div class="flex justify-between"><span class="text-green-400">inputVariables</span><span class="text-slate-500">String JSON[]</span></div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">
+              <span class="text-purple-400">Belongs to:</span> Workflow
+              <br><span class="text-blue-400">Has many:</span> messages, sessions, memories, logs
+              <br><span class="text-amber-400">Join tables:</span> McpServers, Skills, Agents, Rules, Hooks
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Stats -->
-    <div class="stats-row" id="stats-row"></div>
+    <!-- CONVERSATIONS -->
+    <div class="domain-group mb-12 fade-in" data-domain="conversations">
+      <h2 class="text-xl font-bold text-cyan-400 mb-4 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-cyan-400"></span> Conversas e Mensagens
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <div class="table-card glass rounded-xl p-5" data-table="conversation" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">Conversation</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Sessão de chat vinculada a User + Workflow. Rastreia step atual.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">id, title, projectPath</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">userId</span><span class="text-slate-500">FK → User</span></div>
+              <div class="flex justify-between"><span class="text-green-400">workflowId</span><span class="text-slate-500">FK → Workflow</span></div>
+              <div class="flex justify-between"><span class="text-green-400">currentStepId</span><span class="text-slate-500">FK? → WorkflowStep</span></div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">
+              <span class="text-blue-400">Has many:</span> messages, sessions, stepMemories, executionStates, executionLogs, executionTraces
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="message" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">Message</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Mensagem user/assistant com metadata JSON e attachments.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">role</span><span class="text-slate-500">String (user|assistant)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">content</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">selectedForContext</span><span class="text-slate-500">Boolean</span></div>
+              <div class="flex justify-between"><span class="text-green-400">metadata</span><span class="text-slate-500">String? JSON</span></div>
+              <div class="flex justify-between"><span class="text-green-400">conversationId, stepId</span><span class="text-slate-500">FK</span></div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">
+              <span class="text-blue-400">Has many:</span> attachments (MessageAttachment)
+              <br><span class="text-amber-400">Índices:</span> conversationId, conversationId+stepId, stepId
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="messageattachment" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">MessageAttachment</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Arquivo anexo (imagem). PNG/JPG/GIF/WebP até 10MB.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">filename, mimeType</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">size</span><span class="text-slate-500">Int (bytes)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">path, projectPath, url</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">messageId</span><span class="text-slate-500">FK → Message</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="conversationsession" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">ConversationSession</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Resume token do Claude CLI por conversation+step.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">claudeSessionId</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">conversationId</span><span class="text-slate-500">FK → Conversation</span></div>
+              <div class="flex justify-between"><span class="text-green-400">stepId</span><span class="text-slate-500">FK → WorkflowStep</span></div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500"><span class="text-amber-400">Unique:</span> conversationId + stepId</div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="stepmemory" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">StepMemory</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Resumo acumulado da conversa para context compaction.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">content</span><span class="text-slate-500">String (resumo)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">conversationId + stepId</span><span class="text-slate-500">FK unique</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXECUTION -->
+    <div class="domain-group mb-12 fade-in" data-domain="execution">
+      <h2 class="text-xl font-bold text-rose-400 mb-4 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-rose-400"></span> Execução e Monitoramento
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <div class="table-card glass rounded-xl p-5" data-table="executionstate" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">ExecutionState</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">State machine: queued → running → completed/failed/cancelled.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">id</span><span class="text-slate-500">String @id (executionId)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">state</span><span class="text-slate-500">String (queued|running|...)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">currentStepIndex</span><span class="text-slate-500">Int</span></div>
+              <div class="flex justify-between"><span class="text-green-400">retryCounts</span><span class="text-slate-500">String JSON</span></div>
+              <div class="flex justify-between"><span class="text-green-400">metadata</span><span class="text-slate-500">String JSON</span></div>
+              <div class="flex justify-between"><span class="text-green-400">conversationId</span><span class="text-slate-500">FK → Conversation</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="executionlog" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">ExecutionLog</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Audit trail de eventos por execução.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">executionId</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">eventType</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">stepId, stepName</span><span class="text-slate-500">String?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">data</span><span class="text-slate-500">String JSON</span></div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500"><span class="text-amber-400">Índices:</span> executionId, executionId+eventType, conversationId</div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="executiontrace" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">ExecutionTrace</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Trace completo do Claude CLI: tokens, custo, timing, raw I/O.</p>
+          <div class="flex flex-wrap gap-1 mb-2">
+            <span class="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400">40+ campos</span>
+          </div>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">executionId, conversationId, stepId</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">commandLine</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">pid</span><span class="text-slate-500">Int?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">stdoutRaw, stderrRaw</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">exitCode, signal, resultStatus</span><span class="text-slate-500">Result</span></div>
+              <div class="flex justify-between"><span class="text-green-400">inputTokens, outputTokens</span><span class="text-slate-500">Int</span></div>
+              <div class="flex justify-between"><span class="text-green-400">totalCostUsd</span><span class="text-slate-500">Float?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">claudeCodeVersion</span><span class="text-slate-500">String?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">startedAt...completedAt</span><span class="text-slate-500">DateTime</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="steptemplate" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">StepTemplate</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Template reutilizável de step com resources pré-configurados.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">name, description</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">systemPrompt, conditions</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">resourceIds</span><span class="text-slate-500">JSON {mcpServerIds, skillIds...}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="promptversion" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">PromptVersion</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Histórico de versões de prompts por step.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">stepId</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">version</span><span class="text-slate-500">Int</span></div>
+              <div class="flex justify-between"><span class="text-green-400">content, diff</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">createdBy</span><span class="text-slate-500">FK → User</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="usertokenbudget" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">UserTokenBudget</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Controle de budget diário/mensal de tokens por usuário.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">dailyLimit</span><span class="text-slate-500">Int (5M)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">monthlyLimit</span><span class="text-slate-500">Int (100M)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">currentDailyUsage</span><span class="text-slate-500">Int</span></div>
+              <div class="flex justify-between"><span class="text-green-400">currentMonthlyUsage</span><span class="text-slate-500">Int</span></div>
+              <div class="flex justify-between"><span class="text-green-400">userId</span><span class="text-slate-500">FK @unique → User</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI CONFIG -->
+    <div class="domain-group mb-12 fade-in" data-domain="ai-config">
+      <h2 class="text-xl font-bold text-emerald-400 mb-4 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-emerald-400"></span> AI Config — Skills, Agents & Rules
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <div class="table-card glass rounded-xl p-5" data-table="skill" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">Skill</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Habilidade com frontmatter, body, allowed tools. Importável do GitHub.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">name, description</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">frontmatter, body</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">allowedTools</span><span class="text-slate-500">JSON[]</span></div>
+              <div class="flex justify-between"><span class="text-green-400">model</span><span class="text-slate-500">String?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">source</span><span class="text-slate-500">manual | imported</span></div>
+              <div class="flex justify-between"><span class="text-green-400">repoOwner/Name/Branch/Path</span><span class="text-slate-500">GitHub tracking</span></div>
+              <div class="flex justify-between"><span class="text-green-400">fileManifest</span><span class="text-slate-500">JSON [{path,content}]</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="agent" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">Agent</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Agente com system prompt, tools, model, permissões. Importável do GitHub.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">systemPrompt</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">tools, disallowedTools</span><span class="text-slate-500">JSON[]</span></div>
+              <div class="flex justify-between"><span class="text-green-400">permissionMode</span><span class="text-slate-500">String (default)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">maxTurns</span><span class="text-slate-500">Int?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">skills</span><span class="text-slate-500">JSON[]</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="rule" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">Rule</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Regra (diretriz) injetada no system prompt. Pode estar vinculada a Skill.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">name, description, body</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">isGlobal</span><span class="text-slate-500">Boolean</span></div>
+              <div class="flex justify-between"><span class="text-green-400">skillId</span><span class="text-slate-500">FK? → Skill</span></div>
+              <div class="flex justify-between"><span class="text-green-400">pluginId</span><span class="text-slate-500">FK? → Plugin</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTEGRATIONS -->
+    <div class="domain-group mb-12 fade-in" data-domain="integrations">
+      <h2 class="text-xl font-bold text-violet-400 mb-4 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-violet-400"></span> Integrações — MCP, Plugins, Webhooks
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <div class="table-card glass rounded-xl p-5" data-table="mcpserver" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">McpServer</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Servidor MCP (http/sse/stdio) com tools cache e health check.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">type</span><span class="text-slate-500">http | sse | stdio</span></div>
+              <div class="flex justify-between"><span class="text-green-400">uri, command, args</span><span class="text-slate-500">Connection info</span></div>
+              <div class="flex justify-between"><span class="text-green-400">envVars</span><span class="text-slate-500">JSON {}</span></div>
+              <div class="flex justify-between"><span class="text-green-400">toolsCache</span><span class="text-slate-500">String? JSON</span></div>
+              <div class="flex justify-between"><span class="text-green-400">lastTestAt, lastTestOk</span><span class="text-slate-500">Health check</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="plugin" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">Plugin</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Plugin agrupando MCP servers, skills, agents e rules.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">name, version, author</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">manifest</span><span class="text-slate-500">JSON {}</span></div>
+              <div class="flex justify-between"><span class="text-green-400">source</span><span class="text-slate-500">manual | imported</span></div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500">
+              <span class="text-blue-400">Has many:</span> mcpServers, skills, agents, rules
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="webhook" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">Webhook</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Webhook outbound com secret HMAC-SHA256 e retry.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">url</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">events</span><span class="text-slate-500">JSON[] event names</span></div>
+              <div class="flex justify-between"><span class="text-green-400">secret</span><span class="text-slate-500">String (HMAC key)</span></div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500"><span class="text-blue-400">Has many:</span> deliveries (WebhookDelivery)</div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="webhookdelivery" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">WebhookDelivery</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Registro de entrega com retry (max 3, backoff exponencial).</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">payload</span><span class="text-slate-500">String JSON</span></div>
+              <div class="flex justify-between"><span class="text-green-400">responseCode, responseBody</span><span class="text-slate-500">Result</span></div>
+              <div class="flex justify-between"><span class="text-green-400">attempts</span><span class="text-slate-500">Int (max 3)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">status</span><span class="text-slate-500">pending|success|failed</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYSTEM -->
+    <div class="domain-group mb-12 fade-in" data-domain="system">
+      <h2 class="text-xl font-bold text-amber-400 mb-4 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-amber-400"></span> Sistema — Hooks, API Keys, Git
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+        <div class="table-card glass rounded-xl p-5" data-table="hook" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">Hook</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Claude Code Hook: PreToolUse, PostToolUse, Stop. Handler: command/prompt/agent.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">eventType</span><span class="text-slate-500">PreToolUse | PostToolUse | Stop</span></div>
+              <div class="flex justify-between"><span class="text-green-400">matcher</span><span class="text-slate-500">String? regex</span></div>
+              <div class="flex justify-between"><span class="text-green-400">handlerType</span><span class="text-slate-500">command | prompt | agent</span></div>
+              <div class="flex justify-between"><span class="text-green-400">command, prompt</span><span class="text-slate-500">String?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">timeout</span><span class="text-slate-500">Int (60000ms)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">isGlobal, isTemplate</span><span class="text-slate-500">Boolean</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="apikey" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">ApiKey</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">API Key (exk_* prefix). Hash SHA-256 no DB.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">name</span><span class="text-slate-500">String</span></div>
+              <div class="flex justify-between"><span class="text-green-400">keyHash</span><span class="text-slate-500">String @unique SHA-256</span></div>
+              <div class="flex justify-between"><span class="text-green-400">prefix</span><span class="text-slate-500">String (exk_abc1)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">expiresAt</span><span class="text-slate-500">DateTime?</span></div>
+              <div class="flex justify-between"><span class="text-green-400">revoked</span><span class="text-slate-500">Boolean</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="gitaccount" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">GitAccount</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Conta GitHub multi-account (Pessoal, Trabalho). Token em plain text.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">label</span><span class="text-slate-500">String (Pessoal, Trabalho)</span></div>
+              <div class="flex justify-between"><span class="text-green-400">token</span><span class="text-slate-500">String ⚠️ plain text</span></div>
+              <div class="flex justify-between"><span class="text-green-400">username</span><span class="text-slate-500">String? cached</span></div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500"><span class="text-blue-400">Has many:</span> projectMappings</div>
+          </div>
+        </div>
+
+        <div class="table-card glass rounded-xl p-5" data-table="projectgitmapping" onclick="this.classList.toggle('open')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-white text-sm">ProjectGitMapping</h3>
+            <svg class="w-4 h-4 text-slate-500 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Mapeia projectPath → GitAccount específica.</p>
+          <div class="fields">
+            <div class="mt-3 pt-3 border-t border-slate-700/50 space-y-1 text-xs font-mono">
+              <div class="flex justify-between"><span class="text-green-400">projectPath</span><span class="text-slate-500">String @unique</span></div>
+              <div class="flex justify-between"><span class="text-green-400">gitAccountId</span><span class="text-slate-500">FK → GitAccount</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOIN TABLES -->
+    <div class="domain-group mb-12 fade-in" data-domain="joins">
+      <h2 class="text-xl font-bold text-slate-400 mb-4 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-slate-400"></span> Join Tables — Step ↔ Resources
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="glass rounded-xl p-5">
+          <h3 class="font-bold text-white text-sm mb-1">WorkflowStepMcpServer</h3>
+          <p class="text-xs text-slate-500">Step ↔ McpServer (unique: stepId+serverId)</p>
+        </div>
+        <div class="glass rounded-xl p-5">
+          <h3 class="font-bold text-white text-sm mb-1">WorkflowStepSkill</h3>
+          <p class="text-xs text-slate-500">Step ↔ Skill (unique: stepId+skillId)</p>
+        </div>
+        <div class="glass rounded-xl p-5">
+          <h3 class="font-bold text-white text-sm mb-1">WorkflowStepAgent</h3>
+          <p class="text-xs text-slate-500">Step ↔ Agent (unique: stepId+agentId)</p>
+        </div>
+        <div class="glass rounded-xl p-5">
+          <h3 class="font-bold text-white text-sm mb-1">WorkflowStepRule</h3>
+          <p class="text-xs text-slate-500">Step ↔ Rule (unique: stepId+ruleId)</p>
+        </div>
+        <div class="glass rounded-xl p-5">
+          <h3 class="font-bold text-white text-sm mb-1">WorkflowStepHook</h3>
+          <p class="text-xs text-slate-500">Step ↔ Hook (unique: stepId+hookId)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- REDIS -->
+    <div class="mb-12 fade-in">
+      <h2 class="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-red-400"></span> Redis — Cache, Pub/Sub & Filas
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="glass rounded-xl p-5">
+          <h3 class="font-semibold text-red-400 text-sm mb-2">General Connection</h3>
+          <p class="text-xs text-slate-400">Cache geral, BullMQ queue, estado temporário. Lazy init.</p>
+        </div>
+        <div class="glass rounded-xl p-5">
+          <h3 class="font-semibold text-red-400 text-sm mb-2">Subscriber Connection</h3>
+          <p class="text-xs text-slate-400">Subscribe em channels execution:{conversationId}. Eventos em tempo real.</p>
+        </div>
+        <div class="glass rounded-xl p-5">
+          <h3 class="font-semibold text-red-400 text-sm mb-2">Publisher Connection</h3>
+          <p class="text-xs text-slate-400">Publish de eventos do orchestrator para SSE consumers.</p>
+        </div>
+      </div>
+      <div class="glass rounded-xl p-5 mt-4">
+        <h3 class="font-semibold text-amber-400 text-sm mb-2">BullMQ — Fila "execution"</h3>
+        <div class="flex flex-wrap gap-3 text-xs text-slate-400">
+          <span class="bg-slate-800 px-2 py-1 rounded">Concurrency: 3</span>
+          <span class="bg-slate-800 px-2 py-1 rounded">removeOnComplete: 100</span>
+          <span class="bg-slate-800 px-2 py-1 rounded">removeOnFail: 50</span>
+          <span class="bg-slate-800 px-2 py-1 rounded">Retry: disabled</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECURITY NOTES -->
+    <div class="mb-12 fade-in">
+      <h2 class="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-yellow-400"></span> Notas de Segurança
+      </h2>
+      <div class="glass rounded-xl p-6 space-y-3">
+        <div class="flex items-start gap-3">
+          <span class="text-green-400 text-sm">✓</span>
+          <p class="text-sm text-slate-300"><span class="font-semibold">Senhas:</span> bcryptjs (10 rounds) — campo <code class="text-green-400 font-mono text-xs">passwordHash</code></p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-green-400 text-sm">✓</span>
+          <p class="text-sm text-slate-300"><span class="font-semibold">API Keys:</span> SHA-256 hash — campo <code class="text-green-400 font-mono text-xs">keyHash</code> (original nunca armazenado)</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-red-400 text-sm">✗</span>
+          <p class="text-sm text-slate-300"><span class="font-semibold">GitHub Tokens:</span> <span class="text-red-400">plain text</span> — campos <code class="text-red-400 font-mono text-xs">User.githubToken</code> e <code class="text-red-400 font-mono text-xs">GitAccount.token</code></p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-green-400 text-sm">✓</span>
+          <p class="text-sm text-slate-300"><span class="font-semibold">Cascade Delete:</span> Todos os recursos deletam em cascata quando o User é removido</p>
+        </div>
+        <div class="flex items-start gap-3">
+          <span class="text-green-400 text-sm">✓</span>
+          <p class="text-sm text-slate-300"><span class="font-semibold">Índices:</span> 30+ índices otimizando queries por userId, conversationId, executionId, stepId</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================ -->
+  <!-- SCHEMA VISUAL INTERATIVO — Todas as 47 tabelas + 15 enums    -->
+  <!-- ============================================================ -->
+  <section class="max-w-7xl mx-auto px-6 pb-20 fade-in" id="schema-visual">
+    <h2 class="text-2xl font-bold text-white mb-2">Schema Visual Interativo</h2>
+    <p class="text-sm text-slate-400 mb-6">Todas as 47 tabelas do Prisma organizadas por domínio. Clique para expandir campos. Clique nos nomes de tabela relacionada para navegar.</p>
+
+    <style>
+      .sv-tabs { display:flex; gap:0.25rem; border-bottom:1px solid rgba(148,163,184,0.15); margin-bottom:1.25rem; }
+      .sv-tab { padding:0.6rem 1.1rem; background:none; border:none; color:#94a3b8; font-size:0.85rem; font-weight:500; cursor:pointer; border-bottom:2px solid transparent; font-family:inherit; transition:all 0.2s; }
+      .sv-tab:hover { color:#e2e8f0; }
+      .sv-tab.active { color:#2dd4bf; border-bottom-color:#2dd4bf; }
+      .sv-panel { display:none; }
+      .sv-panel.active { display:block; }
+      .sv-toolbar { display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap; margin-bottom:1.25rem; }
+      .sv-search { flex:1; min-width:180px; padding:0.55rem 0.9rem; background:rgba(30,41,59,0.6); border:1px solid rgba(148,163,184,0.15); border-radius:8px; color:#e2e8f0; font-size:0.82rem; font-family:inherit; outline:none; }
+      .sv-search:focus { border-color:rgba(13,148,136,0.5); box-shadow:0 0 12px rgba(13,148,136,0.1); }
+      .sv-gbtn { padding:0.45rem 0.75rem; background:rgba(30,41,59,0.5); border:1px solid rgba(148,163,184,0.15); border-radius:8px; color:#94a3b8; font-size:0.75rem; font-weight:500; cursor:pointer; transition:all 0.2s; font-family:inherit; white-space:nowrap; }
+      .sv-gbtn:hover { background:rgba(30,41,59,0.8); color:#e2e8f0; }
+      .sv-gbtn.active { background:rgba(13,148,136,0.15); color:#2dd4bf; border-color:rgba(13,148,136,0.3); }
+      .sv-group { border:1px solid rgba(148,163,184,0.1); border-radius:12px; padding:1.1rem; background:rgba(15,23,42,0.5); margin-bottom:1rem; }
+      .sv-group-title { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.8rem; padding-bottom:0.4rem; border-bottom:2px solid; display:flex; align-items:center; gap:0.4rem; }
+      .sv-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:0.65rem; }
+      .sv-card { background:rgba(30,41,59,0.4); border:1px solid rgba(148,163,184,0.1); border-radius:8px; overflow:hidden; transition:all 0.25s; cursor:pointer; }
+      .sv-card:hover { border-color:rgba(13,148,136,0.4); }
+      .sv-card.sv-hl { border-color:#2dd4bf; box-shadow:0 0 18px rgba(13,148,136,0.2); }
+      .sv-card-hd { display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0.75rem; border-bottom:1px solid rgba(148,163,184,0.08); }
+      .sv-card-name { font-weight:700; font-size:0.82rem; font-family:'JetBrains Mono',monospace; color:#2dd4bf; }
+      .sv-card-db { font-size:0.65rem; color:#64748b; font-family:'JetBrains Mono',monospace; }
+      .sv-card-badges { display:flex; gap:0.3rem; }
+      .sv-badge { font-size:0.62rem; padding:0.08rem 0.4rem; border-radius:4px; font-weight:600; }
+      .sv-badge-cols { background:rgba(148,163,184,0.1); color:#94a3b8; }
+      .sv-badge-fk { background:rgba(139,92,246,0.15); color:#a78bfa; }
+      .sv-card-preview { padding:0.4rem 0.75rem; display:flex; flex-wrap:wrap; gap:0.25rem; }
+      .sv-pf { font-family:'JetBrains Mono',monospace; font-size:0.65rem; color:#64748b; background:rgba(255,255,255,0.03); padding:0.08rem 0.35rem; border-radius:3px; }
+      .sv-card-fields { max-height:0; overflow:hidden; transition:max-height 0.35s ease; }
+      .sv-card.open .sv-card-fields { max-height:3000px; }
+      .sv-field { display:flex; align-items:center; gap:0.4rem; padding:0.2rem 0.75rem; font-size:0.75rem; }
+      .sv-field:hover { background:rgba(255,255,255,0.02); }
+      .sv-fn { font-family:'JetBrains Mono',monospace; color:#e2e8f0; min-width:130px; }
+      .sv-ft { font-family:'JetBrains Mono',monospace; color:#67e8f9; font-size:0.7rem; }
+      .sv-fb { font-size:0.58rem; padding:0.04rem 0.32rem; border-radius:3px; font-weight:600; }
+      .sv-pk { background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); }
+      .sv-fk { background:rgba(139,92,246,0.15); color:#a78bfa; border:1px solid rgba(139,92,246,0.3); }
+      .sv-uq { background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); }
+      .sv-def { color:#64748b; font-size:0.6rem; }
+      .sv-rels { padding:0.45rem 0.75rem; border-top:1px solid rgba(148,163,184,0.08); }
+      .sv-rels-title { font-size:0.65rem; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.2rem; }
+      .sv-rel { display:flex; align-items:center; gap:0.35rem; font-size:0.7rem; color:#94a3b8; padding:0.12rem 0; }
+      .sv-rel-type { font-size:0.62rem; padding:0.06rem 0.35rem; border-radius:3px; font-weight:600; }
+      .sv-rel-1n { background:rgba(59,130,246,0.15); color:#60a5fa; }
+      .sv-rel-11 { background:rgba(34,197,94,0.15); color:#4ade80; }
+      .sv-rel-tgt { font-family:'JetBrains Mono',monospace; color:#a78bfa; cursor:pointer; }
+      .sv-rel-tgt:hover { color:#c4b5fd; text-decoration:underline; }
+      .sv-enum-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(195px,1fr)); gap:0.75rem; }
+      .sv-enum { background:rgba(30,41,59,0.4); border:1px solid rgba(148,163,184,0.1); border-radius:8px; overflow:hidden; }
+      .sv-enum-name { padding:0.5rem 0.75rem; font-family:'JetBrains Mono',monospace; font-weight:600; font-size:0.8rem; color:#fbbf24; background:rgba(251,191,36,0.05); border-bottom:1px solid rgba(148,163,184,0.08); }
+      .sv-enum-vals { padding:0.4rem 0.75rem; }
+      .sv-enum-val { font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:#86efac; padding:0.12rem 0; }
+      .sv-reltbl { width:100%; border-collapse:collapse; }
+      .sv-reltbl th { font-size:0.72rem; text-align:left; padding:0.5rem; color:#94a3b8; border-bottom:1px solid rgba(148,163,184,0.15); }
+      .sv-reltbl td { font-size:0.78rem; padding:0.45rem 0.5rem; font-family:'JetBrains Mono',monospace; border-bottom:1px solid rgba(148,163,184,0.05); color:#cbd5e1; }
+    </style>
 
     <!-- Tabs -->
-    <div class="view-tabs">
-      <button class="view-tab active" data-view="erd">Schema Visual</button>
-      <button class="view-tab" data-view="relations">Relacionamentos</button>
-      <button class="view-tab" data-view="enums">Enums</button>
+    <div class="sv-tabs">
+      <button class="sv-tab active" onclick="svTab('erd')">Schema Visual</button>
+      <button class="sv-tab" onclick="svTab('rels')">Relacionamentos</button>
+      <button class="sv-tab" onclick="svTab('enums')">Enums (15)</button>
     </div>
 
-    <!-- Toolbar (for ERD tab) -->
-    <div class="toolbar" id="toolbar">
-      <input type="text" class="toolbar-search" id="search" placeholder="Buscar tabela ou campo...">
-      <button class="toolbar-btn active" data-group="all">Todos</button>
+    <!-- Toolbar -->
+    <div class="sv-toolbar" id="sv-toolbar">
+      <input type="text" class="sv-search" id="sv-search" placeholder="Buscar tabela ou campo...">
+      <button class="sv-gbtn active" onclick="svFilter('all',this)">Todos (47)</button>
     </div>
 
     <!-- ERD Panel -->
-    <div class="view-panel active" id="panel-erd">
-      <div class="erd-container">
-        <div class="erd-canvas" id="erd-canvas"></div>
-      </div>
-    </div>
+    <div class="sv-panel active" id="sv-erd"></div>
 
     <!-- Relations Panel -->
-    <div class="view-panel" id="panel-relations">
-      <div class="table-container">
-        <table class="rel-map-table" id="rel-table">
-          <thead>
-            <tr>
-              <th>Origem</th>
-              <th>Campo FK</th>
-              <th>Tipo</th>
-              <th>Destino</th>
-              <th>On Delete</th>
-            </tr>
-          </thead>
-          <tbody id="rel-tbody"></tbody>
-        </table>
+    <div class="sv-panel" id="sv-rels">
+      <div style="overflow-x:auto">
+        <table class="sv-reltbl" id="sv-reltbl"><thead><tr><th>Origem</th><th>Campo FK</th><th>Tipo</th><th>Destino</th><th>On Delete</th></tr></thead><tbody id="sv-reltbody"></tbody></table>
       </div>
     </div>
 
     <!-- Enums Panel -->
-    <div class="view-panel" id="panel-enums">
-      <div class="enum-grid" id="enum-grid"></div>
-    </div>
-  </div>
+    <div class="sv-panel" id="sv-enums"></div>
+  </section>
 
-  <script src="shared.js"></script>
   <script>
   // ================================================================
-  // SCHEMA DATA — Extracted from Prisma schema (47 models, 15 enums)
+  // SCHEMA DATA (47 tables, 15 enums, ~60 FKs)
   // ================================================================
-  const GROUPS = {
-    identity: { label: 'Identity & Access', color: '#22c55e', icon: '🔐' },
-    workflows: { label: 'Workflows', color: '#3b82f6', icon: '📋' },
-    conversations: { label: 'Conversations', color: '#8b5cf6', icon: '💬' },
-    execution: { label: 'Execution Engine', color: '#f59e0b', icon: '⚙️' },
-    resources: { label: 'Resources', color: '#0d9488', icon: '🧩' },
-    automation: { label: 'Automation', color: '#ec4899', icon: '⏰' },
-    observability: { label: 'Observability', color: '#ef4444', icon: '📊' },
-    tagging: { label: 'Tags & Dependencies', color: '#64748b', icon: '🏷️' },
-    joins: { label: 'Join Tables', color: '#475569', icon: '🔗' },
+  const SV_GROUPS={
+    identity:{l:'Identity & Access',c:'#22c55e',i:'🔐'},
+    workflows:{l:'Workflows',c:'#3b82f6',i:'📋'},
+    conversations:{l:'Conversations',c:'#8b5cf6',i:'💬'},
+    execution:{l:'Execution Engine',c:'#f59e0b',i:'⚙️'},
+    resources:{l:'Resources',c:'#0d9488',i:'🧩'},
+    automation:{l:'Automation',c:'#ec4899',i:'⏰'},
+    observability:{l:'Observability',c:'#ef4444',i:'📊'},
+    tagging:{l:'Tags & Dependencies',c:'#64748b',i:'🏷️'},
+    joins:{l:'Join Tables',c:'#475569',i:'🔗'},
   };
-
-  const ENUMS = {
-    UserStatus: ['active','suspended','invited'],
-    UserRole: ['admin','developer','viewer'],
-    WorkflowStatus: ['draft','active','archived'],
-    ConversationStatus: ['active','completed','failed','archived'],
-    ErrorCategory: ['timeout','rate_limit','context_overflow','budget_exceeded','tool_error','permission_denied','unknown'],
-    StepErrorHandler: ['fail','skip','fallback','continue_next'],
-    TriggerType: ['manual','cron','webhook_inbound','event','git_push'],
-    OveragePolicy: ['block','warn','allow'],
-    ResourceType: ['mcp_server','skill','agent','rule','hook','plugin','workflow'],
-    ExecutionStateStatus: ['queued','running','completed','failed','paused','cancelled'],
-    ExecutionAggregateStatus: ['running','completed','failed'],
-    ScheduledExecutionStatus: ['pending','running','completed','failed','cancelled'],
-    ExecutionLogEventType: ['step_start','step_complete','step_fail','step_error','step_skip','workflow_start','workflow_complete','workflow_fail','retry','pause','resume','cancel'],
-    DeliveryStatus: ['pending','success','failed'],
-    TraceResultStatus: ['success','error','timeout','cancelled','needs_input','interrupted'],
+  const SV_ENUMS={
+    UserStatus:['active','suspended','invited'],UserRole:['admin','developer','viewer'],
+    WorkflowStatus:['draft','active','archived'],ConversationStatus:['active','completed','failed','archived'],
+    ErrorCategory:['timeout','rate_limit','context_overflow','budget_exceeded','tool_error','permission_denied','unknown'],
+    StepErrorHandler:['fail','skip','fallback','continue_next'],TriggerType:['manual','cron','webhook_inbound','event','git_push'],
+    OveragePolicy:['block','warn','allow'],ResourceType:['mcp_server','skill','agent','rule','hook','plugin','workflow'],
+    ExecutionStateStatus:['queued','running','completed','failed','paused','cancelled'],
+    ExecutionAggregateStatus:['running','completed','failed'],ScheduledExecutionStatus:['pending','running','completed','failed','cancelled'],
+    ExecutionLogEventType:['step_start','step_complete','step_fail','step_error','step_skip','workflow_start','workflow_complete','workflow_fail','retry','pause','resume','cancel'],
+    DeliveryStatus:['pending','success','failed'],TraceResultStatus:['success','error','timeout','cancelled','needs_input','interrupted'],
   };
-
-  // Table definitions: name, dbName, group, fields[], relations[]
-  const TABLES = [
-    // === IDENTITY ===
-    { name: 'User', db: 'users', group: 'identity', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'email', t: 'String', uq: true },
-      { n: 'passwordHash', t: 'String' },
-      { n: 'name', t: 'String?' },
-      { n: 'status', t: 'UserStatus', def: 'active' },
-      { n: 'role', t: 'UserRole', def: 'developer' },
-      { n: 'preferences', t: 'Json' },
-      { n: 'lastLoginAt', t: 'DateTime?' },
-      { n: 'maxConcurrentExecutions', t: 'Int', def: '5' },
-      { n: 'createdAt', t: 'DateTime' },
-      { n: 'updatedAt', t: 'DateTime' },
-    ], rels: [
-      { type: '1:N', to: 'Workflow' }, { type: '1:N', to: 'Conversation' },
-      { type: '1:N', to: 'McpServer' }, { type: '1:N', to: 'Skill' },
-      { type: '1:N', to: 'Agent' }, { type: '1:N', to: 'Rule' },
-      { type: '1:N', to: 'Plugin' }, { type: '1:N', to: 'Hook' },
-      { type: '1:N', to: 'ApiKey' }, { type: '1:1', to: 'UserTokenBudget' },
-      { type: '1:N', to: 'Webhook' }, { type: '1:N', to: 'GitAccount' },
-      { type: '1:N', to: 'Tag' }, { type: '1:N', to: 'AuditLog' },
-      { type: '1:N', to: 'TokenUsageHistory' }, { type: '1:N', to: 'HourlyTokenUsage' },
-      { type: '1:N', to: 'ExecutionRating' }, { type: '1:N', to: 'PromptVersion' },
-      { type: '1:N', to: 'StepTemplate' },
-    ]},
-    { name: 'ApiKey', db: 'api_keys', group: 'identity', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'name', t: 'String' },
-      { n: 'keyHash', t: 'String', uq: true },
-      { n: 'prefix', t: 'String' },
-      { n: 'scopes', t: 'Json' },
-      { n: 'rateLimit', t: 'Int?' },
-      { n: 'usageCount', t: 'Int', def: '0' },
-      { n: 'ipWhitelist', t: 'Json' },
-      { n: 'lastUsedAt', t: 'DateTime?' },
-      { n: 'expiresAt', t: 'DateTime?' },
-      { n: 'revoked', t: 'Boolean', def: 'false' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [{ type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' }]},
-    { name: 'UserTokenBudget', db: 'user_token_budgets', group: 'identity', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'dailyLimit', t: 'Int', def: '5M' },
-      { n: 'monthlyLimit', t: 'Int', def: '100M' },
-      { n: 'currentDailyUsage', t: 'Int', def: '0' },
-      { n: 'currentMonthlyUsage', t: 'Int', def: '0' },
-      { n: 'lastDailyResetAt', t: 'DateTime' },
-      { n: 'lastMonthlyResetAt', t: 'DateTime' },
-      { n: 'dailyCostLimitUsd', t: 'Float?' },
-      { n: 'monthlyCostLimitUsd', t: 'Float?' },
-      { n: 'overagePolicy', t: 'OveragePolicy', def: 'block' },
-      { n: 'userId', t: 'String', fk: 'User', uq: true },
-    ], rels: [{ type: '1:1', to: 'User', fk: 'userId', del: 'Cascade' }]},
-    { name: 'GitAccount', db: 'git_accounts', group: 'identity', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'label', t: 'String' },
-      { n: 'token', t: 'String' },
-      { n: 'username', t: 'String?' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: '1:N', to: 'ProjectGitMapping' },
-    ]},
-    { name: 'ProjectGitMapping', db: 'project_git_mappings', group: 'identity', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'projectPath', t: 'String', uq: true },
-      { n: 'gitAccountId', t: 'String', fk: 'GitAccount' },
-    ], rels: [{ type: 'N:1', to: 'GitAccount', fk: 'gitAccountId', del: 'Cascade' }]},
-
-    // === WORKFLOWS ===
-    { name: 'Workflow', db: 'workflows', group: 'workflows', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'name', t: 'String' },
-      { n: 'description', t: 'String?' },
-      { n: 'type', t: 'String', def: 'sequential' },
-      { n: 'status', t: 'WorkflowStatus', def: 'active' },
-      { n: 'tags', t: 'Json' },
-      { n: 'lastExecutedAt', t: 'DateTime?' },
-      { n: 'executionCount', t: 'Int', def: '0' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: '1:N', to: 'WorkflowStep' },
-      { type: '1:N', to: 'Conversation' },
-      { type: '1:N', to: 'WorkflowVersion' },
-      { type: '1:N', to: 'WorkflowTrigger' },
-    ]},
-    { name: 'WorkflowStep', db: 'workflow_steps', group: 'workflows', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'workflowId', t: 'String', fk: 'Workflow' },
-      { n: 'name', t: 'String' },
-      { n: 'baseUrl', t: 'String' },
-      { n: 'stepOrder', t: 'Int' },
-      { n: 'systemPrompt', t: 'String?' },
-      { n: 'useBasePrompt', t: 'Boolean', def: 'true' },
-      { n: 'conditions', t: 'Json' },
-      { n: 'maxRetries', t: 'Int', def: '0' },
-      { n: 'dependsOn', t: 'Json' },
-      { n: 'validators', t: 'Json' },
-      { n: 'templateId', t: 'String?', fk: 'StepTemplate' },
-      { n: 'outputVariables', t: 'Json' },
-      { n: 'inputVariables', t: 'Json' },
-      { n: 'backend', t: 'String', def: 'claude' },
-      { n: 'model', t: 'String?' },
-      { n: 'timeout', t: 'Int?', def: '0' },
-      { n: 'errorHandler', t: 'StepErrorHandler', def: 'fail' },
-      { n: 'skipCondition', t: 'String?' },
-      { n: 'subWorkflowId', t: 'String?', fk: 'Workflow' },
-      { n: 'outputSchema', t: 'Json?' },
-    ], rels: [
-      { type: 'N:1', to: 'Workflow', fk: 'workflowId', del: 'Cascade' },
-      { type: 'N:1', to: 'StepTemplate', fk: 'templateId', del: 'SetNull' },
-      { type: 'N:1', to: 'Workflow', fk: 'subWorkflowId', del: 'SetNull', label: 'SubWorkflow' },
-      { type: '1:N', to: 'Message' }, { type: '1:N', to: 'ConversationSession' },
-      { type: '1:N', to: 'StepMemory' }, { type: '1:N', to: 'ExecutionLog' },
-      { type: '1:N', to: 'ExecutionTrace' }, { type: '1:N', to: 'PromptVersion' },
-    ]},
-    { name: 'WorkflowVersion', db: 'workflow_versions', group: 'workflows', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'version', t: 'Int' },
-      { n: 'snapshot', t: 'Json' },
-      { n: 'diff', t: 'Json?' },
-      { n: 'changelog', t: 'String?' },
-      { n: 'workflowId', t: 'String', fk: 'Workflow' },
-    ], rels: [{ type: 'N:1', to: 'Workflow', fk: 'workflowId', del: 'Cascade' }]},
-    { name: 'StepTemplate', db: 'step_templates', group: 'workflows', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'name', t: 'String' },
-      { n: 'description', t: 'String?' },
-      { n: 'baseUrl', t: 'String' },
-      { n: 'systemPrompt', t: 'String?' },
-      { n: 'conditions', t: 'Json' },
-      { n: 'resourceIds', t: 'Json' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: '1:N', to: 'WorkflowStep' },
-    ]},
-
-    // === CONVERSATIONS ===
-    { name: 'Conversation', db: 'conversations', group: 'conversations', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'title', t: 'String?' },
-      { n: 'projectPath', t: 'String?' },
-      { n: 'status', t: 'ConversationStatus', def: 'active' },
-      { n: 'totalTokensUsed', t: 'Int', def: '0' },
-      { n: 'totalCostUsd', t: 'Float?' },
-      { n: 'lastMessageAt', t: 'DateTime?' },
-      { n: 'isArchived', t: 'Boolean', def: 'false' },
-      { n: 'tags', t: 'Json' },
-      { n: 'parentId', t: 'String?', fk: 'Conversation' },
-      { n: 'userId', t: 'String', fk: 'User' },
-      { n: 'workflowId', t: 'String', fk: 'Workflow' },
-      { n: 'currentStepId', t: 'String?', fk: 'WorkflowStep' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: 'N:1', to: 'Workflow', fk: 'workflowId', del: 'Cascade' },
-      { type: 'N:1', to: 'WorkflowStep', fk: 'currentStepId', del: 'SetNull' },
-      { type: 'self', to: 'Conversation', fk: 'parentId', label: 'Fork' },
-      { type: '1:N', to: 'Message' }, { type: '1:N', to: 'ConversationSession' },
-      { type: '1:N', to: 'StepMemory' }, { type: '1:N', to: 'ExecutionState' },
-      { type: '1:N', to: 'ExecutionLog' }, { type: '1:N', to: 'ExecutionTrace' },
-      { type: '1:N', to: 'MessageFeedback' },
-    ]},
-    { name: 'Message', db: 'messages', group: 'conversations', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'role', t: 'String' },
-      { n: 'content', t: 'String' },
-      { n: 'selectedForContext', t: 'Boolean', def: 'false' },
-      { n: 'metadata', t: 'Json?' },
-      { n: 'tokenCount', t: 'Int?' },
-      { n: 'model', t: 'String?' },
-      { n: 'conversationId', t: 'String', fk: 'Conversation' },
-      { n: 'stepId', t: 'String?', fk: 'WorkflowStep' },
-    ], rels: [
-      { type: 'N:1', to: 'Conversation', fk: 'conversationId', del: 'Cascade' },
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'SetNull' },
-      { type: '1:N', to: 'MessageAttachment' },
-      { type: '1:N', to: 'MessageFeedback' },
-    ]},
-    { name: 'MessageFeedback', db: 'message_feedbacks', group: 'conversations', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'rating', t: 'Int' },
-      { n: 'comment', t: 'String?' },
-      { n: 'messageId', t: 'String', fk: 'Message' },
-      { n: 'conversationId', t: 'String', fk: 'Conversation' },
-    ], rels: [
-      { type: 'N:1', to: 'Message', fk: 'messageId', del: 'Cascade' },
-      { type: 'N:1', to: 'Conversation', fk: 'conversationId', del: 'Cascade' },
-    ]},
-    { name: 'MessageAttachment', db: 'message_attachments', group: 'conversations', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'filename', t: 'String' },
-      { n: 'mimeType', t: 'String' },
-      { n: 'size', t: 'Int' },
-      { n: 'path', t: 'String' },
-      { n: 'projectPath', t: 'String' },
-      { n: 'url', t: 'String' },
-      { n: 'messageId', t: 'String', fk: 'Message' },
-    ], rels: [{ type: 'N:1', to: 'Message', fk: 'messageId', del: 'Cascade' }]},
-    { name: 'ConversationSession', db: 'conversation_sessions', group: 'conversations', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'claudeSessionId', t: 'String' },
-      { n: 'conversationId', t: 'String', fk: 'Conversation' },
-      { n: 'stepId', t: 'String', fk: 'WorkflowStep' },
-    ], rels: [
-      { type: 'N:1', to: 'Conversation', fk: 'conversationId', del: 'Cascade' },
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'Cascade' },
-    ]},
-    { name: 'StepMemory', db: 'step_memories', group: 'conversations', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'content', t: 'String' },
-      { n: 'conversationId', t: 'String', fk: 'Conversation' },
-      { n: 'stepId', t: 'String', fk: 'WorkflowStep' },
-    ], rels: [
-      { type: 'N:1', to: 'Conversation', fk: 'conversationId', del: 'Cascade' },
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'Cascade' },
-    ]},
-
-    // === EXECUTION ===
-    { name: 'ExecutionState', db: 'execution_state', group: 'execution', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'state', t: 'ExecutionStateStatus', def: 'queued' },
-      { n: 'currentStepIndex', t: 'Int', def: '0' },
-      { n: 'retryCounts', t: 'Json' },
-      { n: 'metadata', t: 'Json' },
-      { n: 'conversationId', t: 'String', fk: 'Conversation' },
-    ], rels: [{ type: 'N:1', to: 'Conversation', fk: 'conversationId', del: 'Cascade' }]},
-    { name: 'ExecutionLog', db: 'execution_logs', group: 'execution', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'executionId', t: 'String' },
-      { n: 'eventType', t: 'ExecutionLogEventType' },
-      { n: 'stepId', t: 'String?', fk: 'WorkflowStep' },
-      { n: 'stepName', t: 'String?' },
-      { n: 'data', t: 'Json' },
-      { n: 'conversationId', t: 'String', fk: 'Conversation' },
-    ], rels: [
-      { type: 'N:1', to: 'Conversation', fk: 'conversationId', del: 'Cascade' },
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'SetNull' },
-    ]},
-    { name: 'ExecutionTrace', db: 'execution_traces', group: 'execution', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'executionId', t: 'String' },
-      { n: 'conversationId', t: 'String', fk: 'Conversation' },
-      { n: 'stepId', t: 'String', fk: 'WorkflowStep' },
-      { n: 'commandLine', t: 'String' },
-      { n: 'envSnapshot', t: 'Json' },
-      { n: 'messageLength', t: 'Int' },
-      { n: 'systemPrompt', t: 'String?' },
-      { n: 'resumeToken', t: 'String?' },
-      { n: 'model', t: 'String?' },
-      { n: 'projectPath', t: 'String' },
-      { n: 'pid', t: 'Int?' },
-      { n: 'stdoutRaw', t: 'String' },
-      { n: 'stderrRaw', t: 'String' },
-      { n: 'parsedEvents', t: 'Json' },
-      { n: 'startedAt', t: 'DateTime' },
-      { n: 'completedAt', t: 'DateTime?' },
-      { n: 'durationMs', t: 'Int?' },
-      { n: 'exitCode', t: 'Int?' },
-      { n: 'resultStatus', t: 'TraceResultStatus' },
-      { n: 'inputTokens', t: 'Int', def: '0' },
-      { n: 'outputTokens', t: 'Int', def: '0' },
-      { n: 'totalCostUsd', t: 'Float?' },
-      { n: 'numTurns', t: 'Int', def: '0' },
-    ], rels: [
-      { type: 'N:1', to: 'Conversation', fk: 'conversationId', del: 'Cascade' },
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'Cascade' },
-      { type: '1:N', to: 'ExecutionToolCall' },
-    ]},
-    { name: 'ExecutionToolCall', db: 'execution_tool_calls', group: 'execution', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'toolName', t: 'String' },
-      { n: 'input', t: 'Json' },
-      { n: 'output', t: 'Json?' },
-      { n: 'durationMs', t: 'Int?' },
-      { n: 'success', t: 'Boolean', def: 'true' },
-      { n: 'errorMessage', t: 'String?' },
-      { n: 'traceId', t: 'String', fk: 'ExecutionTrace' },
-    ], rels: [{ type: 'N:1', to: 'ExecutionTrace', fk: 'traceId', del: 'Cascade' }]},
-    { name: 'ExecutionAggregate', db: 'execution_aggregates', group: 'execution', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'executionId', t: 'String', uq: true },
-      { n: 'conversationId', t: 'String' },
-      { n: 'workflowId', t: 'String' },
-      { n: 'totalSteps', t: 'Int', def: '0' },
-      { n: 'completedSteps', t: 'Int', def: '0' },
-      { n: 'failedSteps', t: 'Int', def: '0' },
-      { n: 'totalInputTokens', t: 'Int', def: '0' },
-      { n: 'totalOutputTokens', t: 'Int', def: '0' },
-      { n: 'totalCostUsd', t: 'Float?' },
-      { n: 'totalDurationMs', t: 'Int?' },
-      { n: 'finalStatus', t: 'ExecutionAggregateStatus', def: 'running' },
-    ], rels: []},
-    { name: 'DailyExecutionMetrics', db: 'daily_execution_metrics', group: 'execution', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'date', t: 'Date', uq: true },
-      { n: 'totalExecutions', t: 'Int', def: '0' },
-      { n: 'successCount', t: 'Int', def: '0' },
-      { n: 'failureCount', t: 'Int', def: '0' },
-      { n: 'totalInputTokens', t: 'Int', def: '0' },
-      { n: 'totalOutputTokens', t: 'Int', def: '0' },
-      { n: 'totalCostUsd', t: 'Float', def: '0' },
-      { n: 'avgDurationMs', t: 'Float?' },
-      { n: 'p95DurationMs', t: 'Float?' },
-      { n: 'errorBreakdown', t: 'Json' },
-      { n: 'modelBreakdown', t: 'Json' },
-    ], rels: []},
-    { name: 'ExecutionRating', db: 'execution_ratings', group: 'execution', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'rating', t: 'Int' },
-      { n: 'feedback', t: 'String?' },
-      { n: 'executionId', t: 'String' },
-      { n: 'stepId', t: 'String?' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [{ type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' }]},
-
-    // === RESOURCES ===
-    { name: 'McpServer', db: 'mcp_servers', group: 'resources', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'name', t: 'String' },
-      { n: 'description', t: 'String?' },
-      { n: 'type', t: 'String', def: 'http' },
-      { n: 'uri', t: 'String?' },
-      { n: 'command', t: 'String?' },
-      { n: 'args', t: 'Json' },
-      { n: 'envVars', t: 'Json' },
-      { n: 'enabled', t: 'Boolean', def: 'true' },
-      { n: 'isGlobal', t: 'Boolean', def: 'false' },
-      { n: 'toolsCache', t: 'Json?' },
-      { n: 'userId', t: 'String', fk: 'User' },
-      { n: 'pluginId', t: 'String?', fk: 'Plugin' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: 'N:1', to: 'Plugin', fk: 'pluginId', del: 'SetNull' },
-    ]},
-    { name: 'Skill', db: 'skills', group: 'resources', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'name', t: 'String' },
-      { n: 'description', t: 'String?' },
-      { n: 'frontmatter', t: 'Json' },
-      { n: 'body', t: 'String' },
-      { n: 'allowedTools', t: 'Json' },
-      { n: 'model', t: 'String?' },
-      { n: 'enabled', t: 'Boolean', def: 'true' },
-      { n: 'isGlobal', t: 'Boolean', def: 'false' },
-      { n: 'source', t: 'String', def: 'manual' },
-      { n: 'userId', t: 'String', fk: 'User' },
-      { n: 'pluginId', t: 'String?', fk: 'Plugin' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: 'N:1', to: 'Plugin', fk: 'pluginId', del: 'SetNull' },
-      { type: '1:N', to: 'Rule' },
-      { type: '1:N', to: 'AgentSkill' },
-    ]},
-    { name: 'Agent', db: 'agents', group: 'resources', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'name', t: 'String' },
-      { n: 'description', t: 'String?' },
-      { n: 'systemPrompt', t: 'String' },
-      { n: 'tools', t: 'Json' },
-      { n: 'disallowedTools', t: 'Json' },
-      { n: 'model', t: 'String?' },
-      { n: 'permissionMode', t: 'String', def: 'default' },
-      { n: 'maxTurns', t: 'Int?' },
-      { n: 'enabled', t: 'Boolean', def: 'true' },
-      { n: 'isGlobal', t: 'Boolean', def: 'false' },
-      { n: 'userId', t: 'String', fk: 'User' },
-      { n: 'pluginId', t: 'String?', fk: 'Plugin' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: 'N:1', to: 'Plugin', fk: 'pluginId', del: 'SetNull' },
-      { type: '1:N', to: 'AgentSkill' },
-    ]},
-    { name: 'Rule', db: 'rules', group: 'resources', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'name', t: 'String' },
-      { n: 'description', t: 'String?' },
-      { n: 'body', t: 'String' },
-      { n: 'enabled', t: 'Boolean', def: 'true' },
-      { n: 'isGlobal', t: 'Boolean', def: 'false' },
-      { n: 'userId', t: 'String', fk: 'User' },
-      { n: 'skillId', t: 'String?', fk: 'Skill' },
-      { n: 'pluginId', t: 'String?', fk: 'Plugin' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: 'N:1', to: 'Skill', fk: 'skillId', del: 'SetNull' },
-      { type: 'N:1', to: 'Plugin', fk: 'pluginId', del: 'SetNull' },
-    ]},
-    { name: 'Hook', db: 'hooks', group: 'resources', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'name', t: 'String' },
-      { n: 'description', t: 'String?' },
-      { n: 'eventType', t: 'String' },
-      { n: 'matcher', t: 'String?' },
-      { n: 'handlerType', t: 'String', def: 'command' },
-      { n: 'command', t: 'String?' },
-      { n: 'prompt', t: 'String?' },
-      { n: 'timeout', t: 'Int', def: '60000' },
-      { n: 'isAsync', t: 'Boolean', def: 'false' },
-      { n: 'enabled', t: 'Boolean', def: 'true' },
-      { n: 'isGlobal', t: 'Boolean', def: 'false' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [{ type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' }]},
-    { name: 'Plugin', db: 'plugins', group: 'resources', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'name', t: 'String' },
-      { n: 'description', t: 'String?' },
-      { n: 'version', t: 'String?' },
-      { n: 'author', t: 'String?' },
-      { n: 'manifest', t: 'Json' },
-      { n: 'enabled', t: 'Boolean', def: 'true' },
-      { n: 'source', t: 'String', def: 'manual' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: '1:N', to: 'McpServer' }, { type: '1:N', to: 'Skill' },
-      { type: '1:N', to: 'Agent' }, { type: '1:N', to: 'Rule' },
-    ]},
-    { name: 'AgentSkill', db: 'agent_skills', group: 'resources', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'order', t: 'Int', def: '0' },
-      { n: 'config', t: 'Json?' },
-      { n: 'agentId', t: 'String', fk: 'Agent' },
-      { n: 'skillId', t: 'String', fk: 'Skill' },
-    ], rels: [
-      { type: 'N:1', to: 'Agent', fk: 'agentId', del: 'Cascade' },
-      { type: 'N:1', to: 'Skill', fk: 'skillId', del: 'Cascade' },
-    ]},
-    { name: 'PromptVersion', db: 'prompt_versions', group: 'resources', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'stepId', t: 'String', fk: 'WorkflowStep' },
-      { n: 'version', t: 'Int' },
-      { n: 'content', t: 'String' },
-      { n: 'diff', t: 'String?' },
-      { n: 'createdBy', t: 'String', fk: 'User' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'createdBy', del: 'Cascade' },
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'Cascade' },
-    ]},
-
-    // === AUTOMATION ===
-    { name: 'WorkflowTrigger', db: 'workflow_triggers', group: 'automation', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'type', t: 'TriggerType', def: 'manual' },
-      { n: 'cronExpr', t: 'String?' },
-      { n: 'cronTimezone', t: 'String?' },
-      { n: 'webhookSecret', t: 'String?' },
-      { n: 'eventName', t: 'String?' },
-      { n: 'eventFilter', t: 'Json?' },
-      { n: 'rateLimit', t: 'Int?' },
-      { n: 'enabled', t: 'Boolean', def: 'true' },
-      { n: 'lastTriggeredAt', t: 'DateTime?' },
-      { n: 'workflowId', t: 'String', fk: 'Workflow' },
-    ], rels: [
-      { type: 'N:1', to: 'Workflow', fk: 'workflowId', del: 'Cascade' },
-      { type: '1:N', to: 'ScheduledExecution' },
-    ]},
-    { name: 'ScheduledExecution', db: 'scheduled_executions', group: 'automation', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'scheduledAt', t: 'DateTime' },
-      { n: 'executedAt', t: 'DateTime?' },
-      { n: 'status', t: 'ScheduledExecutionStatus', def: 'pending' },
-      { n: 'result', t: 'Json?' },
-      { n: 'errorMessage', t: 'String?' },
-      { n: 'triggerId', t: 'String', fk: 'WorkflowTrigger' },
-    ], rels: [{ type: 'N:1', to: 'WorkflowTrigger', fk: 'triggerId', del: 'Cascade' }]},
-    { name: 'Webhook', db: 'webhooks', group: 'automation', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'url', t: 'String' },
-      { n: 'events', t: 'Json' },
-      { n: 'secret', t: 'String' },
-      { n: 'enabled', t: 'Boolean', def: 'true' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: '1:N', to: 'WebhookDelivery' },
-    ]},
-    { name: 'WebhookDelivery', db: 'webhook_deliveries', group: 'automation', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'payload', t: 'Json' },
-      { n: 'responseCode', t: 'Int?' },
-      { n: 'responseBody', t: 'String?' },
-      { n: 'attempts', t: 'Int', def: '0' },
-      { n: 'status', t: 'DeliveryStatus', def: 'pending' },
-      { n: 'completedAt', t: 'DateTime?' },
-      { n: 'webhookId', t: 'String', fk: 'Webhook' },
-    ], rels: [{ type: 'N:1', to: 'Webhook', fk: 'webhookId', del: 'Cascade' }]},
-
-    // === OBSERVABILITY ===
-    { name: 'TokenUsageHistory', db: 'token_usage_history', group: 'observability', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'inputTokens', t: 'Int' },
-      { n: 'outputTokens', t: 'Int' },
-      { n: 'totalCostUsd', t: 'Float?' },
-      { n: 'model', t: 'String?' },
-      { n: 'executionId', t: 'String?' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [{ type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' }]},
-    { name: 'HourlyTokenUsage', db: 'hourly_token_usage', group: 'observability', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'hour', t: 'DateTime' },
-      { n: 'tokens', t: 'Int', def: '0' },
-      { n: 'costUsd', t: 'Float', def: '0' },
-      { n: 'model', t: 'String?' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [{ type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' }]},
-    { name: 'ResourcePerformanceMetric', db: 'resource_performance_metrics', group: 'observability', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'resourceType', t: 'ResourceType' },
-      { n: 'resourceId', t: 'String' },
-      { n: 'period', t: 'String', def: 'daily' },
-      { n: 'periodStart', t: 'DateTime' },
-      { n: 'executionCount', t: 'Int', def: '0' },
-      { n: 'successCount', t: 'Int', def: '0' },
-      { n: 'avgDurationMs', t: 'Float?' },
-      { n: 'totalCostUsd', t: 'Float', def: '0' },
-    ], rels: []},
-    { name: 'AuditLog', db: 'audit_logs', group: 'observability', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'action', t: 'String' },
-      { n: 'resourceType', t: 'ResourceType' },
-      { n: 'resourceId', t: 'String' },
-      { n: 'resourceName', t: 'String?' },
-      { n: 'diff', t: 'Json?' },
-      { n: 'metadata', t: 'Json?' },
-      { n: 'ipAddress', t: 'String?' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [{ type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' }]},
-
-    // === TAGGING ===
-    { name: 'Tag', db: 'tags', group: 'tagging', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'name', t: 'String' },
-      { n: 'color', t: 'String?' },
-      { n: 'userId', t: 'String', fk: 'User' },
-    ], rels: [
-      { type: 'N:1', to: 'User', fk: 'userId', del: 'Cascade' },
-      { type: '1:N', to: 'ResourceTag' },
-    ]},
-    { name: 'ResourceTag', db: 'resource_tags', group: 'tagging', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'resourceType', t: 'ResourceType' },
-      { n: 'resourceId', t: 'String' },
-      { n: 'tagId', t: 'String', fk: 'Tag' },
-    ], rels: [{ type: 'N:1', to: 'Tag', fk: 'tagId', del: 'Cascade' }]},
-    { name: 'ResourceDependency', db: 'resource_dependencies', group: 'tagging', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'sourceType', t: 'ResourceType' },
-      { n: 'sourceId', t: 'String' },
-      { n: 'dependencyType', t: 'ResourceType' },
-      { n: 'dependencyId', t: 'String' },
-      { n: 'dependencyName', t: 'String?' },
-      { n: 'isOptional', t: 'Boolean', def: 'false' },
-    ], rels: []},
-    { name: 'GitSource', db: 'git_sources', group: 'tagging', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'resourceType', t: 'ResourceType' },
-      { n: 'resourceId', t: 'String' },
-      { n: 'repoOwner', t: 'String' },
-      { n: 'repoName', t: 'String' },
-      { n: 'repoBranch', t: 'String', def: 'main' },
-      { n: 'repoPath', t: 'String?' },
-      { n: 'lastSyncedAt', t: 'DateTime?' },
-    ], rels: []},
-
-    // === JOIN TABLES ===
-    { name: 'WorkflowStepMcpServer', db: 'workflow_step_mcp_servers', group: 'joins', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'stepId', t: 'String', fk: 'WorkflowStep' },
-      { n: 'serverId', t: 'String', fk: 'McpServer' },
-      { n: 'order', t: 'Int', def: '0' },
-      { n: 'config', t: 'Json?' },
-    ], rels: [
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'Cascade' },
-      { type: 'N:1', to: 'McpServer', fk: 'serverId', del: 'Cascade' },
-    ]},
-    { name: 'WorkflowStepSkill', db: 'workflow_step_skills', group: 'joins', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'stepId', t: 'String', fk: 'WorkflowStep' },
-      { n: 'skillId', t: 'String', fk: 'Skill' },
-      { n: 'order', t: 'Int', def: '0' },
-      { n: 'config', t: 'Json?' },
-    ], rels: [
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'Cascade' },
-      { type: 'N:1', to: 'Skill', fk: 'skillId', del: 'Cascade' },
-    ]},
-    { name: 'WorkflowStepAgent', db: 'workflow_step_agents', group: 'joins', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'stepId', t: 'String', fk: 'WorkflowStep' },
-      { n: 'agentId', t: 'String', fk: 'Agent' },
-      { n: 'order', t: 'Int', def: '0' },
-      { n: 'config', t: 'Json?' },
-    ], rels: [
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'Cascade' },
-      { type: 'N:1', to: 'Agent', fk: 'agentId', del: 'Cascade' },
-    ]},
-    { name: 'WorkflowStepRule', db: 'workflow_step_rules', group: 'joins', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'stepId', t: 'String', fk: 'WorkflowStep' },
-      { n: 'ruleId', t: 'String', fk: 'Rule' },
-      { n: 'order', t: 'Int', def: '0' },
-    ], rels: [
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'Cascade' },
-      { type: 'N:1', to: 'Rule', fk: 'ruleId', del: 'Cascade' },
-    ]},
-    { name: 'WorkflowStepHook', db: 'workflow_step_hooks', group: 'joins', fields: [
-      { n: 'id', t: 'String', pk: true },
-      { n: 'stepId', t: 'String', fk: 'WorkflowStep' },
-      { n: 'hookId', t: 'String', fk: 'Hook' },
-      { n: 'order', t: 'Int', def: '0' },
-    ], rels: [
-      { type: 'N:1', to: 'WorkflowStep', fk: 'stepId', del: 'Cascade' },
-      { type: 'N:1', to: 'Hook', fk: 'hookId', del: 'Cascade' },
-    ]},
+  const T=[
+    {n:'User',db:'users',g:'identity',f:[{n:'id',t:'String',pk:1},{n:'email',t:'String',uq:1},{n:'passwordHash',t:'String'},{n:'name',t:'String?'},{n:'status',t:'UserStatus',d:'active'},{n:'role',t:'UserRole',d:'developer'},{n:'preferences',t:'Json'},{n:'lastLoginAt',t:'DateTime?'},{n:'maxConcurrentExecutions',t:'Int',d:'5'}],r:[{t:'1:N',to:'Workflow'},{t:'1:N',to:'Conversation'},{t:'1:N',to:'McpServer'},{t:'1:N',to:'Skill'},{t:'1:N',to:'Agent'},{t:'1:N',to:'Rule'},{t:'1:N',to:'Plugin'},{t:'1:N',to:'Hook'},{t:'1:N',to:'ApiKey'},{t:'1:1',to:'UserTokenBudget'},{t:'1:N',to:'Webhook'},{t:'1:N',to:'GitAccount'},{t:'1:N',to:'Tag'},{t:'1:N',to:'AuditLog'},{t:'1:N',to:'TokenUsageHistory'},{t:'1:N',to:'HourlyTokenUsage'},{t:'1:N',to:'ExecutionRating'},{t:'1:N',to:'PromptVersion'},{t:'1:N',to:'StepTemplate'}]},
+    {n:'ApiKey',db:'api_keys',g:'identity',f:[{n:'id',t:'String',pk:1},{n:'name',t:'String'},{n:'keyHash',t:'String',uq:1},{n:'prefix',t:'String'},{n:'scopes',t:'Json'},{n:'rateLimit',t:'Int?'},{n:'usageCount',t:'Int',d:'0'},{n:'ipWhitelist',t:'Json'},{n:'lastUsedAt',t:'DateTime?'},{n:'expiresAt',t:'DateTime?'},{n:'revoked',t:'Boolean',d:'false'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'}]},
+    {n:'UserTokenBudget',db:'user_token_budgets',g:'identity',f:[{n:'id',t:'String',pk:1},{n:'dailyLimit',t:'Int',d:'5M'},{n:'monthlyLimit',t:'Int',d:'100M'},{n:'currentDailyUsage',t:'Int',d:'0'},{n:'currentMonthlyUsage',t:'Int',d:'0'},{n:'overagePolicy',t:'OveragePolicy',d:'block'},{n:'userId',t:'String',fk:'User',uq:1}],r:[{t:'1:1',to:'User',fk:'userId',del:'Cascade'}]},
+    {n:'GitAccount',db:'git_accounts',g:'identity',f:[{n:'id',t:'String',pk:1},{n:'label',t:'String'},{n:'token',t:'String'},{n:'username',t:'String?'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'1:N',to:'ProjectGitMapping'}]},
+    {n:'ProjectGitMapping',db:'project_git_mappings',g:'identity',f:[{n:'id',t:'String',pk:1},{n:'projectPath',t:'String',uq:1},{n:'gitAccountId',t:'String',fk:'GitAccount'}],r:[{t:'N:1',to:'GitAccount',fk:'gitAccountId',del:'Cascade'}]},
+    {n:'Workflow',db:'workflows',g:'workflows',f:[{n:'id',t:'String',pk:1},{n:'name',t:'String'},{n:'description',t:'String?'},{n:'type',t:'String',d:'sequential'},{n:'status',t:'WorkflowStatus',d:'active'},{n:'tags',t:'Json'},{n:'lastExecutedAt',t:'DateTime?'},{n:'executionCount',t:'Int',d:'0'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'1:N',to:'WorkflowStep'},{t:'1:N',to:'Conversation'},{t:'1:N',to:'WorkflowVersion'},{t:'1:N',to:'WorkflowTrigger'}]},
+    {n:'WorkflowStep',db:'workflow_steps',g:'workflows',f:[{n:'id',t:'String',pk:1},{n:'workflowId',t:'String',fk:'Workflow'},{n:'name',t:'String'},{n:'baseUrl',t:'String'},{n:'stepOrder',t:'Int'},{n:'systemPrompt',t:'String?'},{n:'useBasePrompt',t:'Boolean',d:'true'},{n:'conditions',t:'Json'},{n:'maxRetries',t:'Int',d:'0'},{n:'dependsOn',t:'Json'},{n:'validators',t:'Json'},{n:'templateId',t:'String?',fk:'StepTemplate'},{n:'backend',t:'String',d:'claude'},{n:'model',t:'String?'},{n:'timeout',t:'Int?',d:'0'},{n:'errorHandler',t:'StepErrorHandler',d:'fail'},{n:'subWorkflowId',t:'String?',fk:'Workflow'}],r:[{t:'N:1',to:'Workflow',fk:'workflowId',del:'Cascade'},{t:'N:1',to:'StepTemplate',fk:'templateId',del:'SetNull'},{t:'1:N',to:'Message'},{t:'1:N',to:'ConversationSession'},{t:'1:N',to:'StepMemory'},{t:'1:N',to:'ExecutionLog'},{t:'1:N',to:'ExecutionTrace'},{t:'1:N',to:'PromptVersion'}]},
+    {n:'WorkflowVersion',db:'workflow_versions',g:'workflows',f:[{n:'id',t:'String',pk:1},{n:'version',t:'Int'},{n:'snapshot',t:'Json'},{n:'diff',t:'Json?'},{n:'changelog',t:'String?'},{n:'workflowId',t:'String',fk:'Workflow'}],r:[{t:'N:1',to:'Workflow',fk:'workflowId',del:'Cascade'}]},
+    {n:'StepTemplate',db:'step_templates',g:'workflows',f:[{n:'id',t:'String',pk:1},{n:'name',t:'String'},{n:'description',t:'String?'},{n:'baseUrl',t:'String'},{n:'systemPrompt',t:'String?'},{n:'conditions',t:'Json'},{n:'resourceIds',t:'Json'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'1:N',to:'WorkflowStep'}]},
+    {n:'Conversation',db:'conversations',g:'conversations',f:[{n:'id',t:'String',pk:1},{n:'title',t:'String?'},{n:'projectPath',t:'String?'},{n:'status',t:'ConversationStatus',d:'active'},{n:'totalTokensUsed',t:'Int',d:'0'},{n:'totalCostUsd',t:'Float?'},{n:'lastMessageAt',t:'DateTime?'},{n:'isArchived',t:'Boolean',d:'false'},{n:'parentId',t:'String?',fk:'Conversation'},{n:'userId',t:'String',fk:'User'},{n:'workflowId',t:'String',fk:'Workflow'},{n:'currentStepId',t:'String?',fk:'WorkflowStep'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'N:1',to:'Workflow',fk:'workflowId',del:'Cascade'},{t:'N:1',to:'WorkflowStep',fk:'currentStepId',del:'SetNull'},{t:'self',to:'Conversation',fk:'parentId'},{t:'1:N',to:'Message'},{t:'1:N',to:'ConversationSession'},{t:'1:N',to:'StepMemory'},{t:'1:N',to:'ExecutionState'},{t:'1:N',to:'ExecutionLog'},{t:'1:N',to:'ExecutionTrace'},{t:'1:N',to:'MessageFeedback'}]},
+    {n:'Message',db:'messages',g:'conversations',f:[{n:'id',t:'String',pk:1},{n:'role',t:'String'},{n:'content',t:'String'},{n:'selectedForContext',t:'Boolean',d:'false'},{n:'metadata',t:'Json?'},{n:'tokenCount',t:'Int?'},{n:'model',t:'String?'},{n:'conversationId',t:'String',fk:'Conversation'},{n:'stepId',t:'String?',fk:'WorkflowStep'}],r:[{t:'N:1',to:'Conversation',fk:'conversationId',del:'Cascade'},{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'SetNull'},{t:'1:N',to:'MessageAttachment'},{t:'1:N',to:'MessageFeedback'}]},
+    {n:'MessageFeedback',db:'message_feedbacks',g:'conversations',f:[{n:'id',t:'String',pk:1},{n:'rating',t:'Int'},{n:'comment',t:'String?'},{n:'messageId',t:'String',fk:'Message'},{n:'conversationId',t:'String',fk:'Conversation'}],r:[{t:'N:1',to:'Message',fk:'messageId',del:'Cascade'},{t:'N:1',to:'Conversation',fk:'conversationId',del:'Cascade'}]},
+    {n:'MessageAttachment',db:'message_attachments',g:'conversations',f:[{n:'id',t:'String',pk:1},{n:'filename',t:'String'},{n:'mimeType',t:'String'},{n:'size',t:'Int'},{n:'path',t:'String'},{n:'projectPath',t:'String'},{n:'url',t:'String'},{n:'messageId',t:'String',fk:'Message'}],r:[{t:'N:1',to:'Message',fk:'messageId',del:'Cascade'}]},
+    {n:'ConversationSession',db:'conversation_sessions',g:'conversations',f:[{n:'id',t:'String',pk:1},{n:'claudeSessionId',t:'String'},{n:'conversationId',t:'String',fk:'Conversation'},{n:'stepId',t:'String',fk:'WorkflowStep'}],r:[{t:'N:1',to:'Conversation',fk:'conversationId',del:'Cascade'},{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'Cascade'}]},
+    {n:'StepMemory',db:'step_memories',g:'conversations',f:[{n:'id',t:'String',pk:1},{n:'content',t:'String'},{n:'conversationId',t:'String',fk:'Conversation'},{n:'stepId',t:'String',fk:'WorkflowStep'}],r:[{t:'N:1',to:'Conversation',fk:'conversationId',del:'Cascade'},{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'Cascade'}]},
+    {n:'ExecutionState',db:'execution_state',g:'execution',f:[{n:'id',t:'String',pk:1},{n:'state',t:'ExecutionStateStatus',d:'queued'},{n:'currentStepIndex',t:'Int',d:'0'},{n:'retryCounts',t:'Json'},{n:'metadata',t:'Json'},{n:'conversationId',t:'String',fk:'Conversation'}],r:[{t:'N:1',to:'Conversation',fk:'conversationId',del:'Cascade'}]},
+    {n:'ExecutionLog',db:'execution_logs',g:'execution',f:[{n:'id',t:'String',pk:1},{n:'executionId',t:'String'},{n:'eventType',t:'ExecutionLogEventType'},{n:'stepId',t:'String?',fk:'WorkflowStep'},{n:'stepName',t:'String?'},{n:'data',t:'Json'},{n:'conversationId',t:'String',fk:'Conversation'}],r:[{t:'N:1',to:'Conversation',fk:'conversationId',del:'Cascade'},{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'SetNull'}]},
+    {n:'ExecutionTrace',db:'execution_traces',g:'execution',f:[{n:'id',t:'String',pk:1},{n:'executionId',t:'String'},{n:'conversationId',t:'String',fk:'Conversation'},{n:'stepId',t:'String',fk:'WorkflowStep'},{n:'commandLine',t:'String'},{n:'model',t:'String?'},{n:'projectPath',t:'String'},{n:'pid',t:'Int?'},{n:'stdoutRaw',t:'String'},{n:'stderrRaw',t:'String'},{n:'startedAt',t:'DateTime'},{n:'completedAt',t:'DateTime?'},{n:'durationMs',t:'Int?'},{n:'exitCode',t:'Int?'},{n:'resultStatus',t:'TraceResultStatus'},{n:'inputTokens',t:'Int',d:'0'},{n:'outputTokens',t:'Int',d:'0'},{n:'totalCostUsd',t:'Float?'},{n:'numTurns',t:'Int',d:'0'}],r:[{t:'N:1',to:'Conversation',fk:'conversationId',del:'Cascade'},{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'Cascade'},{t:'1:N',to:'ExecutionToolCall'}]},
+    {n:'ExecutionToolCall',db:'execution_tool_calls',g:'execution',f:[{n:'id',t:'String',pk:1},{n:'toolName',t:'String'},{n:'input',t:'Json'},{n:'output',t:'Json?'},{n:'durationMs',t:'Int?'},{n:'success',t:'Boolean',d:'true'},{n:'errorMessage',t:'String?'},{n:'traceId',t:'String',fk:'ExecutionTrace'}],r:[{t:'N:1',to:'ExecutionTrace',fk:'traceId',del:'Cascade'}]},
+    {n:'ExecutionAggregate',db:'execution_aggregates',g:'execution',f:[{n:'id',t:'String',pk:1},{n:'executionId',t:'String',uq:1},{n:'conversationId',t:'String'},{n:'workflowId',t:'String'},{n:'totalSteps',t:'Int',d:'0'},{n:'completedSteps',t:'Int',d:'0'},{n:'failedSteps',t:'Int',d:'0'},{n:'totalInputTokens',t:'Int',d:'0'},{n:'totalOutputTokens',t:'Int',d:'0'},{n:'totalCostUsd',t:'Float?'},{n:'finalStatus',t:'ExecutionAggregateStatus',d:'running'}],r:[]},
+    {n:'DailyExecutionMetrics',db:'daily_execution_metrics',g:'execution',f:[{n:'id',t:'String',pk:1},{n:'date',t:'Date',uq:1},{n:'totalExecutions',t:'Int',d:'0'},{n:'successCount',t:'Int',d:'0'},{n:'failureCount',t:'Int',d:'0'},{n:'totalCostUsd',t:'Float',d:'0'},{n:'avgDurationMs',t:'Float?'},{n:'p95DurationMs',t:'Float?'},{n:'errorBreakdown',t:'Json'},{n:'modelBreakdown',t:'Json'}],r:[]},
+    {n:'ExecutionRating',db:'execution_ratings',g:'execution',f:[{n:'id',t:'String',pk:1},{n:'rating',t:'Int'},{n:'feedback',t:'String?'},{n:'executionId',t:'String'},{n:'stepId',t:'String?'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'}]},
+    {n:'McpServer',db:'mcp_servers',g:'resources',f:[{n:'id',t:'String',pk:1},{n:'name',t:'String'},{n:'description',t:'String?'},{n:'type',t:'String',d:'http'},{n:'uri',t:'String?'},{n:'command',t:'String?'},{n:'args',t:'Json'},{n:'envVars',t:'Json'},{n:'enabled',t:'Boolean',d:'true'},{n:'isGlobal',t:'Boolean',d:'false'},{n:'toolsCache',t:'Json?'},{n:'userId',t:'String',fk:'User'},{n:'pluginId',t:'String?',fk:'Plugin'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'N:1',to:'Plugin',fk:'pluginId',del:'SetNull'}]},
+    {n:'Skill',db:'skills',g:'resources',f:[{n:'id',t:'String',pk:1},{n:'name',t:'String'},{n:'description',t:'String?'},{n:'frontmatter',t:'Json'},{n:'body',t:'String'},{n:'allowedTools',t:'Json'},{n:'model',t:'String?'},{n:'enabled',t:'Boolean',d:'true'},{n:'isGlobal',t:'Boolean',d:'false'},{n:'source',t:'String',d:'manual'},{n:'userId',t:'String',fk:'User'},{n:'pluginId',t:'String?',fk:'Plugin'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'N:1',to:'Plugin',fk:'pluginId',del:'SetNull'},{t:'1:N',to:'Rule'},{t:'1:N',to:'AgentSkill'}]},
+    {n:'Agent',db:'agents',g:'resources',f:[{n:'id',t:'String',pk:1},{n:'name',t:'String'},{n:'description',t:'String?'},{n:'systemPrompt',t:'String'},{n:'tools',t:'Json'},{n:'disallowedTools',t:'Json'},{n:'model',t:'String?'},{n:'permissionMode',t:'String',d:'default'},{n:'maxTurns',t:'Int?'},{n:'enabled',t:'Boolean',d:'true'},{n:'isGlobal',t:'Boolean',d:'false'},{n:'userId',t:'String',fk:'User'},{n:'pluginId',t:'String?',fk:'Plugin'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'N:1',to:'Plugin',fk:'pluginId',del:'SetNull'},{t:'1:N',to:'AgentSkill'}]},
+    {n:'Rule',db:'rules',g:'resources',f:[{n:'id',t:'String',pk:1},{n:'name',t:'String'},{n:'description',t:'String?'},{n:'body',t:'String'},{n:'enabled',t:'Boolean',d:'true'},{n:'isGlobal',t:'Boolean',d:'false'},{n:'userId',t:'String',fk:'User'},{n:'skillId',t:'String?',fk:'Skill'},{n:'pluginId',t:'String?',fk:'Plugin'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'N:1',to:'Skill',fk:'skillId',del:'SetNull'},{t:'N:1',to:'Plugin',fk:'pluginId',del:'SetNull'}]},
+    {n:'Hook',db:'hooks',g:'resources',f:[{n:'id',t:'String',pk:1},{n:'name',t:'String'},{n:'description',t:'String?'},{n:'eventType',t:'String'},{n:'matcher',t:'String?'},{n:'handlerType',t:'String',d:'command'},{n:'command',t:'String?'},{n:'prompt',t:'String?'},{n:'timeout',t:'Int',d:'60000'},{n:'isAsync',t:'Boolean',d:'false'},{n:'enabled',t:'Boolean',d:'true'},{n:'isGlobal',t:'Boolean',d:'false'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'}]},
+    {n:'Plugin',db:'plugins',g:'resources',f:[{n:'id',t:'String',pk:1},{n:'name',t:'String'},{n:'description',t:'String?'},{n:'version',t:'String?'},{n:'author',t:'String?'},{n:'manifest',t:'Json'},{n:'enabled',t:'Boolean',d:'true'},{n:'source',t:'String',d:'manual'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'1:N',to:'McpServer'},{t:'1:N',to:'Skill'},{t:'1:N',to:'Agent'},{t:'1:N',to:'Rule'}]},
+    {n:'AgentSkill',db:'agent_skills',g:'resources',f:[{n:'id',t:'String',pk:1},{n:'order',t:'Int',d:'0'},{n:'config',t:'Json?'},{n:'agentId',t:'String',fk:'Agent'},{n:'skillId',t:'String',fk:'Skill'}],r:[{t:'N:1',to:'Agent',fk:'agentId',del:'Cascade'},{t:'N:1',to:'Skill',fk:'skillId',del:'Cascade'}]},
+    {n:'PromptVersion',db:'prompt_versions',g:'resources',f:[{n:'id',t:'String',pk:1},{n:'stepId',t:'String',fk:'WorkflowStep'},{n:'version',t:'Int'},{n:'content',t:'String'},{n:'diff',t:'String?'},{n:'createdBy',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'createdBy',del:'Cascade'},{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'Cascade'}]},
+    {n:'WorkflowTrigger',db:'workflow_triggers',g:'automation',f:[{n:'id',t:'String',pk:1},{n:'type',t:'TriggerType',d:'manual'},{n:'cronExpr',t:'String?'},{n:'cronTimezone',t:'String?'},{n:'webhookSecret',t:'String?'},{n:'eventName',t:'String?'},{n:'eventFilter',t:'Json?'},{n:'rateLimit',t:'Int?'},{n:'enabled',t:'Boolean',d:'true'},{n:'workflowId',t:'String',fk:'Workflow'}],r:[{t:'N:1',to:'Workflow',fk:'workflowId',del:'Cascade'},{t:'1:N',to:'ScheduledExecution'}]},
+    {n:'ScheduledExecution',db:'scheduled_executions',g:'automation',f:[{n:'id',t:'String',pk:1},{n:'scheduledAt',t:'DateTime'},{n:'executedAt',t:'DateTime?'},{n:'status',t:'ScheduledExecutionStatus',d:'pending'},{n:'result',t:'Json?'},{n:'errorMessage',t:'String?'},{n:'triggerId',t:'String',fk:'WorkflowTrigger'}],r:[{t:'N:1',to:'WorkflowTrigger',fk:'triggerId',del:'Cascade'}]},
+    {n:'Webhook',db:'webhooks',g:'automation',f:[{n:'id',t:'String',pk:1},{n:'url',t:'String'},{n:'events',t:'Json'},{n:'secret',t:'String'},{n:'enabled',t:'Boolean',d:'true'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'1:N',to:'WebhookDelivery'}]},
+    {n:'WebhookDelivery',db:'webhook_deliveries',g:'automation',f:[{n:'id',t:'String',pk:1},{n:'payload',t:'Json'},{n:'responseCode',t:'Int?'},{n:'responseBody',t:'String?'},{n:'attempts',t:'Int',d:'0'},{n:'status',t:'DeliveryStatus',d:'pending'},{n:'webhookId',t:'String',fk:'Webhook'}],r:[{t:'N:1',to:'Webhook',fk:'webhookId',del:'Cascade'}]},
+    {n:'TokenUsageHistory',db:'token_usage_history',g:'observability',f:[{n:'id',t:'String',pk:1},{n:'inputTokens',t:'Int'},{n:'outputTokens',t:'Int'},{n:'totalCostUsd',t:'Float?'},{n:'model',t:'String?'},{n:'executionId',t:'String?'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'}]},
+    {n:'HourlyTokenUsage',db:'hourly_token_usage',g:'observability',f:[{n:'id',t:'String',pk:1},{n:'hour',t:'DateTime'},{n:'tokens',t:'Int',d:'0'},{n:'costUsd',t:'Float',d:'0'},{n:'model',t:'String?'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'}]},
+    {n:'ResourcePerformanceMetric',db:'resource_performance_metrics',g:'observability',f:[{n:'id',t:'String',pk:1},{n:'resourceType',t:'ResourceType'},{n:'resourceId',t:'String'},{n:'period',t:'String',d:'daily'},{n:'periodStart',t:'DateTime'},{n:'executionCount',t:'Int',d:'0'},{n:'successCount',t:'Int',d:'0'},{n:'avgDurationMs',t:'Float?'},{n:'totalCostUsd',t:'Float',d:'0'}],r:[]},
+    {n:'AuditLog',db:'audit_logs',g:'observability',f:[{n:'id',t:'String',pk:1},{n:'action',t:'String'},{n:'resourceType',t:'ResourceType'},{n:'resourceId',t:'String'},{n:'resourceName',t:'String?'},{n:'diff',t:'Json?'},{n:'metadata',t:'Json?'},{n:'ipAddress',t:'String?'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'}]},
+    {n:'Tag',db:'tags',g:'tagging',f:[{n:'id',t:'String',pk:1},{n:'name',t:'String'},{n:'color',t:'String?'},{n:'userId',t:'String',fk:'User'}],r:[{t:'N:1',to:'User',fk:'userId',del:'Cascade'},{t:'1:N',to:'ResourceTag'}]},
+    {n:'ResourceTag',db:'resource_tags',g:'tagging',f:[{n:'id',t:'String',pk:1},{n:'resourceType',t:'ResourceType'},{n:'resourceId',t:'String'},{n:'tagId',t:'String',fk:'Tag'}],r:[{t:'N:1',to:'Tag',fk:'tagId',del:'Cascade'}]},
+    {n:'ResourceDependency',db:'resource_dependencies',g:'tagging',f:[{n:'id',t:'String',pk:1},{n:'sourceType',t:'ResourceType'},{n:'sourceId',t:'String'},{n:'dependencyType',t:'ResourceType'},{n:'dependencyId',t:'String'},{n:'dependencyName',t:'String?'},{n:'isOptional',t:'Boolean',d:'false'}],r:[]},
+    {n:'GitSource',db:'git_sources',g:'tagging',f:[{n:'id',t:'String',pk:1},{n:'resourceType',t:'ResourceType'},{n:'resourceId',t:'String'},{n:'repoOwner',t:'String'},{n:'repoName',t:'String'},{n:'repoBranch',t:'String',d:'main'},{n:'repoPath',t:'String?'},{n:'lastSyncedAt',t:'DateTime?'}],r:[]},
+    {n:'WorkflowStepMcpServer',db:'workflow_step_mcp_servers',g:'joins',f:[{n:'id',t:'String',pk:1},{n:'stepId',t:'String',fk:'WorkflowStep'},{n:'serverId',t:'String',fk:'McpServer'},{n:'order',t:'Int',d:'0'},{n:'config',t:'Json?'}],r:[{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'Cascade'},{t:'N:1',to:'McpServer',fk:'serverId',del:'Cascade'}]},
+    {n:'WorkflowStepSkill',db:'workflow_step_skills',g:'joins',f:[{n:'id',t:'String',pk:1},{n:'stepId',t:'String',fk:'WorkflowStep'},{n:'skillId',t:'String',fk:'Skill'},{n:'order',t:'Int',d:'0'},{n:'config',t:'Json?'}],r:[{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'Cascade'},{t:'N:1',to:'Skill',fk:'skillId',del:'Cascade'}]},
+    {n:'WorkflowStepAgent',db:'workflow_step_agents',g:'joins',f:[{n:'id',t:'String',pk:1},{n:'stepId',t:'String',fk:'WorkflowStep'},{n:'agentId',t:'String',fk:'Agent'},{n:'order',t:'Int',d:'0'},{n:'config',t:'Json?'}],r:[{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'Cascade'},{t:'N:1',to:'Agent',fk:'agentId',del:'Cascade'}]},
+    {n:'WorkflowStepRule',db:'workflow_step_rules',g:'joins',f:[{n:'id',t:'String',pk:1},{n:'stepId',t:'String',fk:'WorkflowStep'},{n:'ruleId',t:'String',fk:'Rule'},{n:'order',t:'Int',d:'0'}],r:[{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'Cascade'},{t:'N:1',to:'Rule',fk:'ruleId',del:'Cascade'}]},
+    {n:'WorkflowStepHook',db:'workflow_step_hooks',g:'joins',f:[{n:'id',t:'String',pk:1},{n:'stepId',t:'String',fk:'WorkflowStep'},{n:'hookId',t:'String',fk:'Hook'},{n:'order',t:'Int',d:'0'}],r:[{t:'N:1',to:'WorkflowStep',fk:'stepId',del:'Cascade'},{t:'N:1',to:'Hook',fk:'hookId',del:'Cascade'}]},
   ];
 
-  // ================================================================
-  // RENDER ENGINE
-  // ================================================================
-  let activeGroup = 'all';
-  let searchQuery = '';
+  let svGroup='all',svQ='';
 
-  function renderStats() {
-    const totalFields = TABLES.reduce((s, t) => s + t.fields.length, 0);
-    const totalRels = TABLES.reduce((s, t) => s + t.rels.filter(r => r.fk).length, 0);
-    const totalIndexes = TABLES.reduce((s, t) => s + t.fields.filter(f => f.fk || f.uq).length, 0);
-    const stats = [
-      { n: TABLES.length, l: 'Tabelas', c: '#2dd4bf' },
-      { n: Object.keys(ENUMS).length, l: 'Enums', c: '#fbbf24' },
-      { n: totalFields, l: 'Campos', c: '#60a5fa' },
-      { n: totalRels, l: 'Foreign Keys', c: '#a78bfa' },
-      { n: Object.keys(GROUPS).length, l: 'Dominios', c: '#f472b6' },
-      { n: totalIndexes, l: 'Indexes', c: '#4ade80' },
-    ];
-    document.getElementById('stats-row').innerHTML = stats.map(s =>
-      `<div class="stat-card"><div class="stat-num" style="color:${s.c}">${s.n}</div><div class="stat-lbl">${s.l}</div></div>`
-    ).join('');
+  function svTab(v){
+    document.querySelectorAll('.sv-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.sv-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelector(`.sv-tab[onclick*="${v}"]`).classList.add('active');
+    document.getElementById('sv-'+v).classList.add('active');
+    document.getElementById('sv-toolbar').style.display=v==='erd'?'flex':'none';
   }
-
-  function renderGroupButtons() {
-    const toolbar = document.getElementById('toolbar');
-    const search = toolbar.querySelector('.toolbar-search');
-    const allBtn = toolbar.querySelector('[data-group="all"]');
-    let html = '';
-    for (const [gid, g] of Object.entries(GROUPS)) {
-      const count = TABLES.filter(t => t.group === gid).length;
-      html += `<button class="toolbar-btn" data-group="${gid}" style="border-left:3px solid ${g.color}">${g.icon} ${g.label} <span style="color:var(--text-muted);font-size:0.7rem">(${count})</span></button>`;
-    }
-    allBtn.insertAdjacentHTML('afterend', html);
-  }
-
-  function renderERD() {
-    const canvas = document.getElementById('erd-canvas');
-    let html = '';
-    for (const [gid, g] of Object.entries(GROUPS)) {
-      const tables = TABLES.filter(t => t.group === gid);
-      if (activeGroup !== 'all' && activeGroup !== gid) continue;
-      const filtered = tables.filter(t => {
-        if (!searchQuery) return true;
-        const q = searchQuery.toLowerCase();
-        return t.name.toLowerCase().includes(q) || t.db.toLowerCase().includes(q) ||
-          t.fields.some(f => f.n.toLowerCase().includes(q) || f.t.toLowerCase().includes(q));
-      });
-      if (filtered.length === 0) continue;
-      html += `<div class="group-section" data-group="${gid}">
-        <div class="group-section-title" style="color:${g.color};border-color:${g.color}">
-          <span>${g.icon}</span> ${g.label}
-          <span style="font-weight:400;color:var(--text-muted);font-size:0.7rem;text-transform:none">${filtered.length} tabela${filtered.length>1?'s':''}</span>
-        </div>
-        <div class="group-tables">${filtered.map(t => renderTableCard(t, g)).join('')}</div>
-      </div>`;
-    }
-    canvas.innerHTML = html || '<div style="padding:3rem;text-align:center;color:var(--text-muted)">Nenhuma tabela encontrada</div>';
-    // Re-bind events
-    canvas.querySelectorAll('.tbl-card').forEach(card => {
-      card.querySelector('.tbl-card-header').addEventListener('click', () => card.classList.toggle('open'));
-    });
-    canvas.querySelectorAll('.tbl-rel-target').forEach(el => {
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        highlightTable(el.dataset.target);
-      });
-    });
-  }
-
-  function renderTableCard(t, g) {
-    const fkCount = t.fields.filter(f => f.fk).length;
-    const relCount = t.rels.length;
-    const previewFields = t.fields.filter(f => !f.pk && !f.fk).slice(0, 5);
-    return `<div class="tbl-card" data-table="${t.name}" id="tbl-${t.name}">
-      <div class="tbl-card-header" style="border-left:3px solid ${g.color}">
-        <div>
-          <span class="tbl-name">${t.name}</span>
-          <div style="font-size:0.68rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace">${t.db}</div>
-        </div>
-        <div class="tbl-meta">
-          <span class="badge badge-gray">${t.fields.length} cols</span>
-          ${fkCount ? `<span class="badge badge-purple">${fkCount} FK</span>` : ''}
-          ${relCount ? `<span class="badge badge-teal">${relCount} rel</span>` : ''}
-        </div>
-      </div>
-      <div class="tbl-preview">${previewFields.map(f => `<span class="tbl-preview-field">${f.n}</span>`).join('')}</div>
-      <div class="tbl-fields">
-        ${t.fields.map(f => `<div class="tbl-field">
-          <span class="tbl-field-name">${f.n}</span>
-          <span class="tbl-field-type">${f.t}</span>
-          ${f.pk ? '<span class="tbl-field-badge badge-pk">PK</span>' : ''}
-          ${f.fk ? `<span class="tbl-field-badge badge-fk">FK→${f.fk}</span>` : ''}
-          ${f.uq ? '<span class="tbl-field-badge badge-uq">UQ</span>' : ''}
-          ${f.def ? `<span class="badge-opt">=${f.def}</span>` : ''}
-        </div>`).join('')}
-        ${t.rels.length ? `<div class="tbl-relations">
-          <div style="font-size:0.7rem;font-weight:600;color:var(--text-muted);margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.05em">Relacionamentos</div>
-          ${t.rels.map(r => `<div class="tbl-rel">
-            <span class="rel-type ${r.type === '1:N' ? 'rel-1n' : r.type === '1:1' ? 'rel-11' : r.type === 'N:1' ? 'rel-1n' : 'rel-nm'}">${r.type}</span>
-            <span class="tbl-rel-arrow">${r.type === 'N:1' ? '←' : '→'}</span>
-            <span class="tbl-rel-target" data-target="${r.to}">${r.to}</span>
-            ${r.fk ? `<span style="color:var(--text-muted);font-size:0.65rem">via ${r.fk}</span>` : ''}
-            ${r.del ? `<span style="color:var(--text-muted);font-size:0.65rem">[${r.del}]</span>` : ''}
-            ${r.label ? `<span style="color:#fbbf24;font-size:0.65rem">(${r.label})</span>` : ''}
-          </div>`).join('')}
-        </div>` : ''}
-      </div>
-    </div>`;
-  }
-
-  function highlightTable(name) {
-    // Clear search, show all groups
-    document.getElementById('search').value = '';
-    searchQuery = '';
-    activeGroup = 'all';
-    document.querySelectorAll('.toolbar-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('[data-group="all"]').classList.add('active');
-    renderERD();
-    setTimeout(() => {
-      const el = document.getElementById('tbl-' + name);
-      if (el) {
-        el.classList.add('open', 'highlight');
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(() => el.classList.remove('highlight'), 2000);
-      }
-    }, 100);
-  }
-
-  function renderRelationsTable() {
-    const tbody = document.getElementById('rel-tbody');
-    let rows = '';
-    TABLES.forEach(t => {
-      t.rels.filter(r => r.fk).forEach(r => {
-        const typeClass = r.type === '1:1' ? 'rel-11' : r.type === 'N:1' ? 'rel-1n' : r.type === '1:N' ? 'rel-1n' : 'rel-nm';
-        rows += `<tr>
-          <td style="color:var(--text-accent)">${t.name}</td>
-          <td>${r.fk}</td>
-          <td><span class="rel-type ${typeClass}">${r.type}</span></td>
-          <td style="color:#a78bfa">${r.to}</td>
-          <td><span class="badge ${r.del === 'Cascade' ? 'badge-red' : 'badge-amber'}">${r.del || '-'}</span></td>
-        </tr>`;
-      });
-    });
-    tbody.innerHTML = rows;
-  }
-
-  function renderEnums() {
-    const grid = document.getElementById('enum-grid');
-    grid.innerHTML = Object.entries(ENUMS).map(([name, values]) =>
-      `<div class="enum-card">
-        <div class="enum-name">${name} <span style="color:var(--text-muted);font-weight:400">(${values.length})</span></div>
-        <div class="enum-values">${values.map(v => `<div class="enum-val">${v}</div>`).join('')}</div>
-      </div>`
-    ).join('');
-  }
-
-  // ================================================================
-  // EVENT HANDLERS
-  // ================================================================
-  // Tabs
-  document.querySelectorAll('.view-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById('panel-' + tab.dataset.view).classList.add('active');
-      document.getElementById('toolbar').style.display = tab.dataset.view === 'erd' ? 'flex' : 'none';
-    });
-  });
-
-  // Group filter
-  document.getElementById('toolbar').addEventListener('click', (e) => {
-    const btn = e.target.closest('.toolbar-btn');
-    if (!btn) return;
-    document.querySelectorAll('.toolbar-btn').forEach(b => b.classList.remove('active'));
+  function svFilter(g,btn){
+    svGroup=g;
+    document.querySelectorAll('.sv-gbtn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    activeGroup = btn.dataset.group;
-    renderERD();
-  });
+    svRenderERD();
+  }
+  function svRenderERD(){
+    let h='';
+    for(const[gid,g] of Object.entries(SV_GROUPS)){
+      if(svGroup!=='all'&&svGroup!==gid)continue;
+      const tbls=T.filter(t=>t.g===gid).filter(t=>{
+        if(!svQ)return true;
+        const q=svQ.toLowerCase();
+        return t.n.toLowerCase().includes(q)||t.db.toLowerCase().includes(q)||t.f.some(f=>f.n.toLowerCase().includes(q));
+      });
+      if(!tbls.length)continue;
+      h+=`<div class="sv-group"><div class="sv-group-title" style="color:${g.c};border-color:${g.c}"><span>${g.i}</span> ${g.l} <span style="font-weight:400;color:#64748b;font-size:0.68rem;text-transform:none">${tbls.length} tabela${tbls.length>1?'s':''}</span></div><div class="sv-grid">${tbls.map(t=>svCard(t,g)).join('')}</div></div>`;
+    }
+    document.getElementById('sv-erd').innerHTML=h||'<p style="padding:2rem;text-align:center;color:#64748b">Nenhuma tabela encontrada</p>';
+    document.querySelectorAll('.sv-card').forEach(c=>c.querySelector('.sv-card-hd').addEventListener('click',()=>c.classList.toggle('open')));
+    document.querySelectorAll('.sv-rel-tgt').forEach(e=>e.addEventListener('click',ev=>{ev.stopPropagation();svHL(e.dataset.t);}));
+  }
+  function svCard(t,g){
+    const fks=t.f.filter(f=>f.fk).length,prev=t.f.filter(f=>!f.pk&&!f.fk).slice(0,4);
+    return`<div class="sv-card" data-tn="${t.n}" id="sv-${t.n}"><div class="sv-card-hd" style="border-left:3px solid ${g.c}"><div><span class="sv-card-name">${t.n}</span><div class="sv-card-db">${t.db}</div></div><div class="sv-card-badges"><span class="sv-badge sv-badge-cols">${t.f.length} cols</span>${fks?`<span class="sv-badge sv-badge-fk">${fks} FK</span>`:''}</div></div><div class="sv-card-preview">${prev.map(f=>`<span class="sv-pf">${f.n}</span>`).join('')}</div><div class="sv-card-fields">${t.f.map(f=>`<div class="sv-field"><span class="sv-fn">${f.n}</span><span class="sv-ft">${f.t}</span>${f.pk?'<span class="sv-fb sv-pk">PK</span>':''}${f.fk?`<span class="sv-fb sv-fk">FK→${f.fk}</span>`:''}${f.uq?'<span class="sv-fb sv-uq">UQ</span>':''}${f.d?`<span class="sv-def">=${f.d}</span>`:''}</div>`).join('')}${t.r.length?`<div class="sv-rels"><div class="sv-rels-title">Relacionamentos</div>${t.r.map(r=>`<div class="sv-rel"><span class="sv-rel-type ${r.t==='1:1'?'sv-rel-11':'sv-rel-1n'}">${r.t}</span><span style="color:#2dd4bf;font-weight:700">${r.t==='N:1'?'←':'→'}</span><span class="sv-rel-tgt" data-t="${r.to}">${r.to}</span>${r.fk?`<span style="color:#64748b;font-size:0.62rem">via ${r.fk}</span>`:''}${r.del?`<span style="color:#64748b;font-size:0.62rem">[${r.del}]</span>`:''}</div>`).join('')}</div>`:''}</div></div>`;
+  }
+  function svHL(name){
+    svQ='';document.getElementById('sv-search').value='';svGroup='all';
+    document.querySelectorAll('.sv-gbtn').forEach(b=>b.classList.remove('active'));
+    document.querySelector('.sv-gbtn').classList.add('active');
+    svRenderERD();
+    setTimeout(()=>{const el=document.getElementById('sv-'+name);if(el){el.classList.add('open','sv-hl');el.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>el.classList.remove('sv-hl'),2000);}},100);
+  }
+  function svRenderRels(){
+    let h='';T.forEach(t=>{t.r.filter(r=>r.fk).forEach(r=>{h+=`<tr><td style="color:#2dd4bf">${t.n}</td><td>${r.fk}</td><td><span class="sv-rel-type ${r.t==='1:1'?'sv-rel-11':'sv-rel-1n'}">${r.t}</span></td><td style="color:#a78bfa">${r.to}</td><td>${r.del||'-'}</td></tr>`;});});
+    document.getElementById('sv-reltbody').innerHTML=h;
+  }
+  function svRenderEnums(){
+    document.getElementById('sv-enums').innerHTML=`<div class="sv-enum-grid">${Object.entries(SV_ENUMS).map(([n,v])=>`<div class="sv-enum"><div class="sv-enum-name">${n} <span style="color:#64748b;font-weight:400">(${v.length})</span></div><div class="sv-enum-vals">${v.map(x=>`<div class="sv-enum-val">${x}</div>`).join('')}</div></div>`).join('')}</div>`;
+  }
 
-  // Search
-  document.getElementById('search').addEventListener('input', (e) => {
-    searchQuery = e.target.value;
-    renderERD();
-  });
+  // Init group buttons
+  (function(){const tb=document.getElementById('sv-toolbar');const first=tb.querySelector('.sv-gbtn');
+    for(const[gid,g] of Object.entries(SV_GROUPS)){const c=T.filter(t=>t.g===gid).length;const b=document.createElement('button');b.className='sv-gbtn';b.style.borderLeft=`3px solid ${g.c}`;b.textContent=`${g.i} ${g.l} (${c})`;b.onclick=function(){svFilter(gid,this)};first.after(b);}
+  })();
+  document.getElementById('sv-search').addEventListener('input',e=>{svQ=e.target.value;svRenderERD();});
 
-  // ================================================================
-  // INIT
-  // ================================================================
-  renderStats();
-  renderGroupButtons();
-  renderERD();
-  renderRelationsTable();
-  renderEnums();
+  svRenderERD();svRenderRels();svRenderEnums();
   </script>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 py-6 mt-10">
+    <div class="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-slate-500">
+      <a href="02-fluxo-de-dados.html" class="hover:text-white transition">← 02 Fluxo de Dados</a>
+      <span class="text-slate-600">Orquetrador Claude</span>
+      <a href="04-api-endpoints.html" class="hover:text-white transition">04 API Endpoints →</a>
+    </div>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+
+    // Search
+    const search = document.getElementById('searchInput');
+    search.addEventListener('input', () => {
+      const q = search.value.toLowerCase();
+      document.querySelectorAll('.table-card').forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(q) ? '' : 'none';
+      });
+      document.querySelectorAll('.domain-group').forEach(group => {
+        const visible = group.querySelectorAll('.table-card:not([style*="display: none"])').length;
+        group.style.display = visible > 0 || !q ? '' : 'none';
+      });
+    });
+  </script>
+<script src="shared.js"></script>
 </body>
 </html>
