@@ -12,7 +12,7 @@
         extend: {
           colors: {
             surface: { DEFAULT: '#0f172a', card: '#1e293b', hover: '#334155' },
-            accent: { blue: '#3b82f6', purple: '#a855f7', emerald: '#10b981', orange: '#f59e0b', red: '#ef4444', pink: '#ec4899', cyan: '#06b6d4', indigo: '#6366f1', teal: '#14b8a6' }
+            accent: { blue: '#3b82f6', purple: '#a855f7', emerald: '#10b981', orange: '#f59e0b', red: '#ef4444', pink: '#ec4899', cyan: '#06b6d4', indigo: '#6366f1', teal: '#14b8a6', amber: '#f59e0b', rose: '#f43f5e', lime: '#84cc16', sky: '#0ea5e9' }
           },
           fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }
         }
@@ -43,6 +43,10 @@
     .glow-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.15), 0 0 60px rgba(239, 68, 68, 0.05); }
     .glow-teal { box-shadow: 0 0 20px rgba(20, 184, 166, 0.15), 0 0 60px rgba(20, 184, 166, 0.05); }
     .glow-pink { box-shadow: 0 0 20px rgba(236, 72, 153, 0.15), 0 0 60px rgba(236, 72, 153, 0.05); }
+    .glow-indigo { box-shadow: 0 0 20px rgba(99, 102, 241, 0.15), 0 0 60px rgba(99, 102, 241, 0.05); }
+    .glow-amber { box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), 0 0 60px rgba(245, 158, 11, 0.05); }
+    .glow-rose { box-shadow: 0 0 20px rgba(244, 63, 94, 0.15), 0 0 60px rgba(244, 63, 94, 0.05); }
+    .glow-sky { box-shadow: 0 0 20px rgba(14, 165, 233, 0.15), 0 0 60px rgba(14, 165, 233, 0.05); }
 
     .gradient-border { position: relative; }
     .gradient-border::before {
@@ -87,19 +91,23 @@
     }
     .state-node:hover { transform: scale(1.05); }
 
-    .tab-btn-tw { transition: all 0.2s; }
-    .tab-btn-tw.active { border-color: #14b8a6 !important; color: #14b8a6 !important; background: rgba(20,184,166,0.1) !important; }
+    .tab-btn { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+    .tab-btn.active { border-color: #14b8a6 !important; color: #14b8a6 !important; background: rgba(20,184,166,0.1) !important; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
-    .numbered-step { counter-increment: step-counter; }
-    .numbered-step::before {
-      content: counter(step-counter);
-      position: absolute; left: 0; top: 0.75rem;
-      width: 1.75rem; height: 1.75rem; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.7rem; font-weight: 700;
-      background: linear-gradient(135deg, #14b8a6, #06b6d4);
-      color: white;
-    }
+    .code-block { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(71, 85, 105, 0.3); }
+
+    .tree-line { border-left: 2px solid rgba(71, 85, 105, 0.4); }
+    .tree-item { position: relative; padding-left: 1.5rem; }
+    .tree-item::before { content: ''; position: absolute; left: 0; top: 0.75rem; width: 1rem; height: 0; border-top: 2px solid rgba(71, 85, 105, 0.4); }
+
+    .mini-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.65rem; font-weight: 600; }
+    .endpoint-row { transition: background 0.15s; }
+    .endpoint-row:hover { background: rgba(71,85,105,0.15); }
+
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .shimmer { background: linear-gradient(90deg, transparent, rgba(20,184,166,0.1), transparent); background-size: 200% 100%; animation: shimmer 3s infinite; }
   </style>
 </head>
 <body>
@@ -123,32 +131,40 @@
       <h1 class="text-5xl md:text-6xl font-black tracking-tight mb-4">
         <span class="bg-gradient-to-r from-teal-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">Frontend</span>
       </h1>
-      <p class="text-slate-400 text-lg max-w-2xl mx-auto">React 18 + Vite 6 + TypeScript 5.7 — Interface completa do Orquestrador com 16 features, ~21.000 linhas de codigo e streaming SSE em tempo real</p>
+      <p class="text-slate-400 text-lg max-w-3xl mx-auto">React 18 + Vite 6 + TypeScript 5.7 — Interface completa do Orquestrador com 18 features, 120+ componentes, 80+ hooks, 9 Zustand stores, 70+ endpoints API e streaming SSE em tempo real</p>
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-      <div class="glass rounded-2xl p-5 text-center glow-teal float-in">
-        <div class="text-3xl font-black bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">16</div>
-        <div class="text-xs text-slate-400 mt-1 font-medium">Features</div>
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-3 max-w-5xl mx-auto">
+      <div class="glass rounded-2xl p-4 text-center glow-teal float-in">
+        <div class="text-2xl font-black bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">18</div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">Features</div>
       </div>
-      <div class="glass rounded-2xl p-5 text-center glow-blue float-in" style="animation-delay: 0.1s">
-        <div class="text-3xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">80+</div>
-        <div class="text-xs text-slate-400 mt-1 font-medium">Componentes</div>
+      <div class="glass rounded-2xl p-4 text-center glow-blue float-in" style="animation-delay: 0.1s">
+        <div class="text-2xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">120+</div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">Componentes</div>
       </div>
-      <div class="glass rounded-2xl p-5 text-center glow-purple float-in" style="animation-delay: 0.2s">
-        <div class="text-3xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">40+</div>
-        <div class="text-xs text-slate-400 mt-1 font-medium">Custom Hooks</div>
+      <div class="glass rounded-2xl p-4 text-center glow-purple float-in" style="animation-delay: 0.15s">
+        <div class="text-2xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">80+</div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">Custom Hooks</div>
       </div>
-      <div class="glass rounded-2xl p-5 text-center glow-emerald float-in" style="animation-delay: 0.3s">
-        <div class="text-3xl font-black bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">21K</div>
-        <div class="text-xs text-slate-400 mt-1 font-medium">Linhas de Codigo</div>
+      <div class="glass rounded-2xl p-4 text-center glow-orange float-in" style="animation-delay: 0.2s">
+        <div class="text-2xl font-black bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">9</div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">Zustand Stores</div>
+      </div>
+      <div class="glass rounded-2xl p-4 text-center glow-emerald float-in" style="animation-delay: 0.25s">
+        <div class="text-2xl font-black bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">70+</div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">API Endpoints</div>
+      </div>
+      <div class="glass rounded-2xl p-4 text-center glow-pink float-in" style="animation-delay: 0.3s">
+        <div class="text-2xl font-black bg-gradient-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">185</div>
+        <div class="text-[10px] text-slate-400 mt-1 font-medium">Arquivos .tsx/.ts</div>
       </div>
     </div>
   </div>
 </div>
 
-<main class="max-w-6xl mx-auto px-6 pb-24 space-y-20" style="counter-reset: step-counter;">
+<main class="max-w-6xl mx-auto px-6 pb-24 space-y-20">
 
 <!-- ============================================= -->
 <!-- 1. ARQUITETURA EM CAMADAS -->
@@ -158,7 +174,7 @@
     <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 text-white text-sm font-bold">1</span>
     Arquitetura em Camadas
   </h2>
-  <p class="text-slate-400 mb-8">Organização feature-first com camadas claras de responsabilidade</p>
+  <p class="text-slate-400 mb-8">Organizacao feature-first com 5 camadas claras de responsabilidade</p>
 
   <!-- Layer stack -->
   <div class="space-y-3">
@@ -167,7 +183,14 @@
         <span class="text-teal-400 font-bold text-sm">ROUTING LAYER</span>
         <span class="text-[10px] font-mono text-slate-500">app/routes.tsx</span>
       </div>
-      <p class="text-slate-300 text-sm">React Router v7 com 20 rotas lazy-loaded. ProtectedRoute via JWT. Retry automático em chunk 404 (stale deploys).</p>
+      <p class="text-slate-300 text-sm mb-2">React Router v7 com 20 rotas lazy-loaded. ProtectedRoute via JWT. Retry automatico em chunk 404 (stale deploys via <code class="text-teal-400 text-xs">lazyRetry</code>). Suspense boundary unico com <code class="text-teal-400 text-xs">PageLoader</code>.</p>
+      <div class="flex flex-wrap gap-2 text-[10px]">
+        <span class="px-2 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">BrowserRouter</span>
+        <span class="px-2 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">React.lazy()</span>
+        <span class="px-2 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">Suspense</span>
+        <span class="px-2 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">ProtectedRoute</span>
+        <span class="px-2 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">sessionStorage retry</span>
+      </div>
     </div>
 
     <div class="flex justify-center"><div class="w-0.5 h-6 bg-gradient-to-b from-teal-500/50 to-blue-500/50"></div></div>
@@ -175,9 +198,16 @@
     <div class="layer-box glass rounded-xl p-4 border-l-4 border-blue-500 glow-blue">
       <div class="flex items-center gap-3 mb-2">
         <span class="text-blue-400 font-bold text-sm">LAYOUT LAYER</span>
-        <span class="text-[10px] font-mono text-slate-500">app/app-layout.tsx + sidebar.tsx</span>
+        <span class="text-[10px] font-mono text-slate-500">app/app-layout.tsx + layout/sidebar.tsx</span>
       </div>
-      <p class="text-slate-300 text-sm">AppLayout 2-pane com Sidebar colapsável (w-60). Sidebar: 3 seções (Menu 5 itens, Config 9 itens, Admin condicional). Dark mode nativo.</p>
+      <p class="text-slate-300 text-sm mb-2">AppLayout 2-pane com Sidebar colapsavel (w-60 / w-0, transition 300ms). Sidebar: 3 secoes — Menu (5 itens), Config (8 itens), Admin (condicional por <code class="text-blue-400 text-xs">user.role === 'admin'</code>). Dark mode nativo com <code class="text-blue-400 text-xs">class="dark"</code>.</p>
+      <div class="flex flex-wrap gap-2 text-[10px]">
+        <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">NavLink isActive</span>
+        <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">Outlet</span>
+        <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">Logo "Execut"</span>
+        <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">User Avatar</span>
+        <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">Logout</span>
+      </div>
     </div>
 
     <div class="flex justify-center"><div class="w-0.5 h-6 bg-gradient-to-b from-blue-500/50 to-purple-500/50"></div></div>
@@ -187,7 +217,25 @@
         <span class="text-purple-400 font-bold text-sm">FEATURE LAYER</span>
         <span class="text-[10px] font-mono text-slate-500">features/{domain}/</span>
       </div>
-      <p class="text-slate-300 text-sm">16 domínios independentes. Cada feature: index.tsx (página), api.ts (HTTP), store.ts (Zustand), types.ts, hooks/, components/.</p>
+      <p class="text-slate-300 text-sm mb-2">18 dominios independentes. Cada feature segue a estrutura: <code class="text-purple-400 text-xs">index.tsx</code> (pagina), <code class="text-purple-400 text-xs">api.ts</code> (HTTP), <code class="text-purple-400 text-xs">store.ts</code> (Zustand), <code class="text-purple-400 text-xs">types.ts</code> (interfaces), <code class="text-purple-400 text-xs">hooks/</code> (React Query), <code class="text-purple-400 text-xs">components/</code> (UI).</p>
+      <div class="flex flex-wrap gap-1.5 text-[10px]">
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">conversations</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">workflows</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">agents</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">skills</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">rules</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">hooks</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">plugins</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">mcp-servers</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">dashboard</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">settings</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">executions</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">auth</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">admin</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">webhooks</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">workflow-chat</span>
+        <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400">step-templates</span>
+      </div>
     </div>
 
     <div class="flex justify-center"><div class="w-0.5 h-6 bg-gradient-to-b from-purple-500/50 to-orange-500/50"></div></div>
@@ -195,9 +243,20 @@
     <div class="layer-box glass rounded-xl p-4 border-l-4 border-orange-500 glow-orange">
       <div class="flex items-center gap-3 mb-2">
         <span class="text-orange-400 font-bold text-sm">STATE LAYER</span>
-        <span class="text-[10px] font-mono text-slate-500">Zustand + React Query v5</span>
+        <span class="text-[10px] font-mono text-slate-500">Zustand 5.0 + React Query 5.62</span>
       </div>
-      <p class="text-slate-300 text-sm">Zustand para estado local/streaming (5 stores). React Query para server cache (staleTime 30s, gcTime 5min, retry 1). SSE customizado para real-time.</p>
+      <p class="text-slate-300 text-sm mb-2">9 Zustand stores para estado local/streaming/modais. React Query para server cache (staleTime 30s, gcTime 5min, retry 1, refetchOnWindowFocus). SSE customizado para real-time via fetch ReadableStream (nao EventSource).</p>
+      <div class="flex flex-wrap gap-2 text-[10px]">
+        <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-mono">useAuthStore</span>
+        <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-mono">useConversationsStore</span>
+        <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-mono">useWorkflowsStore</span>
+        <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-mono">useAgentsStore</span>
+        <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-mono">useSkillsStore</span>
+        <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-mono">useRulesStore</span>
+        <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-mono">useMcpServersStore</span>
+        <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-mono">usePluginsStore</span>
+        <span class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-mono">useHooksStore</span>
+      </div>
     </div>
 
     <div class="flex justify-center"><div class="w-0.5 h-6 bg-gradient-to-b from-orange-500/50 to-emerald-500/50"></div></div>
@@ -207,39 +266,45 @@
         <span class="text-emerald-400 font-bold text-sm">API LAYER</span>
         <span class="text-[10px] font-mono text-slate-500">shared/lib/api-client.ts + sse-client.ts</span>
       </div>
-      <p class="text-slate-300 text-sm">Axios com interceptors (auto-inject JWT, 401→logout). SSE client custom via fetch (não EventSource). Proxy /api → :3333.</p>
+      <p class="text-slate-300 text-sm mb-2">Axios com interceptors (auto-inject JWT no header Authorization, 401 → remove token + redirect /login). SSE client custom via fetch + ReadableStream + TextDecoder (nao EventSource nativo). Proxy <code class="text-emerald-400 text-xs">/api → :3333</code>. Base URL via <code class="text-emerald-400 text-xs">VITE_API_URL</code>.</p>
+      <div class="flex flex-wrap gap-2 text-[10px]">
+        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono">Request Interceptor</span>
+        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono">Response Interceptor</span>
+        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono">AbortController</span>
+        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono">createSSEConnection()</span>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- ============================================= -->
-<!-- 2. TECH STACK DETALHADA -->
+<!-- 2. TECH STACK COMPLETA -->
 <!-- ============================================= -->
 <section class="reveal">
   <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
     <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 text-white text-sm font-bold">2</span>
-    Tech Stack
+    Tech Stack Completa
   </h2>
-  <p class="text-slate-400 mb-8">Todas as dependências com versões exatas</p>
+  <p class="text-slate-400 mb-8">43 dependencias runtime + 13 dev — todas as versoes exatas</p>
 
   <div class="grid md:grid-cols-3 gap-4">
     <div class="glass rounded-xl p-5 glow-teal reveal reveal-delay-1">
-      <h4 class="text-teal-400 font-bold text-xs uppercase tracking-wider mb-3">Core</h4>
+      <h4 class="text-teal-400 font-bold text-xs uppercase tracking-wider mb-3">Core Framework</h4>
       <div class="space-y-2 text-sm">
         <div class="flex justify-between"><span class="text-slate-300">React</span><span class="font-mono text-teal-400 text-xs">^18.3.1</span></div>
         <div class="flex justify-between"><span class="text-slate-300">React DOM</span><span class="font-mono text-teal-400 text-xs">^18.3.1</span></div>
         <div class="flex justify-between"><span class="text-slate-300">TypeScript</span><span class="font-mono text-teal-400 text-xs">^5.7.2</span></div>
         <div class="flex justify-between"><span class="text-slate-300">Vite</span><span class="font-mono text-teal-400 text-xs">^6.0.8</span></div>
-        <div class="flex justify-between"><span class="text-slate-300">React Router</span><span class="font-mono text-teal-400 text-xs">^7.1.1</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">React Router DOM</span><span class="font-mono text-teal-400 text-xs">^7.1.1</span></div>
       </div>
     </div>
 
     <div class="glass rounded-xl p-5 glow-purple reveal reveal-delay-2">
-      <h4 class="text-purple-400 font-bold text-xs uppercase tracking-wider mb-3">UI & Estilos</h4>
+      <h4 class="text-purple-400 font-bold text-xs uppercase tracking-wider mb-3">UI & Componentes</h4>
       <div class="space-y-2 text-sm">
         <div class="flex justify-between"><span class="text-slate-300">Tailwind CSS</span><span class="font-mono text-purple-400 text-xs">^3.4.17</span></div>
-        <div class="flex justify-between"><span class="text-slate-300">shadcn/ui</span><span class="font-mono text-purple-400 text-xs">23 comps</span></div>
-        <div class="flex justify-between"><span class="text-slate-300">Radix UI</span><span class="font-mono text-purple-400 text-xs">primitivos</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">shadcn/ui (Radix)</span><span class="font-mono text-purple-400 text-xs">23 comps</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">Radix UI Primitives</span><span class="font-mono text-purple-400 text-xs">12 pkgs</span></div>
         <div class="flex justify-between"><span class="text-slate-300">Lucide React</span><span class="font-mono text-purple-400 text-xs">^0.468</span></div>
         <div class="flex justify-between"><span class="text-slate-300">Sonner</span><span class="font-mono text-purple-400 text-xs">^1.7.1</span></div>
         <div class="flex justify-between"><span class="text-slate-300">Recharts</span><span class="font-mono text-purple-400 text-xs">^3.8.0</span></div>
@@ -250,10 +315,11 @@
       <h4 class="text-blue-400 font-bold text-xs uppercase tracking-wider mb-3">Estado & Dados</h4>
       <div class="space-y-2 text-sm">
         <div class="flex justify-between"><span class="text-slate-300">Zustand</span><span class="font-mono text-blue-400 text-xs">^5.0.2</span></div>
-        <div class="flex justify-between"><span class="text-slate-300">React Query</span><span class="font-mono text-blue-400 text-xs">^5.62.8</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">TanStack React Query</span><span class="font-mono text-blue-400 text-xs">^5.62.8</span></div>
         <div class="flex justify-between"><span class="text-slate-300">Axios</span><span class="font-mono text-blue-400 text-xs">^1.7.9</span></div>
         <div class="flex justify-between"><span class="text-slate-300">Zod</span><span class="font-mono text-blue-400 text-xs">^3.24.1</span></div>
         <div class="flex justify-between"><span class="text-slate-300">React Hook Form</span><span class="font-mono text-blue-400 text-xs">^7.54.2</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">@hookform/resolvers</span><span class="font-mono text-blue-400 text-xs">^3.9.1</span></div>
       </div>
     </div>
 
@@ -262,6 +328,8 @@
       <div class="space-y-2 text-sm">
         <div class="flex justify-between"><span class="text-slate-300">TipTap React</span><span class="font-mono text-orange-400 text-xs">^2.27.2</span></div>
         <div class="flex justify-between"><span class="text-slate-300">TipTap Starter Kit</span><span class="font-mono text-orange-400 text-xs">^2.27.2</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">TipTap Code Block</span><span class="font-mono text-orange-400 text-xs">lowlight</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">TipTap Image/Link</span><span class="font-mono text-orange-400 text-xs">^2.27.2</span></div>
         <div class="flex justify-between"><span class="text-slate-300">react-markdown</span><span class="font-mono text-orange-400 text-xs">^10.1.0</span></div>
         <div class="flex justify-between"><span class="text-slate-300">remark-gfm</span><span class="font-mono text-orange-400 text-xs">^4.0.1</span></div>
         <div class="flex justify-between"><span class="text-slate-300">lowlight</span><span class="font-mono text-orange-400 text-xs">^3.3.0</span></div>
@@ -273,20 +341,22 @@
       <div class="space-y-2 text-sm">
         <div class="flex justify-between"><span class="text-slate-300">tailwind-merge</span><span class="font-mono text-emerald-400 text-xs">^2.6.0</span></div>
         <div class="flex justify-between"><span class="text-slate-300">clsx</span><span class="font-mono text-emerald-400 text-xs">^2.1.1</span></div>
-        <div class="flex justify-between"><span class="text-slate-300">CVA</span><span class="font-mono text-emerald-400 text-xs">^0.7.1</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">class-variance-authority</span><span class="font-mono text-emerald-400 text-xs">^0.7.1</span></div>
         <div class="flex justify-between"><span class="text-slate-300">tailwindcss-animate</span><span class="font-mono text-emerald-400 text-xs">^1.0.7</span></div>
         <div class="flex justify-between"><span class="text-slate-300">@tailwindcss/typography</span><span class="font-mono text-emerald-400 text-xs">^0.5.19</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">react-grab</span><span class="font-mono text-emerald-400 text-xs">^0.1.18</span></div>
       </div>
     </div>
 
     <div class="glass rounded-xl p-5 glow-pink reveal reveal-delay-3">
-      <h4 class="text-pink-400 font-bold text-xs uppercase tracking-wider mb-3">Build & Lint</h4>
+      <h4 class="text-pink-400 font-bold text-xs uppercase tracking-wider mb-3">Build & Dev</h4>
       <div class="space-y-2 text-sm">
-        <div class="flex justify-between"><span class="text-slate-300">@vitejs/plugin-react</span><span class="font-mono text-pink-400 text-xs">^4.3.4</span></div>
-        <div class="flex justify-between"><span class="text-slate-300">ESLint</span><span class="font-mono text-pink-400 text-xs">^9.17.0</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">@vitejs/plugin-react</span><span class="font-mono text-pink-400 text-xs">^4.3.4 SWC</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">ESLint</span><span class="font-mono text-pink-400 text-xs">^9.17.0 flat</span></div>
         <div class="flex justify-between"><span class="text-slate-300">typescript-eslint</span><span class="font-mono text-pink-400 text-xs">^8.18.2</span></div>
         <div class="flex justify-between"><span class="text-slate-300">PostCSS</span><span class="font-mono text-pink-400 text-xs">^8.4.49</span></div>
         <div class="flex justify-between"><span class="text-slate-300">Autoprefixer</span><span class="font-mono text-pink-400 text-xs">^10.4.20</span></div>
+        <div class="flex justify-between"><span class="text-slate-300">eslint-plugin-react-hooks</span><span class="font-mono text-pink-400 text-xs">^5.1.0</span></div>
       </div>
     </div>
   </div>
@@ -300,7 +370,24 @@
     <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm font-bold">3</span>
     Sistema de Rotas
   </h2>
-  <p class="text-slate-400 mb-8">20 rotas lazy-loaded com guards e retry automático</p>
+  <p class="text-slate-400 mb-8">20 rotas lazy-loaded com guards, retry automatico e code splitting</p>
+
+  <!-- lazyRetry -->
+  <div class="glass rounded-xl p-5 mb-4 border-l-4 border-purple-500">
+    <h4 class="text-purple-400 font-bold text-sm mb-2">lazyRetry() — Stale Chunk Recovery</h4>
+    <p class="text-xs text-slate-400 mb-3">Wrapper do <code class="text-purple-400">React.lazy()</code> que intercepta erros 404 de chunks antigos (ex: apos deploy). Usa sessionStorage para evitar loop infinito — tenta reload 1x por pagina por sessao.</p>
+    <div class="code-block rounded-lg p-3 text-xs font-mono overflow-x-auto">
+      <span class="text-purple-400">function</span> <span class="text-cyan-400">lazyRetry</span>(factory) {<br>
+      &nbsp;&nbsp;<span class="text-purple-400">return</span> lazy(() => factory().<span class="text-yellow-400">catch</span>(() => {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">if</span> (!sessionStorage.<span class="text-yellow-400">getItem</span>(key)) {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sessionStorage.<span class="text-yellow-400">setItem</span>(key, <span class="text-emerald-400">'1'</span>);<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;window.location.<span class="text-yellow-400">reload</span>();<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">return</span> factory();<br>
+      &nbsp;&nbsp;}));<br>
+      }
+    </div>
+  </div>
 
   <div class="glass rounded-xl overflow-hidden">
     <table class="sse-table">
@@ -308,61 +395,61 @@
         <tr>
           <th class="text-slate-400">Path</th>
           <th class="text-slate-400">Componente</th>
-          <th class="text-slate-400 hidden md:table-cell">Descrição</th>
+          <th class="text-slate-400 hidden md:table-cell">Descricao</th>
           <th class="text-slate-400">Guard</th>
         </tr>
       </thead>
       <tbody class="text-sm">
-        <tr><td colspan="4" class="!bg-teal-500/5 !border-teal-500/20 text-teal-400 font-semibold text-xs uppercase tracking-wider">Publicas</td></tr>
-        <tr><td class="font-mono text-teal-400">/login</td><td class="text-purple-400">LoginPage</td><td class="text-slate-400 hidden md:table-cell">Formulário JWT login</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-400">NONE</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/register</td><td class="text-purple-400">RegisterPage</td><td class="text-slate-400 hidden md:table-cell">Formulário de registro</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-400">NONE</span></td></tr>
+        <tr><td colspan="4" class="!bg-teal-500/5 !border-teal-500/20 text-teal-400 font-semibold text-xs uppercase tracking-wider">Publicas (sem auth)</td></tr>
+        <tr><td class="font-mono text-teal-400">/login</td><td class="text-purple-400">LoginPage</td><td class="text-slate-400 hidden md:table-cell">Formulario JWT — email + password → POST /auth/login</td><td><span class="mini-badge bg-slate-700 text-slate-400">NONE</span></td></tr>
+        <tr><td class="font-mono text-teal-400">/register</td><td class="text-purple-400">RegisterPage</td><td class="text-slate-400 hidden md:table-cell">Registro — email + password + name → POST /auth/register</td><td><span class="mini-badge bg-slate-700 text-slate-400">NONE</span></td></tr>
 
         <tr><td colspan="4" class="!bg-blue-500/5 !border-blue-500/20 text-blue-400 font-semibold text-xs uppercase tracking-wider">Menu Principal</td></tr>
-        <tr><td class="font-mono text-teal-400">/</td><td class="text-purple-400">DashboardPage</td><td class="text-slate-400 hidden md:table-cell">KPIs, graficos Recharts, alerts</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/conversations</td><td class="text-purple-400">ConversationsPage</td><td class="text-slate-400 hidden md:table-cell">Lista com busca e paginacao</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/conversations/:id</td><td class="text-purple-400">ConversationDetailPage</td><td class="text-slate-400 hidden md:table-cell">Chat + SSE streaming real-time</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400">AUTH+SSE</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/workflows</td><td class="text-purple-400">WorkflowsPage</td><td class="text-slate-400 hidden md:table-cell">CRUD de workflows</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/workflows/new</td><td class="text-purple-400">WorkflowWizardPage</td><td class="text-slate-400 hidden md:table-cell">Wizard 3 fases de criacao</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-orange-500/20 text-orange-400">AUTH+WIZ</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/workflows/:id/edit</td><td class="text-purple-400">WorkflowWizardPage</td><td class="text-slate-400 hidden md:table-cell">Wizard de edicao</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-orange-500/20 text-orange-400">AUTH+WIZ</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/executions</td><td class="text-purple-400">ExecutionsPage</td><td class="text-slate-400 hidden md:table-cell">Historico com auto-refresh 5s</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/workflow-chat</td><td class="text-purple-400">WorkflowChatPage</td><td class="text-slate-400 hidden md:table-cell">Chat direto com workflow (504L)</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400">AUTH+SSE</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/</td><td class="text-purple-400">DashboardPage</td><td class="text-slate-400 hidden md:table-cell">KPIs, Recharts (daily/workflow), alerts, budget, tool analytics</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/conversations</td><td class="text-purple-400">ConversationsPage</td><td class="text-slate-400 hidden md:table-cell">Lista grid/table, busca, filtros, batch delete, clone, folders</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/conversations/:id</td><td class="text-purple-400">ConversationDetailPage</td><td class="text-slate-400 hidden md:table-cell">Chat SSE real-time, step panel, timeline, upload, voice</td><td><span class="mini-badge bg-purple-500/20 text-purple-400">AUTH+SSE</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/workflows</td><td class="text-purple-400">WorkflowsPage</td><td class="text-slate-400 hidden md:table-cell">CRUD grid/table, duplicate, prompt history + diff viewer</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/workflows/new</td><td class="text-purple-400">WorkflowWizardPage</td><td class="text-slate-400 hidden md:table-cell">Wizard 3 fases: basic info → step builder → review</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">AUTH+WIZ</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/workflows/:id/edit</td><td class="text-purple-400">WorkflowWizardPage</td><td class="text-slate-400 hidden md:table-cell">Edita workflow existente (initEdit carrega dados via API)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">AUTH+WIZ</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/executions</td><td class="text-purple-400">ExecutionsPage</td><td class="text-slate-400 hidden md:table-cell">Historico com auto-refresh 5s, summary por estado, filtros</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/workflow-chat</td><td class="text-purple-400">WorkflowChatPage</td><td class="text-slate-400 hidden md:table-cell">Chat direto com workflow sem conversation formal (SSE v1)</td><td><span class="mini-badge bg-purple-500/20 text-purple-400">AUTH+SSE</span></td></tr>
 
         <tr><td colspan="4" class="!bg-purple-500/5 !border-purple-500/20 text-purple-400 font-semibold text-xs uppercase tracking-wider">Configuracao</td></tr>
-        <tr><td class="font-mono text-teal-400">/mcp-servers</td><td class="text-purple-400">McpServersPage</td><td class="text-slate-400 hidden md:table-cell">Servers MCP (HTTP, SSE, stdio)</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/skills</td><td class="text-purple-400">SkillsPage</td><td class="text-slate-400 hidden md:table-cell">Prompts reutilizaveis</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/agents</td><td class="text-purple-400">AgentsPage</td><td class="text-slate-400 hidden md:table-cell">Agentes de IA</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/rules</td><td class="text-purple-400">RulesPage</td><td class="text-slate-400 hidden md:table-cell">Regras e diretrizes</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/plugins</td><td class="text-purple-400">PluginsPage</td><td class="text-slate-400 hidden md:table-cell">Pacotes de componentes</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/hooks</td><td class="text-purple-400">HooksPage</td><td class="text-slate-400 hidden md:table-cell">Automacoes de lifecycle</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/webhooks</td><td class="text-purple-400">WebhooksPage</td><td class="text-slate-400 hidden md:table-cell">Webhooks externos</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
-        <tr><td class="font-mono text-teal-400">/settings</td><td class="text-purple-400">SettingsPage</td><td class="text-slate-400 hidden md:table-cell">Git, API Keys, Budget, Profile</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/mcp-servers</td><td class="text-purple-400">McpServersPage</td><td class="text-slate-400 hidden md:table-cell">HTTP/SSE/stdio servers, test connection, quick-install</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/skills</td><td class="text-purple-400">SkillsPage</td><td class="text-slate-400 hidden md:table-cell">Prompts reutilizaveis, import GitHub, resync, allowedTools</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/agents</td><td class="text-purple-400">AgentsPage</td><td class="text-slate-400 hidden md:table-cell">Agentes IA com model, permissionMode, maxTurns, skills[]</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/rules</td><td class="text-purple-400">RulesPage</td><td class="text-slate-400 hidden md:table-cell">Diretrizes, vinculacao com skill, import/resync</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/plugins</td><td class="text-purple-400">PluginsPage</td><td class="text-slate-400 hidden md:table-cell">Pacotes (MCP + Skills + Agents), import URL, resync</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/hooks</td><td class="text-purple-400">HooksPage</td><td class="text-slate-400 hidden md:table-cell">Lifecycle hooks, templates, preview, 6 event types</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/webhooks</td><td class="text-purple-400">WebhooksPage</td><td class="text-slate-400 hidden md:table-cell">Webhooks externos, delivery logs, toggle, secret</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/step-templates</td><td class="text-purple-400">StepTemplatesPage</td><td class="text-slate-400 hidden md:table-cell">Templates de step reutilizaveis para workflows</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/settings</td><td class="text-purple-400">SettingsPage</td><td class="text-slate-400 hidden md:table-cell">Git multi-account, API Keys, Budget, Profile</td><td><span class="mini-badge bg-teal-500/20 text-teal-400">AUTH</span></td></tr>
 
         <tr><td colspan="4" class="!bg-red-500/5 !border-red-500/20 text-red-400 font-semibold text-xs uppercase tracking-wider">Admin</td></tr>
-        <tr><td class="font-mono text-teal-400">/admin/users</td><td class="text-purple-400">AdminPage</td><td class="text-slate-400 hidden md:table-cell">Gestao de usuarios e roles</td><td><span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400">ADMIN</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400">/admin/users</td><td class="text-purple-400">AdminPage</td><td class="text-slate-400 hidden md:table-cell">Gestao de usuarios, roles (admin/developer/viewer), delete</td><td><span class="mini-badge bg-red-500/20 text-red-400">ADMIN</span></td></tr>
       </tbody>
     </table>
   </div>
 </section>
 
 <!-- ============================================= -->
-<!-- 4. ZUSTAND STORES -->
+<!-- 4. ZUSTAND STORES (TODOS OS 9) -->
 <!-- ============================================= -->
 <section class="reveal">
   <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
     <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-500 text-white text-sm font-bold">4</span>
-    Zustand Stores
+    9 Zustand Stores
   </h2>
-  <p class="text-slate-400 mb-8">5 stores principais + 6 stores CRUD menores</p>
+  <p class="text-slate-400 mb-8">3 stores complexos (auth, conversations, workflows) + 6 stores CRUD com padrao identico</p>
 
   <div class="grid md:grid-cols-2 gap-4">
     <!-- Auth Store -->
     <div class="glass rounded-xl p-5 border-l-4 border-teal-500 glow-teal">
       <div class="flex items-center gap-2 mb-1">
-        <span class="text-lg">🔐</span>
         <h4 class="font-bold text-teal-400">useAuthStore</h4>
-        <span class="text-[10px] font-mono text-slate-500 ml-auto">54 linhas</span>
+        <span class="text-[10px] font-mono text-slate-500 ml-auto">features/auth/store.ts</span>
       </div>
-      <p class="text-slate-500 text-xs font-mono mb-3">features/auth/store.ts</p>
+      <p class="text-xs text-slate-500 mb-3">Autenticacao JWT com persistencia em localStorage. Cross-tab sync via storage event.</p>
       <div class="grid grid-cols-2 gap-3">
         <div>
           <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">State</div>
@@ -377,7 +464,7 @@
           <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Actions</div>
           <div class="space-y-0.5 text-xs font-mono">
             <div class="text-yellow-400">login(email, pwd)</div>
-            <div class="text-yellow-400">register(email, pwd)</div>
+            <div class="text-yellow-400">register(email, pwd, name?)</div>
             <div class="text-yellow-400">logout()</div>
             <div class="text-yellow-400">checkAuth()</div>
           </div>
@@ -388,64 +475,76 @@
     <!-- Conversations Store -->
     <div class="glass rounded-xl p-5 border-l-4 border-purple-500 glow-purple">
       <div class="flex items-center gap-2 mb-1">
-        <span class="text-lg">💬</span>
         <h4 class="font-bold text-purple-400">useConversationsStore</h4>
-        <span class="text-[10px] font-mono text-slate-500 ml-auto">133 linhas</span>
+        <span class="text-[10px] font-mono text-slate-500 ml-auto">features/conversations/store.ts</span>
       </div>
-      <p class="text-slate-500 text-xs font-mono mb-3">features/conversations/store.ts</p>
+      <p class="text-xs text-slate-500 mb-3">Controle de SSE streaming, fases, pause/resume, step statuses e cache de actions.</p>
       <div class="grid grid-cols-2 gap-3">
         <div>
           <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Streaming State</div>
           <div class="space-y-0.5 text-xs font-mono">
             <div><span class="text-cyan-400">isStreaming:</span> <span class="text-slate-400">boolean</span></div>
-            <div><span class="text-cyan-400">streamingPhase:</span> <span class="text-slate-400">5 states</span></div>
+            <div><span class="text-cyan-400">streamingPhase:</span> <span class="text-slate-400">5 estados</span></div>
             <div><span class="text-cyan-400">streamingContent:</span> <span class="text-slate-400">string</span></div>
             <div><span class="text-cyan-400">streamingActions:</span> <span class="text-slate-400">Action[]</span></div>
             <div><span class="text-cyan-400">isPaused:</span> <span class="text-slate-400">boolean</span></div>
-            <div><span class="text-cyan-400">pausedInfo:</span> <span class="text-slate-400">PausedInfo</span></div>
-            <div><span class="text-cyan-400">stepStatuses:</span> <span class="text-slate-400">Map</span></div>
+            <div><span class="text-cyan-400">pausedInfo:</span> <span class="text-slate-400">PausedInfo | null</span></div>
+            <div><span class="text-cyan-400">stepStatuses:</span> <span class="text-slate-400">Map&lt;string, Status&gt;</span></div>
+            <div><span class="text-cyan-400">actionsCache:</span> <span class="text-slate-400">Map&lt;string, Action[]&gt;</span></div>
+            <div><span class="text-cyan-400">isInterrupting:</span> <span class="text-slate-400">boolean</span></div>
           </div>
         </div>
         <div>
           <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Methods (20+)</div>
           <div class="space-y-0.5 text-xs font-mono">
             <div class="text-yellow-400">setStreaming()</div>
+            <div class="text-yellow-400">setStreamingPhase()</div>
             <div class="text-yellow-400">appendStreamingContent()</div>
-            <div class="text-yellow-400">setPaused()</div>
-            <div class="text-yellow-400">setStepStatus()</div>
-            <div class="text-yellow-400">initStepStatuses()</div>
-            <div class="text-yellow-400">cacheActions()</div>
+            <div class="text-yellow-400">addStreamingAction()</div>
             <div class="text-yellow-400">clearStreaming()</div>
+            <div class="text-yellow-400">resetStreamingContent()</div>
+            <div class="text-yellow-400">setPaused(paused, info)</div>
+            <div class="text-yellow-400">setStepStatus(id, status)</div>
+            <div class="text-yellow-400">initStepStatuses(steps)</div>
+            <div class="text-yellow-400">cacheActions(msgId, acts)</div>
           </div>
         </div>
+      </div>
+      <div class="mt-3 text-[10px] text-slate-500">
+        <span class="font-bold text-purple-400">Step Statuses:</span> pending | running | active | completed | error | retry | cancelled | paused
       </div>
     </div>
 
     <!-- Workflows Store -->
     <div class="glass rounded-xl p-5 border-l-4 border-orange-500 glow-orange">
       <div class="flex items-center gap-2 mb-1">
-        <span class="text-lg">📋</span>
         <h4 class="font-bold text-orange-400">useWorkflowsStore</h4>
-        <span class="text-[10px] font-mono text-slate-500 ml-auto">227 linhas</span>
+        <span class="text-[10px] font-mono text-slate-500 ml-auto">features/workflows/store.ts</span>
       </div>
-      <p class="text-slate-500 text-xs font-mono mb-3">features/workflows/store.ts</p>
+      <p class="text-xs text-slate-500 mb-3">Estado do Wizard 3 fases, manipulacao de steps, edicao com load async via API.</p>
       <div class="grid grid-cols-2 gap-3">
         <div>
           <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Wizard State</div>
           <div class="space-y-0.5 text-xs font-mono">
             <div><span class="text-cyan-400">currentPhase:</span> <span class="text-slate-400">1 | 2 | 3</span></div>
-            <div><span class="text-cyan-400">basicInfo:</span> <span class="text-slate-400">{name,desc,type}</span></div>
+            <div><span class="text-cyan-400">basicInfo:</span> <span class="text-slate-400">{name, desc, type}</span></div>
             <div><span class="text-cyan-400">formSteps:</span> <span class="text-slate-400">WorkflowStep[]</span></div>
             <div><span class="text-cyan-400">selectedStepIndex:</span> <span class="text-slate-400">number</span></div>
+            <div><span class="text-cyan-400">editingWorkflow:</span> <span class="text-slate-400">Workflow | null</span></div>
+            <div><span class="text-cyan-400">isLoadingEdit:</span> <span class="text-slate-400">boolean</span></div>
           </div>
         </div>
         <div>
           <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Actions (15+)</div>
           <div class="space-y-0.5 text-xs font-mono">
+            <div class="text-yellow-400">setPhase(1|2|3)</div>
+            <div class="text-yellow-400">setBasicInfo(partial)</div>
+            <div class="text-yellow-400">addStep() / removeStep(i)</div>
+            <div class="text-yellow-400">updateStep(i, data)</div>
             <div class="text-yellow-400">moveStep(from, to)</div>
-            <div class="text-yellow-400">duplicateStep(idx)</div>
-            <div class="text-yellow-400">addStep() / removeStep()</div>
-            <div class="text-yellow-400">initCreate() / initEdit()</div>
+            <div class="text-yellow-400">duplicateStep(i)</div>
+            <div class="text-yellow-400">initCreate() / initEdit(wf)</div>
+            <div class="text-yellow-400">resetWizard()</div>
           </div>
         </div>
       </div>
@@ -454,20 +553,21 @@
     <!-- CRUD Pattern -->
     <div class="glass rounded-xl p-5 border-l-4 border-slate-500">
       <div class="flex items-center gap-2 mb-1">
-        <span class="text-lg">🔄</span>
-        <h4 class="font-bold text-slate-300">CRUD Modal Stores</h4>
+        <h4 class="font-bold text-slate-300">6 CRUD Modal Stores</h4>
         <span class="text-[10px] font-mono text-slate-500 ml-auto">~32 linhas cada</span>
       </div>
-      <p class="text-slate-500 text-xs mb-3">Padrão idêntico para: skills, agents, rules, plugins, hooks, mcp-servers</p>
-      <div class="code-block bg-slate-900/80 rounded-lg p-3 text-xs font-mono">
-        <span class="text-purple-400">interface</span> <span class="text-cyan-400">ModalState</span> {<br>
+      <p class="text-xs text-slate-500 mb-3">Padrao identico aplicado a: <span class="text-teal-400">agents</span>, <span class="text-purple-400">skills</span>, <span class="text-blue-400">rules</span>, <span class="text-orange-400">plugins</span>, <span class="text-pink-400">hooks</span>, <span class="text-emerald-400">mcp-servers</span></p>
+      <div class="code-block rounded-lg p-3 text-xs font-mono">
+        <span class="text-purple-400">interface</span> <span class="text-cyan-400">CrudModalState</span> {<br>
         &nbsp;&nbsp;<span class="text-slate-300">isModalOpen:</span> <span class="text-cyan-400">boolean</span><br>
-        &nbsp;&nbsp;<span class="text-slate-300">editingItem:</span> <span class="text-cyan-400">Item | null</span><br>
+        &nbsp;&nbsp;<span class="text-slate-300">editingItem:</span> <span class="text-cyan-400">Entity | null</span><br>
+        &nbsp;&nbsp;<span class="text-slate-300">isLoadingEdit:</span> <span class="text-cyan-400">boolean</span><br>
         &nbsp;&nbsp;<span class="text-yellow-400">openCreateModal()</span>: <span class="text-cyan-400">void</span><br>
-        &nbsp;&nbsp;<span class="text-yellow-400">openEditModal(item)</span>: <span class="text-cyan-400">Promise</span> <span class="text-slate-500">// loads via API</span><br>
+        &nbsp;&nbsp;<span class="text-yellow-400">openEditModal(item)</span>: <span class="text-cyan-400">Promise&lt;void&gt;</span> <span class="text-slate-500">// fetch via API</span><br>
         &nbsp;&nbsp;<span class="text-yellow-400">closeModal()</span>: <span class="text-cyan-400">void</span><br>
         }
       </div>
+      <p class="text-[10px] text-slate-500 mt-2"><span class="text-pink-400 font-bold">Hooks Store extra:</span> isTemplatesOpen, isPreviewOpen, openTemplates(), closeTemplates(), openPreview(), closePreview()</p>
     </div>
   </div>
 </section>
@@ -480,11 +580,11 @@
     <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 text-white text-sm font-bold">5</span>
     SSE Streaming Deep Dive
   </h2>
-  <p class="text-slate-400 mb-8">useSSEStream — o hook mais complexo do projeto (498 linhas)</p>
+  <p class="text-slate-400 mb-8">useSSEStream — o hook mais complexo do projeto: streaming bidirecional com 18 eventos, auto-reconnect e interrupt</p>
 
   <!-- State Machine -->
   <div class="glass rounded-xl p-6 mb-6 glow-pink">
-    <h4 class="text-pink-400 font-bold text-sm uppercase tracking-wider mb-4">Streaming Phase Machine</h4>
+    <h4 class="text-pink-400 font-bold text-sm uppercase tracking-wider mb-4">Streaming Phase Machine (StreamingPhase type)</h4>
     <div class="flex flex-wrap items-center gap-2 justify-center">
       <div class="state-node bg-slate-700/50 border border-slate-600 text-slate-300">
         <span class="w-2 h-2 rounded-full bg-slate-500"></span>idle
@@ -508,241 +608,574 @@
     </div>
   </div>
 
+  <!-- API Methods -->
+  <div class="grid md:grid-cols-2 gap-4 mb-4">
+    <div class="glass rounded-xl p-5 border-l-4 border-pink-500">
+      <h4 class="text-pink-400 font-bold text-sm mb-3">sendMessage(content, stepIndex?, attachments?)</h4>
+      <div class="space-y-1.5 text-xs text-slate-300">
+        <div class="flex gap-2"><span class="text-pink-400 font-bold">POST</span><code class="text-cyan-400">/conversations/{id}/messages/stream</code></div>
+        <div>Body: <code class="text-slate-400">{ content, stepIndex, attachments }</code></div>
+        <div>Header: <code class="text-slate-400">Authorization: Bearer {token}</code></div>
+        <div>Response: SSE stream via fetch + ReadableStream</div>
+        <div>Retorna: AbortController para cancelamento</div>
+      </div>
+    </div>
+    <div class="glass rounded-xl p-5 border-l-4 border-blue-500">
+      <h4 class="text-blue-400 font-bold text-sm mb-3">watchExecution()</h4>
+      <div class="space-y-1.5 text-xs text-slate-300">
+        <div class="flex gap-2"><span class="text-blue-400 font-bold">GET</span><code class="text-cyan-400">/conversations/{id}/watch</code></div>
+        <div>Usado no auto-reconnect apos page refresh (F5)</div>
+        <div>Processa exatamente os mesmos eventos do sendMessage</div>
+        <div>Verifica status antes: <code class="text-cyan-400">GET /execution-status</code></div>
+      </div>
+    </div>
+    <div class="glass rounded-xl p-5 border-l-4 border-purple-500">
+      <h4 class="text-purple-400 font-bold text-sm mb-3">interruptExecution(message)</h4>
+      <div class="space-y-1.5 text-xs text-slate-300">
+        <div class="flex gap-2"><span class="text-purple-400 font-bold">POST</span><code class="text-cyan-400">/conversations/{id}/interrupt</code></div>
+        <div>Envia mensagem durante execucao ativa</div>
+        <div>Permite usuario guiar a IA em tempo real</div>
+      </div>
+    </div>
+    <div class="glass rounded-xl p-5 border-l-4 border-red-500">
+      <h4 class="text-red-400 font-bold text-sm mb-3">cancel()</h4>
+      <div class="space-y-1.5 text-xs text-slate-300">
+        <div class="flex gap-2"><span class="text-red-400 font-bold">1.</span>cancelledRef = true</div>
+        <div class="flex gap-2"><span class="text-red-400 font-bold">2.</span>AbortController.abort() (HTTP fecha)</div>
+        <div class="flex gap-2"><span class="text-red-400 font-bold">3.</span>Steps running → status cancelled</div>
+        <div class="flex gap-2"><span class="text-red-400 font-bold">4.</span>POST /cancel (safety net)</div>
+        <div class="flex gap-2"><span class="text-red-400 font-bold">5.</span>invalidateQueries para estado final</div>
+      </div>
+    </div>
+  </div>
+
   <!-- SSE Events Table -->
   <div class="glass rounded-xl overflow-hidden">
     <div class="px-4 py-3 border-b border-slate-700/50">
       <h4 class="text-sm font-bold text-slate-300">18 Eventos SSE Processados</h4>
     </div>
+    <div class="overflow-x-auto">
     <table class="sse-table text-sm">
       <thead>
         <tr>
           <th class="text-slate-400">Evento</th>
-          <th class="text-slate-400">Acao</th>
-          <th class="text-slate-400 hidden md:table-cell">Transicao</th>
+          <th class="text-slate-400">Acao no Frontend</th>
+          <th class="text-slate-400 hidden md:table-cell">Transicao de Estado</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td><code class="text-pink-400 text-xs">step_start</code></td><td class="text-slate-300">Marca step anterior completo, inicia novo step</td><td class="text-slate-500 hidden md:table-cell">→ ai_thinking</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">stream (content)</code></td><td class="text-slate-300">appendStreamingContent() — acumula texto token a token</td><td class="text-slate-500 hidden md:table-cell">→ streaming</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">stream (action)</code></td><td class="text-slate-300">addStreamingAction() — tool_use, thinking, tool_result</td><td class="text-slate-500 hidden md:table-cell">→ streaming</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">step_complete</code></td><td class="text-slate-300">Marca step como completed ou active</td><td class="text-slate-500 hidden md:table-cell">—</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">step_error</code></td><td class="text-slate-300">Marca step como error, chama onError</td><td class="text-slate-500 hidden md:table-cell">—</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">message_saved</code></td><td class="text-slate-300">Insere mensagem no cache React Query em tempo real</td><td class="text-slate-500 hidden md:table-cell">—</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">execution_paused</code></td><td class="text-slate-300">Pausa execucao, armazena pausedInfo + AskUserQuestion</td><td class="text-slate-500 hidden md:table-cell">isPaused=true</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">execution_resumed</code></td><td class="text-slate-300">Retoma execucao, volta para running</td><td class="text-slate-500 hidden md:table-cell">→ ai_thinking</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">context_reset</code></td><td class="text-slate-300">Reseta contexto, mostra mensagem de sistema</td><td class="text-slate-500 hidden md:table-cell">→ ai_thinking</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">user_interrupt</code></td><td class="text-slate-300">Usuario enviou mensagem durante execucao</td><td class="text-slate-500 hidden md:table-cell">—</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">condition_retry</code></td><td class="text-slate-300">Step em retry por condicao nao atendida</td><td class="text-slate-500 hidden md:table-cell">status=retry</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">condition_jump</code></td><td class="text-slate-300">Pula para outro step</td><td class="text-slate-500 hidden md:table-cell">reset content</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">dag_batch_start</code></td><td class="text-slate-300">Inicio de batch DAG paralelo</td><td class="text-slate-500 hidden md:table-cell">→ ai_thinking</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">step_blocked</code></td><td class="text-slate-300">Step bloqueado por dependencia</td><td class="text-slate-500 hidden md:table-cell">status=blocked</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">validation_failed</code></td><td class="text-slate-300">Validacao de output falhou</td><td class="text-slate-500 hidden md:table-cell">—</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">complete</code></td><td class="text-slate-300">Execucao finalizada, invalida queries, onComplete</td><td class="text-slate-500 hidden md:table-cell">→ idle</td></tr>
-        <tr><td><code class="text-pink-400 text-xs">error</code></td><td class="text-slate-300">Erro generico, chama onError</td><td class="text-slate-500 hidden md:table-cell">→ idle</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">step_start</code></td><td class="text-slate-300">Marca step anterior completo, resetStreamingContent, inicia novo step</td><td class="text-slate-500 hidden md:table-cell">→ ai_thinking, step: running</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">stream (content)</code></td><td class="text-slate-300">appendStreamingContent() — acumula texto token por token</td><td class="text-slate-500 hidden md:table-cell">→ streaming</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">stream (action)</code></td><td class="text-slate-300">addStreamingAction() — tool_use, thinking, tool_result, error</td><td class="text-slate-500 hidden md:table-cell">→ streaming</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">step_complete</code></td><td class="text-slate-300">setStepStatus(completed ou active), setProgress()</td><td class="text-slate-500 hidden md:table-cell">step: completed</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">step_error</code></td><td class="text-slate-300">setStepStatus(error), onError callback</td><td class="text-slate-500 hidden md:table-cell">step: error</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">message_saved</code></td><td class="text-slate-300">Insere mensagem no cache React Query (setQueryData) em tempo real</td><td class="text-slate-500 hidden md:table-cell">— (cache update)</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">execution_paused</code></td><td class="text-slate-300">setPaused(true, pausedInfo), exibe AskUserQuestion com opcoes</td><td class="text-slate-500 hidden md:table-cell">isPaused=true</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">execution_resumed</code></td><td class="text-slate-300">setPaused(false), retoma execucao normalmente</td><td class="text-slate-500 hidden md:table-cell">→ ai_thinking</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">context_reset</code></td><td class="text-slate-300">Context compaction, resetStreamingContent, mensagem de sistema</td><td class="text-slate-500 hidden md:table-cell">→ ai_thinking</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">user_interrupt</code></td><td class="text-slate-300">Usuario enviou mensagem durante execucao ativa</td><td class="text-slate-500 hidden md:table-cell">—</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">condition_retry</code></td><td class="text-slate-300">Step em retry por condicao nao atendida</td><td class="text-slate-500 hidden md:table-cell">step: retry</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">condition_jump</code></td><td class="text-slate-300">Pula para outro step, resetStreamingContent</td><td class="text-slate-500 hidden md:table-cell">reset content</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">dag_batch_start</code></td><td class="text-slate-300">Inicio de batch DAG paralelo, reset</td><td class="text-slate-500 hidden md:table-cell">→ ai_thinking</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">step_blocked</code></td><td class="text-slate-300">Step bloqueado por dependencia DAG</td><td class="text-slate-500 hidden md:table-cell">step: blocked</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">validation_failed</code></td><td class="text-slate-300">Output nao passou validacao</td><td class="text-slate-500 hidden md:table-cell">—</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">complete</code></td><td class="text-slate-300">clearStreaming(), invalidateQueries(['conversations']), onComplete()</td><td class="text-slate-500 hidden md:table-cell">→ idle</td></tr>
+        <tr><td><code class="text-pink-400 text-xs">error</code></td><td class="text-slate-300">clearStreaming(), toast.error(), onError()</td><td class="text-slate-500 hidden md:table-cell">→ idle</td></tr>
       </tbody>
     </table>
+    </div>
   </div>
 
-  <!-- Reconnect & Cancel -->
-  <div class="grid md:grid-cols-2 gap-4 mt-4">
-    <div class="glass rounded-xl p-5 border-l-4 border-blue-500">
-      <h4 class="text-blue-400 font-bold text-sm mb-3">Auto-Reconnect</h4>
-      <div class="space-y-2 text-xs text-slate-300">
-        <div class="flex gap-2"><span class="text-blue-400 font-bold">1.</span>Ao montar, checa <code class="text-xs text-pink-400">/execution-status</code></div>
-        <div class="flex gap-2"><span class="text-blue-400 font-bold">2.</span>Se <code class="text-xs text-pink-400">running</code> → conecta <code class="text-xs text-pink-400">/watch</code> (SSE)</div>
-        <div class="flex gap-2"><span class="text-blue-400 font-bold">3.</span>Se <code class="text-xs text-pink-400">paused</code> → restaura pausedInfo + AskUserQuestion</div>
-        <div class="flex gap-2"><span class="text-blue-400 font-bold">4.</span>Processa eventos identicamente ao sendMessage</div>
-      </div>
-    </div>
-
-    <div class="glass rounded-xl p-5 border-l-4 border-red-500">
-      <h4 class="text-red-400 font-bold text-sm mb-3">Cancel Flow</h4>
-      <div class="space-y-2 text-xs text-slate-300">
-        <div class="flex gap-2"><span class="text-red-400 font-bold">1.</span>Flag <code class="text-xs text-pink-400">cancelledRef = true</code></div>
-        <div class="flex gap-2"><span class="text-red-400 font-bold">2.</span>AbortController.abort() (HTTP fecha)</div>
-        <div class="flex gap-2"><span class="text-red-400 font-bold">3.</span>Steps running → status <code class="text-xs text-pink-400">cancelled</code></div>
-        <div class="flex gap-2"><span class="text-red-400 font-bold">4.</span>POST <code class="text-xs text-pink-400">/cancel</code> (safety net)</div>
-        <div class="flex gap-2"><span class="text-red-400 font-bold">5.</span>invalidateQueries para estado final</div>
-      </div>
+  <!-- Auto-reconnect -->
+  <div class="glass rounded-xl p-5 mt-4 border-l-4 border-blue-500">
+    <h4 class="text-blue-400 font-bold text-sm mb-3">Auto-Reconnect (useEffect on mount)</h4>
+    <div class="flex flex-wrap gap-6 text-xs text-slate-300">
+      <div class="flex gap-2"><span class="text-blue-400 font-bold">1.</span>Checa <code class="text-pink-400">GET /execution-status</code></div>
+      <div class="flex gap-2"><span class="text-blue-400 font-bold">2.</span>Se <code class="text-pink-400">running</code> → watchExecution() (SSE)</div>
+      <div class="flex gap-2"><span class="text-blue-400 font-bold">3.</span>Se <code class="text-pink-400">paused</code> → restaura pausedInfo + AskUserQuestion</div>
+      <div class="flex gap-2"><span class="text-blue-400 font-bold">4.</span>Processa eventos identicamente ao sendMessage</div>
     </div>
   </div>
 </section>
 
 <!-- ============================================= -->
-<!-- 6. WORKFLOW WIZARD -->
+<!-- 6. API LAYER COMPLETO -->
 <!-- ============================================= -->
 <section class="reveal">
   <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
-    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 text-white text-sm font-bold">6</span>
-    Workflow Wizard
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 text-white text-sm font-bold">6</span>
+    API Layer — 70+ Endpoints
   </h2>
-  <p class="text-slate-400 mb-8">Criacao e edicao de workflows em 3 fases com 12 sub-componentes</p>
+  <p class="text-slate-400 mb-8">Axios + interceptors, tipagem forte por dominio, SSE via fetch nativo</p>
+
+  <!-- API Client Config -->
+  <div class="glass rounded-xl p-5 mb-4 border-l-4 border-emerald-500">
+    <h4 class="text-emerald-400 font-bold text-sm mb-2">apiClient (shared/lib/api-client.ts)</h4>
+    <div class="code-block rounded-lg p-3 text-xs font-mono overflow-x-auto">
+      <span class="text-purple-400">const</span> apiClient = axios.<span class="text-yellow-400">create</span>({<br>
+      &nbsp;&nbsp;baseURL: <span class="text-emerald-400">import.meta.env.VITE_API_URL</span> || <span class="text-emerald-400">'http://localhost:3333'</span>,<br>
+      &nbsp;&nbsp;headers: { <span class="text-emerald-400">'Content-Type'</span>: <span class="text-emerald-400">'application/json'</span> }<br>
+      });<br><br>
+      <span class="text-slate-500">// Request: injeta Bearer token do localStorage</span><br>
+      <span class="text-slate-500">// Response: 401 → remove token → redirect /login</span>
+    </div>
+  </div>
+
+  <!-- Endpoints por dominio -->
+  <div class="glass rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+    <table class="sse-table text-sm">
+      <thead>
+        <tr>
+          <th class="text-slate-400">Dominio</th>
+          <th class="text-slate-400">Metodo</th>
+          <th class="text-slate-400">Endpoint</th>
+          <th class="text-slate-400 hidden md:table-cell">Descricao</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Auth -->
+        <tr><td colspan="4" class="!bg-teal-500/5 text-teal-400 font-semibold text-xs uppercase">Auth (3 endpoints)</td></tr>
+        <tr class="endpoint-row"><td class="text-teal-400 text-xs">auth</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/auth/register</td><td class="text-slate-400 hidden md:table-cell">Registro com email, password, name</td></tr>
+        <tr class="endpoint-row"><td class="text-teal-400 text-xs">auth</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/auth/login</td><td class="text-slate-400 hidden md:table-cell">Login retorna {token, user}</td></tr>
+        <tr class="endpoint-row"><td class="text-teal-400 text-xs">auth</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/auth/me</td><td class="text-slate-400 hidden md:table-cell">Valida token, retorna user</td></tr>
+
+        <!-- Conversations -->
+        <tr><td colspan="4" class="!bg-purple-500/5 text-purple-400 font-semibold text-xs uppercase">Conversations (16 endpoints)</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/folders</td><td class="text-slate-400 hidden md:table-cell">Lista project folders</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/conversations</td><td class="text-slate-400 hidden md:table-cell">Lista (filtro workflowId opcional)</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/conversations/{id}</td><td class="text-slate-400 hidden md:table-cell">Detalhe com messages</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/conversations</td><td class="text-slate-400 hidden md:table-cell">Cria conversa</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-red-500/20 text-red-400">DEL</span></td><td class="font-mono text-xs">/conversations/{id}</td><td class="text-slate-400 hidden md:table-cell">Remove conversa</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-red-500/20 text-red-400">DEL</span></td><td class="font-mono text-xs">/conversations/batch</td><td class="text-slate-400 hidden md:table-cell">Batch delete (ids[])</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/conversations/{id}/clone</td><td class="text-slate-400 hidden md:table-cell">Clona conversa</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/conversations/{id}/cancel</td><td class="text-slate-400 hidden md:table-cell">Cancela execucao</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/conversations/{id}/advance-step</td><td class="text-slate-400 hidden md:table-cell">Avanca step (step_by_step)</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/conversations/{id}/go-back-step</td><td class="text-slate-400 hidden md:table-cell">Volta step</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/conversations/{id}/jump-to-step</td><td class="text-slate-400 hidden md:table-cell">Pula para step especifico</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">PATCH</span></td><td class="font-mono text-xs">/conversations/{id}</td><td class="text-slate-400 hidden md:table-cell">Atualiza titulo</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/conversations/{id}/messages/stream</td><td class="text-slate-400 hidden md:table-cell">SSE streaming</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/conversations/{id}/attachments</td><td class="text-slate-400 hidden md:table-cell">Upload imagens (FormData)</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/conversations/{id}/token-usage</td><td class="text-slate-400 hidden md:table-cell">Metricas de tokens</td></tr>
+        <tr class="endpoint-row"><td class="text-purple-400 text-xs">conv</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/conversations/{id}/execution-stats</td><td class="text-slate-400 hidden md:table-cell">Estatisticas execucao</td></tr>
+
+        <!-- CRUD Resources -->
+        <tr><td colspan="4" class="!bg-blue-500/5 text-blue-400 font-semibold text-xs uppercase">CRUD Resources (7 endpoints cada × 6 dominios = 42)</td></tr>
+        <tr class="endpoint-row"><td class="text-blue-400 text-xs">each</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/{resource}</td><td class="text-slate-400 hidden md:table-cell">Lista todos (agents, skills, rules, hooks, mcp-servers, plugins)</td></tr>
+        <tr class="endpoint-row"><td class="text-blue-400 text-xs">each</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/{resource}/{id}</td><td class="text-slate-400 hidden md:table-cell">Detalhe por ID</td></tr>
+        <tr class="endpoint-row"><td class="text-blue-400 text-xs">each</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/{resource}</td><td class="text-slate-400 hidden md:table-cell">Cria recurso</td></tr>
+        <tr class="endpoint-row"><td class="text-blue-400 text-xs">each</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">PUT</span></td><td class="font-mono text-xs">/{resource}/{id}</td><td class="text-slate-400 hidden md:table-cell">Atualiza recurso</td></tr>
+        <tr class="endpoint-row"><td class="text-blue-400 text-xs">each</td><td><span class="mini-badge bg-red-500/20 text-red-400">DEL</span></td><td class="font-mono text-xs">/{resource}/{id}</td><td class="text-slate-400 hidden md:table-cell">Remove recurso</td></tr>
+        <tr class="endpoint-row"><td class="text-blue-400 text-xs">each</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">PATCH</span></td><td class="font-mono text-xs">/{resource}/{id}/toggle</td><td class="text-slate-400 hidden md:table-cell">Toggle enabled</td></tr>
+        <tr class="endpoint-row"><td class="text-blue-400 text-xs">extra</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/{resource}/import</td><td class="text-slate-400 hidden md:table-cell">Import de URL/markdown (agents, skills, rules)</td></tr>
+        <tr class="endpoint-row"><td class="text-blue-400 text-xs">extra</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/{resource}/{id}/resync</td><td class="text-slate-400 hidden md:table-cell">Resync com fonte (agents, skills, rules, plugins)</td></tr>
+
+        <!-- Workflows -->
+        <tr><td colspan="4" class="!bg-orange-500/5 text-orange-400 font-semibold text-xs uppercase">Workflows (6 endpoints)</td></tr>
+        <tr class="endpoint-row"><td class="text-orange-400 text-xs">wf</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/workflows</td><td class="text-slate-400 hidden md:table-cell">Lista workflows</td></tr>
+        <tr class="endpoint-row"><td class="text-orange-400 text-xs">wf</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/workflows</td><td class="text-slate-400 hidden md:table-cell">Cria com steps[]</td></tr>
+        <tr class="endpoint-row"><td class="text-orange-400 text-xs">wf</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">PUT</span></td><td class="font-mono text-xs">/workflows/{id}</td><td class="text-slate-400 hidden md:table-cell">Atualiza workflow</td></tr>
+        <tr class="endpoint-row"><td class="text-orange-400 text-xs">wf</td><td><span class="mini-badge bg-red-500/20 text-red-400">DEL</span></td><td class="font-mono text-xs">/workflows/{id}</td><td class="text-slate-400 hidden md:table-cell">Remove workflow</td></tr>
+        <tr class="endpoint-row"><td class="text-orange-400 text-xs">wf</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/workflows/{id}/duplicate</td><td class="text-slate-400 hidden md:table-cell">Duplica workflow</td></tr>
+
+        <!-- Settings/Git -->
+        <tr><td colspan="4" class="!bg-emerald-500/5 text-emerald-400 font-semibold text-xs uppercase">Settings & Git (14 endpoints)</td></tr>
+        <tr class="endpoint-row"><td class="text-emerald-400 text-xs">git</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/git/token/status</td><td class="text-slate-400 hidden md:table-cell">Status do token GitHub</td></tr>
+        <tr class="endpoint-row"><td class="text-emerald-400 text-xs">git</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/git/accounts</td><td class="text-slate-400 hidden md:table-cell">Lista contas Git (multi-account)</td></tr>
+        <tr class="endpoint-row"><td class="text-emerald-400 text-xs">git</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/git/clone</td><td class="text-slate-400 hidden md:table-cell">Clona repositorio</td></tr>
+        <tr class="endpoint-row"><td class="text-emerald-400 text-xs">git</td><td><span class="mini-badge bg-emerald-500/20 text-emerald-400">POST</span></td><td class="font-mono text-xs">/git/pull | /git/push</td><td class="text-slate-400 hidden md:table-cell">Pull/Push alteracoes</td></tr>
+        <tr class="endpoint-row"><td class="text-emerald-400 text-xs">keys</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/api-keys</td><td class="text-slate-400 hidden md:table-cell">Lista API keys</td></tr>
+        <tr class="endpoint-row"><td class="text-emerald-400 text-xs">budget</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/auth/budget</td><td class="text-slate-400 hidden md:table-cell">Token budget summary (daily/monthly)</td></tr>
+
+        <!-- Metrics -->
+        <tr><td colspan="4" class="!bg-cyan-500/5 text-cyan-400 font-semibold text-xs uppercase">Metrics & Traces</td></tr>
+        <tr class="endpoint-row"><td class="text-cyan-400 text-xs">metrics</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/metrics/daily | /by-workflow | /alerts | /tool-analytics</td><td class="text-slate-400 hidden md:table-cell">Dashboard analytics (refresh 60s)</td></tr>
+        <tr class="endpoint-row"><td class="text-cyan-400 text-xs">traces</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/conversations/{id}/traces</td><td class="text-slate-400 hidden md:table-cell">Traces de execucao</td></tr>
+        <tr class="endpoint-row"><td class="text-cyan-400 text-xs">traces</td><td><span class="mini-badge bg-blue-500/20 text-blue-400">GET</span></td><td class="font-mono text-xs">/traces/{id}</td><td class="text-slate-400 hidden md:table-cell">Detalhe do trace (parsedEvents, tokens)</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= -->
+<!-- 7. 80+ CUSTOM HOOKS -->
+<!-- ============================================= -->
+<section class="reveal">
+  <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm font-bold">7</span>
+    80+ Custom Hooks
+  </h2>
+  <p class="text-slate-400 mb-8">React Query hooks por dominio + hooks utilitarios compartilhados + hooks complexos de streaming</p>
+
+  <!-- Shared Hooks -->
+  <div class="glass rounded-xl p-5 mb-4 border-l-4 border-teal-500 glow-teal">
+    <h4 class="text-teal-400 font-bold text-sm mb-3">Hooks Compartilhados (shared/hooks/)</h4>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <div class="text-xs font-mono text-cyan-400 mb-1">useDebounce&lt;T&gt;(value, delay=500)</div>
+        <p class="text-[10px] text-slate-400">Retorna valor debounced. Usa setTimeout com cleanup. Util para search inputs.</p>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-cyan-400 mb-1">useLocalStorage&lt;T&gt;(key, initialValue)</div>
+        <p class="text-[10px] text-slate-400">Persiste state em localStorage com JSON serialize. Cross-tab sync via storage event.</p>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-cyan-400 mb-1">useRole()</div>
+        <p class="text-[10px] text-slate-400">Retorna {role, isAdmin, canEdit, canExecute, isViewer} baseado no useAuthStore.</p>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-cyan-400 mb-1">useSearchPagination&lt;T&gt;(options)</div>
+        <p class="text-[10px] text-slate-400">Busca + filtros + paginacao. PageSize em localStorage. Retorna paged[], search, filters, etc.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- React Query hooks por dominio -->
+  <div class="grid md:grid-cols-2 gap-3">
+    <div class="glass rounded-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-purple-400 font-bold text-xs uppercase">Conversations (15 hooks)</h4>
+        <span class="text-[10px] text-slate-500 font-mono">hooks/use-conversations.ts</span>
+      </div>
+      <div class="space-y-0.5 text-[10px] font-mono text-slate-300">
+        <div>useConversations(workflowId?) · useFolders() · useConversation(id)</div>
+        <div>useCreateConversation · useDeleteConversation · useDeleteMany</div>
+        <div>useCloneConversation · useCancelExecution(convId)</div>
+        <div>useAdvanceStep · useGoBackStep · useJumpToStep</div>
+        <div>useUpdateConversationTitle · useResetStepSession</div>
+        <div>useTokenUsage(convId) · useExecutionStats(convId)</div>
+        <div class="text-pink-400 font-semibold mt-1">+ useSSEStream (498 linhas) + useImageUpload + useWorkflowStream</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-orange-400 font-bold text-xs uppercase">Workflows (6 hooks)</h4>
+        <span class="text-[10px] text-slate-500 font-mono">hooks/use-workflows.ts</span>
+      </div>
+      <div class="space-y-0.5 text-[10px] font-mono text-slate-300">
+        <div>useWorkflows() · useWorkflow(id)</div>
+        <div>useCreateWorkflow · useUpdateWorkflow</div>
+        <div>useDeleteWorkflow · useDuplicateWorkflow</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-blue-400 font-bold text-xs uppercase">Agents (8 hooks)</h4>
+        <span class="text-[10px] text-slate-500 font-mono">hooks/use-agents.ts</span>
+      </div>
+      <div class="space-y-0.5 text-[10px] font-mono text-slate-300">
+        <div>useAgents() · useAgent(id) · useCreateAgent · useUpdateAgent</div>
+        <div>useDeleteAgent · useToggleAgent · useImportAgent · useResyncAgent</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-cyan-400 font-bold text-xs uppercase">Skills (8 hooks)</h4>
+        <span class="text-[10px] text-slate-500 font-mono">hooks/use-skills.ts</span>
+      </div>
+      <div class="space-y-0.5 text-[10px] font-mono text-slate-300">
+        <div>useSkills() · useSkill(id) · useCreateSkill · useUpdateSkill</div>
+        <div>useDeleteSkill · useToggleSkill · useImportSkill · useResyncSkill</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-emerald-400 font-bold text-xs uppercase">Rules (8 hooks)</h4>
+      </div>
+      <div class="space-y-0.5 text-[10px] font-mono text-slate-300">
+        <div>useRules · useRule(id) · useCreateRule · useUpdateRule · useDeleteRule · useToggleRule · useImportRule · useResyncRule</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-pink-400 font-bold text-xs uppercase">Hooks / System (11 hooks)</h4>
+      </div>
+      <div class="space-y-0.5 text-[10px] font-mono text-slate-300">
+        <div>useHooks · useHook(id) · useCreateHook · useUpdateHook · useDeleteHook · useToggleHook</div>
+        <div>useHookTemplates (staleTime: Infinity) · useHookEvents (staleTime: Infinity)</div>
+        <div>useCreateFromTemplate(templateId) · useHookPreview(hookIds)</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-sky-400 font-bold text-xs uppercase">MCP Servers (9 hooks)</h4>
+      </div>
+      <div class="space-y-0.5 text-[10px] font-mono text-slate-300">
+        <div>useMcpServers · useMcpServer(id) · useCreateMcpServer · useUpdateMcpServer</div>
+        <div>useDeleteMcpServer · useToggleMcpServer · useTestMcpServer</div>
+        <div>useQuickInstallMcpServer</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-amber-400 font-bold text-xs uppercase">Plugins (8 hooks)</h4>
+      </div>
+      <div class="space-y-0.5 text-[10px] font-mono text-slate-300">
+        <div>usePlugins · usePlugin(id) · useUpdatePlugin · useInstallPlugin</div>
+        <div>useDeletePlugin (cascading invalidate) · useTogglePlugin · useResyncPlugin · useImportPluginUrl</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-teal-400 font-bold text-xs uppercase">Settings (15 hooks)</h4>
+      </div>
+      <div class="space-y-0.5 text-[10px] font-mono text-slate-300">
+        <div class="text-slate-500 font-semibold">Git (11):</div>
+        <div>useGitTokenStatus · useSaveGitToken · useRemoveGitToken · useGitRepos</div>
+        <div>useGitClone · useGitStatus · useGitPull · useGitPush</div>
+        <div>useGitAccounts · useCreateGitAccount · useDeleteGitAccount</div>
+        <div class="text-slate-500 font-semibold mt-1">API Keys (3): useApiKeys · useCreateApiKey · useRevokeApiKey</div>
+        <div class="text-slate-500 font-semibold">Budget (1): useBudget (refetch 30s)</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h4 class="text-rose-400 font-bold text-xs uppercase">Dashboard & Mais</h4>
+      </div>
+      <div class="space-y-0.5 text-[10px] font-mono text-slate-300">
+        <div class="text-slate-500 font-semibold">Dashboard (4): useDailyMetrics · useWorkflowMetrics · useMetricAlerts · useToolAnalytics (refresh 60s)</div>
+        <div class="text-slate-500 font-semibold">Executions (2): useExecutions(state?, limit) · useExecutionSummary (refresh 5s)</div>
+        <div class="text-slate-500 font-semibold">Traces (2): useConversationTraces · useTraceDetail</div>
+        <div class="text-slate-500 font-semibold">Webhooks (7): useWebhooks · useCreateWebhook · useDeleteWebhook · useToggleWebhook · useWebhookDeliveries</div>
+        <div class="text-slate-500 font-semibold">Admin (3): useAdminUsers · useUpdateUserRole · useDeleteUser</div>
+        <div class="text-slate-500 font-semibold">Step Templates (5): CRUD completo</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- React Query Config -->
+  <div class="glass rounded-xl p-5 mt-4 border-l-4 border-indigo-500">
+    <h4 class="text-indigo-400 font-bold text-sm mb-2">React Query Config (App.tsx)</h4>
+    <div class="code-block rounded-lg p-3 text-xs font-mono">
+      <span class="text-purple-400">new</span> QueryClient({ defaultOptions: {<br>
+      &nbsp;&nbsp;queries: { staleTime: <span class="text-emerald-400">30_000</span>, gcTime: <span class="text-emerald-400">300_000</span>, retry: <span class="text-emerald-400">1</span>, refetchOnWindowFocus: <span class="text-emerald-400">true</span> },<br>
+      &nbsp;&nbsp;mutations: { retry: <span class="text-emerald-400">0</span> }<br>
+      }})
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= -->
+<!-- 8. WORKFLOW WIZARD -->
+<!-- ============================================= -->
+<section class="reveal">
+  <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 text-white text-sm font-bold">8</span>
+    Workflow Wizard — 12 Sub-componentes
+  </h2>
+  <p class="text-slate-400 mb-8">Criacao e edicao de workflows em 3 fases com validacao, resources, DAG deps e preview visual</p>
 
   <!-- 3 Phases -->
-  <div class="grid md:grid-cols-3 gap-0">
-    <div class="glass rounded-l-xl md:rounded-l-xl md:rounded-r-none rounded-xl md:rounded-none p-5 border-l-4 border-teal-500 relative">
+  <div class="grid md:grid-cols-3 gap-0 mb-4">
+    <div class="glass rounded-l-xl md:rounded-r-none rounded-xl md:rounded-none p-5 border-l-4 border-teal-500">
       <div class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 text-white text-xs font-bold mb-3">1</div>
-      <h4 class="font-bold text-teal-400 text-sm mb-2">Basic Info</h4>
-      <p class="text-xs text-slate-400 leading-relaxed">Nome (obrigatorio), descricao, tipo: <code class="text-[10px] text-cyan-400">sequential</code> (auto) ou <code class="text-[10px] text-cyan-400">step_by_step</code> (usuario controla).</p>
+      <h4 class="font-bold text-teal-400 text-sm mb-2">PhaseBasicInfo</h4>
+      <p class="text-xs text-slate-400 leading-relaxed mb-2">Nome (obrigatorio), descricao, tipo: <code class="text-[10px] text-cyan-400">sequential</code> (executa tudo automatico) ou <code class="text-[10px] text-cyan-400">step_by_step</code> (usuario controla avanco).</p>
+      <div class="text-[10px] text-slate-500 font-mono">WizardStepper + WizardFooter</div>
     </div>
-    <div class="glass p-5 border-l-4 border-purple-500 relative">
+    <div class="glass p-5 border-l-4 border-purple-500">
       <div class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white text-xs font-bold mb-3">2</div>
-      <h4 class="font-bold text-purple-400 text-sm mb-2">Step Builder</h4>
-      <p class="text-xs text-slate-400 leading-relaxed">Split panel: sidebar com lista de steps + editor com systemPrompt, resources (MCP, Skills, Agents, Rules, Hooks), validators, variables, DAG deps.</p>
+      <h4 class="font-bold text-purple-400 text-sm mb-2">PhaseStepBuilder</h4>
+      <p class="text-xs text-slate-400 leading-relaxed mb-2">Split panel: <span class="text-purple-300">StepListSidebar</span> (drag-drop) + <span class="text-purple-300">StepDetailEditor</span> com StepResourceTabs (MCP, Skills, Agents, Rules, Hooks), VariableConfigPanel, ValidatorConfigPanel.</p>
+      <div class="text-[10px] text-slate-500 font-mono">ResourceSelectPanel + WorkflowFlowPreview</div>
     </div>
-    <div class="glass rounded-r-xl md:rounded-r-xl md:rounded-l-none rounded-xl md:rounded-none p-5 border-l-4 border-orange-500 relative">
+    <div class="glass rounded-r-xl md:rounded-l-none rounded-xl md:rounded-none p-5 border-l-4 border-orange-500">
       <div class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-500 text-white text-xs font-bold mb-3">3</div>
-      <h4 class="font-bold text-orange-400 text-sm mb-2">Review</h4>
-      <p class="text-xs text-slate-400 leading-relaxed">Resumo completo: workflow info, flow preview, cards de cada step com resource counts e configuracoes. Botao "Criar" ou "Salvar".</p>
+      <h4 class="font-bold text-orange-400 text-sm mb-2">PhaseReview</h4>
+      <p class="text-xs text-slate-400 leading-relaxed mb-2">Resumo completo: workflow info, flow preview visual, cards de cada step com resource counts e configuracoes. Botao "Criar" ou "Salvar".</p>
+      <div class="text-[10px] text-slate-500 font-mono">PromptHistoryDialog + PromptDiffViewer</div>
     </div>
   </div>
 
   <!-- WorkflowStep Interface -->
-  <div class="glass rounded-xl p-5 mt-4">
-    <h4 class="text-orange-400 font-bold text-sm mb-3">WorkflowStep Interface</h4>
-    <div class="code-block bg-slate-900/80 rounded-lg p-4 text-xs font-mono overflow-x-auto">
+  <div class="glass rounded-xl p-5">
+    <h4 class="text-orange-400 font-bold text-sm mb-3">WorkflowStep Interface — 20 campos</h4>
+    <div class="code-block rounded-lg p-4 text-xs font-mono overflow-x-auto">
       <span class="text-purple-400">interface</span> <span class="text-cyan-400">WorkflowStep</span> {<br>
-      &nbsp;&nbsp;<span class="text-slate-300">name:</span> <span class="text-cyan-400">string</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// obrigatorio</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">systemPrompt?:</span> <span class="text-cyan-400">string</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// prompt customizado</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">useBasePrompt?:</span> <span class="text-cyan-400">boolean</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// combina com base prompt</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">conditions:</span> <span class="text-cyan-400">StepConditions</span>&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// routing rules</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">maxRetries:</span> <span class="text-cyan-400">number</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// retry on failure</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">mcpServerIds:</span> <span class="text-cyan-400">string[]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// MCP servers</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">skillIds:</span> <span class="text-cyan-400">string[]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// skills</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">agentIds:</span> <span class="text-cyan-400">string[]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// agentes</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">ruleIds:</span> <span class="text-cyan-400">string[]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// rules</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">hookIds:</span> <span class="text-cyan-400">string[]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// hooks</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">dependsOn?:</span> <span class="text-cyan-400">string[]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// DAG dependencies</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">name:</span> <span class="text-cyan-400">string</span>               <span class="text-slate-500">// obrigatorio</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">baseUrl:</span> <span class="text-cyan-400">string</span>            <span class="text-slate-500">// project path</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">systemPrompt?:</span> <span class="text-cyan-400">string</span>      <span class="text-slate-500">// prompt customizado</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">useBasePrompt?:</span> <span class="text-cyan-400">boolean</span>    <span class="text-slate-500">// combina com base prompt</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">conditions:</span> <span class="text-cyan-400">StepConditions</span>   <span class="text-slate-500">// {rules: ConditionRule[], default: string}</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">maxRetries:</span> <span class="text-cyan-400">number</span>         <span class="text-slate-500">// retry on failure</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">mcpServerIds:</span> <span class="text-cyan-400">string[]</span>     <span class="text-slate-500">// MCP servers</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">skillIds:</span> <span class="text-cyan-400">string[]</span>         <span class="text-slate-500">// skills</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">agentIds:</span> <span class="text-cyan-400">string[]</span>         <span class="text-slate-500">// agentes</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">ruleIds:</span> <span class="text-cyan-400">string[]</span>          <span class="text-slate-500">// rules</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">hookIds:</span> <span class="text-cyan-400">string[]</span>          <span class="text-slate-500">// hooks</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">dependsOn?:</span> <span class="text-cyan-400">string[]</span>       <span class="text-slate-500">// DAG dependencies</span><br>
       &nbsp;&nbsp;<span class="text-slate-300">validators?:</span> <span class="text-cyan-400">ValidatorConfig[]</span> <span class="text-slate-500">// build_check, test_check, llm_judge</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">outputVariables?:</span> <span class="text-cyan-400">string[]</span>&nbsp;<span class="text-slate-500">// variaveis produzidas</span><br>
-      &nbsp;&nbsp;<span class="text-slate-300">inputVariables?:</span> <span class="text-cyan-400">string[]</span>&nbsp;&nbsp;<span class="text-slate-500">// variaveis necessarias</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">outputVariables?:</span> <span class="text-cyan-400">string[]</span> <span class="text-slate-500">// variaveis produzidas</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">inputVariables?:</span> <span class="text-cyan-400">string[]</span>  <span class="text-slate-500">// variaveis necessarias</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">backend?:</span> <span class="text-cyan-400">string</span>           <span class="text-slate-500">// engine backend</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">timeout?:</span> <span class="text-cyan-400">number</span>           <span class="text-slate-500">// timeout em ms</span><br>
       &nbsp;&nbsp;<span class="text-slate-300">errorHandler?:</span> <span class="text-cyan-400">'fail' | 'skip' | 'fallback' | 'continue_next'</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">skipCondition?:</span> <span class="text-cyan-400">string</span>    <span class="text-slate-500">// condicao de skip</span><br>
+      &nbsp;&nbsp;<span class="text-slate-300">subWorkflowId?:</span> <span class="text-cyan-400">string</span>    <span class="text-slate-500">// sub-workflow aninhado</span><br>
       }
     </div>
   </div>
 </section>
 
 <!-- ============================================= -->
-<!-- 7. 16 FEATURES -->
+<!-- 9. MAPA DE FEATURES (TODAS AS 18) -->
 <!-- ============================================= -->
 <section class="reveal">
   <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
-    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 text-white text-sm font-bold">7</span>
-    Mapa de Features
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 text-white text-sm font-bold">9</span>
+    Mapa Completo de Features
   </h2>
-  <p class="text-slate-400 mb-8">Cada feature é um domínio independente com API, store, hooks e componentes</p>
+  <p class="text-slate-400 mb-8">Cada feature e um dominio independente com API, store, hooks e componentes proprios</p>
 
-  <div class="grid md:grid-cols-2 gap-3">
-    <div class="glass rounded-xl p-4 border-l-4 border-purple-500">
+  <!-- Major Features -->
+  <div class="grid md:grid-cols-2 gap-3 mb-4">
+    <div class="glass rounded-xl p-4 border-l-4 border-purple-500 glow-purple">
       <div class="flex items-center justify-between mb-1">
-        <h4 class="text-purple-400 font-bold text-sm">💬 conversations</h4>
-        <span class="text-[10px] font-mono text-slate-500">~1500 linhas</span>
+        <h4 class="text-purple-400 font-bold text-sm">conversations</h4>
+        <span class="text-[10px] font-mono text-slate-500">14 componentes, 18 hooks</span>
       </div>
-      <p class="text-xs text-slate-400 mb-2">Chat com SSE streaming, message bubbles, actions collapsible, AskUserQuestion, upload de imagens, timeline de execucao, metricas de tokens.</p>
+      <p class="text-xs text-slate-400 mb-2">ChatContainer com SSE streaming real-time, MessageBubble (markdown + actions collapsible), MessageInput (upload + voice), StepPanel (timeline + step nav), UserQuestionCard (AskUserQuestion interativo), SuggestedNextSteps, UsageStatsDialog, ExecutionTimeline, MessageFeedback (thumbs), ImageUploader, ProgressBar, StreamingStatus.</p>
       <div class="flex flex-wrap gap-1">
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-mono">14 componentes</span>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">4 hooks</span>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">128L api.ts</span>
+        <span class="mini-badge bg-purple-500/10 text-purple-400">SSE Stream</span>
+        <span class="mini-badge bg-purple-500/10 text-purple-400">Image Upload</span>
+        <span class="mini-badge bg-purple-500/10 text-purple-400">Voice Input</span>
+        <span class="mini-badge bg-purple-500/10 text-purple-400">Step Navigation</span>
       </div>
     </div>
 
-    <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
+    <div class="glass rounded-xl p-4 border-l-4 border-orange-500 glow-orange">
       <div class="flex items-center justify-between mb-1">
-        <h4 class="text-orange-400 font-bold text-sm">📋 workflows</h4>
-        <span class="text-[10px] font-mono text-slate-500">~1000 linhas</span>
+        <h4 class="text-orange-400 font-bold text-sm">workflows</h4>
+        <span class="text-[10px] font-mono text-slate-500">17 componentes, 6 hooks, 227L store</span>
       </div>
-      <p class="text-xs text-slate-400 mb-2">Wizard 3 fases com 12 sub-componentes. Resource selection, validators, DAG deps, prompt history com diff viewer.</p>
+      <p class="text-xs text-slate-400 mb-2">WorkflowWizard 3 fases com 12 sub-componentes. WizardStepper, PhaseBasicInfo, PhaseStepBuilder (split panel: StepListSidebar + StepDetailEditor + StepResourceTabs + ResourceSelectPanel + VariableConfigPanel + ValidatorConfigPanel + WorkflowFlowPreview), PhaseReview, PromptHistoryDialog com PromptDiffViewer.</p>
       <div class="flex flex-wrap gap-1">
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 font-mono">16 componentes</span>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">227L store</span>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">72L types</span>
+        <span class="mini-badge bg-orange-500/10 text-orange-400">3-Phase Wizard</span>
+        <span class="mini-badge bg-orange-500/10 text-orange-400">DAG Dependencies</span>
+        <span class="mini-badge bg-orange-500/10 text-orange-400">Prompt Versioning</span>
       </div>
     </div>
 
-    <div class="glass rounded-xl p-4 border-l-4 border-teal-500">
+    <div class="glass rounded-xl p-4 border-l-4 border-teal-500 glow-teal">
       <div class="flex items-center justify-between mb-1">
-        <h4 class="text-teal-400 font-bold text-sm">📊 dashboard</h4>
-        <span class="text-[10px] font-mono text-slate-500">~600 linhas</span>
+        <h4 class="text-teal-400 font-bold text-sm">dashboard</h4>
+        <span class="text-[10px] font-mono text-slate-500">8 componentes, 4 hooks</span>
       </div>
-      <p class="text-xs text-slate-400 mb-2">KPIs (workflows, conversations, steps, messages), graficos Recharts (daily cost, workflow comparison), tool analytics, budget bars, alerts.</p>
+      <p class="text-xs text-slate-400 mb-2">Stats cards (workflows, conversations, steps, messages), PerformanceCards (latency, errors, model), DailyChart (Recharts line), WorkflowComparison (bar), ToolAnalytics, TokenBudgetBar (progress), AlertsPanel, recent conversations list.</p>
       <div class="flex flex-wrap gap-1">
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">6 componentes</span>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">4 hooks</span>
+        <span class="mini-badge bg-teal-500/10 text-teal-400">Recharts</span>
+        <span class="mini-badge bg-teal-500/10 text-teal-400">Auto-refresh 60s</span>
+        <span class="mini-badge bg-teal-500/10 text-teal-400">Budget Monitor</span>
       </div>
     </div>
 
-    <div class="glass rounded-xl p-4 border-l-4 border-blue-500">
+    <div class="glass rounded-xl p-4 border-l-4 border-blue-500 glow-blue">
       <div class="flex items-center justify-between mb-1">
-        <h4 class="text-blue-400 font-bold text-sm">⚙️ settings</h4>
-        <span class="text-[10px] font-mono text-slate-500">~911 linhas</span>
+        <h4 class="text-blue-400 font-bold text-sm">settings</h4>
+        <span class="text-[10px] font-mono text-slate-500">15 hooks, multi-tab</span>
       </div>
-      <p class="text-xs text-slate-400 mb-2">Profile, token budget (daily/monthly), API keys CRUD, multi-account GitHub com repo browser e clone dialog.</p>
+      <p class="text-xs text-slate-400 mb-2">Profile editor, token budget (daily/monthly progress bars), API keys CRUD com reveal, multi-account GitHub com repo browser, clone dialog, git status/pull/push, init repo.</p>
       <div class="flex flex-wrap gap-1">
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">8 hooks</span>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">116L api</span>
-      </div>
-    </div>
-
-    <div class="glass rounded-xl p-4 border-l-4 border-emerald-500">
-      <div class="flex items-center justify-between mb-1">
-        <h4 class="text-emerald-400 font-bold text-sm">▶️ executions</h4>
-        <span class="text-[10px] font-mono text-slate-500">~332 linhas</span>
-      </div>
-      <p class="text-xs text-slate-400 mb-2">Historico com auto-refresh 5s, summary cards por estado, filtros por tab, stop button, duracao calculada, error details.</p>
-      <div class="flex flex-wrap gap-1">
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono">6 estados</span>
+        <span class="mini-badge bg-blue-500/10 text-blue-400">Multi-Git Account</span>
+        <span class="mini-badge bg-blue-500/10 text-blue-400">API Keys</span>
+        <span class="mini-badge bg-blue-500/10 text-blue-400">Budget Tracking</span>
       </div>
     </div>
 
     <div class="glass rounded-xl p-4 border-l-4 border-pink-500">
       <div class="flex items-center justify-between mb-1">
-        <h4 class="text-pink-400 font-bold text-sm">🤖 workflow-chat</h4>
-        <span class="text-[10px] font-mono text-slate-500">~504 linhas</span>
+        <h4 class="text-pink-400 font-bold text-sm">workflow-chat</h4>
+        <span class="text-[10px] font-mono text-slate-500">useWorkflowStream hook proprio</span>
       </div>
-      <p class="text-xs text-slate-400 mb-2">Chat direto com workflow sem criar conversation formal. SSE stream proprio, endpoint v1.</p>
-      <div class="flex flex-wrap gap-1">
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 font-mono">233L hook SSE</span>
+      <p class="text-xs text-slate-400 mb-2">Chat direto com workflow sem criar conversation formal. SSE stream dedicado via <code class="text-[10px] text-pink-400">/api/v1/workflows/{id}/execute/stream</code>. Acumula mensagens por step.</p>
+    </div>
+
+    <div class="glass rounded-xl p-4 border-l-4 border-emerald-500">
+      <div class="flex items-center justify-between mb-1">
+        <h4 class="text-emerald-400 font-bold text-sm">executions</h4>
+        <span class="text-[10px] font-mono text-slate-500">auto-refresh 5s, 6 estados</span>
       </div>
+      <p class="text-xs text-slate-400 mb-2">Historico de execucoes com summary cards (queued, running, paused, completed, failed, cancelled), filtros por estado, stop button, duracao calculada, error details.</p>
     </div>
   </div>
 
   <!-- CRUD Features Grid -->
-  <h4 class="text-slate-400 text-sm font-bold mt-6 mb-3">Features CRUD (padrao identico)</h4>
+  <h4 class="text-slate-400 text-sm font-bold mb-3">Features CRUD (padrao identico: Page + Card + Table + Form + Modal + Import)</h4>
   <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-    <div class="glass rounded-lg p-3 text-center"><span class="text-sm">🧠</span><div class="text-xs text-slate-300 font-medium mt-1">skills</div><div class="text-[10px] text-slate-500">5 comps + import</div></div>
-    <div class="glass rounded-lg p-3 text-center"><span class="text-sm">🤖</span><div class="text-xs text-slate-300 font-medium mt-1">agents</div><div class="text-[10px] text-slate-500">5 comps + import</div></div>
-    <div class="glass rounded-lg p-3 text-center"><span class="text-sm">📐</span><div class="text-xs text-slate-300 font-medium mt-1">rules</div><div class="text-[10px] text-slate-500">5 comps + import</div></div>
-    <div class="glass rounded-lg p-3 text-center"><span class="text-sm">🧩</span><div class="text-xs text-slate-300 font-medium mt-1">plugins</div><div class="text-[10px] text-slate-500">5 comps + resync</div></div>
-    <div class="glass rounded-lg p-3 text-center"><span class="text-sm">🪝</span><div class="text-xs text-slate-300 font-medium mt-1">hooks</div><div class="text-[10px] text-slate-500">5 comps + templates</div></div>
-    <div class="glass rounded-lg p-3 text-center"><span class="text-sm">🖥️</span><div class="text-xs text-slate-300 font-medium mt-1">mcp-servers</div><div class="text-[10px] text-slate-500">5 comps + quick-install</div></div>
+    <div class="glass rounded-lg p-3">
+      <div class="text-xs text-slate-300 font-medium">agents</div>
+      <div class="text-[10px] text-slate-500 mt-1">9 comps · model, permissionMode (default/full/plan), maxTurns, tools[], disallowedTools[], skills[], import/resync GitHub</div>
+    </div>
+    <div class="glass rounded-lg p-3">
+      <div class="text-xs text-slate-300 font-medium">skills</div>
+      <div class="text-[10px] text-slate-500 mt-1">9 comps · body (markdown content), allowedTools[], model, import/resync GitHub, vinculacao com rules</div>
+    </div>
+    <div class="glass rounded-lg p-3">
+      <div class="text-xs text-slate-300 font-medium">rules</div>
+      <div class="text-[10px] text-slate-500 mt-1">9 comps · body (text), skillId vinculacao, import/resync GitHub, isGlobal toggle</div>
+    </div>
+    <div class="glass rounded-lg p-3">
+      <div class="text-xs text-slate-300 font-medium">plugins</div>
+      <div class="text-[10px] text-slate-500 mt-1">9 comps · Pacotes (MCP + Skills + Agents), install manifest JSON, import GitHub URL, resync, cascade delete</div>
+    </div>
+    <div class="glass rounded-lg p-3">
+      <div class="text-xs text-slate-300 font-medium">hooks</div>
+      <div class="text-[10px] text-slate-500 mt-1">6 comps · 6 eventTypes (PreToolUse, PostToolUse, Stop...), handlerType (command/prompt/agent), templates dialog, preview JSON</div>
+    </div>
+    <div class="glass rounded-lg p-3">
+      <div class="text-xs text-slate-300 font-medium">mcp-servers</div>
+      <div class="text-[10px] text-slate-500 mt-1">9 comps · 3 tipos (http/sse/stdio), test connection, quick-install de CLI, toolsCache, envVars{}</div>
+    </div>
+    <div class="glass rounded-lg p-3">
+      <div class="text-xs text-slate-300 font-medium">webhooks</div>
+      <div class="text-[10px] text-slate-500 mt-1">7 hooks · URL + events[] + secret, toggle, delivery logs com status code e response body</div>
+    </div>
+    <div class="glass rounded-lg p-3">
+      <div class="text-xs text-slate-300 font-medium">step-templates</div>
+      <div class="text-[10px] text-slate-500 mt-1">5 hooks · Templates reutilizaveis de step com resources pre-configurados para workflows</div>
+    </div>
+    <div class="glass rounded-lg p-3">
+      <div class="text-xs text-slate-300 font-medium">auth + admin</div>
+      <div class="text-[10px] text-slate-500 mt-1">Login/Register forms, ProtectedRoute guard, AdminPage para gestao de usuarios (roles: admin/developer/viewer)</div>
+    </div>
   </div>
 </section>
 
 <!-- ============================================= -->
-<!-- 8. COMPONENTES UI -->
+<!-- 10. COMPONENTES UI -->
 <!-- ============================================= -->
 <section class="reveal">
   <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
-    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 text-white text-sm font-bold">8</span>
-    Componentes UI
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 text-white text-sm font-bold">10</span>
+    120+ Componentes UI
   </h2>
-  <p class="text-slate-400 mb-8">23 componentes shadcn/ui + 5 comuns + 1 layout</p>
+  <p class="text-slate-400 mb-8">23 shadcn/ui (Radix primitives) + 5 comuns + componentes por feature</p>
 
   <!-- shadcn grid -->
   <div class="glass rounded-xl p-5 mb-4">
-    <h4 class="text-cyan-400 font-bold text-xs uppercase tracking-wider mb-3">shadcn/ui — shared/components/ui/</h4>
+    <h4 class="text-cyan-400 font-bold text-xs uppercase tracking-wider mb-3">23 shadcn/ui — shared/components/ui/ (Radix + Tailwind + CVA)</h4>
     <div class="flex flex-wrap gap-2">
-      <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Button</span>
+      <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Button (6 variants)</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Input</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Textarea</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Label</span>
-      <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Card</span>
+      <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Card (5 parts)</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Dialog</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">AlertDialog</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Select</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">DropdownMenu</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Tabs</span>
-      <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Badge</span>
+      <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Badge (4 variants)</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Avatar</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Alert</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Progress</span>
@@ -756,121 +1189,262 @@
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Collapsible</span>
       <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">Sonner</span>
     </div>
+    <p class="text-[10px] text-slate-500 mt-3">Todos com React.forwardRef, acessibilidade ARIA, keyboard navigation, data-[state] animations, CVA variants.</p>
   </div>
 
   <!-- Common + Layout -->
   <div class="grid md:grid-cols-2 gap-4">
     <div class="glass rounded-xl p-5">
-      <h4 class="text-emerald-400 font-bold text-xs uppercase tracking-wider mb-3">Comuns — shared/components/common/</h4>
+      <h4 class="text-emerald-400 font-bold text-xs uppercase tracking-wider mb-3">5 Comuns — shared/components/common/</h4>
       <div class="space-y-2 text-sm">
-        <div class="flex justify-between items-center"><span class="text-slate-300 font-medium">SearchPagination</span><span class="text-[10px] font-mono text-slate-500">288 linhas — busca + filtros + paginacao</span></div>
-        <div class="flex justify-between items-center"><span class="text-slate-300 font-medium">ImportRepoDialog</span><span class="text-[10px] font-mono text-slate-500">197 linhas — import GitHub</span></div>
-        <div class="flex justify-between items-center"><span class="text-slate-300 font-medium">ConfirmDialog</span><span class="text-[10px] font-mono text-slate-500">52 linhas — confirmacao</span></div>
-        <div class="flex justify-between items-center"><span class="text-slate-300 font-medium">EmptyState</span><span class="text-[10px] font-mono text-slate-500">28 linhas — estado vazio</span></div>
-        <div class="flex justify-between items-center"><span class="text-slate-300 font-medium">LoadingSkeleton</span><span class="text-[10px] font-mono text-slate-500">38 linhas — loading</span></div>
+        <div class="flex justify-between items-center"><span class="text-slate-300 font-medium">SearchPagination</span><span class="text-[10px] font-mono text-slate-500">hook + SearchBar + FilterBar + Pagination</span></div>
+        <div class="flex justify-between items-center"><span class="text-slate-300 font-medium">ImportRepoDialog</span><span class="text-[10px] font-mono text-slate-500">import GitHub repo dialog</span></div>
+        <div class="flex justify-between items-center"><span class="text-slate-300 font-medium">ConfirmDialog</span><span class="text-[10px] font-mono text-slate-500">confirmacao com variant destructive</span></div>
+        <div class="flex justify-between items-center"><span class="text-slate-300 font-medium">EmptyState</span><span class="text-[10px] font-mono text-slate-500">icon + title + desc + action</span></div>
+        <div class="flex justify-between items-center"><span class="text-slate-300 font-medium">LoadingSkeleton</span><span class="text-[10px] font-mono text-slate-500">Loading, CardSkeleton, ListSkeleton</span></div>
       </div>
     </div>
 
     <div class="glass rounded-xl p-5">
-      <h4 class="text-orange-400 font-bold text-xs uppercase tracking-wider mb-3">Layout & Theme</h4>
+      <h4 class="text-orange-400 font-bold text-xs uppercase tracking-wider mb-3">Design System & Theme</h4>
       <div class="space-y-3 text-sm">
         <div>
-          <div class="text-slate-300 font-medium mb-1">Sidebar (245 linhas)</div>
-          <p class="text-xs text-slate-500">3 secoes: Menu (5), Config (9), Admin (condicional). Logo "Execut", user avatar, logout.</p>
+          <div class="text-slate-300 font-medium mb-1">Sidebar (layout/sidebar.tsx)</div>
+          <p class="text-xs text-slate-500">3 secoes: Menu (Dashboard, Conversas, Workflows, Execucoes, Workflow Agent), Config (MCP Servers, Skills, Agents, Rules, Plugins, Hooks, Webhooks, Templates), Admin (condicional).</p>
         </div>
         <div>
-          <div class="text-slate-300 font-medium mb-1">Dark Mode</div>
-          <p class="text-xs text-slate-500">class-based (dark padrao), CSS vars HSL, Inter font, custom scrollbar, prose-invert markdown.</p>
-        </div>
-        <div>
-          <div class="text-slate-300 font-medium mb-1">Cores Primary</div>
+          <div class="text-slate-300 font-medium mb-1">Dark Mode & Cores</div>
           <div class="flex gap-2 mt-1">
-            <div class="w-6 h-6 rounded" style="background: hsl(173, 80%, 40%)" title="Teal"></div>
-            <div class="w-6 h-6 rounded" style="background: hsl(199, 89%, 48%)" title="Info"></div>
-            <div class="w-6 h-6 rounded" style="background: hsl(160, 84%, 39%)" title="Success"></div>
-            <div class="w-6 h-6 rounded" style="background: hsl(38, 92%, 50%)" title="Warning"></div>
-            <div class="w-6 h-6 rounded" style="background: hsl(0, 84%, 60%)" title="Destructive"></div>
+            <div class="flex flex-col items-center gap-0.5">
+              <div class="w-6 h-6 rounded" style="background: hsl(173, 80%, 40%)" title="Primary"></div>
+              <span class="text-[8px] text-slate-500">primary</span>
+            </div>
+            <div class="flex flex-col items-center gap-0.5">
+              <div class="w-6 h-6 rounded" style="background: hsl(199, 89%, 48%)" title="Info"></div>
+              <span class="text-[8px] text-slate-500">info</span>
+            </div>
+            <div class="flex flex-col items-center gap-0.5">
+              <div class="w-6 h-6 rounded" style="background: hsl(160, 84%, 39%)" title="Success"></div>
+              <span class="text-[8px] text-slate-500">success</span>
+            </div>
+            <div class="flex flex-col items-center gap-0.5">
+              <div class="w-6 h-6 rounded" style="background: hsl(38, 92%, 50%)" title="Warning"></div>
+              <span class="text-[8px] text-slate-500">warning</span>
+            </div>
+            <div class="flex flex-col items-center gap-0.5">
+              <div class="w-6 h-6 rounded" style="background: hsl(0, 84%, 60%)" title="Destructive"></div>
+              <span class="text-[8px] text-slate-500">destruct</span>
+            </div>
+            <div class="flex flex-col items-center gap-0.5">
+              <div class="w-6 h-6 rounded" style="background: hsl(222, 47%, 11%)" title="Background"></div>
+              <span class="text-[8px] text-slate-500">bg dark</span>
+            </div>
+            <div class="flex flex-col items-center gap-0.5">
+              <div class="w-6 h-6 rounded" style="background: hsl(224, 47%, 13%)" title="Card"></div>
+              <span class="text-[8px] text-slate-500">card</span>
+            </div>
           </div>
         </div>
+        <div>
+          <div class="text-slate-300 font-medium mb-1">Fontes</div>
+          <p class="text-xs text-slate-500">Display: Inter (400-900) · Code: JetBrains Mono, Fira Code, Monaco</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Animations -->
+  <div class="glass rounded-xl p-5 mt-4 border-l-4 border-pink-500">
+    <h4 class="text-pink-400 font-bold text-sm mb-3">Animacoes CSS (6 custom keyframes)</h4>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+      <div><span class="text-pink-400 font-mono">accordion-down/up</span><p class="text-[10px] text-slate-500">Height transition 0.2s</p></div>
+      <div><span class="text-pink-400 font-mono">fade-in</span><p class="text-[10px] text-slate-500">Opacity 0→1 em 0.3s</p></div>
+      <div><span class="text-pink-400 font-mono">slide-up</span><p class="text-[10px] text-slate-500">translateY + opacity 0.3s</p></div>
+      <div><span class="text-pink-400 font-mono">slide-in-right</span><p class="text-[10px] text-slate-500">translateX + opacity 0.3s</p></div>
+      <div><span class="text-pink-400 font-mono">thinking-dots</span><p class="text-[10px] text-slate-500">Staggered dots (0.2s delays)</p></div>
+      <div><span class="text-pink-400 font-mono">shimmer</span><p class="text-[10px] text-slate-500">Gradient bg para streaming</p></div>
+    </div>
+    <p class="text-[10px] text-slate-500 mt-2">+ prefers-reduced-motion support: desabilita todas animacoes quando usuario prefere</p>
+  </div>
+</section>
+
+<!-- ============================================= -->
+<!-- 11. TYPESCRIPT TYPES -->
+<!-- ============================================= -->
+<section class="reveal">
+  <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 text-white text-sm font-bold">11</span>
+    TypeScript Types — Modelo de Dados
+  </h2>
+  <p class="text-slate-400 mb-8">Tipagem forte com 50+ interfaces cobrindo todos os dominios</p>
+
+  <div class="grid md:grid-cols-2 gap-3">
+    <div class="glass rounded-xl p-4">
+      <h4 class="text-purple-400 font-bold text-xs mb-2">Conversation & Message</h4>
+      <div class="text-[10px] font-mono text-slate-300 space-y-0.5">
+        <div><span class="text-cyan-400">Conversation</span>: id, title, projectPath, status (<span class="text-emerald-400">active|completed|failed|archived</span>), totalTokensUsed, totalCostUsd, workflowId, workflowName, workflowType, currentStepIndex, messagesCount, tags[], parentId</div>
+        <div><span class="text-cyan-400">Message</span>: id, role (<span class="text-emerald-400">user|assistant|system</span>), content, stepId, stepName, selectedForContext, tokenCount, model, metadata (actions[]), attachments[]</div>
+        <div><span class="text-cyan-400">Action</span>: type (<span class="text-emerald-400">tool_use|tool_result|thinking|error|stderr|system</span>), name, input, output, content, id</div>
+        <div><span class="text-cyan-400">Attachment</span>: id, filename, mimeType, size, path, url</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <h4 class="text-orange-400 font-bold text-xs mb-2">Workflow & Step</h4>
+      <div class="text-[10px] font-mono text-slate-300 space-y-0.5">
+        <div><span class="text-cyan-400">Workflow</span>: id, name, description, type (<span class="text-emerald-400">sequential|step_by_step</span>), status (<span class="text-emerald-400">draft|active|archived</span>), tags[], executionCount, steps[], stepsCount, conversationsCount</div>
+        <div><span class="text-cyan-400">WorkflowStep</span>: 20 campos (ver secao 8)</div>
+        <div><span class="text-cyan-400">StepConditions</span>: rules[{type, match, goto, maxRetries}], default</div>
+        <div><span class="text-cyan-400">ConditionRule.type</span>: contains | not_contains | equals | starts_with | ends_with | regex | length_gt | length_lt</div>
+        <div><span class="text-cyan-400">ValidatorConfig</span>: type, command?, schema?, criteria?, enabled</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <h4 class="text-teal-400 font-bold text-xs mb-2">Agent & Skill & Rule</h4>
+      <div class="text-[10px] font-mono text-slate-300 space-y-0.5">
+        <div><span class="text-cyan-400">Agent</span>: name, description, systemPrompt, tools[], disallowedTools[], model, permissionMode (default/full/plan), maxTurns, skills[], enabled, isGlobal, source (manual/imported), repo fields</div>
+        <div><span class="text-cyan-400">Skill</span>: name, description, body (markdown), allowedTools[], model, enabled, isGlobal, source, repo fields</div>
+        <div><span class="text-cyan-400">Rule</span>: name, description, body (text), enabled, isGlobal, skillId, source, repo fields</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <h4 class="text-blue-400 font-bold text-xs mb-2">Hook & MCP Server & Plugin</h4>
+      <div class="text-[10px] font-mono text-slate-300 space-y-0.5">
+        <div><span class="text-cyan-400">Hook</span>: name, eventType, matcher (regex), handlerType (<span class="text-emerald-400">command|prompt|agent</span>), command, prompt, timeout, isAsync, statusMessage, enabled, isTemplate</div>
+        <div><span class="text-cyan-400">HookEventInfo</span>: value, label, description, supportsMatcher, category (<span class="text-emerald-400">tools|lifecycle|workflow|system</span>)</div>
+        <div><span class="text-cyan-400">McpServer</span>: name, type (<span class="text-emerald-400">http|sse|stdio</span>), uri, command, args[], envVars{}, toolsCache (McpTool[]), lastTestOk</div>
+        <div><span class="text-cyan-400">Plugin</span>: name, version, author, mcpServersCount, skillsCount, agentsCount, source, manifest (nested MCP+Skills+Agents)</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <h4 class="text-emerald-400 font-bold text-xs mb-2">Execution & Trace</h4>
+      <div class="text-[10px] font-mono text-slate-300 space-y-0.5">
+        <div><span class="text-cyan-400">Execution</span>: id, state (<span class="text-emerald-400">queued|running|paused|completed|failed|cancelled</span>), currentStepIndex, conversationId, workflowName, error, startedAt, completedAt</div>
+        <div><span class="text-cyan-400">TraceSummary</span>: executionId, stepId, resultStatus, durationMs, contentLength, actionsCount</div>
+        <div><span class="text-cyan-400">TraceDetail</span>: commandLine, model, projectPath, parsedEvents[], exitCode, inputTokens, outputTokens, totalCostUsd</div>
+        <div><span class="text-cyan-400">ParsedEvent</span>: t (offset ms), k (event type), d? (data object)</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-4">
+      <h4 class="text-pink-400 font-bold text-xs mb-2">Auth & Settings</h4>
+      <div class="text-[10px] font-mono text-slate-300 space-y-0.5">
+        <div><span class="text-cyan-400">AuthUser</span>: id, email, name, status (<span class="text-emerald-400">active|suspended|invited</span>), role (<span class="text-emerald-400">admin|developer|viewer</span>), maxConcurrentExecutions, basePath, hasGithub</div>
+        <div><span class="text-cyan-400">GitStatus</span>: isRepo, branch, ahead, behind, modified, untracked, staged, hasRemote, lastCommit</div>
+        <div><span class="text-cyan-400">BudgetSummary</span>: dailyUsage, dailyLimit, monthlyUsage, monthlyLimit, dailyPercent, monthlyPercent</div>
+        <div><span class="text-cyan-400">Webhook</span>: url, events[], secret, enabled, deliveryCount</div>
+        <div><span class="text-cyan-400">DailyMetric</span>: date, cost, tokens, executions, errors, p50/p95DurationMs, errorBreakdown{}, modelBreakdown{}</div>
       </div>
     </div>
   </div>
 </section>
 
 <!-- ============================================= -->
-<!-- 9. ARQUIVOS-CHAVE -->
+<!-- 12. UTILITY FUNCTIONS -->
 <!-- ============================================= -->
 <section class="reveal">
   <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
-    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 text-white text-sm font-bold">9</span>
-    Arquivos-Chave
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white text-sm font-bold">12</span>
+    Utility Functions
   </h2>
-  <p class="text-slate-400 mb-8">Os arquivos mais importantes do frontend</p>
+  <p class="text-slate-400 mb-8">shared/lib/utils.ts + sse-client.ts — funcoes core reutilizadas em todo o projeto</p>
 
-  <div class="glass rounded-xl overflow-hidden">
-    <table class="sse-table text-sm">
-      <thead>
-        <tr>
-          <th class="text-slate-400">Arquivo</th>
-          <th class="text-slate-400">Linhas</th>
-          <th class="text-slate-400 hidden md:table-cell">Responsabilidade</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td class="font-mono text-teal-400 text-xs">use-sse-stream.ts</td><td>498</td><td class="text-slate-400 hidden md:table-cell">SSE streaming, 18 eventos, reconnect, cancel</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">workflow-chat/index.tsx</td><td>504</td><td class="text-slate-400 hidden md:table-cell">Chat direto com workflow (SSE v1)</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">message-bubble.tsx</td><td>389</td><td class="text-slate-400 hidden md:table-cell">Renderizacao de mensagens (markdown, actions, AskUserQuestion)</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">step-panel.tsx</td><td>361</td><td class="text-slate-400 hidden md:table-cell">Painel de step em conversas</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">usage-stats-dialog.tsx</td><td>361</td><td class="text-slate-400 hidden md:table-cell">Metricas de tokens e custo</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">execution-timeline.tsx</td><td>339</td><td class="text-slate-400 hidden md:table-cell">Timeline visual de steps executados</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">hook-form.tsx</td><td>337</td><td class="text-slate-400 hidden md:table-cell">Formulario completo de hooks</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">chat-container.tsx</td><td>299</td><td class="text-slate-400 hidden md:table-cell">Container de chat (messages, streaming, scroll, audio)</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">message-input.tsx</td><td>275</td><td class="text-slate-400 hidden md:table-cell">Input com upload, voice, multiline</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">search-pagination.tsx</td><td>288</td><td class="text-slate-400 hidden md:table-cell">Hook reutilizavel de busca + paginacao</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">sidebar.tsx</td><td>245</td><td class="text-slate-400 hidden md:table-cell">Navegacao lateral com 3 secoes</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">routes.tsx</td><td>246</td><td class="text-slate-400 hidden md:table-cell">20 rotas lazy-loaded com retry</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">workflows/store.ts</td><td>227</td><td class="text-slate-400 hidden md:table-cell">Wizard state (3 fases, steps, resources)</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">conversations/store.ts</td><td>133</td><td class="text-slate-400 hidden md:table-cell">Streaming state (phases, paused, step statuses)</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">sse-client.ts</td><td>91</td><td class="text-slate-400 hidden md:table-cell">SSE generico via fetch (nao EventSource)</td></tr>
-        <tr><td class="font-mono text-teal-400 text-xs">api-client.ts</td><td>35</td><td class="text-slate-400 hidden md:table-cell">Axios + interceptors (JWT, 401)</td></tr>
-      </tbody>
-    </table>
+  <div class="grid md:grid-cols-3 gap-4">
+    <div class="glass rounded-xl p-5">
+      <h4 class="text-amber-400 font-bold text-xs uppercase tracking-wider mb-3">cn() — Class Merge</h4>
+      <div class="code-block rounded-lg p-2 text-[10px] font-mono mb-2">
+        cn(...inputs: ClassValue[]): string<br>
+        <span class="text-slate-500">// clsx + tailwind-merge</span>
+      </div>
+      <p class="text-[10px] text-slate-400">Combina classes condicionais via clsx e resolve conflitos Tailwind via tailwind-merge. Ubiquo em todos os componentes.</p>
+    </div>
+
+    <div class="glass rounded-xl p-5">
+      <h4 class="text-amber-400 font-bold text-xs uppercase tracking-wider mb-3">formatDate() — pt-BR</h4>
+      <div class="code-block rounded-lg p-2 text-[10px] font-mono mb-2">
+        formatDate(date: string | Date): string<br>
+        <span class="text-slate-500">// Intl.DateTimeFormat('pt-BR')</span>
+      </div>
+      <p class="text-[10px] text-slate-400">Formata data com locale portugues. dateStyle: short, timeStyle: short. Ex: "25/3/2026, 14:30".</p>
+    </div>
+
+    <div class="glass rounded-xl p-5">
+      <h4 class="text-amber-400 font-bold text-xs uppercase tracking-wider mb-3">formatRelativeTime()</h4>
+      <div class="code-block rounded-lg p-2 text-[10px] font-mono mb-2">
+        formatRelativeTime(date): string<br>
+        <span class="text-slate-500">// "agora", "5min atras", "2h atras"</span>
+      </div>
+      <p class="text-[10px] text-slate-400">&lt;10s: "agora", &lt;60s: "Ns atras", &lt;60m: "Nmin atras", &lt;24h: "Nh atras", &lt;7d: "Nd atras", else: formatDate().</p>
+    </div>
+
+    <div class="glass rounded-xl p-5">
+      <h4 class="text-amber-400 font-bold text-xs uppercase tracking-wider mb-3">truncate()</h4>
+      <div class="code-block rounded-lg p-2 text-[10px] font-mono mb-2">
+        truncate(str, maxLength): string<br>
+        <span class="text-slate-500">// slice + "..."</span>
+      </div>
+      <p class="text-[10px] text-slate-400">Corta string em maxLength e adiciona ellipsis. Usado em cards e tables para texto longo.</p>
+    </div>
+
+    <div class="glass rounded-xl p-5">
+      <h4 class="text-amber-400 font-bold text-xs uppercase tracking-wider mb-3">generateId()</h4>
+      <div class="code-block rounded-lg p-2 text-[10px] font-mono mb-2">
+        generateId(): string<br>
+        <span class="text-slate-500">// 7 chars random (Math.random)</span>
+      </div>
+      <p class="text-[10px] text-slate-400">Gera ID aleatorio de 7 caracteres via Math.random().toString(36). Para keys temporarios de UI.</p>
+    </div>
+
+    <div class="glass rounded-xl p-5">
+      <h4 class="text-amber-400 font-bold text-xs uppercase tracking-wider mb-3">createSSEConnection()</h4>
+      <div class="code-block rounded-lg p-2 text-[10px] font-mono mb-2">
+        createSSEConnection(opts): AbortController<br>
+        <span class="text-slate-500">// fetch + ReadableStream + TextDecoder</span>
+      </div>
+      <p class="text-[10px] text-slate-400">SSE generico via fetch (nao EventSource). Suporta GET/POST, headers custom, line buffering, JSON parse, error callbacks.</p>
+    </div>
   </div>
 </section>
 
 <!-- ============================================= -->
-<!-- 10. VITE CONFIG -->
+<!-- 13. BUILD & CONFIG -->
 <!-- ============================================= -->
 <section class="reveal">
   <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
-    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-pink-500 text-white text-sm font-bold">10</span>
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-pink-500 text-white text-sm font-bold">13</span>
     Build & Config
   </h2>
-  <p class="text-slate-400 mb-8">Vite 6, Tailwind 3.4, TypeScript 5.7 — configs otimizadas para container</p>
+  <p class="text-slate-400 mb-8">Vite 6 (SWC), Tailwind 3.4, TypeScript 5.7, shadcn — configs otimizadas para container</p>
 
   <div class="grid md:grid-cols-2 gap-4">
     <div class="glass rounded-xl p-5 border-l-4 border-blue-500">
       <h4 class="text-blue-400 font-bold text-sm mb-3">vite.config.ts</h4>
       <div class="space-y-1.5 text-xs text-slate-300">
         <div class="flex justify-between"><span>Dev Port</span><span class="font-mono text-blue-400">5173</span></div>
-        <div class="flex justify-between"><span>Host</span><span class="font-mono text-blue-400">0.0.0.0</span></div>
+        <div class="flex justify-between"><span>Host</span><span class="font-mono text-blue-400">0.0.0.0 (all interfaces)</span></div>
         <div class="flex justify-between"><span>Path alias @</span><span class="font-mono text-blue-400">./src</span></div>
         <div class="flex justify-between"><span>HMR</span><span class="font-mono text-blue-400">wss:// port 443</span></div>
-        <div class="flex justify-between"><span>File watching</span><span class="font-mono text-blue-400">polling 1s</span></div>
-        <div class="flex justify-between"><span>API proxy /api</span><span class="font-mono text-blue-400">localhost:3333</span></div>
+        <div class="flex justify-between"><span>File watching</span><span class="font-mono text-blue-400">polling 1000ms (Docker)</span></div>
+        <div class="flex justify-between"><span>API proxy /api</span><span class="font-mono text-blue-400">→ localhost:3333</span></div>
         <div class="flex justify-between"><span>CORS</span><span class="font-mono text-blue-400">enabled</span></div>
+        <div class="flex justify-between"><span>Pre-bundle</span><span class="font-mono text-blue-400">28 deps optimizados</span></div>
+        <div class="flex justify-between"><span>Plugin</span><span class="font-mono text-blue-400">@vitejs/plugin-react (SWC)</span></div>
       </div>
     </div>
 
     <div class="glass rounded-xl p-5 border-l-4 border-purple-500">
       <h4 class="text-purple-400 font-bold text-sm mb-3">tailwind.config.js</h4>
       <div class="space-y-1.5 text-xs text-slate-300">
-        <div class="flex justify-between"><span>Dark Mode</span><span class="font-mono text-purple-400">class-based</span></div>
-        <div class="flex justify-between"><span>Cores</span><span class="font-mono text-purple-400">HSL CSS vars</span></div>
-        <div class="flex justify-between"><span>Container</span><span class="font-mono text-purple-400">1400px max</span></div>
-        <div class="flex justify-between"><span>Animacoes</span><span class="font-mono text-purple-400">6 custom</span></div>
+        <div class="flex justify-between"><span>Dark Mode</span><span class="font-mono text-purple-400">class-based (.dark)</span></div>
+        <div class="flex justify-between"><span>Cores</span><span class="font-mono text-purple-400">16 tokens HSL CSS vars</span></div>
+        <div class="flex justify-between"><span>Container</span><span class="font-mono text-purple-400">1400px max, 2rem pad</span></div>
+        <div class="flex justify-between"><span>Border radius</span><span class="font-mono text-purple-400">var(--radius) 0.625rem</span></div>
+        <div class="flex justify-between"><span>Keyframes</span><span class="font-mono text-purple-400">6 custom</span></div>
         <div class="flex justify-between"><span>Plugins</span><span class="font-mono text-purple-400">animate + typography</span></div>
-        <div class="flex justify-between"><span>Border radius</span><span class="font-mono text-purple-400">CSS var</span></div>
+        <div class="flex justify-between"><span>Content scan</span><span class="font-mono text-purple-400">./src/**/*.{tsx,ts}</span></div>
       </div>
     </div>
 
@@ -879,9 +1453,11 @@
       <div class="space-y-1.5 text-xs text-slate-300">
         <div class="flex justify-between"><span>Target</span><span class="font-mono text-emerald-400">ES2020</span></div>
         <div class="flex justify-between"><span>Module</span><span class="font-mono text-emerald-400">ESNext (ESM)</span></div>
-        <div class="flex justify-between"><span>Strict</span><span class="font-mono text-emerald-400">true</span></div>
-        <div class="flex justify-between"><span>JSX</span><span class="font-mono text-emerald-400">react-jsx (auto)</span></div>
-        <div class="flex justify-between"><span>Resolution</span><span class="font-mono text-emerald-400">bundler</span></div>
+        <div class="flex justify-between"><span>Strict</span><span class="font-mono text-emerald-400">true (all checks)</span></div>
+        <div class="flex justify-between"><span>JSX</span><span class="font-mono text-emerald-400">react-jsx (auto runtime)</span></div>
+        <div class="flex justify-between"><span>Module Resolution</span><span class="font-mono text-emerald-400">bundler</span></div>
+        <div class="flex justify-between"><span>noUnusedLocals</span><span class="font-mono text-emerald-400">true</span></div>
+        <div class="flex justify-between"><span>Path aliases</span><span class="font-mono text-emerald-400">@/* → ./src/*</span></div>
       </div>
     </div>
 
@@ -891,8 +1467,149 @@
         <div class="flex justify-between"><span>Style</span><span class="font-mono text-orange-400">default</span></div>
         <div class="flex justify-between"><span>Base color</span><span class="font-mono text-orange-400">slate</span></div>
         <div class="flex justify-between"><span>CSS vars</span><span class="font-mono text-orange-400">enabled</span></div>
+        <div class="flex justify-between"><span>RSC</span><span class="font-mono text-orange-400">disabled</span></div>
         <div class="flex justify-between"><span>@/components</span><span class="font-mono text-orange-400">shared/components</span></div>
         <div class="flex justify-between"><span>@/ui</span><span class="font-mono text-orange-400">shared/components/ui</span></div>
+        <div class="flex justify-between"><span>@/hooks</span><span class="font-mono text-orange-400">shared/hooks</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Environment -->
+  <div class="glass rounded-xl p-5 mt-4 border-l-4 border-cyan-500">
+    <h4 class="text-cyan-400 font-bold text-sm mb-3">Environment & Deployment</h4>
+    <div class="grid md:grid-cols-2 gap-4 text-xs text-slate-300">
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Variaveis</div>
+        <div class="font-mono"><span class="text-cyan-400">VITE_API_URL</span> = https://orquestrador-api.ddw1sl.easypanel.host</div>
+        <div class="text-[10px] text-slate-500 mt-1">Fallback: http://localhost:3333</div>
+      </div>
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">Scripts</div>
+        <div class="font-mono space-y-0.5">
+          <div><span class="text-yellow-400">dev</span>: vite (HMR + polling)</div>
+          <div><span class="text-yellow-400">build</span>: tsc -b && vite build</div>
+          <div><span class="text-yellow-400">preview</span>: vite preview</div>
+          <div><span class="text-yellow-400">lint</span>: eslint .</div>
+          <div><span class="text-yellow-400">typecheck</span>: tsc --noEmit</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= -->
+<!-- 14. COMPONENT HIERARCHY -->
+<!-- ============================================= -->
+<section class="reveal">
+  <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 text-white text-sm font-bold">14</span>
+    Component Hierarchy
+  </h2>
+  <p class="text-slate-400 mb-8">Arvore de composicao das paginas principais</p>
+
+  <div class="glass rounded-xl p-5">
+    <div class="code-block rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed">
+      <span class="text-purple-400">App</span> <span class="text-slate-500">(QueryClientProvider + BrowserRouter + Toaster)</span><br>
+      ├── <span class="text-teal-400">LoginPage</span> / <span class="text-teal-400">RegisterPage</span> <span class="text-slate-500">(publicas)</span><br>
+      └── <span class="text-blue-400">ProtectedRoute</span> → <span class="text-blue-400">AppLayout</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;├── <span class="text-orange-400">Sidebar</span> <span class="text-slate-500">(colapsavel w-60/w-0)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── NavLinks <span class="text-slate-500">(Menu 5 + Config 8)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── Admin links <span class="text-slate-500">(condicional role)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── User avatar + Logout<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;└── <span class="text-purple-400">Outlet</span> <span class="text-slate-500">(Suspense + PageLoader)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="text-teal-400">DashboardPage</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── StatsCards (4x) · PerformanceCards · TokenBudgetBar<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── DailyChart · WorkflowComparison · ToolAnalytics<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── AlertsPanel · Recent Conversations<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="text-purple-400">ConversationDetailPage</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="text-pink-400">ChatContainer</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── MessageBubble[] <span class="text-slate-500">(markdown + actions)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── UserQuestionCard <span class="text-slate-500">(AskUser)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── MessageFeedback <span class="text-slate-500">(thumbs)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── StreamingStatus + SuggestedNextSteps<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── <span class="text-cyan-400">MessageInput</span> <span class="text-slate-500">(upload, voice, multiline)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── ImageUploader<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── <span class="text-orange-400">StepPanel</span> <span class="text-slate-500">(right sidebar)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── Step indicators + navigation<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── ExecutionTimeline + UsageStatsDialog<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="text-orange-400">WorkflowWizardPage</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── WizardStepper (1/2/3)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── PhaseBasicInfo | PhaseStepBuilder | PhaseReview<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── StepListSidebar + StepDetailEditor<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── StepResourceTabs → ResourceSelectPanel<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── VariableConfigPanel + ValidatorConfigPanel<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── WorkflowFlowPreview<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── WizardFooter (Back/Next/Submit)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="text-blue-400">CRUD Pages</span> <span class="text-slate-500">(agents, skills, rules, ...)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── SearchBar + FilterBar + ViewMode toggle<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── Card (grid) | Table (list) + Pagination<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── Modal → Form (react-hook-form + zod)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── ConfirmDialog + ImportDialog
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= -->
+<!-- 15. ARQUIVOS-CHAVE -->
+<!-- ============================================= -->
+<section class="reveal">
+  <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-red-500 text-white text-sm font-bold">15</span>
+    Arquivos-Chave
+  </h2>
+  <p class="text-slate-400 mb-8">Os arquivos mais importantes do frontend — por complexidade e criticidade</p>
+
+  <div class="glass rounded-xl overflow-hidden">
+    <table class="sse-table text-sm">
+      <thead>
+        <tr>
+          <th class="text-slate-400">Arquivo</th>
+          <th class="text-slate-400 hidden md:table-cell">Responsabilidade</th>
+          <th class="text-slate-400">Criticidade</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">hooks/use-sse-stream.ts</td><td class="text-slate-400 hidden md:table-cell">SSE streaming bidirecional, 18 eventos, reconnect, cancel, interrupt</td><td><span class="mini-badge bg-red-500/20 text-red-400">CRITICAL</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">conversations/store.ts</td><td class="text-slate-400 hidden md:table-cell">Streaming state machine (phases, pause, step statuses, actions cache)</td><td><span class="mini-badge bg-red-500/20 text-red-400">CRITICAL</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/chat-container.tsx</td><td class="text-slate-400 hidden md:table-cell">Container de chat (messages, streaming, auto-scroll, scroll button)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/message-bubble.tsx</td><td class="text-slate-400 hidden md:table-cell">Renderizacao de mensagens (markdown, actions, AskUserQuestion, feedback)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/message-input.tsx</td><td class="text-slate-400 hidden md:table-cell">Input com upload de imagens, voice recognition, multiline, attachments</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/step-panel.tsx</td><td class="text-slate-400 hidden md:table-cell">Painel lateral com step indicators, nav, timeline tab, token usage</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">workflows/store.ts</td><td class="text-slate-400 hidden md:table-cell">Wizard state (3 fases, steps[], resources, move/dup/add/remove steps)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">workflow-chat/index.tsx</td><td class="text-slate-400 hidden md:table-cell">Chat direto com workflow (SSE v1 endpoint, hook dedicado)</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">shared/lib/sse-client.ts</td><td class="text-slate-400 hidden md:table-cell">SSE generico via fetch ReadableStream (nao EventSource nativo)</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">shared/lib/api-client.ts</td><td class="text-slate-400 hidden md:table-cell">Axios com interceptors (auto JWT, 401→redirect /login)</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">app/routes.tsx</td><td class="text-slate-400 hidden md:table-cell">20 rotas lazy-loaded com lazyRetry e Suspense boundary</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">common/search-pagination.tsx</td><td class="text-slate-400 hidden md:table-cell">Hook + componentes reutilizaveis de busca/filtro/paginacao</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">layout/sidebar.tsx</td><td class="text-slate-400 hidden md:table-cell">Navegacao principal, 3 secoes, NavLink, role-based, logo</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">auth/store.ts + protected-route.tsx</td><td class="text-slate-400 hidden md:table-cell">Zustand auth + JWT guard com auto checkAuth() on mount</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Storage mechanisms -->
+  <div class="grid md:grid-cols-3 gap-3 mt-4">
+    <div class="glass rounded-xl p-4">
+      <h4 class="text-teal-400 font-bold text-xs uppercase mb-2">localStorage</h4>
+      <div class="space-y-0.5 text-[10px] text-slate-400 font-mono">
+        <div>token → JWT bearer token</div>
+        <div>page-size → items por pagina</div>
+        <div>*-view → grid | table por feature</div>
+      </div>
+    </div>
+    <div class="glass rounded-xl p-4">
+      <h4 class="text-purple-400 font-bold text-xs uppercase mb-2">React Query Cache</h4>
+      <div class="space-y-0.5 text-[10px] text-slate-400 font-mono">
+        <div>staleTime: 30s (queries)</div>
+        <div>gcTime: 5min (garbage collect)</div>
+        <div>refetchOnWindowFocus: true</div>
+      </div>
+    </div>
+    <div class="glass rounded-xl p-4">
+      <h4 class="text-orange-400 font-bold text-xs uppercase mb-2">sessionStorage</h4>
+      <div class="space-y-0.5 text-[10px] text-slate-400 font-mono">
+        <div>lazyRetry keys → chunk reload once</div>
       </div>
     </div>
   </div>

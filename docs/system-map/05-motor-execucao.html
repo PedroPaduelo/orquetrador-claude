@@ -41,6 +41,8 @@
     .glow-orange { box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), 0 0 60px rgba(245, 158, 11, 0.05); }
     .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.15), 0 0 60px rgba(6, 182, 212, 0.05); }
     .glow-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.15), 0 0 60px rgba(239, 68, 68, 0.05); }
+    .glow-pink { box-shadow: 0 0 20px rgba(236, 72, 153, 0.15), 0 0 60px rgba(236, 72, 153, 0.05); }
+    .glow-indigo { box-shadow: 0 0 20px rgba(99, 102, 241, 0.15), 0 0 60px rgba(99, 102, 241, 0.05); }
 
     .gradient-border { position: relative; }
     .gradient-border::before {
@@ -176,6 +178,10 @@
       color: #64748b;
       font-size: 1.2rem;
     }
+
+    .toc-link { transition: all 0.2s; }
+    .toc-link:hover { color: #60a5fa; padding-left: 4px; }
+    .file-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: 'JetBrains Mono', monospace; }
   </style>
 </head>
 <body>
@@ -184,7 +190,6 @@
 
 <!-- Hero Header -->
 <header class="pb-16 px-4 relative overflow-hidden">
-  <!-- Background glow -->
   <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
   <div class="absolute top-20 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl"></div>
 
@@ -205,179 +210,229 @@
         <span class="text-accent-emerald">execucao sequencial</span>,
         <span class="text-accent-purple">paralela (DAG)</span> e
         <span class="text-accent-orange">step-by-step</span> com controle manual.
+        Cada execucao passa por 7 camadas: da API REST ate o Redis PubSub, com streaming em tempo real,
+        gerenciamento de sessoes, compactacao de memoria e tratamento de erros configuravel.
       </p>
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 reveal reveal-delay-1">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 reveal reveal-delay-1">
       <div class="glass rounded-xl p-4 text-center glow-blue">
-        <div class="text-3xl font-black text-blue-400" data-count="3">3</div>
+        <div class="text-3xl font-black text-blue-400">3</div>
         <div class="text-sm text-slate-400 mt-1">Modos de Execucao</div>
       </div>
       <div class="glass rounded-xl p-4 text-center glow-purple">
-        <div class="text-3xl font-black text-purple-400" data-count="3">3</div>
+        <div class="text-3xl font-black text-purple-400">3</div>
         <div class="text-sm text-slate-400 mt-1">Workers BullMQ</div>
       </div>
       <div class="glass rounded-xl p-4 text-center glow-emerald">
-        <div class="text-3xl font-black text-emerald-400" data-count="10">10+</div>
+        <div class="text-3xl font-black text-emerald-400">15+</div>
         <div class="text-sm text-slate-400 mt-1">Eventos SSE</div>
       </div>
       <div class="glass rounded-xl p-4 text-center glow-cyan">
-        <div class="text-3xl font-black text-cyan-400" data-count="15">15</div>
+        <div class="text-3xl font-black text-cyan-400">16</div>
         <div class="text-sm text-slate-400 mt-1">Arquivos-Chave</div>
+      </div>
+      <div class="glass rounded-xl p-4 text-center glow-orange">
+        <div class="text-3xl font-black text-orange-400">494</div>
+        <div class="text-sm text-slate-400 mt-1">Linhas no Engine</div>
       </div>
     </div>
   </div>
 </header>
 
+<!-- Table of Contents -->
+<div class="max-w-7xl mx-auto px-4 mb-12 reveal">
+  <div class="glass-strong rounded-2xl p-6">
+    <h3 class="text-lg font-bold text-slate-300 mb-4">Indice de Secoes</h3>
+    <div class="grid md:grid-cols-3 gap-2 text-sm">
+      <a href="#arch" class="toc-link text-slate-400 hover:text-blue-400">1. Arquitetura em 7 Camadas</a>
+      <a href="#flow" class="toc-link text-slate-400 hover:text-blue-400">2. Fluxo de Execucao (11 etapas)</a>
+      <a href="#sequential" class="toc-link text-slate-400 hover:text-blue-400">3. Sequential Executor</a>
+      <a href="#dag" class="toc-link text-slate-400 hover:text-blue-400">4. DAG Executor</a>
+      <a href="#stepbystep" class="toc-link text-slate-400 hover:text-blue-400">5. Step-by-Step Executor</a>
+      <a href="#stepexec" class="toc-link text-slate-400 hover:text-blue-400">6. Step Executor Deep Dive</a>
+      <a href="#engine" class="toc-link text-slate-400 hover:text-blue-400">7. Claude Code Engine</a>
+      <a href="#parser" class="toc-link text-slate-400 hover:text-blue-400">8. Stream Parser</a>
+      <a href="#sessions" class="toc-link text-slate-400 hover:text-blue-400">9. Sessoes e Memoria</a>
+      <a href="#pause" class="toc-link text-slate-400 hover:text-blue-400">10. Pausa e Resumption</a>
+      <a href="#errors" class="toc-link text-slate-400 hover:text-blue-400">11. Tratamento de Erros</a>
+      <a href="#conditions" class="toc-link text-slate-400 hover:text-blue-400">12. Conditions Evaluator</a>
+      <a href="#sse" class="toc-link text-slate-400 hover:text-blue-400">13. Eventos SSE (15 tipos)</a>
+      <a href="#bullmq" class="toc-link text-slate-400 hover:text-blue-400">14. BullMQ & Filas</a>
+      <a href="#db" class="toc-link text-slate-400 hover:text-blue-400">15. Banco de Dados</a>
+      <a href="#cancel" class="toc-link text-slate-400 hover:text-blue-400">16. Cancellation & Interrupt</a>
+      <a href="#files" class="toc-link text-slate-400 hover:text-blue-400">17. Arquivos-Chave (16 arquivos)</a>
+      <a href="#improvements" class="toc-link text-slate-400 hover:text-blue-400">18. Melhorias 2026</a>
+    </div>
+  </div>
+</div>
+
 <!-- Main Content -->
 <main class="max-w-7xl mx-auto px-4 pb-20">
 
+  <!-- ================================================================ -->
   <!-- Section 1: Arquitetura em Camadas -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <section id="arch" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
       <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-lg">1</span>
-      <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Arquitetura em Camadas</span>
+      <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Arquitetura em 7 Camadas</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6 mb-6">
       <p class="text-slate-400 mb-6">
-        O motor de execucao segue uma arquitetura em camadas, onde cada camada tem uma responsabilidade
-        especifica e bem definida. A API REST recebe as requisicoes, a fila BullMQ gerencia a concorrencia,
-        o Task Orchestrator coordena a execucao, e finalmente o Claude Code Engine executa os comandos.
+        O motor de execucao segue uma arquitetura em 7 camadas bem definidas. Cada camada tem responsabilidade
+        unica e se comunica com a proxima via interfaces tipadas. A separacao garante que mudancas em uma camada
+        nao afetem as demais.
       </p>
 
-      <div class="space-y-4">
+      <div class="space-y-3">
         <!-- Layer 1 -->
         <div class="layer-box border-l-4 border-blue-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="text-blue-400 font-semibold">API REST + SSE Streaming</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">POST /conversations/:id/messages/stream</span>
+            <span class="text-blue-400 font-semibold">Camada 1: API REST + SSE Streaming</span>
+            <span class="file-tag bg-blue-500/20 text-blue-300">execution.routes.ts (706 linhas)</span>
           </div>
-          <p class="text-sm text-slate-400">
-            Recebe a requisicao do cliente, valida autenticacao, carrega workflow e passos,
-            verifica orcamento de tokens e estabelece conexao Server-Sent Events para streaming em tempo real.
+          <p class="text-sm text-slate-400 mb-2">
+            Recebe requisicao do cliente via <code class="mono text-blue-300">POST /conversations/:id/messages/stream</code>.
+            Valida autenticacao, carrega workflow e passos, verifica orcamento de tokens via
+            <code class="mono text-blue-300">tokenBudgetService.checkBudget(userId)</code>.
           </p>
+          <div class="text-xs text-slate-500 space-y-1">
+            <div>Headers SSE: <code class="mono">Content-Type: text/event-stream</code>, <code class="mono">Cache-Control: no-cache</code>, <code class="mono">X-Accel-Buffering: no</code></div>
+            <div>Timeouts: <code class="mono">keepAliveTimeout: 600000ms</code>, <code class="mono">requestTimeout: 0</code> (sem limite para SSE)</div>
+            <div>Heartbeat: <code class="mono">:heartbeat\n\n</code> a cada 15 segundos</div>
+          </div>
         </div>
 
-        <div class="flex justify-center">
-          <div class="flow-arrow">
-            <div class="w-16 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"></div>
-          </div>
-        </div>
+        <div class="flex justify-center"><span class="text-xl text-slate-600">&#8595;</span></div>
 
         <!-- Layer 2 -->
         <div class="layer-box border-l-4 border-purple-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="text-purple-400 font-semibold">BullMQ Queue (Redis)</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">concurrency=3</span>
+            <span class="text-purple-400 font-semibold">Camada 2: BullMQ Queue (Redis)</span>
+            <span class="file-tag bg-purple-500/20 text-purple-300">execution-queue.ts + execution-worker.ts</span>
           </div>
-          <p class="text-sm text-slate-400">
-            Fila de execucao com Redis como backend. Configurada com 3 workers simultaneos.
-            Job name: <code class="mono text-purple-300">"execution"</code>. Gerencia prioridade,
-            retries e estado de processamento.
+          <p class="text-sm text-slate-400 mb-2">
+            Fila <code class="mono text-purple-300">'execution'</code> com Redis como backend.
+            Workers configuraveis: <code class="mono text-purple-300">EXECUTION_CONCURRENCY=3</code> (env var).
+            Jobs sem retry automatico (<code class="mono text-purple-300">attempts: 1</code>).
+            Historico: ultimos 100 completos, 50 falhos.
           </p>
+          <div class="text-xs text-slate-500">
+            Dashboard: <code class="mono">Bull Board</code> em <code class="mono">/admin/queues</code> |
+            Fila secundaria: <code class="mono">trigger-scheduler</code> (polling a cada 30s para cron triggers)
+          </div>
         </div>
 
-        <div class="flex justify-center">
-          <div class="flow-arrow">
-            <div class="w-16 h-0.5 bg-gradient-to-r from-purple-500 to-emerald-500"></div>
-          </div>
-        </div>
+        <div class="flex justify-center"><span class="text-xl text-slate-600">&#8595;</span></div>
 
         <!-- Layer 3 -->
         <div class="layer-box border-l-4 border-emerald-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="text-emerald-400 font-semibold">Task Orchestrator</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Router</span>
+            <span class="text-emerald-400 font-semibold">Camada 3: Task Orchestrator</span>
+            <span class="file-tag bg-emerald-500/20 text-emerald-300">task-orchestrator.ts (99 linhas)</span>
           </div>
-          <p class="text-sm text-slate-400">
-            Decide qual executor usar baseado no tipo de workflow:
-            <code class="mono text-emerald-300">Sequential</code>,
-            <code class="mono text-emerald-300">DAG</code> ou
-            <code class="mono text-emerald-300">Step-by-Step</code>.
-            Gerencia estados de execucao e emite eventos para SSE.
+          <p class="text-sm text-slate-400 mb-2">
+            Facade central que decide qual executor usar. Detecta automaticamente DAG quando steps possuem <code class="mono text-emerald-300">dependsOn</code>.
+            Gerencia <code class="mono text-emerald-300">activeExecutions: Map&lt;string, boolean&gt;</code> para evitar execucoes concorrentes na mesma conversa.
           </p>
+          <div class="text-xs text-slate-500">
+            Metodos: <code class="mono">executeSequential()</code>, <code class="mono">executeDAG()</code>,
+            <code class="mono">executeStepByStep()</code>, <code class="mono">resumeExecution()</code>,
+            <code class="mono">cancel()</code>, <code class="mono">interrupt()</code>
+          </div>
         </div>
 
-        <div class="flex justify-center">
-          <div class="flow-arrow">
-            <div class="w-16 h-0.5 bg-gradient-to-r from-emerald-500 to-orange-500"></div>
-          </div>
-        </div>
+        <div class="flex justify-center"><span class="text-xl text-slate-600">&#8595;</span></div>
 
         <!-- Layer 4 -->
         <div class="layer-box border-l-4 border-orange-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="text-orange-400 font-semibold">[Sequential | DAG | Step-by-Step]</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-300">Executors</span>
+            <span class="text-orange-400 font-semibold">Camada 4: Workflow Executors</span>
+            <span class="file-tag bg-orange-500/20 text-orange-300">3 executores especializados</span>
           </div>
-          <p class="text-sm text-slate-400">
-            <strong>Sequential:</strong> Executa passos em ordem, com suporte a pause, retry e jump.<br>
-            <strong>DAG:</strong> Executa passos em paralelo baseado em dependencias.<br>
-            <strong>Step-by-Step:</strong> Executa um passo por vez, controlado pelo cliente.
-          </p>
+          <div class="grid md:grid-cols-3 gap-3 mt-3">
+            <div class="glass rounded-lg p-3">
+              <div class="text-emerald-400 font-semibold text-sm mb-1">Sequential (394 linhas)</div>
+              <p class="text-xs text-slate-500">Loop <code class="mono">while(i &lt; steps.length)</code> com skip, pause, retry, conditions, jump e backoff exponencial</p>
+            </div>
+            <div class="glass rounded-lg p-3">
+              <div class="text-purple-400 font-semibold text-sm mb-1">DAG (~180 linhas)</div>
+              <p class="text-xs text-slate-500">Batches paralelos via <code class="mono">Promise.all()</code>, deteccao de ciclos DFS, contexto de dependencias injetado</p>
+            </div>
+            <div class="glass rounded-lg p-3">
+              <div class="text-orange-400 font-semibold text-sm mb-1">Step-by-Step (212 linhas)</div>
+              <p class="text-xs text-slate-500">Um step por chamada, cliente controla avanco via <code class="mono">stepIndex</code>, navegacao livre (advance/back/jump)</p>
+            </div>
+          </div>
         </div>
 
-        <div class="flex justify-center">
-          <div class="flow-arrow">
-            <div class="w-16 h-0.5 bg-gradient-to-r from-orange-500 to-cyan-500"></div>
-          </div>
-        </div>
+        <div class="flex justify-center"><span class="text-xl text-slate-600">&#8595;</span></div>
 
         <!-- Layer 5 -->
         <div class="layer-box border-l-4 border-cyan-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="text-cyan-400 font-semibold">Step Executor</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">Step Engine</span>
+            <span class="text-cyan-400 font-semibold">Camada 5: Step Executor</span>
+            <span class="file-tag bg-cyan-500/20 text-cyan-300">step-executor.ts (410 linhas)</span>
           </div>
-          <p class="text-sm text-slate-400">
-            Prepara o contexto de execucao: recupera sessao, memoria, constroi system prompt,
-            sincroniza arquivos, configura git e invoca o Claude Code Engine.
+          <p class="text-sm text-slate-400 mb-2">
+            8 fases por step: (1) Recover Session Token, (2) Recover Step Memory, (3) Build System Prompt
+            (base + custom + memory), (4) File Sync, (5) Git Config + GitHub Token, (6) Execute Claude Engine,
+            (7) Handle Result (needsUserInput | interrupted | error | timeout), (8) Save Message & Return.
           </p>
+          <div class="text-xs text-slate-500">
+            Recuperacao automatica: <code class="mono">session_not_found</code> &rarr; delete + retry |
+            <code class="mono">prompt_too_long</code> &rarr; summarize + compact + retry
+          </div>
         </div>
 
-        <div class="flex justify-center">
-          <div class="flow-arrow">
-            <div class="w-16 h-0.5 bg-gradient-to-r from-cyan-500 to-red-500"></div>
-          </div>
-        </div>
+        <div class="flex justify-center"><span class="text-xl text-slate-600">&#8595;</span></div>
 
         <!-- Layer 6 -->
         <div class="layer-box border-l-4 border-red-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="text-red-400 font-semibold">Claude Code Engine</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-300">claude CLI</span>
+            <span class="text-red-400 font-semibold">Camada 6: Claude Code Engine</span>
+            <span class="file-tag bg-red-500/20 text-red-300">claude-code-engine.ts (494 linhas)</span>
           </div>
-          <p class="text-sm text-slate-400">
-            Spawna processo Claude CLI via <code class="mono text-red-300">sudo -u claude-sandbox</code>,
-            parseia stream JSON, gerencia AskUserQuestion, timeouts e cancelamentos.
+          <p class="text-sm text-slate-400 mb-2">
+            Spawna processo Claude CLI via <code class="mono text-red-300">sudo -n -u claude-sandbox -g dev --preserve-env</code>
+            com <code class="mono text-red-300">detached: true</code> (process group independente).
+            Parseia stream JSON (NDJSON) em tempo real via StreamParser.
           </p>
+          <div class="text-xs text-slate-500">
+            Flags: <code class="mono">--print --output-format stream-json --verbose --dangerously-skip-permissions</code> |
+            Opcionais: <code class="mono">--resume</code>, <code class="mono">--system-prompt</code>, <code class="mono">--model</code>
+          </div>
         </div>
 
-        <div class="flex justify-center">
-          <div class="flow-arrow">
-            <div class="w-16 h-0.5 bg-gradient-to-r from-red-500 to-pink-500"></div>
-          </div>
-        </div>
+        <div class="flex justify-center"><span class="text-xl text-slate-600">&#8595;</span></div>
 
         <!-- Layer 7 -->
         <div class="layer-box border-l-4 border-pink-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="text-pink-400 font-semibold">Redis PubSub + SSE</span>
-            <span class="text-xs px-2 py-0.5 rounded bg-pink-500/20 text-pink-300">Event Streaming</span>
+            <span class="text-pink-400 font-semibold">Camada 7: Event System + SSE</span>
+            <span class="file-tag bg-pink-500/20 text-pink-300">events.ts (213 linhas)</span>
           </div>
-          <p class="text-sm text-slate-400">
-            Eventos sao publicados no Redis PubSub e transmitidos via SSE para o cliente.
-            Heartbeat a cada 15s mantem a conexao viva.
+          <p class="text-sm text-slate-400 mb-2">
+            <code class="mono text-pink-300">OrchestratorEvents extends EventEmitter</code> (singleton in-memory).
+            15 tipos de eventos tipados. SSE handler registra listeners por conversa, filtra por
+            <code class="mono text-pink-300">conversationId</code> e serializa como <code class="mono text-pink-300">event: name\ndata: json\n\n</code>.
           </p>
+          <div class="text-xs text-slate-500">
+            Multi-client: cada conexao SSE tem listener set independente |
+            Cleanup automatico no disconnect: remove listeners + cancela execucao
+          </div>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- ================================================================ -->
   <!-- Section 2: Fluxo de Execucao Completo -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <section id="flow" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
       <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-emerald-500 flex items-center justify-center text-lg">2</span>
       <span class="bg-gradient-to-r from-purple-400 to-emerald-400 bg-clip-text text-transparent">Fluxo de Execucao Completo</span>
@@ -386,15 +441,16 @@
     <div class="glass-strong rounded-2xl p-6">
       <p class="text-slate-400 mb-8">
         Desde o momento em que uma mensagem chega ate a conclusao da execucao, cada etapa e
-        cuidadosamente orquestrada. Acompanhe o fluxo completo abaixo:
+        cuidadosamente orquestrada. Fluxo detalhado com 11 etapas:
       </p>
 
-      <div class="space-y-6" style="counter-reset: step-counter;">
+      <div class="space-y-4" style="counter-reset: step-counter;">
         <div class="relative pl-8 numbered-step">
           <div class="glass rounded-xl p-4 border-l-4 border-blue-500">
             <div class="font-semibold text-blue-400 mb-1">POST /conversations/:id/messages/stream</div>
             <p class="text-sm text-slate-400">
-              A requisicao chega com o conteudo da mensagem, attachments e opcionalmente stepIndex (para step-by-step).
+              Requisicao com <code class="mono">{ content, stepIndex?, attachments? }</code>.
+              Body validado via Zod schema. O <code class="mono">stepIndex</code> e opcional (usado para step-by-step).
             </p>
           </div>
         </div>
@@ -403,7 +459,9 @@
           <div class="glass rounded-xl p-4 border-l-4 border-blue-500">
             <div class="font-semibold text-blue-400 mb-1">Validacao e Carregamento</div>
             <p class="text-sm text-slate-400">
-              Valida conversacao existe, carrega workflow e passos do banco de dados. Verifica permissões do usuario.
+              Carrega conversa com workflow + steps (ordenados por <code class="mono">stepOrder ASC</code>) via Prisma.
+              Valida existencia, permissoes e tipo de workflow. Se <code class="mono">step_by_step</code>,
+              resolve <code class="mono">currentStepId</code> ou usa <code class="mono">stepIndex</code> explicitamente.
             </p>
           </div>
         </div>
@@ -412,8 +470,8 @@
           <div class="glass rounded-xl p-4 border-l-4 border-purple-500">
             <div class="font-semibold text-purple-400 mb-1">Verificacao de Orcamento</div>
             <p class="text-sm text-slate-400">
-              <code class="mono text-purple-300">tokenBudgetService.checkBudget(userId)</code> - Verifica se o usuario
-              tem saldo de tokens disponivel para a execucao.
+              <code class="mono text-purple-300">tokenBudgetService.checkBudget(userId)</code> &mdash; verifica saldo de tokens.
+              Retorna <code class="mono">{ allowed: boolean, reason?: string }</code>. Se bloqueado, HTTP 429 imediato.
             </p>
           </div>
         </div>
@@ -422,39 +480,44 @@
           <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
             <div class="font-semibold text-orange-400 mb-1">Cancelamento de Execucao Stale</div>
             <p class="text-sm text-slate-400">
-              Se existe uma execucao anterior "stale" (em execucao mas sem processo vivo),
-              force-cancel antes de iniciar a nova.
+              Se <code class="mono text-orange-300">taskOrchestrator.isExecuting(id)</code>, forca cancelamento:
+              SIGTERM &rarr; pkill filhos &rarr; SIGKILL apos 2s. Aguarda <code class="mono">500ms</code> para cleanup.
+              Recovery no startup: todas execucoes <code class="mono">state: 'running'</code> orfas sao marcadas como <code class="mono">failed</code>.
             </p>
           </div>
         </div>
 
         <div class="relative pl-8 numbered-step">
           <div class="glass rounded-xl p-4 border-l-4 border-cyan-500">
-            <div class="font-semibold text-cyan-400 mb-1">Setup SSE</div>
+            <div class="font-semibold text-cyan-400 mb-1">Setup SSE + Listener Registration</div>
             <p class="text-sm text-slate-400">
-              Headers <code class="mono text-cyan-300">Content-Type: text/event-stream</code>,
-              <code class="mono text-cyan-300">Cache-Control: no-cache</code>.
-              Heartbeat <code class="mono text-cyan-300">:heartbeat</code> a cada 15s.
+              SSE headers configurados. Heartbeat a cada 15s.
+              <strong>15 event listeners</strong> registrados no <code class="mono text-cyan-300">orchestratorEvents</code>:
+              step:start, step:stream, step:complete, step:error, message:saved, condition:retry,
+              condition:jump, execution:complete, context:reset, execution:cancelled, dag:batch_start,
+              validation:failed, execution:paused, execution:resumed, user:interrupt.
+              Cada listener filtra por <code class="mono">conversationId</code>.
             </p>
           </div>
         </div>
 
         <div class="relative pl-8 numbered-step">
           <div class="glass rounded-xl p-4 border-l-4 border-cyan-500">
-            <div class="font-semibold text-cyan-400 mb-1">Registro de Listeners</div>
+            <div class="font-semibold text-cyan-400 mb-1">Deteccao de Execucao Pausada</div>
             <p class="text-sm text-slate-400">
-              Registra listeners no <code class="mono text-cyan-300">orchestratorEvents</code> (EventEmitter)
-              para transmitir eventos em tempo real via SSE.
+              <code class="mono text-cyan-300">taskOrchestrator.getPausedExecution(id)</code> &mdash;
+              se ha execucao pausada (AskUserQuestion), redireciona para <code class="mono">resumeExecution()</code>
+              com a resposta do usuario ao inves de iniciar nova execucao.
             </p>
           </div>
         </div>
 
         <div class="relative pl-8 numbered-step">
           <div class="glass rounded-xl p-4 border-l-4 border-pink-500">
-            <div class="font-semibold text-pink-400 mb-1">Enqueue BullMQ Job</div>
+            <div class="font-semibold text-pink-400 mb-1">Project Path Lock + Enqueue</div>
             <p class="text-sm text-slate-400">
-              <code class="mono text-pink-300">executionQueue.add('execution', {...})</code> - Job enfileirado
-              com todos os dados necessarios: conversationId, workflowId, userId, content, projectPath, etc.
+              Adquire lock no <code class="mono text-pink-300">projectPath</code> (evita conflitos de IO).
+              Job enfileirado com: <code class="mono text-pink-300">conversationId, workflowId, userId, content, stepIndex, projectPath, workflowType, attachments</code>.
             </p>
           </div>
         </div>
@@ -463,19 +526,9 @@
           <div class="glass rounded-xl p-4 border-l-4 border-pink-500">
             <div class="font-semibold text-pink-400 mb-1">Worker Processa Job</div>
             <p class="text-sm text-slate-400">
-              <code class="mono text-pink-300">ExecutionWorker</code> pega o job (concurrency=3) e chama
-              <code class="mono text-pink-300">processExecutionJob</code>.
-            </p>
-          </div>
-        </div>
-
-        <div class="relative pl-8 numbered-step">
-          <div class="glass rounded-xl p-4 border-l-4 border-red-500">
-            <div class="font-semibold text-red-400 mb-1">Decisao do Executor</div>
-            <p class="text-sm text-slate-400">
-              Baseado no <code class="mono text-red-300">workflowType</code>, escolhe:
-              <code class="mono text-red-300">Sequential</code>, <code class="mono text-red-300">DAG</code> ou
-              <code class="mono text-red-300">StepByStep</code>.
+              <code class="mono text-pink-300">processExecutionJob</code> carrega conversa do DB, monta <code class="mono">ExecutionContext</code>,
+              e decide executor: <code class="mono">isDAGWorkflow(steps)</code> &rarr; DAG | <code class="mono">workflowType === 'sequential'</code> &rarr; Sequential |
+              else &rarr; StepByStep.
             </p>
           </div>
         </div>
@@ -484,8 +537,20 @@
           <div class="glass rounded-xl p-4 border-l-4 border-red-500">
             <div class="font-semibold text-red-400 mb-1">Execucao dos Steps</div>
             <p class="text-sm text-slate-400">
-              Cada step e executado → eventos streamados → mensagem salva → resultado armazenado.
-              Em caso de erro, decide baseado em <code class="mono text-red-300">decideOnError</code>.
+              Cada step: (1) skip check, (2) emit step:start, (3) executeStep(), (4) stream events em tempo real,
+              (5) handle result (pause/error/success), (6) save message, (7) evaluate conditions, (8) advance/retry/jump/finish.
+              Validators opcionais com retry automatico.
+            </p>
+          </div>
+        </div>
+
+        <div class="relative pl-8 numbered-step">
+          <div class="glass rounded-xl p-4 border-l-4 border-red-500">
+            <div class="font-semibold text-red-400 mb-1">Checkpoint & Save</div>
+            <p class="text-sm text-slate-400">
+              Apos cada step: <code class="mono text-red-300">saveCheckpoint(executionId, stepIndex, output, nextInput)</code>,
+              message persistida no DB com <code class="mono">role: 'assistant'</code>, metadata incluindo
+              <code class="mono">actions, sessionId, stepName, stepOrder</code>.
             </p>
           </div>
         </div>
@@ -494,8 +559,11 @@
           <div class="glass rounded-xl p-4 border-l-4 border-emerald-500">
             <div class="font-semibold text-emerald-400 mb-1">Finalizacao</div>
             <p class="text-sm text-slate-400">
-              <code class="mono text-emerald-300">markCompleted</code> + <code class="mono text-emerald-300">emitExecutionComplete</code>.
-              SSE encerrado. Listener removido.
+              <code class="mono text-emerald-300">markCompleted(executionId)</code> &rarr;
+              <code class="mono text-emerald-300">emitExecutionComplete({success: true})</code> &rarr;
+              SSE envia <code class="mono">event: complete</code> &rarr; cleanup de listeners &rarr;
+              <code class="mono">activeExecutions.delete(conversationId)</code>.
+              Dispara webhook <code class="mono">execution:complete</code> se userId configurado.
             </p>
           </div>
         </div>
@@ -503,416 +571,475 @@
     </div>
   </section>
 
-  <!-- Section 3: Modos de Execucao -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 3: Sequential Executor -->
+  <!-- ================================================================ -->
+  <section id="sequential" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-orange-500 flex items-center justify-center text-lg">3</span>
-      <span class="bg-gradient-to-r from-emerald-400 to-orange-400 bg-clip-text text-transparent">Modos de Execucao</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center text-lg">3</span>
+      <span class="bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">Sequential Executor</span>
     </h2>
 
-    <!-- Tabs -->
-    <div class="mb-6 border-b border-slate-700">
-      <div class="flex gap-2 overflow-x-auto" id="execution-tabs">
-        <button class="px-4 py-2 border-b-2 border-emerald-500 text-emerald-400 font-medium transition" data-tab="sequential">
-          Sequential
-        </button>
-        <button class="px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition" data-tab="dag">
-          DAG
-        </button>
-        <button class="px-4 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition" data-tab="stepbystep">
-          Step-by-Step
-        </button>
-      </div>
-    </div>
-
-    <!-- Sequential Tab -->
-    <div id="tab-sequential" class="tab-content">
-      <div class="glass-strong rounded-2xl p-6">
-        <div class="flex items-center gap-3 mb-6">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-2xl">→</div>
-          <div>
-            <h3 class="text-xl font-bold text-emerald-400">Sequential Executor</h3>
-            <p class="text-slate-400 text-sm">Executa passos em ordem sequencial, um apos o outro</p>
-          </div>
-        </div>
-
-        <div class="code-block p-4 mb-6 overflow-x-auto">
-          <code class="text-sm">
-            <span class="text-purple-400">while</span> (i &lt; steps.length) {<br>
-            &nbsp;&nbsp;<span class="text-slate-500">// 1. Skip check</span><br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (skipCondition(step)) { i++; <span class="text-purple-400">continue</span>; }<br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (evaluateSkip(step, context)) { i++; <span class="text-purple-400">continue</span>; }<br>
-            <br>
-            &nbsp;&nbsp;<span class="text-slate-500">// 2. Execute step</span><br>
-            &nbsp;&nbsp;<span class="text-purple-400">const</span> result = <span class="text-purple-400">await</span> executeStep(step, userInput);<br>
-            <br>
-            &nbsp;&nbsp;<span class="text-slate-500">// 3. Handle pause (AskUserQuestion)</span><br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (result.needsUserInput) {<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;markPaused(executionId, i, stepId, resumeToken, question);<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">return</span>;<br>
-            &nbsp;&nbsp;}<br>
-            <br>
-            &nbsp;&nbsp;<span class="text-slate-500">// 4. Handle error</span><br>
-            &nbsp;&nbsp;<span class="text-purple-400">const</span> action = decideOnError(error, step.decideOnError);<br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (action === <span class="text-green-400">'fail'</span>) markFailed();<br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (action === <span class="text-green-400">'skip'</span>) { i++; <span class="text-purple-400">continue</span>; }<br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (action === <span class="text-green-400">'continue_next'</span>) { i++; <span class="text-purple-400">continue</span>; }<br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (action === <span class="text-green-400">'fallback'</span>) retryWithFallback();<br>
-            <br>
-            &nbsp;&nbsp;<span class="text-slate-500">// 5. Save message</span><br>
-            &nbsp;&nbsp;<span class="text-purple-400">await</span> saveMessage(conversationId, stepId, result.content);<br>
-            <br>
-            &nbsp;&nbsp;<span class="text-slate-500">// 6. Evaluate conditions</span><br>
-            &nbsp;&nbsp;<span class="text-purple-400">const</span> condition = evaluateConditions(result, step.conditions);<br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (condition.action === <span class="text-green-400">'jump'</span>) i = condition.targetIndex;<br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (condition.action === <span class="text-green-400">'retry'</span>) <span class="text-purple-400">continue</span>;<br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (condition.action === <span class="text-green-400">'finish'</span>) <span class="text-purple-400">break</span>;<br>
-            <br>
-            &nbsp;&nbsp;i++; <span class="text-slate-500">// next step</span><br>
-            }<br>
-            <br>
-            <span class="text-slate-500">// 7. Finalize</span><br>
-            markCompleted(executionId);<br>
-            emitExecutionComplete(executionId, stepsCompleted);
-          </code>
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="glass rounded-xl p-4">
-            <h4 class="font-semibold text-emerald-400 mb-2">Caracteristicas</h4>
-            <ul class="text-sm text-slate-400 space-y-1">
-              <li>• Execucao deterministica em ordem</li>
-              <li>• Suporte a skip condicional</li>
-              <li>• Pausa em AskUserQuestion</li>
-              <li>• 4 estrategias de tratamento de erro</li>
-              <li>• Avaliacao de condicoes pos-step</li>
-              <li>• Jump para step arbitrario</li>
-              <li>• Retry com contador maximo</li>
-            </ul>
-          </div>
-          <div class="glass rounded-xl p-4">
-            <h4 class="font-semibold text-emerald-400 mb-2">Arquivos</h4>
-            <ul class="text-sm text-slate-400 space-y-1 mono">
-              <li class="text-blue-400">sequential-executor.ts</li>
-              <li class="text-blue-400">step-executor.ts</li>
-              <li class="text-blue-400">step-error-handler.ts</li>
-              <li class="text-blue-400">conditions-evaluator.ts</li>
-            </ul>
-          </div>
+    <div class="glass-strong rounded-2xl p-6">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-2xl">&rarr;</div>
+        <div>
+          <h3 class="text-xl font-bold text-emerald-400">sequential-executor.ts</h3>
+          <p class="text-slate-400 text-sm">394 linhas | Executa passos em ordem com full control flow</p>
         </div>
       </div>
-    </div>
 
-    <!-- DAG Tab -->
-    <div id="tab-dag" class="tab-content hidden">
-      <div class="glass-strong rounded-2xl p-6">
-        <div class="flex items-center gap-3 mb-6">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-2xl">◇</div>
-          <div>
-            <h3 class="text-xl font-bold text-purple-400">DAG Executor</h3>
-            <p class="text-slate-400 text-sm">Directed Acyclic Graph - Execucao paralela baseada em dependencias</p>
-          </div>
-        </div>
+      <!-- Pseudocode -->
+      <div class="code-block p-4 mb-6 overflow-x-auto">
+        <code class="text-sm">
+          <span class="text-slate-500">// ID: exec_{conversationId}_{timestamp}_{random5}</span><br>
+          <span class="text-purple-400">const</span> executionState = <span class="text-purple-400">await</span> executionStateManager.create(conversationId, startIndex)<br>
+          <span class="text-purple-400">let</span> i = startIndex, currentInput = userInput<br>
+          <span class="text-purple-400">const</span> retryCounts: Record&lt;string, number&gt; = {}<br>
+          <br>
+          <span class="text-purple-400">while</span> (i &lt; steps.length) {<br>
+          &nbsp;&nbsp;<span class="text-slate-500">// 1. Cancellation check</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (!deps.activeExecutions.get(conversationId)) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;emitExecutionCancelled(); markCancelled(); <span class="text-purple-400">return</span><br>
+          &nbsp;&nbsp;}<br>
+          <br>
+          &nbsp;&nbsp;<span class="text-slate-500">// 2. Skip condition (6 formatos suportados)</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (step.skipCondition) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">if</span> (evaluateSkipCondition(step.skipCondition, currentInput, i)) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;emitStepStream({ <span class="text-green-400">'Step pulado'</span> }); i++; <span class="text-purple-400">continue</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+          &nbsp;&nbsp;}<br>
+          <br>
+          &nbsp;&nbsp;<span class="text-slate-500">// 3. Execute step (8 fases internas)</span><br>
+          &nbsp;&nbsp;emitStepStart({ stepId, stepName, stepOrder: i+1, totalSteps })<br>
+          &nbsp;&nbsp;<span class="text-purple-400">let</span> result = <span class="text-purple-400">await</span> executeStep(deps, executionId, ...)<br>
+          <br>
+          &nbsp;&nbsp;<span class="text-slate-500">// 4. AskUserQuestion &rarr; pause</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (result.needsUserInput) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">const</span> q = extractAskQuestion(result.actions)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;saveAssistantMessage({ needsUserInput: <span class="text-orange-400">true</span> })<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;markPaused(executionId, i, step.id, result.resumeToken, q)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;emitExecutionPaused({ askUserQuestion: q })<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">return</span> <span class="text-slate-500">// exit - aguarda resposta do usuario</span><br>
+          &nbsp;&nbsp;}<br>
+          <br>
+          &nbsp;&nbsp;<span class="text-slate-500">// 5. Error handling (4 estrategias)</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (isStepError(result)) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">const</span> decision = decideOnError(step, result)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">if</span> (decision.action === <span class="text-green-400">'fail'</span>) { markFailed(); <span class="text-purple-400">return</span> }<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">if</span> (decision.action === <span class="text-green-400">'fallback'</span>) { retryWithFallbackMessage() }<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">if</span> (decision.skipStep) { i++; <span class="text-purple-400">continue</span> }<br>
+          &nbsp;&nbsp;}<br>
+          <br>
+          &nbsp;&nbsp;<span class="text-slate-500">// 6. Validators (optional, maxRetries default 2)</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (step.validators) { validateAndRetry() }<br>
+          <br>
+          &nbsp;&nbsp;<span class="text-slate-500">// 7. Save assistant message + checkpoint</span><br>
+          &nbsp;&nbsp;saveMessage(conversationId, step.id, result.content)<br>
+          &nbsp;&nbsp;saveCheckpoint(executionId, i, result.content)<br>
+          <br>
+          &nbsp;&nbsp;<span class="text-slate-500">// 8. Conditions evaluation (8 tipos, 5+ acoes)</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">const</span> condResult = conditionsEvaluator.evaluate(result.content, step.conditions)<br>
+          &nbsp;&nbsp;<span class="text-purple-400">const</span> nextStep = resolveNextStep(condResult.action, steps, i)<br>
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (nextStep.isRetry) { handleRetryWithBackoff() }<br>
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (nextStep.isFinished) { emitComplete(); <span class="text-purple-400">break</span> }<br>
+          &nbsp;&nbsp;i = nextStep.nextIndex; currentInput = result.content<br>
+          }<br>
+          <br>
+          markCompleted(executionId)<br>
+          emitExecutionComplete({ success: <span class="text-orange-400">true</span> })
+        </code>
+      </div>
 
-        <div class="code-block p-4 mb-6 overflow-x-auto">
-          <code class="text-sm">
-            <span class="text-slate-500">// 1. Build DAG from steps</span><br>
-            <span class="text-purple-400">const</span> dag = <span class="text-purple-400">new</span> DAG(steps, {<br>
-            &nbsp;&nbsp;getId: (step) => step.id,<br>
-            &nbsp;&nbsp;getDependencies: (step) => step.dependsOn || []<br>
-            });<br>
-            <br>
-            <span class="text-slate-500">// 2. Validate cycles (DFS)</span><br>
-            <span class="text-purple-400">if</span> (dag.hasCycle()) {<br>
-            &nbsp;&nbsp;<span class="text-purple-400">throw new</span> Error(<span class="text-green-400">'Circular dependency detected'</span>);<br>
-            }<br>
-            <br>
-            <span class="text-slate-500">// 3. Execute until complete</span><br>
-            <span class="text-purple-400">while</span> (!dag.isComplete()) {<br>
-            &nbsp;&nbsp;<span class="text-slate-500">// 4. Get ready steps (deps satisfied)</span><br>
-            &nbsp;&nbsp;<span class="text-purple-400">const</span> readySteps = dag.getReadySteps();<br>
-            <br>
-            &nbsp;&nbsp;<span class="text-slate-500">// 5. Parallel execution</span><br>
-            &nbsp;&nbsp;<span class="text-purple-400">const</span> results = <span class="text-purple-400">await Promise</span>.all(<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;readySteps.map(step =><br>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;executeStep(step, getDependencyContext(step))<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;)<br>
-            &nbsp;&nbsp;);<br>
-            <br>
-            &nbsp;&nbsp;<span class="text-slate-500">// 6. Mark completed</span><br>
-            &nbsp;&nbsp;results.forEach(r => dag.markCompleted(r.stepId, r.output));<br>
-            }<br>
-            <br>
-            <span class="text-slate-500">// 7. Finalize</span><br>
-            markCompleted(executionId);<br>
-            emitExecutionComplete(executionId, stepsCompleted);
-          </code>
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="glass rounded-xl p-4">
-            <h4 class="font-semibold text-purple-400 mb-2">Caracteristicas</h4>
-            <ul class="text-sm text-slate-400 space-y-1">
-              <li>• Execucao paralela de steps independentes</li>
-              <li>• Deteccao de ciclos via DFS</li>
-              <li>• Contexto de dependencias injetado</li>
-              <li>• Ordem topologica garantida</li>
-              <li>• Erro em um step nao bloqueia outros</li>
-            </ul>
+      <!-- Skip Conditions -->
+      <div class="mb-6">
+        <h4 class="font-semibold text-emerald-400 mb-3">Skip Conditions (6 formatos)</h4>
+        <div class="grid md:grid-cols-3 gap-3">
+          <div class="glass rounded-lg p-3">
+            <code class="mono text-sm text-cyan-400">"true"</code>
+            <p class="text-xs text-slate-500 mt-1">Sempre pula o step</p>
           </div>
-          <div class="glass rounded-xl p-4">
-            <h4 class="font-semibold text-purple-400 mb-2">Arquivos</h4>
-            <ul class="text-sm text-slate-400 space-y-1 mono">
-              <li class="text-blue-400">dag-workflow-executor.ts</li>
-              <li class="text-blue-400">dag-executor.ts</li>
-              <li class="text-blue-400">step-executor.ts</li>
-            </ul>
+          <div class="glass rounded-lg p-3">
+            <code class="mono text-sm text-cyan-400">"false"</code>
+            <p class="text-xs text-slate-500 mt-1">Nunca pula</p>
           </div>
-        </div>
-
-        <div class="mt-6 p-4 rounded-xl bg-purple-500/10 border border-purple-500/30">
-          <h5 class="font-semibold text-purple-400 mb-2">Exemplo de Dependencias</h5>
-          <div class="diagram-flow text-sm">
-            <div class="diagram-node">A (base)</div>
-            <span class="diagram-arrow">→</span>
-            <div class="diagram-node">B (deps: A)</div>
-            <span class="diagram-arrow">→</span>
-            <div class="diagram-node">D (deps: B, C)</div>
+          <div class="glass rounded-lg p-3">
+            <code class="mono text-sm text-cyan-400">"empty_input"</code>
+            <p class="text-xs text-slate-500 mt-1">Pula se input vazio</p>
           </div>
-          <div class="diagram-flow text-sm mt-2">
-            <div class="diagram-node">A</div>
-            <span class="diagram-arrow">→</span>
-            <div class="diagram-node">C (deps: A)</div>
-            <span class="diagram-arrow">→</span>
-            <div class="diagram-node">D</div>
+          <div class="glass rounded-lg p-3">
+            <code class="mono text-sm text-cyan-400">"contains:keyword"</code>
+            <p class="text-xs text-slate-500 mt-1">Pula se input contem keyword (case-insensitive)</p>
           </div>
-          <p class="text-xs text-slate-500 mt-3">B e C executam em paralelo. D so executa apos B e C completarem.</p>
+          <div class="glass rounded-lg p-3">
+            <code class="mono text-sm text-cyan-400">"not_contains:keyword"</code>
+            <p class="text-xs text-slate-500 mt-1">Pula se input NAO contem keyword</p>
+          </div>
+          <div class="glass rounded-lg p-3">
+            <code class="mono text-sm text-cyan-400">"step_index > 3"</code>
+            <p class="text-xs text-slate-500 mt-1">Operadores: &gt;, &lt;, &gt;=, &lt;=, ==</p>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Step-by-Step Tab -->
-    <div id="tab-stepbystep" class="tab-content hidden">
-      <div class="glass-strong rounded-2xl p-6">
-        <div class="flex items-center gap-3 mb-6">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-lg">⏯</div>
-          <div>
-            <h3 class="text-xl font-bold text-orange-400">Step-by-Step Executor</h3>
-            <p class="text-slate-400 text-sm">Execucao controlada pelo cliente - um step por vez</p>
-          </div>
+      <!-- Backoff Strategy -->
+      <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+        <h4 class="font-semibold text-emerald-400 mb-2">Exponential Backoff</h4>
+        <p class="text-sm text-slate-400 mb-2">
+          Formula: <code class="mono text-emerald-300">Math.min(Math.pow(2, attempt) * 1000, 30000)</code>
+        </p>
+        <div class="flex gap-3 text-xs text-slate-500 flex-wrap">
+          <span>Attempt 1: <span class="text-emerald-400">2s</span></span>
+          <span>Attempt 2: <span class="text-emerald-400">4s</span></span>
+          <span>Attempt 3: <span class="text-emerald-400">8s</span></span>
+          <span>Attempt 4: <span class="text-emerald-400">16s</span></span>
+          <span>Attempt 5+: <span class="text-emerald-400">30s (cap)</span></span>
         </div>
-
-        <div class="code-block p-4 mb-6 overflow-x-auto">
-          <code class="text-sm">
-            <span class="text-slate-500">// Execute single step by index</span><br>
-            <span class="text-purple-400">async function</span> executeStepByStep(context, userInput, stepIndex) {<br>
-            &nbsp;&nbsp;<span class="text-purple-400">const</span> step = context.workflow.steps[stepIndex];<br>
-            <br>
-            &nbsp;&nbsp;<span class="text-slate-500">// Same error handling as sequential</span><br>
-            &nbsp;&nbsp;<span class="text-purple-400">const</span> result = <span class="text-purple-400">await</span> executeStep(step, userInput);<br>
-            <br>
-            &nbsp;&nbsp;<span class="text-slate-500">// Handle pause via AskUserQuestion</span><br>
-            &nbsp;&nbsp;<span class="text-purple-400">if</span> (result.needsUserInput) {<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;markPaused(executionId, stepIndex, step.id, resumeToken, question);<br>
-            &nbsp;&nbsp;&nbsp;&nbsp;SIGTERM process; <span class="text-slate-500">// kill cleanly</span><br>
-            &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">return</span>;<br>
-            &nbsp;&nbsp;}<br>
-            <br>
-            &nbsp;&nbsp;<span class="text-slate-500">// Save and emit</span><br>
-            &nbsp;&nbsp;saveMessage(conversationId, step.id, result.content);<br>
-            &nbsp;&nbsp;emitStepComplete(step.id, result);<br>
-            }
-          </code>
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="glass rounded-xl p-4">
-            <h4 class="font-semibold text-orange-400 mb-2">Caracteristicas</h4>
-            <ul class="text-sm text-slate-400 space-y-1">
-              <li>• Cliente controla o avanco</li>
-              <li>• Um step executado por chamada</li>
-              <li>• Pausa automatica em AskUserQuestion</li>
-              <li>• Mesmo tratamento de erro que sequential</li>
-              <li>• Estado preservado entre chamadas</li>
-              <li>• Resume via --resume token</li>
-            </ul>
-          </div>
-          <div class="glass rounded-xl p-4">
-            <h4 class="font-semibold text-orange-400 mb-2">Arquivos</h4>
-            <ul class="text-sm text-slate-400 space-y-1 mono">
-              <li class="text-blue-400">step-by-step-executor.ts</li>
-              <li class="text-blue-400">step-executor.ts</li>
-              <li class="text-blue-400">execution-resumer.ts</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="mt-6 p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
-          <h5 class="font-semibold text-orange-400 mb-2">Fluxo de Navegacao</h5>
-          <div class="diagram-flow text-sm">
-            <span class="text-slate-400">Cliente</span>
-            <span class="diagram-arrow">→</span>
-            <span class="text-orange-400">POST /messages/stream?stepIndex=0</span>
-            <span class="diagram-arrow">→</span>
-            <span class="text-slate-400">Step 0</span>
-          </div>
-          <div class="diagram-flow text-sm mt-2">
-            <span class="text-slate-400">Cliente</span>
-            <span class="diagram-arrow">→</span>
-            <span class="text-orange-400">POST /messages/stream?stepIndex=1</span>
-            <span class="diagram-arrow">→</span>
-            <span class="text-slate-400">Step 1</span>
-          </div>
-          <p class="text-xs text-slate-500 mt-3">O cliente pode avancar, voltar ou pular steps livremente.</p>
-        </div>
+        <p class="text-xs text-slate-500 mt-2">
+          Retry counts armazenados em <code class="mono">ExecutionState.retryCounts: Record&lt;string, number&gt;</code>.
+          Keys: <code class="mono">step.id</code> (condition retry), <code class="mono">validator_{step.id}</code> (validators),
+          <code class="mono">jump_{stepId}_to_{nextIndex}</code> (jumps).
+          Default maxRetries: <strong>3</strong> (condition) | <strong>2</strong> (validator).
+        </p>
       </div>
     </div>
   </section>
 
-  <!-- Section 4: Step Executor Deep Dive -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 4: DAG Executor -->
+  <!-- ================================================================ -->
+  <section id="dag" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-red-500 flex items-center justify-center text-lg">4</span>
-      <span class="bg-gradient-to-r from-cyan-400 to-red-400 bg-clip-text text-transparent">Step Executor Deep Dive</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-lg">4</span>
+      <span class="bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">DAG Executor (Parallel)</span>
+    </h2>
+
+    <div class="glass-strong rounded-2xl p-6">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-2xl">&#9671;</div>
+        <div>
+          <h3 class="text-xl font-bold text-purple-400">Directed Acyclic Graph</h3>
+          <p class="text-slate-400 text-sm">dag-executor.ts + dag-workflow-executor.ts | Execucao paralela com dependencias</p>
+        </div>
+      </div>
+
+      <!-- Data Structures -->
+      <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <div class="glass rounded-xl p-4 border-l-4 border-purple-500">
+          <div class="font-semibold text-purple-400 mb-2 text-sm">graph: Map&lt;string, DagStep&gt;</div>
+          <p class="text-xs text-slate-500">Adjacency list. Cada node: <code class="mono">{step, index, dependsOn: string[]}</code></p>
+        </div>
+        <div class="glass rounded-xl p-4 border-l-4 border-indigo-500">
+          <div class="font-semibold text-indigo-400 mb-2 text-sm">completed: Set&lt;string&gt;</div>
+          <p class="text-xs text-slate-500">O(1) lookup para steps ja completados</p>
+        </div>
+        <div class="glass rounded-xl p-4 border-l-4 border-blue-500">
+          <div class="font-semibold text-blue-400 mb-2 text-sm">outputs: Map&lt;string, string&gt;</div>
+          <p class="text-xs text-slate-500">Armazena output de cada step para injecao de contexto</p>
+        </div>
+      </div>
+
+      <!-- Algorithm -->
+      <div class="code-block p-4 mb-6 overflow-x-auto">
+        <code class="text-sm">
+          <span class="text-slate-500">// 1. Build DAG (O(V) onde V = steps)</span><br>
+          <span class="text-purple-400">for</span> (<span class="text-purple-400">const</span> step <span class="text-purple-400">of</span> steps) {<br>
+          &nbsp;&nbsp;graph.set(step.id, { step, index, dependsOn: parseDependsOn(step.dependsOn) })<br>
+          }<br>
+          <br>
+          <span class="text-slate-500">// 2. Validate - DFS cycle detection (O(V+E))</span><br>
+          <span class="text-purple-400">const</span> visited = <span class="text-purple-400">new</span> Set(), inStack = <span class="text-purple-400">new</span> Set()<br>
+          <span class="text-purple-400">function</span> hasCycle(id) {<br>
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (inStack.has(id)) <span class="text-purple-400">return true</span>&nbsp;&nbsp;<span class="text-slate-500">// Back edge = cycle!</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (visited.has(id)) <span class="text-purple-400">return false</span>&nbsp;&nbsp;<span class="text-slate-500">// Already explored</span><br>
+          &nbsp;&nbsp;visited.add(id); inStack.add(id)<br>
+          &nbsp;&nbsp;<span class="text-purple-400">for</span> (<span class="text-purple-400">const</span> dep <span class="text-purple-400">of</span> node.dependsOn) { <span class="text-purple-400">if</span> (hasCycle(dep)) <span class="text-purple-400">return true</span> }<br>
+          &nbsp;&nbsp;inStack.delete(id); <span class="text-purple-400">return false</span><br>
+          }<br>
+          <br>
+          <span class="text-slate-500">// 3. Execute in batches (implicit topological sort)</span><br>
+          <span class="text-purple-400">let</span> batchIndex = 0<br>
+          <span class="text-purple-400">while</span> (!dag.isComplete()) {<br>
+          &nbsp;&nbsp;<span class="text-purple-400">const</span> readySteps = dag.getReadySteps() <span class="text-slate-500">// deps satisfied &amp;&amp; not completed</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">if</span> (readySteps.length === 0) <span class="text-purple-400">break</span> <span class="text-slate-500">// Deadlock detection</span><br>
+          &nbsp;&nbsp;emitDagBatchStart({ stepIds, batchIndex })<br>
+          <br>
+          &nbsp;&nbsp;<span class="text-slate-500">// 4. Parallel execution (unlimited concurrency per batch)</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">const</span> results = <span class="text-purple-400">await Promise</span>.all(<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;readySteps.map(<span class="text-purple-400">async</span> (dagStep) => {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">const</span> depContext = dag.getDependencyContext(dagStep.step.id)<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">const</span> input = depContext ? <span class="text-green-400">`${userInput}\n\n${depContext}`</span> : userInput<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">return</span> { dagStep, result: <span class="text-purple-400">await</span> executeStep(..., input) }<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;})<br>
+          &nbsp;&nbsp;)<br>
+          <br>
+          &nbsp;&nbsp;<span class="text-slate-500">// 5. Process results + mark completed</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">for</span> (<span class="text-purple-400">const</span> { dagStep, result } <span class="text-purple-400">of</span> results) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">if</span> (isStepError(result) &amp;&amp; resolveErrorHandler(dagStep.step) === <span class="text-green-400">'fail'</span>) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;markFailed(); <span class="text-purple-400">return</span> <span class="text-slate-500">// Stop entire DAG</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;dag.markCompleted(dagStep.step.id, result.content)<br>
+          &nbsp;&nbsp;}<br>
+          &nbsp;&nbsp;batchIndex++<br>
+          }
+        </code>
+      </div>
+
+      <!-- Dependency Context -->
+      <div class="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 mb-4">
+        <h5 class="font-semibold text-purple-400 mb-2">Injecao de Contexto de Dependencias</h5>
+        <p class="text-sm text-slate-400 mb-3">
+          <code class="mono text-purple-300">getDependencyContext(stepId)</code> concatena outputs dos steps-pai:
+        </p>
+        <div class="code-block p-3 text-sm mb-3">
+          <code>
+            <span class="text-slate-500">// Formato do contexto injetado:</span><br>
+            [Output from "Step A"]:<br>
+            ...output completo do step A...<br>
+            <br>
+            [Output from "Step B"]:<br>
+            ...output completo do step B...
+          </code>
+        </div>
+        <div class="diagram-flow text-sm">
+          <div class="diagram-node border-emerald-500/50">A (sem deps)</div>
+          <span class="diagram-arrow">&rarr;</span>
+          <div class="diagram-node border-purple-500/50">B (deps: A)</div>
+          <span class="diagram-arrow">&rarr;</span>
+          <div class="diagram-node border-orange-500/50">D (deps: B, C)</div>
+        </div>
+        <div class="diagram-flow text-sm mt-2">
+          <div class="diagram-node border-emerald-500/50">A</div>
+          <span class="diagram-arrow">&rarr;</span>
+          <div class="diagram-node border-blue-500/50">C (deps: A)</div>
+          <span class="diagram-arrow">&rarr;</span>
+          <div class="diagram-node border-orange-500/50">D</div>
+        </div>
+        <p class="text-xs text-slate-500 mt-3">B e C executam em paralelo (Batch 2). D so executa apos ambos completarem (Batch 3).</p>
+      </div>
+
+      <!-- Error Handling in DAG -->
+      <div class="glass rounded-xl p-4">
+        <h5 class="font-semibold text-red-400 mb-2">Error Handling no DAG</h5>
+        <p class="text-sm text-slate-400">
+          Erros sao avaliados <strong>per-step</strong> durante o batch. Se <code class="mono">errorHandler === 'fail'</code>,
+          a execucao inteira para <strong>apos o batch corrente completar</strong> (Promise.all aguarda todos).
+          Para <code class="mono">skip/continue_next</code>, o step e marcado como completed e o DAG continua.
+          Para <code class="mono">fallback</code>, re-executa com <code class="mono">FALLBACK_MESSAGE</code> antes de retornar resultado.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- Section 5: Step-by-Step Executor -->
+  <!-- ================================================================ -->
+  <section id="stepbystep" class="mb-16 reveal">
+    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-lg">5</span>
+      <span class="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">Step-by-Step Executor</span>
+    </h2>
+
+    <div class="glass-strong rounded-2xl p-6">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-lg">&#9199;</div>
+        <div>
+          <h3 class="text-xl font-bold text-orange-400">step-by-step-executor.ts</h3>
+          <p class="text-slate-400 text-sm">212 linhas | Um step por chamada, cliente controla o avanco</p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h4 class="font-semibold text-orange-400 mb-3">Diferenca vs Sequential</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-700">
+                <th class="px-3 py-2 text-left text-slate-400">Aspecto</th>
+                <th class="px-3 py-2 text-left text-orange-400">Step-by-Step</th>
+                <th class="px-3 py-2 text-left text-emerald-400">Sequential</th>
+              </tr></thead>
+              <tbody class="text-xs text-slate-400">
+                <tr class="border-b border-slate-800"><td class="px-3 py-2">Controle</td><td class="px-3 py-2">Cliente</td><td class="px-3 py-2">Automatico</td></tr>
+                <tr class="border-b border-slate-800"><td class="px-3 py-2">Loop</td><td class="px-3 py-2">Nenhum (1 step)</td><td class="px-3 py-2">while(i &lt; steps)</td></tr>
+                <tr class="border-b border-slate-800"><td class="px-3 py-2">Navegacao</td><td class="px-3 py-2">advance/back/jump API</td><td class="px-3 py-2">Conditions only</td></tr>
+                <tr class="border-b border-slate-800"><td class="px-3 py-2">Pause</td><td class="px-3 py-2">Return imediato</td><td class="px-3 py-2">Pause + auto-continue</td></tr>
+                <tr><td class="px-3 py-2">Resume</td><td class="px-3 py-2">Explicit API call</td><td class="px-3 py-2">Loop continuation</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h4 class="font-semibold text-orange-400 mb-3">API de Navegacao</h4>
+          <div class="space-y-2">
+            <div class="glass rounded-lg p-3">
+              <code class="mono text-sm text-blue-400">POST /conversations/:id/advance-step</code>
+              <p class="text-xs text-slate-500 mt-1">Move <code class="mono">currentStepId</code> para <code class="mono">steps[currentIndex + 1]</code>. Transacao Serializable.</p>
+            </div>
+            <div class="glass rounded-lg p-3">
+              <code class="mono text-sm text-blue-400">POST /conversations/:id/go-back-step</code>
+              <p class="text-xs text-slate-500 mt-1">Move para <code class="mono">steps[Math.max(0, currentIndex - 1)]</code>. Guard contra indice negativo.</p>
+            </div>
+            <div class="glass rounded-lg p-3">
+              <code class="mono text-sm text-blue-400">POST /conversations/:id/jump-to-step</code>
+              <p class="text-xs text-slate-500 mt-1">Body: <code class="mono">{ stepId }</code>. Busca por ID no array de steps. 400 se nao encontrado.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
+        <h5 class="font-semibold text-orange-400 mb-2">Fluxo Tipico</h5>
+        <div class="diagram-flow text-sm">
+          <span class="text-slate-400">Cliente</span>
+          <span class="diagram-arrow">&rarr;</span>
+          <span class="text-orange-400 mono text-xs">POST /messages/stream?stepIndex=0</span>
+          <span class="diagram-arrow">&rarr;</span>
+          <span class="text-slate-400">Executa Step 0</span>
+          <span class="diagram-arrow">&rarr;</span>
+          <span class="text-emerald-400">SSE: complete</span>
+        </div>
+        <div class="diagram-flow text-sm mt-2">
+          <span class="text-slate-400">Cliente</span>
+          <span class="diagram-arrow">&rarr;</span>
+          <span class="text-orange-400 mono text-xs">POST /advance-step</span>
+          <span class="diagram-arrow">&rarr;</span>
+          <span class="text-orange-400 mono text-xs">POST /messages/stream</span>
+          <span class="diagram-arrow">&rarr;</span>
+          <span class="text-slate-400">Executa Step 1</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-3">O cliente pode avancar, voltar ou pular steps livremente. Estado persiste em <code class="mono">conversation.currentStepId</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================ -->
+  <!-- Section 6: Step Executor Deep Dive -->
+  <!-- ================================================================ -->
+  <section id="stepexec" class="mb-16 reveal">
+    <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-lg">6</span>
+      <span class="bg-gradient-to-r from-cyan-400 to-teal-400 bg-clip-text text-transparent">Step Executor Deep Dive</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6">
       <p class="text-slate-400 mb-6">
-        O Step Executor e o coracao de cada execucao. Ele prepara o contexto, invoca o Claude Code Engine
-        e processa o resultado. Cada passo passa por estas fases:
+        <code class="mono text-cyan-300">step-executor.ts</code> (410 linhas) &mdash; o coracao de cada execucao individual.
+        Cada step passa por 8 fases com recuperacao automatica de erros:
       </p>
 
-      <div class="grid md:grid-cols-2 gap-4">
+      <div class="grid md:grid-cols-2 gap-4 mb-6">
         <div class="glass rounded-xl p-4 border-l-4 border-cyan-500">
           <div class="font-semibold text-cyan-400 mb-2">1. Recover Session Token</div>
-          <p class="text-sm text-slate-400 mb-2">
-            <code class="mono text-cyan-300">sessionManager.getSession(conversationId, stepId)</code>
-          </p>
-          <p class="text-xs text-slate-500">
-            Recupera o resumeToken da sessao anterior para continuidade.
-          </p>
+          <p class="text-sm text-slate-400"><code class="mono text-cyan-300">sessionManager.getSession(conversationId, stepId)</code></p>
+          <p class="text-xs text-slate-500 mt-1">Query: <code class="mono">SELECT claude_session_id FROM conversation_sessions WHERE conversation_id=? AND step_id=?</code>. Retorna <code class="mono">null</code> se inexistente.</p>
         </div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-cyan-500">
           <div class="font-semibold text-cyan-400 mb-2">2. Recover Step Memory</div>
-          <p class="text-sm text-slate-400 mb-2">
-            <code class="mono text-cyan-300">memoryManager.getMemory(conversationId, stepId)</code>
-          </p>
-          <p class="text-xs text-slate-500">
-            Recupera o resumo do contexto anterior para compactacao.
-          </p>
+          <p class="text-sm text-slate-400"><code class="mono text-cyan-300">memoryManager.getMemory(conversationId, stepId)</code></p>
+          <p class="text-xs text-slate-500 mt-1">Retorna resumo compactado de sessoes anteriores. Usado para manter continuidade quando contexto e resetado.</p>
         </div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-blue-500">
           <div class="font-semibold text-blue-400 mb-2">3. Build System Prompt</div>
-          <p class="text-sm text-slate-400 mb-2">
-            <code class="mono text-blue-300">buildSystemPrompt(base + custom + memory)</code>
-          </p>
-          <p class="text-xs text-slate-500">
-            Combina prompt base, prompt customizado do step e memoria injetada.
-          </p>
+          <p class="text-sm text-slate-400"><code class="mono text-blue-300">buildSystemPrompt({ stepSystemPrompt, projectPath, memory, useBasePrompt })</code></p>
+          <p class="text-xs text-slate-500 mt-1">Composicao: [Base Prompt (11 secoes)] + [Step Custom Prompt] + [Memoria de Contexto]. Separados por <code class="mono">---</code>.</p>
         </div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-blue-500">
           <div class="font-semibold text-blue-400 mb-2">4. File Sync</div>
-          <p class="text-sm text-slate-400 mb-2">
-            <code class="mono text-blue-300">fileSyncService.sync(projectPath)</code>
-          </p>
-          <p class="text-xs text-slate-500">
-            Sincroniza arquivos do projeto com o ambiente de execucao.
-          </p>
+          <p class="text-sm text-slate-400"><code class="mono text-blue-300">fileSyncService.sync(projectPath)</code></p>
+          <p class="text-xs text-slate-500 mt-1">Sincroniza arquivos do projeto. Cria diretorio se inexistente (<code class="mono">mode: 0o775</code>). Chmod para group write se necessario.</p>
         </div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-purple-500">
-          <div class="font-semibold text-purple-400 mb-2">5. Git Config</div>
-          <p class="text-sm text-slate-400 mb-2">
-            <code class="mono text-purple-300">fetch GitHub token + git config</code>
-          </p>
-          <p class="text-xs text-slate-500">
-            Configura credenciais Git para operacoes versionadas.
-          </p>
+          <div class="font-semibold text-purple-400 mb-2">5. Git Config + GitHub Token</div>
+          <p class="text-sm text-slate-400"><code class="mono text-purple-300">env.GITHUB_TOKEN + env.GIT_ASKPASS = 'echo'</code></p>
+          <p class="text-xs text-slate-500 mt-1">Token GitHub injetado para operacoes git. <code class="mono">GIT_ASKPASS=echo</code> previne prompts de credencial.</p>
         </div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-purple-500">
           <div class="font-semibold text-purple-400 mb-2">6. Execute Claude Engine</div>
-          <p class="text-sm text-slate-400 mb-2">
-            <code class="mono text-purple-300">claudeCodeEngine.execute({...})</code>
-          </p>
-          <p class="text-xs text-slate-500">
-            Invoca o Claude CLI com timeout configuravel.
-          </p>
+          <p class="text-sm text-slate-400"><code class="mono text-purple-300">deps.engine.execute({ ...options, onEvent, onRawStdout, onRawStderr })</code></p>
+          <p class="text-xs text-slate-500 mt-1">Timeout configuravel via <code class="mono">step.timeout</code> (default: 0 = sem timeout). Callback <code class="mono">onEvent</code> emite step:stream em tempo real.</p>
         </div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
           <div class="font-semibold text-orange-400 mb-2">7. Handle Result</div>
-          <p class="text-sm text-slate-400 mb-2">
-            <code class="mono text-orange-300">needsUserInput | interrupted | error | timeout</code>
-          </p>
-          <p class="text-xs text-slate-500">
-            Processa cada tipo de resultado apropriadamente.
-          </p>
+          <p class="text-sm text-slate-400"><code class="mono text-orange-300">needsUserInput | interrupted | cancelled | timedOut | error | success</code></p>
+          <p class="text-xs text-slate-500 mt-1">Resultados processados em cascata. Interrupt salva output parcial + mensagem do usuario. Cancel limpa tudo.</p>
         </div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
-          <div class="font-semibold text-orange-400 mb-2">8. Save & Return</div>
-          <p class="text-sm text-slate-400 mb-2">
-            <code class="mono text-orange-300">saveMessage() + return result</code>
-          </p>
-          <p class="text-xs text-slate-500">
-            Persiste a mensagem e retorna o conteudo gerado.
+          <div class="font-semibold text-orange-400 mb-2">8. Auto-Recovery</div>
+          <p class="text-sm text-slate-400"><code class="mono text-orange-300">session_not_found | prompt_too_long</code></p>
+          <p class="text-xs text-slate-500 mt-1">
+            <strong>Session expired:</strong> delete session &rarr; retry sem --resume.
+            <strong>Prompt too long:</strong> summarize via Haiku &rarr; delete session &rarr; rebuild prompt com memory &rarr; retry sem --resume.
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 5: Claude Code Engine -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 7: Claude Code Engine -->
+  <!-- ================================================================ -->
+  <section id="engine" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-lg">5</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center text-lg">7</span>
       <span class="bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent">Claude Code Engine</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6">
+      <p class="text-slate-400 mb-6">
+        <code class="mono text-red-300">claude-code-engine.ts</code> (494 linhas) &mdash;
+        Classe <code class="mono text-red-300">ClaudeCodeEngine implements CliEngine</code>.
+        Gerencia processos Claude CLI, parsing de stream, e lifecycle completo.
+      </p>
+
       <div class="grid md:grid-cols-2 gap-6 mb-6">
         <div>
           <h3 class="font-semibold text-red-400 mb-3">Command Building</h3>
           <div class="code-block p-4 text-sm">
             <code>
-              <span class="text-slate-500"># Base command</span><br>
+              <span class="text-slate-500"># Base (sempre presente)</span><br>
               claude --print \<br>
               &nbsp;&nbsp;--output-format stream-json \<br>
               &nbsp;&nbsp;--verbose \<br>
               &nbsp;&nbsp;--dangerously-skip-permissions<br>
               <br>
-              <span class="text-slate-500"># Optional flags</span><br>
-              [--resume &lt;token&gt;]<br>
-              [--system-prompt &lt;prompt&gt;]<br>
-              [--model &lt;model&gt;]<br>
+              <span class="text-slate-500"># Condicionais</span><br>
+              [--resume &lt;sessionToken&gt;]<br>
+              [--system-prompt &lt;fullPrompt&gt;]<br>
+              [--model &lt;claude-sonnet-4-6&gt;]<br>
               <br>
-              <span class="text-slate-500"># Message + images</span><br>
-              "&lt;message&gt;" [&lt;image-paths&gt;...]
+              <span class="text-slate-500"># Mensagem + imagens (paths appended)</span><br>
+              "&lt;message&gt;\n\n&lt;/path/to/img1.png&gt;\n&lt;/path/to/img2.jpg&gt;"
             </code>
           </div>
         </div>
 
         <div>
-          <h3 class="font-semibold text-red-400 mb-3">Environment Setup</h3>
+          <h3 class="font-semibold text-red-400 mb-3">Environment Blocklist</h3>
           <div class="code-block p-4 text-sm">
             <code>
-              <span class="text-slate-500"># Blocked vars (security)</span><br>
-              ENV_BLOCKLIST = [<br>
-              &nbsp;&nbsp;DATABASE_URL,<br>
-              &nbsp;&nbsp;JWT_SECRET,<br>
-              &nbsp;&nbsp;GROQ_API_KEY,<br>
-              &nbsp;&nbsp;CLAUDECODE,<br>
-              &nbsp;&nbsp;...<br>
-              ]<br>
+              <span class="text-slate-500"># Bloqueadas (seguranca)</span><br>
+              DATABASE_URL<br>
+              JWT_SECRET<br>
+              GROQ_API_KEY<br>
+              CLAUDECODE<br>
+              CLAUDE_CODE_ENTRYPOINT<br>
+              npm_lifecycle_event<br>
+              npm_package_name<br>
+              npm_package_version<br>
               <br>
-              <span class="text-slate-500"># Injected vars</span><br>
-              ANTHROPIC_BASE_URL<br>
-              GITHUB_TOKEN<br>
-              GIT_ASKPASS
+              <span class="text-slate-500"># Injetadas</span><br>
+              ANTHROPIC_BASE_URL <span class="text-slate-500"># required</span><br>
+              GITHUB_TOKEN <span class="text-slate-500"># if configured</span><br>
+              GIT_ASKPASS=echo<br>
+              HOME=/home/claude-sandbox <span class="text-slate-500"># if sandbox</span>
             </code>
           </div>
         </div>
@@ -923,166 +1050,171 @@
           <h3 class="font-semibold text-red-400 mb-3">Sandbox Spawn</h3>
           <div class="code-block p-4 text-sm">
             <code>
-              <span class="text-purple-400">const</span> SANDBOX_ENABLED = <span class="text-orange-400">true</span>;<br>
-              <span class="text-purple-400">const</span> SANDBOX_USER = <span class="text-green-400">'claude-sandbox'</span>;<br>
-              <span class="text-purple-400">const</span> SANDBOX_GROUP = <span class="text-green-400">'dev'</span>;<br>
+              <span class="text-purple-400">const</span> SANDBOX_USER = <span class="text-green-400">'claude-sandbox'</span><br>
+              <span class="text-purple-400">const</span> SANDBOX_GROUP = <span class="text-green-400">'dev'</span><br>
+              <span class="text-purple-400">const</span> SANDBOX_ENABLED = env !== <span class="text-green-400">'false'</span><br>
               <br>
               spawn(<span class="text-green-400">'sudo'</span>, [<br>
-              &nbsp;&nbsp;<span class="text-green-400">'-n'</span>,<br>
-              &nbsp;&nbsp;<span class="text-green-400">'-u'</span>, SANDBOX_USER,<br>
-              &nbsp;&nbsp;<span class="text-green-400">'-g'</span>, SANDBOX_GROUP,<br>
-              &nbsp;&nbsp;<span class="text-green-400">'--preserve-env'</span>,<br>
-              &nbsp;&nbsp;<span class="text-green-400">'--'</span>, <span class="text-green-400">'claude'</span>,<br>
-              &nbsp;&nbsp;...args<br>
-              ], { detached: <span class="text-purple-400">true</span> });
+              &nbsp;&nbsp;<span class="text-green-400">'-n'</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// non-interactive</span><br>
+              &nbsp;&nbsp;<span class="text-green-400">'-u'</span>, SANDBOX_USER,&nbsp;&nbsp;<span class="text-slate-500">// run as user</span><br>
+              &nbsp;&nbsp;<span class="text-green-400">'-g'</span>, SANDBOX_GROUP,&nbsp;<span class="text-slate-500">// run with group</span><br>
+              &nbsp;&nbsp;<span class="text-green-400">'--preserve-env'</span>,&nbsp;&nbsp;<span class="text-slate-500">// keep filtered env</span><br>
+              &nbsp;&nbsp;<span class="text-green-400">'--'</span>, claudeBin, ...args<br>
+              ], {<br>
+              &nbsp;&nbsp;cwd: projectPath,<br>
+              &nbsp;&nbsp;stdio: [<span class="text-green-400">'pipe'</span>,<span class="text-green-400">'pipe'</span>,<span class="text-green-400">'pipe'</span>],<br>
+              &nbsp;&nbsp;detached: <span class="text-orange-400">true</span>,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// new process group</span><br>
+              })<br>
+              <br>
+              childProcess.stdin?.end()&nbsp;&nbsp;<span class="text-slate-500">// close immediately</span>
             </code>
           </div>
-          <p class="text-xs text-slate-500 mt-2">
-            <code class="mono">detached: true</code> cria um novo process group para controle independente.
-            Stdin e fechado imediatamente para evitar bloqueios.
-          </p>
         </div>
 
         <div>
-          <h3 class="font-semibold text-red-400 mb-3">Stream Parsing</h3>
+          <h3 class="font-semibold text-red-400 mb-3">Process Tracking</h3>
           <div class="code-block p-4 text-sm">
             <code>
-              <span class="text-slate-500"># Stream JSON format (newline-delimited)</span><br>
-              {<span class="text-green-400">"type"</span>:<span class="text-green-400">"system"</span>,<span class="text-green-400">"subtype"</span>:<span class="text-green-400">"init"</span>,...}<br>
-              {<span class="text-green-400">"type"</span>:<span class="text-green-400">"content"</span>,<span class="text-green-400">"text"</span>:<span class="text-green-400">"Analyzing..."</span>}<br>
-              {<span class="text-green-400">"type"</span>:<span class="text-green-400">"action"</span>,<span class="text-green-400">"type"</span>:<span class="text-green-400">"tool_use"</span>,<span class="text-green-400">"name"</span>:<span class="text-green-400">"Read"</span>}<br>
-              {<span class="text-green-400">"type"</span>:<span class="text-green-400">"result"</span>,<span class="text-green-400">"session_id"</span>:<span class="text-green-400">"..."</span>}<br>
+              <span class="text-slate-500">// Internal state maps</span><br>
+              activeProcesses: Map&lt;string, ChildProcess&gt;<br>
+              cancelledProcesses: Set&lt;string&gt;<br>
+              interruptedProcesses: Map&lt;string, string&gt;<br>
               <br>
-              <span class="text-slate-500"># Parser events</span><br>
-              onEvent({ type, action, content })<br>
-              onError(error)
+              <span class="text-slate-500">// Process ID format</span><br>
+              <span class="text-green-400">`${conversationId}_${stepId}_${Date.now()}`</span><br>
+              <br>
+              <span class="text-slate-500">// Kill strategies (in order)</span><br>
+              1. process.kill(-pid, SIGTERM)&nbsp;&nbsp;<span class="text-slate-500">// group</span><br>
+              2. pkill -TERM -P ${pid}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// children</span><br>
+              3. process.kill(pid, SIGTERM)&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// direct</span><br>
+              4. childProcess.kill(SIGTERM)&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// node</span><br>
+              <span class="text-slate-500">// After 2000ms timeout:</span><br>
+              5-8. Same with SIGKILL
             </code>
           </div>
-          <p class="text-xs text-slate-500 mt-2">
-            StreamParser processa stdout linha por linha. AskUserQuestion detectado → SIGTERM.
-          </p>
         </div>
       </div>
 
+      <!-- EngineExecuteResult -->
       <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30">
-        <h4 class="font-semibold text-red-400 mb-2">EngineExecuteResult</h4>
-        <div class="grid md:grid-cols-3 gap-4 text-sm">
-          <div>
-            <span class="text-slate-500">content:</span>
-            <span class="text-white mono"> string</span>
-          </div>
-          <div>
-            <span class="text-slate-500">resumeToken:</span>
-            <span class="text-white mono"> string</span>
-          </div>
-          <div>
-            <span class="text-slate-500">actions:</span>
-            <span class="text-white mono"> Action[]</span>
-          </div>
-          <div>
-            <span class="text-slate-500">timedOut:</span>
-            <span class="text-white mono"> boolean</span>
-          </div>
-          <div>
-            <span class="text-slate-500">cancelled:</span>
-            <span class="text-white mono"> boolean</span>
-          </div>
-          <div>
-            <span class="text-slate-500">needsUserInput:</span>
-            <span class="text-white mono"> boolean</span>
-          </div>
-          <div>
-            <span class="text-slate-500">exitCode:</span>
-            <span class="text-white mono"> number | null</span>
-          </div>
-          <div>
-            <span class="text-slate-500">signal:</span>
-            <span class="text-white mono"> string | null</span>
-          </div>
-          <div>
-            <span class="text-slate-500">error:</span>
-            <span class="text-white mono"> string | undefined</span>
-          </div>
+        <h4 class="font-semibold text-red-400 mb-3">EngineExecuteResult (11 campos)</h4>
+        <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
+          <div><span class="text-slate-500">content:</span> <span class="text-white mono">string</span><br><span class="text-xs text-slate-600">Texto final do assistant</span></div>
+          <div><span class="text-slate-500">resumeToken:</span> <span class="text-white mono">string|null</span><br><span class="text-xs text-slate-600">Session ID para --resume</span></div>
+          <div><span class="text-slate-500">actions:</span> <span class="text-white mono">Action[]</span><br><span class="text-xs text-slate-600">tool_use, tool_result, thinking, stderr</span></div>
+          <div><span class="text-slate-500">timedOut:</span> <span class="text-white mono">boolean</span><br><span class="text-xs text-slate-600">Step timeout exceeded</span></div>
+          <div><span class="text-slate-500">cancelled:</span> <span class="text-white mono">boolean</span><br><span class="text-xs text-slate-600">User/system cancel</span></div>
+          <div><span class="text-slate-500">needsUserInput:</span> <span class="text-white mono">boolean</span><br><span class="text-xs text-slate-600">AskUserQuestion detected</span></div>
+          <div><span class="text-slate-500">interrupted:</span> <span class="text-white mono">boolean</span><br><span class="text-xs text-slate-600">User interrupt mid-step</span></div>
+          <div><span class="text-slate-500">interruptMessage:</span> <span class="text-white mono">string</span><br><span class="text-xs text-slate-600">Mensagem do interrupt</span></div>
+          <div><span class="text-slate-500">exitCode:</span> <span class="text-white mono">number|null</span><br><span class="text-xs text-slate-600">Process exit code</span></div>
+          <div><span class="text-slate-500">signal:</span> <span class="text-white mono">string|null</span><br><span class="text-xs text-slate-600">SIGTERM, SIGKILL, etc</span></div>
+          <div><span class="text-slate-500">error:</span> <span class="text-white mono">string|undefined</span><br><span class="text-xs text-slate-600">Enriched with stderr</span></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 6: Stream Parser -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 8: Stream Parser -->
+  <!-- ================================================================ -->
+  <section id="parser" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-indigo-500 flex items-center justify-center text-lg">6</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-indigo-500 flex items-center justify-center text-lg">8</span>
       <span class="bg-gradient-to-r from-pink-400 to-indigo-400 bg-clip-text text-transparent">Stream Parser</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6">
       <p class="text-slate-400 mb-6">
-        O StreamParser processa o output do Claude CLI em formato <code class="mono">stream-json</code>.
-        Cada linha e um objeto JSON independente (newline-delimited JSON).
+        <code class="mono text-pink-300">stream-parser.ts</code> (~360 linhas) &mdash;
+        Processa NDJSON (newline-delimited JSON) do Claude CLI.
+        Buffer management para chunks incompletos, fallback para linhas malformadas.
       </p>
 
-      <div class="code-block p-4 mb-6">
+      <!-- Buffer Management -->
+      <div class="code-block p-4 mb-6 overflow-x-auto">
         <code class="text-sm">
-          <span class="text-slate-500"># Event: system/init</span><br>
-          {<br>
-          &nbsp;&nbsp;<span class="text-green-400">"type"</span>: <span class="text-green-400">"system"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"subtype"</span>: <span class="text-green-400">"init"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"session_id"</span>: <span class="text-green-400">"sk_ants_"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"model"</span>: <span class="text-green-400">"claude-sonnet-4-20250514"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"claude_code_version"</span>: <span class="text-green-400">"1.0.0"</span><br>
-          }<br>
+          <span class="text-purple-400">private</span> buffer = <span class="text-green-400">''</span><br>
           <br>
-          <span class="text-slate-500"># Event: content</span><br>
-          {<span class="text-green-400">"type"</span>: <span class="text-green-400">"content"</span>, <span class="text-green-400">"text"</span>: <span class="text-green-400">"Analyzing the codebase..."</span>}<br>
+          parse(chunk: string): StreamEvent[] {<br>
+          &nbsp;&nbsp;<span class="text-purple-400">this</span>.buffer += chunk&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// Accumulate</span><br>
+          &nbsp;&nbsp;<span class="text-purple-400">const</span> lines = <span class="text-purple-400">this</span>.buffer.split(<span class="text-green-400">'\n'</span>)<br>
+          &nbsp;&nbsp;<span class="text-purple-400">this</span>.buffer = lines.pop() || <span class="text-green-400">''</span> <span class="text-slate-500">// Keep incomplete last line</span><br>
           <br>
-          <span class="text-slate-500"># Event: action (tool_use)</span><br>
-          {<br>
-          &nbsp;&nbsp;<span class="text-green-400">"type"</span>: <span class="text-green-400">"action"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"type"</span>: <span class="text-green-400">"tool_use"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"name"</span>: <span class="text-green-400">"Read"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"input"</span>: {<span class="text-green-400">"file_path"</span>: <span class="text-green-400">"/workspace/src/index.ts"</span>}<br>
-          }<br>
-          <br>
-          <span class="text-slate-500"># Event: action (tool_result)</span><br>
-          {<br>
-          &nbsp;&nbsp;<span class="text-green-400">"type"</span>: <span class="text-green-400">"action"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"type"</span>: <span class="text-green-400">"tool_result"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"output"</span>: <span class="text-green-400">"export function hello() {...}"</span><br>
-          }<br>
-          <br>
-          <span class="text-slate-500"># Event: result (final)</span><br>
-          {<br>
-          &nbsp;&nbsp;<span class="text-green-400">"type"</span>: <span class="text-green-400">"result"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"session_id"</span>: <span class="text-green-400">"sk_ants_"</span>,<br>
-          &nbsp;&nbsp;<span class="text-green-400">"usage"</span>: {<span class="text-green-400">"input_tokens"</span>: 1234, <span class="text-green-400">"output_tokens"</span>: 567}<br>
+          &nbsp;&nbsp;<span class="text-purple-400">for</span> (<span class="text-purple-400">const</span> line <span class="text-purple-400">of</span> lines) {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">try</span> {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="text-purple-400">const</span> data = JSON.parse(line.trim())<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;events.push(...<span class="text-purple-400">this</span>.parseJsonEvent(data))<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;} <span class="text-purple-400">catch</span> {<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;events.push({ type: <span class="text-green-400">'content'</span>, content: line.trim() }) <span class="text-slate-500">// Fallback</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+          &nbsp;&nbsp;}<br>
           }
         </code>
       </div>
 
-      <div class="grid md:grid-cols-3 gap-4">
-        <div class="glass rounded-xl p-4 text-center">
-          <div class="text-2xl mb-2">📡</div>
-          <div class="font-semibold text-pink-400">Buffer Management</div>
-          <p class="text-xs text-slate-500 mt-1">Acumula linhas incompletas ate newline</p>
+      <!-- Event Types -->
+      <h4 class="font-semibold text-pink-400 mb-4">7 Tipos de StreamEvent</h4>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+        <div class="glass rounded-xl p-3 border-l-4 border-pink-500">
+          <div class="font-semibold text-pink-400 text-sm">content</div>
+          <p class="text-xs text-slate-500">Texto gerado pelo assistant. Acumulado em <code class="mono">content += event.content</code>. Streaming em tempo real.</p>
         </div>
-        <div class="glass rounded-xl p-4 text-center">
-          <div class="text-2xl mb-2">🔄</div>
-          <div class="font-semibold text-indigo-400">JSON Parse</div>
-          <p class="text-xs text-slate-500 mt-1">Parse com fallback para erros de formatacao</p>
+        <div class="glass rounded-xl p-3 border-l-4 border-indigo-500">
+          <div class="font-semibold text-indigo-400 text-sm">action</div>
+          <p class="text-xs text-slate-500">tool_use, tool_result, thinking, stderr, system, error. AskUserQuestion detectado aqui.</p>
         </div>
-        <div class="glass rounded-xl p-4 text-center">
-          <div class="text-2xl mb-2">⚡</div>
-          <div class="font-semibold text-cyan-400">Event Emission</div>
-          <p class="text-xs text-slate-500 mt-1">Emite eventos parseados via callback</p>
+        <div class="glass rounded-xl p-3 border-l-4 border-blue-500">
+          <div class="font-semibold text-blue-400 text-sm">session</div>
+          <p class="text-xs text-slate-500">Session ID extraido de <code class="mono">system.init</code> e <code class="mono">result</code>. Usado como --resume token.</p>
         </div>
+        <div class="glass rounded-xl p-3 border-l-4 border-emerald-500">
+          <div class="font-semibold text-emerald-400 text-sm">result</div>
+          <p class="text-xs text-slate-500">Evento final com resultado. Pode conter string do output final.</p>
+        </div>
+        <div class="glass rounded-xl p-3 border-l-4 border-red-500">
+          <div class="font-semibold text-red-400 text-sm">error</div>
+          <p class="text-xs text-slate-500">Subtipos: error_during_execution, error_max_turns, error_max_budget_usd.</p>
+        </div>
+        <div class="glass rounded-xl p-3 border-l-4 border-orange-500">
+          <div class="font-semibold text-orange-400 text-sm">usage</div>
+          <p class="text-xs text-slate-500">input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens, server_tool_use (web_search, web_fetch).</p>
+        </div>
+        <div class="glass rounded-xl p-3 border-l-4 border-cyan-500">
+          <div class="font-semibold text-cyan-400 text-sm">metadata</div>
+          <p class="text-xs text-slate-500">claude_code_version, model, mcp_servers[], tools[], total_cost_usd, duration_api_ms, num_turns, stop_reason, service_tier.</p>
+        </div>
+      </div>
+
+      <!-- JSON Sources -->
+      <h4 class="font-semibold text-pink-400 mb-3">Fontes JSON Parseadas</h4>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm sse-table">
+          <thead><tr>
+            <th class="px-3 py-2 text-left text-pink-400">type no JSON</th>
+            <th class="px-3 py-2 text-left text-pink-400">Eventos Emitidos</th>
+            <th class="px-3 py-2 text-left text-pink-400">Detalhes</th>
+          </tr></thead>
+          <tbody class="text-xs text-slate-400">
+            <tr><td class="px-3 py-2 mono">system (init)</td><td class="px-3 py-2">session + metadata</td><td class="px-3 py-2">Inicializacao com session_id, model, mcp_servers[], tools[]</td></tr>
+            <tr><td class="px-3 py-2 mono">result</td><td class="px-3 py-2">session + error? + metadata + usage + result</td><td class="px-3 py-2">Evento final (3-6 sub-eventos). Detecta error_during_execution</td></tr>
+            <tr><td class="px-3 py-2 mono">assistant</td><td class="px-3 py-2">content + action (tool_use/thinking) + usage</td><td class="px-3 py-2">Blocos de conteudo, tool_use com ID salvo em currentToolUse</td></tr>
+            <tr><td class="px-3 py-2 mono">user</td><td class="px-3 py-2">action (tool_result)</td><td class="px-3 py-2">Resultado de tools, matched por ID com currentToolUse</td></tr>
+            <tr><td class="px-3 py-2 mono">stream_event</td><td class="px-3 py-2">content (text_delta) + action (thinking_delta)</td><td class="px-3 py-2">Streaming incremental de conteudo e pensamento</td></tr>
+            <tr><td class="px-3 py-2 mono">content_block_delta</td><td class="px-3 py-2">content</td><td class="px-3 py-2">Fallback para formato antigo de stream</td></tr>
+            <tr><td class="px-3 py-2 mono">progress</td><td class="px-3 py-2">(ignorado)</td><td class="px-3 py-2">Eventos de progresso silenciosamente descartados</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </section>
 
-  <!-- Section 7: Gerenciamento de Sessoes e Memoria -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 9: Sessoes e Memoria -->
+  <!-- ================================================================ -->
+  <section id="sessions" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-lg">7</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-lg">9</span>
       <span class="bg-gradient-to-r from-indigo-400 to-blue-400 bg-clip-text text-transparent">Sessoes e Memoria</span>
     </h2>
 
@@ -1090,689 +1222,618 @@
       <!-- Session Manager -->
       <div class="glass-strong rounded-2xl p-6">
         <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center text-xl">🔑</div>
-          <h3 class="font-semibold text-indigo-400">Session Manager</h3>
+          <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center text-lg">&#128273;</div>
+          <div>
+            <h3 class="font-semibold text-indigo-400">Session Manager</h3>
+            <p class="text-xs text-slate-500">session-manager.ts (69 linhas)</p>
+          </div>
         </div>
 
-        <div class="space-y-4">
-          <div class="code-block p-3 text-sm">
-            <code>
-              <span class="text-purple-400">interface</span> Session {<br>
-              &nbsp;&nbsp;conversationId: string;<br>
-              &nbsp;&nbsp;stepId: string;<br>
-              &nbsp;&nbsp;claudeSessionId: string;<br>
-              &nbsp;&nbsp;resumeToken: string;<br>
-              &nbsp;&nbsp;createdAt: Date;<br>
-              }
-            </code>
-          </div>
-
-          <div class="space-y-2 text-sm">
-            <div class="flex items-center gap-2">
-              <span class="text-indigo-400">getSession()</span>
-              <span class="text-slate-500">→</span>
-              <span class="text-slate-400">resumeToken</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-indigo-400">saveSession()</span>
-              <span class="text-slate-500">→</span>
-              <span class="text-slate-400">UPSERT conversation_sessions</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-indigo-400">deleteAllSessions()</span>
-              <span class="text-slate-500">→</span>
-              <span class="text-slate-400">cleanup on cancel</span>
-            </div>
-          </div>
-
-          <p class="text-xs text-slate-500 mt-4">
-            O resumeToken permite continuar uma execucao interrompida exatamente de onde parou,
-            preservando o contexto da sessao Claude.
-          </p>
+        <div class="code-block p-3 text-sm mb-4">
+          <code>
+            <span class="text-slate-500">// Prisma: ConversationSession</span><br>
+            <span class="text-purple-400">model</span> conversation_sessions {<br>
+            &nbsp;&nbsp;id&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String &nbsp;<span class="text-slate-500">@id @default(uuid())</span><br>
+            &nbsp;&nbsp;claudeSessionId String &nbsp;<span class="text-slate-500">// --resume token</span><br>
+            &nbsp;&nbsp;conversationId&nbsp;&nbsp;String &nbsp;<span class="text-slate-500">// FK cascade</span><br>
+            &nbsp;&nbsp;stepId&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String &nbsp;<span class="text-slate-500">// FK cascade</span><br>
+            &nbsp;&nbsp;createdAt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DateTime<br>
+            &nbsp;&nbsp;<span class="text-slate-500">@@unique([conversationId, stepId])</span><br>
+            }
+          </code>
         </div>
+
+        <div class="space-y-2 text-sm mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-indigo-400 mono text-xs">getSession(convId, stepId)</span>
+            <span class="text-slate-600">&rarr;</span>
+            <span class="text-slate-400 text-xs">resumeToken | null</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-indigo-400 mono text-xs">saveSession(convId, stepId, token)</span>
+            <span class="text-slate-600">&rarr;</span>
+            <span class="text-slate-400 text-xs">UPSERT (atomic)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-indigo-400 mono text-xs">deleteSession(convId, stepId)</span>
+            <span class="text-slate-600">&rarr;</span>
+            <span class="text-slate-400 text-xs">On error recovery</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-indigo-400 mono text-xs">deleteAllSessions(convId)</span>
+            <span class="text-slate-600">&rarr;</span>
+            <span class="text-slate-400 text-xs">On cancel/cleanup</span>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500">
+          Token lifecycle: Claude CLI gera session_id &rarr; StreamParser extrai &rarr; Engine retorna como <code class="mono">resumeToken</code>
+          &rarr; SessionManager salva via UPSERT &rarr; Proxima execucao usa como <code class="mono">--resume</code>.
+        </p>
       </div>
 
       <!-- Memory Manager -->
       <div class="glass-strong rounded-2xl p-6">
         <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-xl">🧠</div>
-          <h3 class="font-semibold text-blue-400">Memory Manager</h3>
+          <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-lg">&#129504;</div>
+          <div>
+            <h3 class="font-semibold text-blue-400">Memory Manager</h3>
+            <p class="text-xs text-slate-500">memory-manager.ts (147 linhas)</p>
+          </div>
         </div>
 
-        <div class="space-y-4">
-          <div class="code-block p-3 text-sm">
-            <code>
-              <span class="text-purple-400">interface</span> Memory {<br>
-              &nbsp;&nbsp;conversationId: string;<br>
-              &nbsp;&nbsp;stepId: string;<br>
-              &nbsp;&nbsp;content: string; <span class="text-slate-500">// summary</span><br>
-              &nbsp;&nbsp;accumulatedTokens: number;<br>
-              &nbsp;&nbsp;createdAt: Date;<br>
-              }
-            </code>
-          </div>
+        <div class="code-block p-3 text-sm mb-4">
+          <code>
+            <span class="text-slate-500">// Prisma: StepMemory</span><br>
+            <span class="text-purple-400">model</span> step_memories {<br>
+            &nbsp;&nbsp;id&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;&nbsp;&nbsp;<span class="text-slate-500">@id @default(uuid())</span><br>
+            &nbsp;&nbsp;content&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// Resumo acumulado</span><br>
+            &nbsp;&nbsp;conversationId String&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// FK cascade</span><br>
+            &nbsp;&nbsp;stepId&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;String&nbsp;&nbsp;&nbsp;<span class="text-slate-500">// FK cascade</span><br>
+            &nbsp;&nbsp;updatedAt&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DateTime <span class="text-slate-500">@updatedAt</span><br>
+            &nbsp;&nbsp;<span class="text-slate-500">@@unique([conversationId, stepId])</span><br>
+            }
+          </code>
+        </div>
 
-          <div class="space-y-2 text-sm">
-            <div class="flex items-center gap-2">
-              <span class="text-blue-400">getMemory()</span>
-              <span class="text-slate-500">→</span>
-              <span class="text-slate-400">summary text</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-blue-400">summarizeAndSave()</span>
-              <span class="text-slate-500">→</span>
-              <span class="text-slate-400">Haiku summarization</span>
-            </div>
-          </div>
+        <div class="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-xs mb-4">
+          <p class="text-slate-400 font-semibold mb-2">summarizeAndSave() - Fluxo de Compactacao:</p>
+          <ol class="text-slate-400 space-y-1 list-decimal list-inside">
+            <li>Busca memoria anterior (se existente)</li>
+            <li>Busca todas mensagens do step (ordenadas por createdAt ASC)</li>
+            <li>Formata como <code class="mono">[ROLE]: content</code> (trunca a 3000 chars cada)</li>
+            <li>Prompt estruturado em PT-BR: 7 categorias (pedidos, feito, estado, arquivos, decisoes, problemas, contexto)</li>
+            <li>Chama <code class="mono">claude-haiku-4-5-20251001</code> com max_tokens: 4000</li>
+            <li>Salva via UPSERT | Fallback: "[Resumo automatico falhou. N mensagens no historico.]"</li>
+          </ol>
+        </div>
 
-          <div class="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-xs">
-            <p class="text-slate-400">
-              <strong>Trigger:</strong> "prompt too long" error<br>
-              <strong>Action:</strong> compact memory → reset session → re-execute
-            </p>
-          </div>
-
-          <p class="text-xs text-slate-500">
-            Usa claude-haiku-4-5 para resumir o contexto acumulado, reduzindo tokens
-            mantendo a informacao essencial.
+        <div class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs">
+          <p class="text-amber-400 font-semibold mb-1">Trigger: "prompt too long" error</p>
+          <p class="text-slate-400">
+            1. <code class="mono">summarizeAndSave()</code> &rarr;
+            2. <code class="mono">deleteSession()</code> &rarr;
+            3. <code class="mono">getMemory()</code> (fresh) &rarr;
+            4. <code class="mono">buildSystemPrompt()</code> com memory injetada &rarr;
+            5. Retry sem --resume (nova sessao com contexto compactado)
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 8: Pausa e Resumption -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 10: Pausa e Resumption -->
+  <!-- ================================================================ -->
+  <section id="pause" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-lg">8</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-lg">10</span>
       <span class="bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">Pausa e Resumption</span>
     </h2>
 
-    <div class="glass-strong rounded-2xl p-6">
+    <div class="glass-strong rounded-2xl p-6 mb-6">
       <p class="text-slate-400 mb-6">
-        Quando o Claude chama <code class="mono">AskUserQuestion</code>, a execucao e pausada
-        e aguarda input do usuario. O estado e preservado e pode ser retomado.
+        Quando Claude chama <code class="mono">AskUserQuestion</code>, o motor detecta via
+        <code class="mono text-orange-300">USER_INPUT_TOOLS = new Set(['AskUserQuestion'])</code>,
+        mata o processo, salva estado e aguarda input do usuario. Lifecycle completo:
       </p>
 
-      <div class="space-y-4">
-        <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
+      <div class="space-y-3">
+        <div class="glass rounded-xl p-4 border-l-4 border-red-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-sm font-bold">1</span>
-            <span class="font-semibold text-orange-400">Claude chama AskUserQuestion</span>
-          </div>
-          <p class="text-sm text-slate-400">Tool use detectado no stream: <code class="mono">{"type":"action","name":"AskUserQuestion"}</code></p>
-        </div>
-
-        <div class="flex justify-center">
-          <span class="text-2xl text-slate-600">↓</span>
-        </div>
-
-        <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-sm font-bold">2</span>
-            <span class="font-semibold text-orange-400">StreamParser detecta e mata processo</span>
-          </div>
-          <p class="text-sm text-slate-400">SIGTERM enviado ao processo, SIGKILL apos 2s se necessario</p>
-        </div>
-
-        <div class="flex justify-center">
-          <span class="text-2xl text-slate-600">↓</span>
-        </div>
-
-        <div class="glass rounded-xl p-4 border-l-4 border-amber-500">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-sm font-bold">3</span>
-            <span class="font-semibold text-amber-400">Estado salvo</span>
+            <span class="w-7 h-7 rounded-full bg-red-500 flex items-center justify-center text-sm font-bold">1</span>
+            <span class="font-semibold text-red-400">Claude chama AskUserQuestion (stream)</span>
           </div>
           <p class="text-sm text-slate-400">
-            <code class="mono">markPaused(executionId, stepIndex, stepId, resumeToken, question)</code>
+            StreamParser emite action com <code class="mono">type: 'tool_use', name: 'AskUserQuestion'</code>.
+            Engine detecta via <code class="mono">USER_INPUT_TOOLS.has(action.name)</code>.
+            Flag <code class="mono">needsUserInput = true</code>.
           </p>
         </div>
 
-        <div class="flex justify-center">
-          <span class="text-2xl text-slate-600">↓</span>
+        <div class="flex justify-center"><span class="text-lg text-slate-600">&#8595;</span></div>
+
+        <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-sm font-bold">2</span>
+            <span class="font-semibold text-orange-400">SIGTERM imediato ao process group</span>
+          </div>
+          <p class="text-sm text-slate-400">
+            <code class="mono">process.kill(-pid, 'SIGTERM')</code> mata grupo inteiro.
+            Fallback: <code class="mono">childProcess.kill('SIGTERM')</code>.
+            Apos <strong>2000ms</strong>: SIGKILL forcado.
+          </p>
         </div>
+
+        <div class="flex justify-center"><span class="text-lg text-slate-600">&#8595;</span></div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-amber-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-sm font-bold">4</span>
-            <span class="font-semibold text-amber-400">Evento SSE emitido</span>
+            <span class="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-sm font-bold">3</span>
+            <span class="font-semibold text-amber-400">Extracao da pergunta + Estado salvo</span>
           </div>
-          <p class="text-sm text-slate-400"><code class="mono">emitExecutionPaused</code> → cliente recebe question + options</p>
+          <p class="text-sm text-slate-400">
+            Itera <code class="mono">result.actions</code> buscando AskUserQuestion. Extrai <code class="mono">questions[0].question</code>
+            e <code class="mono">questions[0].options[]</code>.
+            Chama <code class="mono">markPaused(executionId, stepIndex, stepId, resumeToken, askUserQuestion)</code>.
+            Metadata: <code class="mono">pausedAt, pausedStepIndex, pausedStepId, pausedResumeToken, askUserQuestion</code>.
+          </p>
         </div>
 
-        <div class="flex justify-center">
-          <span class="text-2xl text-slate-600">↓</span>
-        </div>
+        <div class="flex justify-center"><span class="text-lg text-slate-600">&#8595;</span></div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-yellow-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-yellow-500 text-black flex items-center justify-center text-sm font-bold">5</span>
-            <span class="font-semibold text-yellow-400">Usuario responde</span>
+            <span class="w-7 h-7 rounded-full bg-yellow-500 text-black flex items-center justify-center text-sm font-bold">4</span>
+            <span class="font-semibold text-yellow-400">SSE: execution_paused + Aguarda resposta</span>
           </div>
           <p class="text-sm text-slate-400">
-            POST /conversations/:id/messages/stream com a resposta do usuario
+            <code class="mono">emitExecutionPaused({ askUserQuestion: { question, options } })</code>.
+            Cliente recebe pergunta e opcoes. <code class="mono">activeExecutions.delete(conversationId)</code>.
+            Status endpoint: <code class="mono">GET /conversations/:id/status</code> &rarr; <code class="mono">{ isPaused: true, pausedInfo }</code>.
           </p>
         </div>
 
-        <div class="flex justify-center">
-          <span class="text-2xl text-slate-600">↓</span>
-        </div>
+        <div class="flex justify-center"><span class="text-lg text-slate-600">&#8595;</span></div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-emerald-500">
           <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-sm font-bold">6</span>
-            <span class="font-semibold text-emerald-400">Retomada da execucao</span>
+            <span class="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-sm font-bold">5</span>
+            <span class="font-semibold text-emerald-400">Usuario responde &rarr; resumeExecution()</span>
           </div>
           <p class="text-sm text-slate-400">
-            <code class="mono">resumeExecution()</code> carrega estado pausado + <code class="mono">--resume</code> token
+            <code class="mono">POST /conversations/:id/messages/stream</code> com resposta.
+            Route detecta <code class="mono">getPausedExecution(id)</code> e redireciona para
+            <code class="mono">resumeExecution(deps, context, userAnswer, pausedInfo)</code>.
+            Re-executa MESMO step com resposta como input + <code class="mono">--resume token</code>.
+            Se Sequential: auto-continua restante dos steps. Se Step-by-Step: para apos step.
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 9: Tratamento de Erros -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 11: Tratamento de Erros -->
+  <!-- ================================================================ -->
+  <section id="errors" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center text-lg">9</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center text-lg">11</span>
       <span class="bg-gradient-to-r from-red-400 to-rose-400 bg-clip-text text-transparent">Tratamento de Erros</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6 mb-6">
       <p class="text-slate-400 mb-6">
-        Cada step pode configurar como erros devem ser tratados via <code class="mono">decideOnError</code>.
-        Esta estrategia define o comportamento quando uma excecao ocorre.
+        <code class="mono text-red-300">step-error-handler.ts</code> (83 linhas) &mdash;
+        Cada step configura <code class="mono">errorHandler: StepErrorHandler</code> (enum Prisma).
+        Deteccao: <code class="mono">isStepError(result) = result.error || result.timedOut</code>.
       </p>
 
-      <div class="grid md:grid-cols-2 gap-4">
+      <div class="grid md:grid-cols-2 gap-4 mb-6">
         <div class="glass rounded-xl p-4 border-l-4 border-red-500">
           <div class="flex items-center gap-2 mb-2">
-            <span class="text-red-400 font-mono text-sm">fail</span>
-            <span class="badge-red text-xs px-2 py-0.5 rounded">Padrao</span>
+            <span class="text-red-400 font-mono text-sm font-bold">fail</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-300">Padrao</span>
           </div>
-          <p class="text-sm text-slate-400">
-            Para a execucao imediatamente e marca como FAILED.
-            Erro e propagado para o cliente via SSE.
+          <p class="text-sm text-slate-400 mb-2">
+            Para a execucao imediatamente. <code class="mono">markFailed(executionId, errMsg)</code>.
+            <code class="mono">activeExecutions.delete()</code>. Evento <code class="mono">step:error</code> emitido.
           </p>
+          <div class="text-xs text-slate-500 mono">
+            skipStep: false | continueAsSuccess: false | shouldRetryWithFallback: false
+          </div>
         </div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
           <div class="flex items-center gap-2 mb-2">
-            <span class="text-orange-400 font-mono text-sm">skip</span>
+            <span class="text-orange-400 font-mono text-sm font-bold">skip</span>
           </div>
-          <p class="text-sm text-slate-400">
-            Ignora o erro e continua para o proximo step.
-            Nenhuma mensagem de erro e enviada ao cliente.
+          <p class="text-sm text-slate-400 mb-2">
+            Ignora erro, avanca para proximo step. <code class="mono">logEvent('step_skipped')</code>.
+            Nenhuma mensagem salva do step falho.
           </p>
+          <div class="text-xs text-slate-500 mono">
+            skipStep: true | continueAsSuccess: false | shouldRetryWithFallback: false
+          </div>
         </div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-amber-500">
           <div class="flex items-center gap-2 mb-2">
-            <span class="text-amber-400 font-mono text-sm">continue_next</span>
+            <span class="text-amber-400 font-mono text-sm font-bold">continue_next</span>
           </div>
-          <p class="text-sm text-slate-400">
-            Trata o output de erro como sucesso e prossegue.
-            Mensagem de erro e incluida no conteudo.
+          <p class="text-sm text-slate-400 mb-2">
+            Trata output de erro como sucesso. <code class="mono">result.content</code> (mesmo vazio) passado adiante.
+            Conditions avaliam contra output de erro.
           </p>
+          <div class="text-xs text-slate-500 mono">
+            skipStep: false | continueAsSuccess: true | shouldRetryWithFallback: false
+          </div>
         </div>
 
         <div class="glass rounded-xl p-4 border-l-4 border-yellow-500">
           <div class="flex items-center gap-2 mb-2">
-            <span class="text-yellow-400 font-mono text-sm">fallback</span>
+            <span class="text-yellow-400 font-mono text-sm font-bold">fallback</span>
           </div>
-          <p class="text-sm text-slate-400">
-            Retenta com mensagem simplificada:
-            <code class="mono">"Retry: a execucao anterior falhou..."</code>
+          <p class="text-sm text-slate-400 mb-2">
+            Re-executa com <code class="mono text-yellow-300">FALLBACK_MESSAGE = "Retry: a execucao anterior falhou. Tente novamente de forma mais simples."</code>
+            Se fallback tambem falha: <code class="mono">markFailed()</code>.
           </p>
+          <div class="text-xs text-slate-500 mono">
+            skipStep: false | continueAsSuccess: false | shouldRetryWithFallback: true
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Error Scenarios -->
-    <div class="glass-strong rounded-2xl p-6">
-      <h3 class="font-semibold text-red-400 mb-4">Cenarios de Erro Especiais</h3>
-
-      <div class="space-y-4">
+      <h4 class="font-semibold text-red-400 mb-3">Cenarios de Erro Especiais</h4>
+      <div class="grid md:grid-cols-2 gap-3">
         <div class="glass rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-red-400">⏱</span>
-            <span class="font-semibold text-red-400">Timeout</span>
-          </div>
-          <p class="text-sm text-slate-400">
-            Configuravel por step via <code class="mono">timeout</code> (default: 10min).
-            Processo recebe SIGTERM → aguarda 2s → SIGKILL.
+          <div class="font-semibold text-red-400 text-sm mb-1">Timeout</div>
+          <p class="text-xs text-slate-400">
+            <code class="mono">withTimeout(promise, stepTimeoutMs)</code>. Default: 0 (sem timeout).
+            Timeout &rarr; <code class="mono">engine.cancel()</code> &rarr; result com <code class="mono">timedOut: true</code>.
+            Formula: <code class="mono">Step "X" excedeu o timeout de Ys</code>.
           </p>
         </div>
-
         <div class="glass rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-orange-400">🔍</span>
-            <span class="font-semibold text-orange-400">Session Not Found</span>
-          </div>
-          <p class="text-sm text-slate-400">
-            Sessao Claude expirou ou foi invalidada.
-            Delete session → re-executa sem <code class="mono">--resume</code>.
+          <div class="font-semibold text-orange-400 text-sm mb-1">Session Not Found</div>
+          <p class="text-xs text-slate-400">
+            Sessao Claude expirou. <code class="mono">isSessionNotFoundError()</code> detecta.
+            Recovery: <code class="mono">deleteSession()</code> &rarr; retry sem <code class="mono">--resume</code> + emit <code class="mono">context:reset</code>.
           </p>
         </div>
-
         <div class="glass rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-amber-400">📏</span>
-            <span class="font-semibold text-amber-400">Prompt Too Long</span>
-          </div>
-          <p class="text-sm text-slate-400">
-            Contexto excede limite de tokens do modelo.
-            Compact memory → reset session → re-execute.
+          <div class="font-semibold text-amber-400 text-sm mb-1">Prompt Too Long</div>
+          <p class="text-xs text-slate-400">
+            <code class="mono">isPromptTooLongError()</code> detecta (case-insensitive).
+            Recovery: summarize via Haiku &rarr; delete session &rarr; retry com memory compactada.
           </p>
         </div>
-
         <div class="glass rounded-xl p-4">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-rose-400">🛑</span>
-            <span class="font-semibold text-rose-400">Cancellation</span>
-          </div>
-          <p class="text-sm text-slate-400">
-            Usuario ou sistema cancela a execucao.
-            SIGTERM para process group → cleanup de recursos.
+          <div class="font-semibold text-rose-400 text-sm mb-1">Process Crash (exit code != 0)</div>
+          <p class="text-xs text-slate-400">
+            Stderr heuristics: <code class="mono">Error:, ENOENT, EACCES, Cannot find, Authentication, API key</code>.
+            Error enrichment: se erro generico, appenda stderr (ate 1000 chars).
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 10: Conditions Evaluator -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 12: Conditions Evaluator -->
+  <!-- ================================================================ -->
+  <section id="conditions" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-lg">10</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-lg">12</span>
       <span class="bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">Conditions Evaluator</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6">
       <p class="text-slate-400 mb-6">
-        Regras condicionais podem ser definidas por step para controlar o fluxo de execucao
-        baseado no conteudo gerado. Isso permite workflows dinamicos e adaptativos.
+        <code class="mono text-teal-300">conditions-evaluator.ts</code> (162 linhas) &mdash;
+        Regras condicionais pos-step para controle dinamico de fluxo. First-match semantics.
       </p>
 
-      <div class="code-block p-4 mb-6">
-        <code class="text-sm">
-          <span class="text-slate-500">// Condition structure</span><br>
-          <span class="text-purple-400">interface</span> Condition {<br>
-          &nbsp;&nbsp;type: <span class="text-green-400">'contains'</span> | <span class="text-green-400">'not_contains'</span> | <span class="text-green-400">'equals'</span> | <span class="text-green-400">'regex'</span>;<br>
-          &nbsp;&nbsp;value: string;<br>
-          &nbsp;&nbsp;action: <span class="text-green-400">'next'</span> | <span class="text-green-400">'retry'</span> | <span class="text-green-400">'jump-to-'</span>&lt;stepId&gt; | <span class="text-green-400">'finish'</span> | <span class="text-green-400">'previous'</span>;<br>
-          &nbsp;&nbsp;maxRetries?: number;<br>
-          &nbsp;&nbsp;retryMessage?: string;<br>
-          }
-        </code>
-      </div>
-
-      <div class="grid md:grid-cols-2 gap-4 mb-6">
-        <div class="glass rounded-xl p-4">
-          <h4 class="font-semibold text-teal-400 mb-2">Types</h4>
-          <ul class="text-sm text-slate-400 space-y-1">
-            <li><code class="mono">contains</code> - valor presente no conteudo</li>
-            <li><code class="mono">not_contains</code> - valor ausente</li>
-            <li><code class="mono">equals</code> - conteudo exatamente igual</li>
-            <li><code class="mono">regex</code> - expressao regular casa</li>
-          </ul>
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h4 class="font-semibold text-teal-400 mb-3">8 Tipos de Condicao</h4>
+          <div class="space-y-2">
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-cyan-400">contains</code> <span class="text-xs text-slate-500">&mdash; substring (case-insensitive)</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-cyan-400">not_contains</code> <span class="text-xs text-slate-500">&mdash; ausencia de substring</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-cyan-400">equals</code> <span class="text-xs text-slate-500">&mdash; igualdade exata (trim + case-insensitive)</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-cyan-400">starts_with</code> <span class="text-xs text-slate-500">&mdash; prefixo (case-insensitive)</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-cyan-400">ends_with</code> <span class="text-xs text-slate-500">&mdash; sufixo (case-insensitive)</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-cyan-400">regex</code> <span class="text-xs text-slate-500">&mdash; RegExp com flag 'i'. Erros de regex sao logados e retornam false</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-cyan-400">length_gt</code> <span class="text-xs text-slate-500">&mdash; content.length &gt; parseInt(match)</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-cyan-400">length_lt</code> <span class="text-xs text-slate-500">&mdash; content.length &lt; parseInt(match)</span></div>
+          </div>
         </div>
+        <div>
+          <h4 class="font-semibold text-cyan-400 mb-3">5+ Acoes Disponiveis</h4>
+          <div class="space-y-2">
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-emerald-400">next</code> <span class="text-xs text-slate-500">&mdash; proximo step (i+1). isFinished se ultimo.</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-emerald-400">previous</code> <span class="text-xs text-slate-500">&mdash; step anterior. Math.max(0, i-1).</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-emerald-400">retry</code> <span class="text-xs text-slate-500">&mdash; re-executa mesmo step (isRetry: true). Backoff exponencial.</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-emerald-400">finish</code> <span class="text-xs text-slate-500">&mdash; encerra workflow (nextIndex = steps.length).</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-emerald-400">{stepId}</code> <span class="text-xs text-slate-500">&mdash; jump por ID. Busca no array de steps.</span></div>
+            <div class="glass rounded-lg p-2"><code class="mono text-xs text-emerald-400">{number}</code> <span class="text-xs text-slate-500">&mdash; jump por indice numerico. Fallback se ID nao encontrado.</span></div>
+          </div>
 
-        <div class="glass rounded-xl p-4">
-          <h4 class="font-semibold text-cyan-400 mb-2">Actions</h4>
-          <ul class="text-sm text-slate-400 space-y-1">
-            <li><code class="mono">next</code> - proximo step</li>
-            <li><code class="mono">retry</code> - repete mesmo step</li>
-            <li><code class="mono">jump-to-</code>- proximo step especifico</li>
-            <li><code class="mono">finish</code> - encerra workflow</li>
-            <li><code class="mono">previous</code> - volta ao anterior</li>
-          </ul>
+          <div class="mt-4">
+            <h4 class="font-semibold text-cyan-400 mb-2">Interface ConditionRule</h4>
+            <div class="code-block p-3 text-xs">
+              <code>
+                { type, match, goto,<br>
+                &nbsp;&nbsp;maxRetries?: number, <span class="text-slate-500">// Override por regra</span><br>
+                &nbsp;&nbsp;retryMessage?: string <span class="text-slate-500">// Template: {output}, {error}, {type}</span><br>
+                }
+              </code>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="p-4 rounded-xl bg-teal-500/10 border border-teal-500/30">
-        <h4 class="font-semibold text-teal-400 mb-2">Exemplo de Uso</h4>
+        <h5 class="font-semibold text-teal-400 mb-2">Exemplo de Configuracao</h5>
         <div class="code-block p-3 text-sm">
           <code>
-            conditions: [<br>
-            &nbsp;&nbsp;{ type: <span class="text-green-400">'contains'</span>, value: <span class="text-green-400">'ERROR'</span>, action: <span class="text-green-400">'jump-to-error-handler'</span> },<br>
-            &nbsp;&nbsp;{ type: <span class="text-green-400">'regex'</span>, value: <span class="text-green-400">'^DONE:'</span>, action: <span class="text-green-400">'finish'</span> },<br>
-            &nbsp;&nbsp;{ type: <span class="text-green-400">'contains'</span>, value: <span class="text-green-400">'retry'</span>, action: <span class="text-green-400">'retry'</span>, maxRetries: 3 }<br>
-            ]
+            conditions: {<br>
+            &nbsp;&nbsp;rules: [<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;{ type: <span class="text-green-400">'contains'</span>, match: <span class="text-green-400">'ERROR'</span>, goto: <span class="text-green-400">'error-handler-step-id'</span> },<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;{ type: <span class="text-green-400">'regex'</span>, match: <span class="text-green-400">'^DONE:'</span>, goto: <span class="text-green-400">'finish'</span> },<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;{ type: <span class="text-green-400">'not_contains'</span>, match: <span class="text-green-400">'SUCCESS'</span>, goto: <span class="text-green-400">'retry'</span>, maxRetries: <span class="text-orange-400">3</span>,<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;retryMessage: <span class="text-green-400">'Output deveria conter SUCCESS. Got: {output}'</span> },<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;{ type: <span class="text-green-400">'length_lt'</span>, match: <span class="text-green-400">'100'</span>, goto: <span class="text-green-400">'retry'</span> },<br>
+            &nbsp;&nbsp;],<br>
+            &nbsp;&nbsp;default: <span class="text-green-400">'next'</span><br>
+            }
           </code>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 11: Eventos SSE -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 13: Eventos SSE -->
+  <!-- ================================================================ -->
+  <section id="sse" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center text-lg">11</span>
-      <span class="bg-gradient-to-r from-green-400 to-teal-400 bg-clip-text text-transparent">Eventos SSE em Tempo Real</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center text-lg">13</span>
+      <span class="bg-gradient-to-r from-green-400 to-teal-400 bg-clip-text text-transparent">Eventos SSE (15 Tipos)</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6 overflow-x-auto">
       <p class="text-slate-400 mb-6">
-        A conexao Server-Sent Events transmite eventos em tempo real durante a execucao.
-        Cada evento contem dados relevantes para o cliente acompanhar o progresso.
+        <code class="mono text-green-300">OrchestratorEvents extends EventEmitter</code> (singleton).
+        15 emit methods tipados. Cada SSE handler registra listeners filtrados por conversationId.
+        Formato wire: <code class="mono">event: name\ndata: json\n\n</code>.
       </p>
 
       <table class="w-full text-sm sse-table">
         <thead>
           <tr>
-            <th class="px-4 py-3 text-left text-teal-400">Event</th>
-            <th class="px-4 py-3 text-left text-teal-400">Quando</th>
-            <th class="px-4 py-3 text-left text-teal-400">Data</th>
+            <th class="px-3 py-3 text-left text-teal-400">Evento SSE</th>
+            <th class="px-3 py-3 text-left text-teal-400">Internal Event</th>
+            <th class="px-3 py-3 text-left text-teal-400">Quando</th>
+            <th class="px-3 py-3 text-left text-teal-400">Data Payload</th>
           </tr>
         </thead>
         <tbody class="font-mono text-xs">
-          <tr>
-            <td class="px-4 py-3 text-green-400">step_start</td>
-            <td class="px-4 py-3">Step comeca a executar</td>
-            <td class="px-4 py-3 text-slate-400">{ stepId, stepName, stepIndex }</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-3 text-blue-400">stream</td>
-            <td class="px-4 py-3">Conteudo/acao gerada</td>
-            <td class="px-4 py-3 text-slate-400">{ content, action, type }</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-3 text-emerald-400">step_complete</td>
-            <td class="px-4 py-3">Step finalizado com sucesso</td>
-            <td class="px-4 py-3 text-slate-400">{ stepId, content, resumeToken }</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-3 text-red-400">step_error</td>
-            <td class="px-4 py-3">Step falhou</td>
-            <td class="px-4 py-3 text-slate-400">{ stepId, error }</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-3 text-purple-400">message_saved</td>
-            <td class="px-4 py-3">Mensagem persistida no DB</td>
-            <td class="px-4 py-3 text-slate-400">{ messageId, role }</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-3 text-orange-400">condition_retry</td>
-            <td class="px-4 py-3">Retry por condicao</td>
-            <td class="px-4 py-3 text-slate-400">{ stepId, retryCount, maxRetries }</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-3 text-orange-400">condition_jump</td>
-            <td class="px-4 py-3">Jump para outro step</td>
-            <td class="px-4 py-3 text-slate-400">{ fromStepId, toStepId }</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-3 text-yellow-400">execution_paused</td>
-            <td class="px-4 py-3">AskUserQuestion detectado</td>
-            <td class="px-4 py-3 text-slate-400">{ stepId, question, options }</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-3 text-cyan-400">execution_complete</td>
-            <td class="px-4 py-3">Workflow finalizado</td>
-            <td class="px-4 py-3 text-slate-400">{ executionId, stepsCompleted }</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-3 text-slate-500">:heartbeat</td>
-            <td class="px-4 py-3">A cada 15s (keep-alive)</td>
-            <td class="px-4 py-3 text-slate-400">{}</td>
-          </tr>
+          <tr><td class="px-3 py-2 text-green-400">step_start</td><td class="px-3 py-2 text-slate-500">step:start</td><td class="px-3 py-2">Step comeca</td><td class="px-3 py-2 text-slate-400">executionId, conversationId, stepId, stepName, stepOrder, totalSteps</td></tr>
+          <tr><td class="px-3 py-2 text-blue-400">stream</td><td class="px-3 py-2 text-slate-500">step:stream</td><td class="px-3 py-2">Content/action gerado</td><td class="px-3 py-2 text-slate-400">stepId, type: 'content'|'action', content?, action?</td></tr>
+          <tr><td class="px-3 py-2 text-emerald-400">step_complete</td><td class="px-3 py-2 text-slate-500">step:complete</td><td class="px-3 py-2">Step finalizado</td><td class="px-3 py-2 text-slate-400">stepId, stepName, stepOrder, content, sessionId?, finished</td></tr>
+          <tr><td class="px-3 py-2 text-red-400">step_error</td><td class="px-3 py-2 text-slate-500">step:error</td><td class="px-3 py-2">Step falhou</td><td class="px-3 py-2 text-slate-400">stepId, stepName, error</td></tr>
+          <tr><td class="px-3 py-2 text-purple-400">message_saved</td><td class="px-3 py-2 text-slate-500">message:saved</td><td class="px-3 py-2">Msg persistida</td><td class="px-3 py-2 text-slate-400">messageId, role, content, stepId?, metadata?, attachments?</td></tr>
+          <tr><td class="px-3 py-2 text-orange-400">condition_retry</td><td class="px-3 py-2 text-slate-500">condition:retry</td><td class="px-3 py-2">Retry por condicao</td><td class="px-3 py-2 text-slate-400">stepId, retryCount, maxRetries, retryMessage</td></tr>
+          <tr><td class="px-3 py-2 text-orange-400">condition_jump</td><td class="px-3 py-2 text-slate-500">condition:jump</td><td class="px-3 py-2">Jump entre steps</td><td class="px-3 py-2 text-slate-400">fromStepId, toStepId, toStepIndex</td></tr>
+          <tr><td class="px-3 py-2 text-yellow-400">execution_paused</td><td class="px-3 py-2 text-slate-500">execution:paused</td><td class="px-3 py-2">AskUserQuestion</td><td class="px-3 py-2 text-slate-400">stepId, stepName, stepOrder, resumeToken, askUserQuestion?</td></tr>
+          <tr><td class="px-3 py-2 text-yellow-400">execution_resumed</td><td class="px-3 py-2 text-slate-500">execution:resumed</td><td class="px-3 py-2">User respondeu</td><td class="px-3 py-2 text-slate-400">stepId, stepName, stepOrder</td></tr>
+          <tr><td class="px-3 py-2 text-cyan-400">complete</td><td class="px-3 py-2 text-slate-500">execution:complete</td><td class="px-3 py-2">Workflow fim</td><td class="px-3 py-2 text-slate-400">executionId, conversationId, success: boolean</td></tr>
+          <tr><td class="px-3 py-2 text-rose-400">cancelled</td><td class="px-3 py-2 text-slate-500">execution:cancelled</td><td class="px-3 py-2">Cancelado</td><td class="px-3 py-2 text-slate-400">executionId, conversationId</td></tr>
+          <tr><td class="px-3 py-2 text-indigo-400">context_reset</td><td class="px-3 py-2 text-slate-500">context:reset</td><td class="px-3 py-2">Memory compact</td><td class="px-3 py-2 text-slate-400">stepId, stepName, reason</td></tr>
+          <tr><td class="px-3 py-2 text-purple-400">dag_batch_start</td><td class="px-3 py-2 text-slate-500">dag:batch_start</td><td class="px-3 py-2">DAG batch</td><td class="px-3 py-2 text-slate-400">stepIds[], batchIndex</td></tr>
+          <tr><td class="px-3 py-2 text-pink-400">validation_failed</td><td class="px-3 py-2 text-slate-500">validation:failed</td><td class="px-3 py-2">Validator falhou</td><td class="px-3 py-2 text-slate-400">stepId, stepName, validatorType, feedback</td></tr>
+          <tr><td class="px-3 py-2 text-amber-400">user_interrupt</td><td class="px-3 py-2 text-slate-500">user:interrupt</td><td class="px-3 py-2">User interrompeu</td><td class="px-3 py-2 text-slate-400">stepId, stepName, userMessage</td></tr>
+          <tr><td class="px-3 py-2 text-slate-500">:heartbeat</td><td class="px-3 py-2 text-slate-600">(comment)</td><td class="px-3 py-2">Cada 15s</td><td class="px-3 py-2 text-slate-600">SSE comment line (keep-alive)</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- Section 12: BullMQ & Fila -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 14: BullMQ & Fila -->
+  <!-- ================================================================ -->
+  <section id="bullmq" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-lg">12</span>
-      <span class="bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">BullMQ & Fila</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-lg">14</span>
+      <span class="bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">BullMQ & Filas</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6">
-      <div class="grid md:grid-cols-2 gap-6">
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
         <div>
-          <h3 class="font-semibold text-red-400 mb-4">Configuracao da Fila</h3>
+          <h3 class="font-semibold text-red-400 mb-3">Queue: 'execution'</h3>
           <div class="code-block p-4 text-sm">
             <code>
-              <span class="text-purple-400">const</span> queue = <span class="text-purple-400">new</span> Queue(<span class="text-green-400">'execution'</span>, { connection: redis });<br>
-              <br>
-              <span class="text-purple-400">const</span> worker = <span class="text-purple-400">new</span> Worker(<span class="text-green-400">'execution'</span>, processor, {<br>
-              &nbsp;&nbsp;connection: redis,<br>
-              &nbsp;&nbsp;concurrency: <span class="text-orange-400">3</span>, <span class="text-slate-500">// EXECUTION_CONCURRENCY</span><br>
-              &nbsp;&nbsp;limiter: { max: <span class="text-orange-400">10</span>, duration: <span class="text-orange-400">60000</span> }<br>
-              });
+              <span class="text-purple-400">new</span> Queue&lt;ExecutionJobData&gt;(<span class="text-green-400">'execution'</span>, {<br>
+              &nbsp;&nbsp;connection: getRedis(),<br>
+              &nbsp;&nbsp;defaultJobOptions: {<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;removeOnComplete: { count: <span class="text-orange-400">100</span> },<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;removeOnFail: { count: <span class="text-orange-400">50</span> },<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;attempts: <span class="text-orange-400">1</span>,&nbsp;<span class="text-slate-500">// NO auto-retry</span><br>
+              &nbsp;&nbsp;},<br>
+              })
             </code>
           </div>
         </div>
-
         <div>
-          <h3 class="font-semibold text-orange-400 mb-4">Job Data Structure</h3>
+          <h3 class="font-semibold text-orange-400 mb-3">Worker Config</h3>
           <div class="code-block p-4 text-sm">
             <code>
-              {<br>
-              &nbsp;&nbsp;conversationId: string,<br>
-              &nbsp;&nbsp;workflowId: string,<br>
-              &nbsp;&nbsp;userId: string,<br>
-              &nbsp;&nbsp;content: string,<br>
-              &nbsp;&nbsp;stepIndex?: number,<br>
-              &nbsp;&nbsp;projectPath: string,<br>
-              &nbsp;&nbsp;workflowType: <span class="text-green-400">'sequential'</span>|<span class="text-green-400">'dag'</span>|<span class="text-green-400">'step_by_step'</span>,<br>
-              &nbsp;&nbsp;attachments?: Attachment[]<br>
-              }
+              <span class="text-purple-400">const</span> CONCURRENCY = parseInt(<br>
+              &nbsp;&nbsp;process.env.EXECUTION_CONCURRENCY || <span class="text-green-400">'3'</span><br>
+              )<br>
+              <br>
+              <span class="text-purple-400">new</span> Worker(<span class="text-green-400">'execution'</span>, processor, {<br>
+              &nbsp;&nbsp;connection: getRedis(),<br>
+              &nbsp;&nbsp;concurrency: CONCURRENCY,<br>
+              })<br>
+              <br>
+              <span class="text-slate-500">// Event handlers</span><br>
+              worker.on(<span class="text-green-400">'completed'</span>, log)<br>
+              worker.on(<span class="text-green-400">'failed'</span>, logError)<br>
+              worker.on(<span class="text-green-400">'error'</span>, logError)
             </code>
           </div>
         </div>
       </div>
 
-      <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="glass rounded-xl p-4 text-center">
-          <div class="text-2xl font-black text-red-400">execution</div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="glass rounded-xl p-4 text-center glow-red">
+          <div class="text-xl font-black text-red-400 mono">execution</div>
           <div class="text-xs text-slate-500 mt-1">Queue Name</div>
         </div>
-        <div class="glass rounded-xl p-4 text-center">
-          <div class="text-2xl font-black text-orange-400">execution</div>
-          <div class="text-xs text-slate-500 mt-1">Job Name</div>
+        <div class="glass rounded-xl p-4 text-center glow-orange">
+          <div class="text-xl font-black text-orange-400">3</div>
+          <div class="text-xs text-slate-500 mt-1">Concurrency (default)</div>
         </div>
-        <div class="glass rounded-xl p-4 text-center">
-          <div class="text-2xl font-black text-yellow-400">3</div>
-          <div class="text-xs text-slate-500 mt-1">Concurrency</div>
+        <div class="glass rounded-xl p-4 text-center glow-blue">
+          <div class="text-xl font-black text-blue-400">1</div>
+          <div class="text-xs text-slate-500 mt-1">Attempts (no retry)</div>
         </div>
-        <div class="glass rounded-xl p-4 text-center">
-          <div class="text-2xl font-black text-amber-400">Redis</div>
-          <div class="text-xs text-slate-500 mt-1">Backend</div>
+        <div class="glass rounded-xl p-4 text-center glow-purple">
+          <div class="text-xl font-black text-purple-400">30s</div>
+          <div class="text-xs text-slate-500 mt-1">Graceful Drain</div>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30">
+          <h5 class="font-semibold text-orange-400 mb-2">Graceful Shutdown</h5>
+          <p class="text-xs text-slate-400">
+            SIGINT/SIGTERM &rarr; stop new work &rarr; drain active executions (poll every 2s, max 30s) &rarr;
+            <code class="mono">stopTriggerScheduler()</code> &rarr; <code class="mono">stopExecutionWorker()</code> &rarr;
+            <code class="mono">closeExecutionQueue()</code> &rarr; <code class="mono">app.close()</code> &rarr;
+            <code class="mono">closeAllRedis()</code> &rarr; <code class="mono">process.exit(0)</code>.
+          </p>
+        </div>
+        <div class="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30">
+          <h5 class="font-semibold text-purple-400 mb-2">Fila Secundaria: trigger-scheduler</h5>
+          <p class="text-xs text-slate-400">
+            Queue <code class="mono">'trigger-scheduler'</code> com job repeatable a cada 30s.
+            Concurrency: 1. Processa execucoes cron agendadas.
+            Bull Board disponivel em <code class="mono">/admin/queues</code>.
+          </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 13: Banco de Dados -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 15: Banco de Dados -->
+  <!-- ================================================================ -->
+  <section id="db" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-lg">13</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-lg">15</span>
       <span class="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Banco de Dados</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6">
-      <p class="text-slate-400 mb-6">
-        O motor de execucao utiliza varias tabelas do Prisma para gerenciar estado,
-        sessoes, memoria e auditoria completa de cada execucao.
-      </p>
-
       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="glass rounded-xl p-4 border-l-4 border-blue-500">
-          <h4 class="font-semibold text-blue-400 mb-2 mono text-sm">execution_states</h4>
-          <p class="text-xs text-slate-400">id, conversationId, state, currentStepIndex, metadata</p>
-          <p class="text-xs text-slate-500 mt-2">Estado atual de cada execucao ativa/historica</p>
+          <h4 class="font-semibold text-blue-400 mb-2 mono text-sm">execution_state</h4>
+          <p class="text-xs text-slate-400">id, conversationId, state (enum: queued|running|completed|failed|paused|cancelled), currentStepIndex, retryCounts (JSON), metadata (JSON)</p>
+          <p class="text-xs text-slate-500 mt-2">Metadata inclui: startedAt, completedAt, pausedAt, resumedAt, pausedStepIndex, pausedStepId, pausedResumeToken, askUserQuestion, checkpoints[]</p>
         </div>
-
         <div class="glass rounded-xl p-4 border-l-4 border-indigo-500">
           <h4 class="font-semibold text-indigo-400 mb-2 mono text-sm">conversation_sessions</h4>
-          <p class="text-xs text-slate-400">conversationId, stepId, claudeSessionId, resumeToken</p>
-          <p class="text-xs text-slate-500 mt-2">Tokens de sessao para continuacao de execucao</p>
+          <p class="text-xs text-slate-400">id, conversationId, stepId, claudeSessionId, createdAt</p>
+          <p class="text-xs text-slate-500 mt-2">Unique: (conversationId, stepId). FK cascade em ambas. Armazena --resume tokens.</p>
         </div>
-
         <div class="glass rounded-xl p-4 border-l-4 border-purple-500">
           <h4 class="font-semibold text-purple-400 mb-2 mono text-sm">step_memories</h4>
-          <p class="text-xs text-slate-400">conversationId, stepId, content, accumulatedTokens</p>
-          <p class="text-xs text-slate-500 mt-2">Resumos compactados de contexto longo</p>
+          <p class="text-xs text-slate-400">id, conversationId, stepId, content, createdAt, updatedAt</p>
+          <p class="text-xs text-slate-500 mt-2">Unique: (conversationId, stepId). Resumos Haiku para compactacao de contexto.</p>
         </div>
-
         <div class="glass rounded-xl p-4 border-l-4 border-pink-500">
           <h4 class="font-semibold text-pink-400 mb-2 mono text-sm">execution_traces</h4>
-          <p class="text-xs text-slate-400">stdoutRaw, stderrRaw, parsedEvents, timing, tokens, cost</p>
-          <p class="text-xs text-slate-500 mt-2">Audit trail completo para debugging e analise</p>
+          <p class="text-xs text-slate-400">stdoutRaw, stderrRaw, parsedEvents, timing, tokens, cost, exitCode, signal, resultStatus, errorMessage</p>
+          <p class="text-xs text-slate-500 mt-2">Audit trail via ExecutionMonitor. Classifica erros: timeout, rate_limit, context_overflow, budget_exceeded, permission_denied, tool_error.</p>
         </div>
-
         <div class="glass rounded-xl p-4 border-l-4 border-red-500">
           <h4 class="font-semibold text-red-400 mb-2 mono text-sm">messages</h4>
-          <p class="text-xs text-slate-400">conversationId, stepId, role, content, metadata</p>
-          <p class="text-xs text-slate-500 mt-2">Historico de mensagens trocadas</p>
+          <p class="text-xs text-slate-400">id, conversationId, stepId, role (user|assistant), content, metadata (JSON), createdAt</p>
+          <p class="text-xs text-slate-500 mt-2">Metadata assistant: actions[], sessionId, stepName, stepOrder, needsUserInput.</p>
         </div>
-
         <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
-          <h4 class="font-semibold text-orange-400 mb-2 mono text-sm">paused_executions</h4>
-          <p class="text-xs text-slate-400">executionId, stepIndex, stepId, resumeToken, question</p>
-          <p class="text-xs text-slate-500 mt-2">Execucoes pausadas aguardando input</p>
+          <h4 class="font-semibold text-orange-400 mb-2 mono text-sm">message_attachments</h4>
+          <p class="text-xs text-slate-400">id, messageId, filename, mimeType, path, projectPath, url, size</p>
+          <p class="text-xs text-slate-500 mt-2">FK para messages. Imagens passadas como file paths no comando Claude CLI.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Section 14: Melhorias Recomendadas -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 16: Cancellation & Interrupt -->
+  <!-- ================================================================ -->
+  <section id="cancel" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-lg">14</span>
-      <span class="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Melhorias Recomendadas (2026)</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-rose-500 to-red-500 flex items-center justify-center text-lg">16</span>
+      <span class="bg-gradient-to-r from-rose-400 to-red-400 bg-clip-text text-transparent">Cancellation & Interrupt</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6">
-      <p class="text-slate-400 mb-6">
-        Pesquisa de arquitetura identificou oportunidades de melhoria no motor de execucao.
-        Abaixo, as recomendacoes priorizadas por impacto.
-      </p>
-
-      <div class="grid md:grid-cols-2 gap-4">
-        <div class="glass rounded-xl p-4 priority-high">
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-red-400">Prompt Caching</h4>
-            <span class="badge-red text-xs px-2 py-1 rounded">ALTA</span>
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <h3 class="font-semibold text-rose-400 mb-3">Cancel (destrutivo)</h3>
+          <div class="space-y-2 text-sm text-slate-400">
+            <p>1. <code class="mono">activeExecutions.delete(conversationId)</code></p>
+            <p>2. <code class="mono">engine.cancel(conversationId)</code> &mdash; SIGTERM group + pkill children + SIGKILL 2s</p>
+            <p>3. <code class="mono">sessionManager.deleteAllSessions()</code> &mdash; deleta TODAS sessoes</p>
+            <p>4. <code class="mono">executionStateManager.markCancelled()</code></p>
+            <p class="text-xs text-rose-400 font-semibold mt-2">NAO pode ser resumido. Sessions destruidas.</p>
           </div>
-          <p class="text-sm text-slate-400 mb-2">
-            Anthropic prompt cache com tokens de break point (<code class="mono">__bp__</code>).
-            Reducao estimada de 90% em custo de input tokens e 80% em latencia.
-          </p>
-          <p class="text-xs text-slate-500">
-            Impact: <span class="text-emerald-400">-90% custo</span> | <span class="text-emerald-400">-80% latencia</span>
-          </p>
         </div>
-
-        <div class="glass rounded-xl p-4 priority-high">
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-red-400">Circuit Breaker</h4>
-            <span class="badge-red text-xs px-2 py-1 rounded">ALTA</span>
+        <div>
+          <h3 class="font-semibold text-amber-400 mb-3">Interrupt (preserva estado)</h3>
+          <div class="space-y-2 text-sm text-slate-400">
+            <p>1. <code class="mono">engine.interrupt(conversationId, userMessage)</code></p>
+            <p>2. <code class="mono">interruptedProcesses.set(processId, userMessage)</code></p>
+            <p>3. SIGTERM &rarr; 2s &rarr; SIGKILL (mesmo que cancel)</p>
+            <p>4. Result: <code class="mono">{ interrupted: true, interruptMessage, cancelled: false, error: undefined }</code></p>
+            <p class="text-xs text-amber-400 font-semibold mt-2">Preserva sessoes. Salva output parcial + mensagem do usuario. Pode continuar.</p>
           </div>
-          <p class="text-sm text-slate-400 mb-2">
-            Protecao contra falhas sistemicas (API down, rate limit).
-            Estados: Closed → Open → Half-Open com thresholds configuraveis.
-          </p>
-          <p class="text-xs text-slate-500">
-            Impact: <span class="text-emerald-400">Resiliencia</span> | <span class="text-emerald-400">Prevencao de cascata</span>
-          </p>
         </div>
+      </div>
 
-        <div class="glass rounded-xl p-4 priority-high">
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-red-400">Structured Outputs</h4>
-            <span class="badge-red text-xs px-2 py-1 rounded">ALTA</span>
-          </div>
-          <p class="text-sm text-slate-400 mb-2">
-            JSON Schema validation por step. Previne drift entre steps
-            e garante que outputs atendam contratos definidos.
-          </p>
-          <p class="text-xs text-slate-500">
-            Impact: <span class="text-emerald-400">Consistencia</span> | <span class="text-emerald-400">Type safety</span>
-          </p>
-        </div>
-
-        <div class="glass rounded-xl p-4 priority-medium">
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-orange-400">Filesystem Polling</h4>
-            <span class="badge-amber text-xs px-2 py-1 rounded">MEDIA</span>
-          </div>
-          <p class="text-sm text-slate-400 mb-2">
-            Output em arquivo ao inves de inline. Reduz complexidade de O(n*output)
-            para O(n*filename). Polling detecta conclusao.
-          </p>
-          <p class="text-xs text-slate-500">
-            Impact: <span class="text-emerald-400">-50% contexto</span> | <span class="text-emerald-400">Maior escalabilidade</span>
-          </p>
-        </div>
-
-        <div class="glass rounded-xl p-4 priority-medium">
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-orange-400">Concorrencia Dinamica DAG</h4>
-            <span class="badge-amber text-xs px-2 py-1 rounded">MEDIA</span>
-          </div>
-          <p class="text-sm text-slate-400 mb-2">
-            maxConcurrency configuravel por DAG. Fila com prioridade.
-            Critical path first para otimizar tempo total.
-          </p>
-          <p class="text-xs text-slate-500">
-            Impact: <span class="text-emerald-400">-40% tempo DAG</span> | <span class="text-emerald-400">Melhor throughput</span>
-          </p>
-        </div>
-
-        <div class="glass rounded-xl p-4 priority-medium">
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-orange-400">Metricas Agregadas</h4>
-            <span class="badge-amber text-xs px-2 py-1 rounded">MEDIA</span>
-          </div>
-          <p class="text-sm text-slate-400 mb-2">
-            Taxa sucesso/erro por workflow, latencia P50/P95, custo medio,
-            bottleneck analysis. Dashboards para monitoramento.
-          </p>
-          <p class="text-xs text-slate-500">
-            Impact: <span class="text-emerald-400">Observabilidade</span> | <span class="text-emerald-400">Optimizacoes</span>
-          </p>
-        </div>
-
-        <div class="glass rounded-xl p-4 priority-low">
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-blue-400">Verificacao Semantica</h4>
-            <span class="badge-blue text-xs px-2 py-1 rounded">BAIXA</span>
-          </div>
-          <p class="text-sm text-slate-400 mb-2">
-            LLM rapido (Haiku) valida qualidade do output antes de prosseguir.
-            Checa se requisitos foram atendidos, se ha contradicoes.
-          </p>
-          <p class="text-xs text-slate-500">
-            Impact: <span class="text-emerald-400">Qualidade</span> | <span class="text-emerald-400">+20% custo</span>
-          </p>
-        </div>
-
-        <div class="glass rounded-xl p-4 priority-low">
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-blue-400">Estado Estruturado</h4>
-            <span class="badge-blue text-xs px-2 py-1 rounded">BAIXA</span>
-          </div>
-          <p class="text-sm text-slate-400 mb-2">
-            Schemas tipados para inputs/outputs entre steps. Contratos explicitos
-            com validacao Zod. Previne propagacao de dados malformados.
-          </p>
-          <p class="text-xs text-slate-500">
-            Impact: <span class="text-emerald-400">Type safety</span> | <span class="text-emerald-400">Debugging</span>
-          </p>
-        </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm sse-table">
+          <thead><tr>
+            <th class="px-3 py-2 text-left text-rose-400">Aspecto</th>
+            <th class="px-3 py-2 text-left text-rose-400">Cancel</th>
+            <th class="px-3 py-2 text-left text-amber-400">Interrupt</th>
+            <th class="px-3 py-2 text-left text-orange-400">Pause (AskUser)</th>
+          </tr></thead>
+          <tbody class="text-xs text-slate-400">
+            <tr><td class="px-3 py-2">Trigger</td><td class="px-3 py-2">User click / disconnect</td><td class="px-3 py-2">User sends new msg mid-step</td><td class="px-3 py-2">AskUserQuestion tool</td></tr>
+            <tr><td class="px-3 py-2">Estado final</td><td class="px-3 py-2 text-red-400">cancelled</td><td class="px-3 py-2 text-amber-400">running (continues)</td><td class="px-3 py-2 text-orange-400">paused</td></tr>
+            <tr><td class="px-3 py-2">Sessions</td><td class="px-3 py-2 text-red-400">Deletadas</td><td class="px-3 py-2 text-emerald-400">Preservadas</td><td class="px-3 py-2 text-emerald-400">Preservadas</td></tr>
+            <tr><td class="px-3 py-2">Pode resumir?</td><td class="px-3 py-2 text-red-400">Nao</td><td class="px-3 py-2 text-emerald-400">Sim (auto)</td><td class="px-3 py-2 text-emerald-400">Sim (explicit)</td></tr>
+            <tr><td class="px-3 py-2">Kill sequence</td><td class="px-3 py-2">SIGTERM + pkill + SIGKILL 2s</td><td class="px-3 py-2">SIGTERM + SIGKILL 2s</td><td class="px-3 py-2">SIGTERM + SIGKILL 2s</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </section>
 
-  <!-- Section 15: Arquivos-Chave -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 17: Arquivos-Chave -->
+  <!-- ================================================================ -->
+  <section id="files" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-lg">15</span>
-      <span class="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">Arquivos-Chave</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-lg">17</span>
+      <span class="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">Arquivos-Chave (16 arquivos)</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6 overflow-x-auto">
@@ -1785,177 +1846,90 @@
           </tr>
         </thead>
         <tbody class="text-slate-400">
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-blue-400">task-orchestrator.ts</td>
-            <td class="px-4 py-3">~80</td>
-            <td class="px-4 py-3">Facade para executores, cancelamento, gestao de estado ativo</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-blue-400">sequential-executor.ts</td>
-            <td class="px-4 py-3">~150</td>
-            <td class="px-4 py-3">Loop while(i &lt; steps.length) com pause, error, conditions</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-blue-400">dag-executor.ts</td>
-            <td class="px-4 py-3">~200</td>
-            <td class="px-4 py-3">Construcao de DAG, validacao de ciclos, execucao paralela</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-blue-400">step-by-step-executor.ts</td>
-            <td class="px-4 py-3">~80</td>
-            <td class="px-4 py-3">Execucao unica por stepIndex, controle manual do cliente</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-blue-400">step-executor.ts</td>
-            <td class="px-4 py-3">~180</td>
-            <td class="px-4 py-3">Prepara contexto, invoca engine, salva resultado</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-red-400">claude-code-engine.ts</td>
-            <td class="px-4 py-3">~250</td>
-            <td class="px-4 py-3">Spawna processo Claude CLI, parseia stream, gerencia timeout</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-red-400">stream-parser.ts</td>
-            <td class="px-4 py-3">~120</td>
-            <td class="px-4 py-3">Parse de JSON delimitado por newline, detecção de eventos</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-purple-400">session-manager.ts</td>
-            <td class="px-4 py-3">~100</td>
-            <td class="px-4 py-3">CRUD de tokens de sessao para resumo de execucao</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-purple-400">memory-manager.ts</td>
-            <td class="px-4 py-3">~120</td>
-            <td class="px-4 py-3">Compactacao de contexto via Haiku, gestionamento de memoria</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-orange-400">step-error-handler.ts</td>
-            <td class="px-4 py-3">~80</td>
-            <td class="px-4 py-3">Decisao de acao baseado em decideOnError</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-orange-400">conditions-evaluator.ts</td>
-            <td class="px-4 py-3">~90</td>
-            <td class="px-4 py-3">Avalia condicoes pos-step, decide jump/retry/finish</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-orange-400">execution-state.ts</td>
-            <td class="px-4 py-3">~150</td>
-            <td class="px-4 py-3">CRUD de execution_states, paused_executions no DB</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-pink-400">events.ts</td>
-            <td class="px-4 py-3">~60</td>
-            <td class="px-4 py-3">EventEmitter central para orquestrador</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-pink-400">execution-worker.ts</td>
-            <td class="px-4 py-3">~100</td>
-            <td class="px-4 py-3">Worker BullMQ, processa jobs da fila execution</td>
-          </tr>
-          <tr class="border-b border-slate-800">
-            <td class="px-4 py-3 mono text-pink-400">execution-queue.ts</td>
-            <td class="px-4 py-3">~80</td>
-            <td class="px-4 py-3">Configuracao da fila, concorrencia, rate limiting</td>
-          </tr>
-          <tr>
-            <td class="px-4 py-3 mono text-cyan-400">base-system-prompt.ts</td>
-            <td class="px-4 py-3">~200</td>
-            <td class="px-4 py-3">Prompt base modular, injeta informacoes de infraestrutura</td>
-          </tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-emerald-400 text-xs">task-orchestrator.ts</td><td class="px-4 py-2">99</td><td class="px-4 py-2 text-xs">Facade central: routing de executores, cancel, interrupt, activeExecutions Map</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-emerald-400 text-xs">sequential-executor.ts</td><td class="px-4 py-2">394</td><td class="px-4 py-2 text-xs">Loop while com skip, pause, error handling, conditions, retry com backoff exponencial</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-purple-400 text-xs">dag-executor.ts</td><td class="px-4 py-2">~100</td><td class="px-4 py-2 text-xs">DAG data structure: graph Map, cycle detection DFS, getReadySteps, getDependencyContext</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-purple-400 text-xs">dag-workflow-executor.ts</td><td class="px-4 py-2">~180</td><td class="px-4 py-2 text-xs">Batch execution loop com Promise.all, error handling per-step, result collection</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-orange-400 text-xs">step-by-step-executor.ts</td><td class="px-4 py-2">212</td><td class="px-4 py-2 text-xs">Single step execution por stepIndex, sem loop, return apos completar</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-cyan-400 text-xs">step-executor.ts</td><td class="px-4 py-2">410</td><td class="px-4 py-2 text-xs">8 fases: session, memory, prompt, sync, git, engine, result, auto-recovery</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-red-400 text-xs">claude-code-engine.ts</td><td class="px-4 py-2">494</td><td class="px-4 py-2 text-xs">Spawn sudo + claude CLI, stream parsing, cancel/interrupt, process group mgmt</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-red-400 text-xs">stream-parser.ts</td><td class="px-4 py-2">~360</td><td class="px-4 py-2 text-xs">NDJSON parser: buffer mgmt, 7 event types, AskUserQuestion detection, usage tracking</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-indigo-400 text-xs">session-manager.ts</td><td class="px-4 py-2">69</td><td class="px-4 py-2 text-xs">CRUD resume tokens: getSession, saveSession (UPSERT), deleteSession, deleteAll</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-indigo-400 text-xs">memory-manager.ts</td><td class="px-4 py-2">147</td><td class="px-4 py-2 text-xs">Compactacao Haiku: summarizeAndSave com prompt 7-categorias, fallback on error</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-orange-400 text-xs">step-error-handler.ts</td><td class="px-4 py-2">83</td><td class="px-4 py-2 text-xs">4 estrategias: fail, skip, continue_next, fallback. resolveErrorHandler + decideOnError</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-teal-400 text-xs">conditions-evaluator.ts</td><td class="px-4 py-2">162</td><td class="px-4 py-2 text-xs">8 tipos de condicao, 5+ acoes, resolveNextStep com retry counting</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-blue-400 text-xs">execution-state.ts</td><td class="px-4 py-2">244</td><td class="px-4 py-2 text-xs">ExecutionState CRUD: create, markRunning/Paused/Failed/Completed/Cancelled, checkpoints</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-pink-400 text-xs">events.ts</td><td class="px-4 py-2">213</td><td class="px-4 py-2 text-xs">OrchestratorEvents: 15 emit methods tipados, singleton EventEmitter</td></tr>
+          <tr class="border-b border-slate-800"><td class="px-4 py-2 mono text-pink-400 text-xs">execution-resumer.ts</td><td class="px-4 py-2">404</td><td class="px-4 py-2 text-xs">Resume de execucoes pausadas, re-execucao do step, auto-continuation sequential</td></tr>
+          <tr><td class="px-4 py-2 mono text-cyan-400 text-xs">base-system-prompt.ts</td><td class="px-4 py-2">~80</td><td class="px-4 py-2 text-xs">buildSystemPrompt: 11 secoes base + step custom + memory injection</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- Section 16: Cancellation Flow -->
-  <section class="mb-16 reveal">
+  <!-- ================================================================ -->
+  <!-- Section 18: Melhorias Recomendadas -->
+  <!-- ================================================================ -->
+  <section id="improvements" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
-      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-rose-500 to-red-500 flex items-center justify-center text-lg">16</span>
-      <span class="bg-gradient-to-r from-rose-400 to-red-400 bg-clip-text text-transparent">Cancellation Flow</span>
+      <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-lg">18</span>
+      <span class="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Melhorias Recomendadas (2026)</span>
     </h2>
 
     <div class="glass-strong rounded-2xl p-6">
-      <p class="text-slate-400 mb-6">
-        O cancelamento de execucao e um processo multi-estapa que garante que todos os recursos
-        sejam liberados corretamente, incluindo processos filhos e sessoes.
-      </p>
-
-      <div class="space-y-4">
-        <div class="glass rounded-xl p-4 border-l-4 border-rose-500">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-rose-500 flex items-center justify-center text-sm font-bold">1</span>
-            <span class="font-semibold text-rose-400">taskOrchestrator.cancel(conversationId)</span>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="glass rounded-xl p-4 priority-high">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-red-400">Prompt Caching</h4>
+            <span class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300">ALTA</span>
           </div>
-          <p class="text-sm text-slate-400">Remove da lista de execucoes ativas (activeExecutions.delete)</p>
+          <p class="text-sm text-slate-400 mb-1">Cache breakpoints no system prompt para reutilizacao de tokens entre steps.</p>
+          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">-90% custo input</span> | <span class="text-emerald-400">-80% latencia</span></p>
         </div>
 
-        <div class="flex justify-center">
-          <span class="text-2xl text-slate-600">↓</span>
-        </div>
-
-        <div class="glass rounded-xl p-4 border-l-4 border-red-500">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-sm font-bold">2</span>
-            <span class="font-semibold text-red-400">engine.cancel(conversationId)</span>
+        <div class="glass rounded-xl p-4 priority-high">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-red-400">Circuit Breaker</h4>
+            <span class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300">ALTA</span>
           </div>
-          <p class="text-sm text-slate-400">Encontra todos os processos associados a conversa</p>
+          <p class="text-sm text-slate-400 mb-1">Closed &rarr; Open &rarr; Half-Open com thresholds configuraveis contra falhas sistemicas.</p>
+          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">Resiliencia</span> | <span class="text-emerald-400">Prevencao de cascata</span></p>
         </div>
 
-        <div class="flex justify-center">
-          <span class="text-2xl text-slate-600">↓</span>
-        </div>
-
-        <div class="glass rounded-xl p-4 border-l-4 border-orange-500">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-sm font-bold">3</span>
-            <span class="font-semibold text-orange-400">SIGTERM to process group</span>
+        <div class="glass rounded-xl p-4 priority-high">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-red-400">Structured Outputs</h4>
+            <span class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300">ALTA</span>
           </div>
-          <p class="text-sm text-slate-400">
-            <code class="mono">kill(-pid, 'SIGTERM')</code> - Mata processo grupo e filhos
-          </p>
+          <p class="text-sm text-slate-400 mb-1">JSON Schema validation por step para contratos tipados entre steps.</p>
+          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">Type safety</span> | <span class="text-emerald-400">Consistencia</span></p>
         </div>
 
-        <div class="flex justify-center">
-          <span class="text-2xl text-slate-600">↓</span>
-        </div>
-
-        <div class="glass rounded-xl p-4 border-l-4 border-amber-500">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-sm font-bold">4</span>
-            <span class="font-semibold text-amber-500">pkill -TERM -P pid</span>
+        <div class="glass rounded-xl p-4 priority-medium">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-orange-400">DAG Concurrency Limits</h4>
+            <span class="text-xs px-2 py-1 rounded bg-orange-500/20 text-orange-300">MEDIA</span>
           </div>
-          <p class="text-sm text-slate-400">Backup: mata explicitamente processos filhos</p>
+          <p class="text-sm text-slate-400 mb-1">maxConcurrency por DAG (atualmente unlimited Promise.all). Critical path first.</p>
+          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">-40% tempo DAG</span> | <span class="text-emerald-400">Resource control</span></p>
         </div>
 
-        <div class="flex justify-center">
-          <span class="text-2xl text-slate-600">↓</span>
-        </div>
-
-        <div class="glass rounded-xl p-4 border-l-4 border-yellow-500">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-yellow-500 text-black flex items-center justify-center text-sm font-bold">5</span>
-            <span class="font-semibold text-yellow-500">SIGTERM + SIGKILL after 2s</span>
+        <div class="glass rounded-xl p-4 priority-medium">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-orange-400">Metricas Agregadas</h4>
+            <span class="text-xs px-2 py-1 rounded bg-orange-500/20 text-orange-300">MEDIA</span>
           </div>
-          <p class="text-sm text-slate-400">
-            <code class="mono">setTimeout 2000ms</code> → killall SIGKILL se ainda vivo
-          </p>
+          <p class="text-sm text-slate-400 mb-1">P50/P95 latencia, taxa sucesso/erro, custo medio, bottleneck analysis por workflow.</p>
+          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">Observabilidade</span> | <span class="text-emerald-400">Otimizacoes</span></p>
         </div>
 
-        <div class="flex justify-center">
-          <span class="text-2xl text-slate-600">↓</span>
-        </div>
-
-        <div class="glass rounded-xl p-4 border-l-4 border-emerald-500">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-sm font-bold">6</span>
-            <span class="font-semibold text-emerald-400">Cleanup</span>
+        <div class="glass rounded-xl p-4 priority-low">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-blue-400">Distributed Event Bus</h4>
+            <span class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300">BAIXA</span>
           </div>
-          <p class="text-sm text-slate-400">
-            <code class="mono">sessionManager.deleteAllSessions()</code> + <code class="mono">markCancelled()</code>
-          </p>
+          <p class="text-sm text-slate-400 mb-1">Redis PubSub real para multi-instance. Atualmente single-process EventEmitter.</p>
+          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">Escalabilidade horizontal</span></p>
         </div>
       </div>
     </div>
@@ -1974,39 +1948,7 @@
 
 <script src="shared.js"></script>
 <script>
-// Tab switching for execution modes
 document.addEventListener('DOMContentLoaded', () => {
-  const tabs = document.querySelectorAll('#execution-tabs button');
-  const contents = {
-    sequential: document.getElementById('tab-sequential'),
-    dag: document.getElementById('tab-dag'),
-    stepbystep: document.getElementById('tab-stepbystep')
-  };
-
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const target = tab.dataset.tab;
-
-      // Update tab styles
-      tabs.forEach(t => {
-        t.classList.remove('border-emerald-500', 'text-emerald-400');
-        t.classList.add('border-transparent', 'text-slate-400');
-      });
-      tab.classList.remove('border-transparent', 'text-slate-400');
-      tab.classList.add('border-emerald-500', 'text-emerald-400');
-
-      // Show correct content
-      Object.keys(contents).forEach(key => {
-        if (contents[key]) {
-          contents[key].classList.add('hidden');
-        }
-      });
-      if (contents[target]) {
-        contents[target].classList.remove('hidden');
-      }
-    });
-  });
-
   // Reveal animations
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -2017,6 +1959,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.1 });
 
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Smooth scroll for TOC links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
 });
 </script>
 
