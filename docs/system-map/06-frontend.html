@@ -14,10 +14,10 @@
     }
     .route-row {
       display: grid;
-      grid-template-columns: 200px 200px 1fr;
-      gap: 1rem;
+      grid-template-columns: 180px 180px 1fr 80px;
+      gap: 0.75rem;
       align-items: center;
-      padding: 0.65rem 1rem;
+      padding: 0.6rem 1rem;
       border-bottom: 1px solid var(--border-color);
       transition: background 0.2s;
     }
@@ -25,23 +25,28 @@
     .route-row:last-child { border-bottom: none; }
     .route-path {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       color: var(--text-accent);
       font-weight: 500;
     }
     .route-component {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: #c084fc;
       font-weight: 500;
     }
     .route-desc {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--text-secondary);
+    }
+    .route-badge {
+      display: flex;
+      gap: 0.25rem;
+      justify-content: flex-end;
     }
     .route-row-header {
       background: var(--bg-secondary);
       font-weight: 600;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-secondary);
@@ -51,15 +56,20 @@
     .route-row-header:hover { background: var(--bg-secondary); }
     .route-group-label {
       grid-column: 1 / -1;
-      padding: 0.6rem 1rem;
-      background: rgba(13, 148, 136, 0.06);
+      padding: 0.5rem 1rem;
+      background: rgba(13, 148, 136, 0.08);
       border-bottom: 1px solid var(--border-color);
       font-weight: 600;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--text-accent);
       display: flex;
       align-items: center;
       gap: 0.5rem;
+    }
+    .route-group-label .count {
+      margin-left: auto;
+      font-size: 0.7rem;
+      color: var(--text-muted);
     }
 
     /* Store Cards */
@@ -83,11 +93,17 @@
       align-items: center;
       gap: 0.5rem;
     }
+    .store-file {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
     .store-state, .store-actions {
-      margin-top: 0.6rem;
+      margin-top: 0.75rem;
     }
     .store-state-title, .store-actions-title {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--text-muted);
@@ -96,17 +112,13 @@
     }
     .store-item {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       color: var(--text-secondary);
-      padding: 0.15rem 0;
+      padding: 0.1rem 0;
     }
-    .store-item .type {
-      color: #67e8f9;
-      font-size: 0.72rem;
-    }
-    .store-item .fn {
-      color: #fbbf24;
-    }
+    .store-item .type { color: #67e8f9; }
+    .store-item .fn { color: #fbbf24; }
+    .store-item .optional { color: #64748b; font-style: italic; }
 
     /* Feature Tree */
     .tree {
@@ -116,7 +128,7 @@
     .tree li {
       position: relative;
       padding-left: 1.75rem;
-      line-height: 2;
+      line-height: 1.9;
     }
     .tree li::before {
       content: '';
@@ -131,23 +143,26 @@
       content: '';
       position: absolute;
       left: 0.5rem;
-      top: 1rem;
+      top: 0.95rem;
       width: 0.8rem;
       height: 1px;
       background: var(--border-color);
     }
-    .tree li:last-child::before {
-      bottom: calc(100% - 1rem);
-    }
+    .tree li:last-child::before { bottom: calc(100% - 0.95rem); }
     .tree .folder {
       color: #fbbf24;
       font-weight: 600;
-      font-size: 0.88rem;
+      font-size: 0.85rem;
     }
     .tree .file {
       color: var(--text-secondary);
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
+    }
+    .tree .lines {
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      margin-left: 0.5rem;
     }
 
     /* SSE Phase Flow */
@@ -162,11 +177,11 @@
       background: var(--bg-card);
       border: 2px solid var(--border-color);
       border-radius: 12px;
-      padding: 0.6rem 1rem;
-      font-size: 0.82rem;
+      padding: 0.75rem 1rem;
+      font-size: 0.8rem;
       font-weight: 600;
       text-align: center;
-      min-width: 120px;
+      min-width: 110px;
       transition: all 0.3s;
     }
     .phase-node:hover {
@@ -179,8 +194,8 @@
     }
     .phase-arrow {
       color: var(--text-muted);
-      font-size: 1.4rem;
-      padding: 0 0.35rem;
+      font-size: 1.3rem;
+      padding: 0 0.3rem;
     }
     .phase-label {
       font-size: 0.7rem;
@@ -192,14 +207,14 @@
     .comp-grid {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 0.4rem;
     }
     .comp-chip {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 0.35rem 0.75rem;
-      font-size: 0.8rem;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.78rem;
       font-weight: 500;
       color: var(--text-primary);
       transition: all 0.2s;
@@ -220,7 +235,7 @@
       flex: 1;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      padding: 1.25rem;
+      padding: 1.1rem;
       position: relative;
       transition: all 0.3s;
     }
@@ -231,32 +246,32 @@
       z-index: 1;
     }
     .wizard-step-num {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 700;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.4rem;
     }
     .wizard-step-title {
       font-weight: 600;
-      font-size: 0.95rem;
-      margin-bottom: 0.4rem;
+      font-size: 0.9rem;
+      margin-bottom: 0.3rem;
     }
     .wizard-step-desc {
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       color: var(--text-secondary);
-      line-height: 1.5;
+      line-height: 1.4;
     }
     .wizard-connector {
       width: 0;
       height: 0;
-      border-top: 20px solid transparent;
-      border-bottom: 20px solid transparent;
-      border-left: 14px solid var(--border-color);
+      border-top: 18px solid transparent;
+      border-bottom: 18px solid transparent;
+      border-left: 12px solid var(--border-color);
       align-self: center;
       margin: 0 -1px;
       z-index: 2;
@@ -266,8 +281,8 @@
     .event-tag {
       display: inline-block;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      padding: 0.15rem 0.5rem;
+      font-size: 0.72rem;
+      padding: 0.12rem 0.45rem;
       background: rgba(139, 92, 246, 0.1);
       color: #a78bfa;
       border: 1px solid rgba(139, 92, 246, 0.2);
@@ -278,13 +293,13 @@
     .color-swatch {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      padding: 0.5rem 0;
+      gap: 0.6rem;
+      padding: 0.4rem 0;
     }
     .swatch {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
       border: 1px solid var(--border-color);
       flex-shrink: 0;
     }
@@ -294,27 +309,163 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.6rem 0;
+      padding: 0.5rem 0;
       border-bottom: 1px solid var(--border-color);
     }
     .config-row:last-child { border-bottom: none; }
     .config-key {
       font-weight: 500;
-      font-size: 0.88rem;
+      font-size: 0.85rem;
     }
     .config-val {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       color: var(--text-accent);
     }
 
+    /* Dependency Grid */
+    .dep-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.5rem;
+    }
+    .dep-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.6rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.75rem;
+    }
+    .dep-item .name { font-weight: 500; }
+    .dep-item .ver { color: var(--text-muted); font-size: 0.7rem; margin-left: auto; }
+
+    /* Feature Card Large */
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .feature-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+    }
+    .feature-card-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .feature-card-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .feature-card-components {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+    .feature-comp-tag {
+      background: var(--bg-secondary);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Hook List */
+    .hook-list {
+      list-style: none;
+      padding: 0;
+    }
+    .hook-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .hook-item:last-child { border-bottom: none; }
+    .hook-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-accent);
+      flex: 1;
+    }
+    .hook-desc {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    /* Endpoint Table */
+    .endpoint-table {
+      width: 100%;
+      font-size: 0.78rem;
+    }
+    .endpoint-table .method {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .method.GET { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .method.POST { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .method.PUT { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .method.DELETE { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .method.PATCH { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+    .endpoint-table .path {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-secondary);
+    }
+
+    /* Data Flow Diagram */
+    .flow-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+    }
+    .flow-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .flow-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.5rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .flow-arrow {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+    .flow-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
     @media (max-width: 900px) {
-      .route-row { grid-template-columns: 1fr; gap: 0.25rem; }
+      .route-row { grid-template-columns: 1fr; gap: 0.2rem; }
       .route-row-header { display: none; }
       .wizard-flow { flex-direction: column; }
       .wizard-step { border-radius: 12px !important; }
       .wizard-connector { display: none; }
       .phase-flow { justify-content: center; }
+      .dep-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
     }
   </style>
 </head>
@@ -330,89 +481,217 @@
       <span>06 - Frontend</span>
     </div>
     <h1>Frontend</h1>
-    <p class="subtitle">React 18 + Vite 6 + TypeScript 5.7 — Interface completa do Orquetrador Claude</p>
+    <p class="subtitle">React 18 + Vite 6 + TypeScript 5.7 — Interface completa do Orquestrador Claude com ~21.000 linhas de código</p>
   </div>
 
   <!-- Stats -->
   <div class="grid-4" style="margin-bottom: 2.5rem;">
     <div class="stat-box">
-      <div class="stat-value" data-count="18">18</div>
-      <div class="stat-label">Rotas</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-value" data-count="8">8</div>
-      <div class="stat-label">Zustand Stores</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-value" data-count="23">23</div>
-      <div class="stat-label">Componentes UI</div>
-    </div>
-    <div class="stat-box">
       <div class="stat-value" data-count="16">16</div>
-      <div class="stat-label">Eventos SSE</div>
+      <div class="stat-label">Features</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="21">21</div>
+      <div class="stat-label">K Linhas de Código</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="80">80+</div>
+      <div class="stat-label">Componentes</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" data-count="40">40+</div>
+      <div class="stat-label">Custom Hooks</div>
     </div>
   </div>
 
   <!-- ================================================ -->
-  <!-- SECTION 1: Tech Stack -->
+  <!-- SECTION 1: Tech Stack Detalhada -->
   <!-- ================================================ -->
   <div class="section">
     <div class="section-title">
       <div class="icon" style="background: var(--gradient-1);">&#9881;</div>
-      Tech Stack
+      Tech Stack Completa
     </div>
 
-    <div class="grid-3">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#9883;</div>
-          <div>
-            <div class="card-title">Core</div>
+    <div class="tabs-container">
+      <div class="tabs-header">
+        <button class="tab-btn active" data-tab="tab-core">Core</button>
+        <button class="tab-btn" data-tab="tab-ui">UI & Estilos</button>
+        <button class="tab-btn" data-tab="tab-state">State & Data</button>
+        <button class="tab-btn" data-tab="tab-forms">Forms & Validação</button>
+        <button class="tab-btn" data-tab="tab-editor">Editor & Markdown</button>
+      </div>
+
+      <div id="tab-core" class="tab-content active">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">⚛️</div>
+              <div class="card-title">Framework Core</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">React</span><span class="config-val">^18.3.1</span></div>
+              <div class="config-row"><span class="config-key">React DOM</span><span class="config-val">^18.3.1</span></div>
+              <div class="config-row"><span class="config-key">TypeScript</span><span class="config-val">^5.7.2</span></div>
+              <div class="config-row"><span class="config-key">Vite</span><span class="config-val">^6.0.8</span></div>
+            </div>
           </div>
-        </div>
-        <div class="card-desc">
-          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.25rem;">
-            <span class="badge badge-teal">React 18</span>
-            <span class="badge badge-teal">Vite 6</span>
-            <span class="badge badge-teal">TypeScript 5.7</span>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">🔀</div>
+              <div class="card-title">Roteamento</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">React Router</span><span class="config-val">^7.1.1</span></div>
+              <div class="config-row"><span class="config-key">Lazy Loading</span><span class="config-val">todas as páginas</span></div>
+              <div class="config-row"><span class="config-key">Route Guards</span><span class="config-val">ProtectedRoute</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">📦</div>
+              <div class="card-title">Build</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">@vitejs/plugin-react</span><span class="config-val">^4.3.4</span></div>
+              <div class="config-row"><span class="config-key">ESLint</span><span class="config-val">^9.17.0</span></div>
+              <div class="config-row"><span class="config-key">PostCSS</span><span class="config-val">^8.4.49</span></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#9733;</div>
-          <div>
-            <div class="card-title">UI & Estilos</div>
+      <div id="tab-ui" class="tab-content">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">🎨</div>
+              <div class="card-title">Styling</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">Tailwind CSS</span><span class="config-val">^3.4.17</span></div>
+              <div class="config-row"><span class="config-key">tailwindcss-animate</span><span class="config-val">^1.0.7</span></div>
+              <div class="config-row"><span class="config-key">@tailwindcss/typography</span><span class="config-val">^0.5.19</span></div>
+              <div class="config-row"><span class="config-key">Dark Mode</span><span class="config-val">class-based</span></div>
+            </div>
           </div>
-        </div>
-        <div class="card-desc">
-          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.25rem;">
-            <span class="badge badge-purple">Tailwind CSS 3.4</span>
-            <span class="badge badge-purple">shadcn/ui</span>
-            <span class="badge badge-purple">Radix UI</span>
-            <span class="badge badge-purple">Lucide React</span>
-            <span class="badge badge-purple">Recharts 3</span>
-            <span class="badge badge-purple">Sonner</span>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">🧩</div>
+              <div class="card-title">Componentes UI</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">shadcn/ui</span><span class="config-val">23 componentes</span></div>
+              <div class="config-row"><span class="config-key">Radix UI</span><span class="config-val">primitivos</span></div>
+              <div class="config-row"><span class="config-key">Lucide React</span><span class="config-val">^0.468.0</span></div>
+              <div class="config-row"><span class="config-key">Recharts</span><span class="config-val">^3.8.0</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(245,158,11,0.1); color: #fbbf24;">🔔</div>
+              <div class="card-title">Feedback</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">Sonner</span><span class="config-val">^1.7.1 (toasts)</span></div>
+              <div class="config-row"><span class="config-key">tailwind-merge</span><span class="config-val">^2.6.0</span></div>
+              <div class="config-row"><span class="config-key">clsx</span><span class="config-val">^2.1.1</span></div>
+              <div class="config-row"><span class="config-key">class-variance-authority</span><span class="config-val">^0.7.1</span></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#8644;</div>
-          <div>
-            <div class="card-title">Estado & Dados</div>
+      <div id="tab-state" class="tab-content">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(236,72,153,0.1); color: #f472b6;">🗃️</div>
+              <div class="card-title">Client State</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">Zustand</span><span class="config-val">^5.0.2</span></div>
+              <div class="config-row"><span class="config-key">Stores</span><span class="config-val">5 principais</span></div>
+              <div class="config-row"><span class="config-key">useLocalStorage</span><span class="config-val">hook customizado</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(14,165,233,0.1); color: #38bdf8;">🌐</div>
+              <div class="card-title">Server State</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">@tanstack/react-query</span><span class="config-val">^5.62.8</span></div>
+              <div class="config-row"><span class="config-key">staleTime</span><span class="config-val">30s padrão</span></div>
+              <div class="config-row"><span class="config-key">gcTime</span><span class="config-val">5min padrão</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(239,68,68,0.1); color: #f87171;">📡</div>
+              <div class="card-title">Streaming</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">SSE Client</span><span class="config-val">custom fetch</span></div>
+              <div class="config-row"><span class="config-key">useSSEStream</span><span class="config-val">hook principal</span></div>
+              <div class="config-row"><span class="config-key">Eventos</span><span class="config-val">16 tipos</span></div>
+            </div>
           </div>
         </div>
-        <div class="card-desc">
-          <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.25rem;">
-            <span class="badge badge-blue">Zustand 5</span>
-            <span class="badge badge-blue">TanStack Query 5</span>
-            <span class="badge badge-blue">React Router 7</span>
-            <span class="badge badge-blue">React Hook Form</span>
-            <span class="badge badge-blue">Zod</span>
-            <span class="badge badge-blue">Axios</span>
+      </div>
+
+      <div id="tab-forms" class="tab-content">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">📝</div>
+              <div class="card-title">Forms</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">react-hook-form</span><span class="config-val">^7.54.2</span></div>
+              <div class="config-row"><span class="config-key">@hookform/resolvers</span><span class="config-val">^3.9.1</span></div>
+              <div class="config-row"><span class="config-key">Zod</span><span class="config-val">^3.24.1</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(59,130,246,0.1); color: #60a5fa;">🔌</div>
+              <div class="card-title">HTTP Client</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">Axios</span><span class="config-val">^1.7.9</span></div>
+              <div class="config-row"><span class="config-key">Interceptors</span><span class="config-val">token + 401</span></div>
+              <div class="config-row"><span class="config-key">Base URL</span><span class="config-val">:3333 (proxy)</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-editor" class="tab-content">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">✏️</div>
+              <div class="card-title">Rich Text Editor</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">@tiptap/react</span><span class="config-val">^2.27.2</span></div>
+              <div class="config-row"><span class="config-key">@tiptap/starter-kit</span><span class="config-val">^2.27.2</span></div>
+              <div class="config-row"><span class="config-key">@tiptap/extension-link</span><span class="config-val">^2.27.2</span></div>
+              <div class="config-row"><span class="config-key">@tiptap/extension-image</span><span class="config-val">^2.27.2</span></div>
+              <div class="config-row"><span class="config-key">@tiptap/extension-code-block-lowlight</span><span class="config-val">^2.27.2</span></div>
+              <div class="config-row"><span class="config-key">lowlight</span><span class="config-val">^3.3.0</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-icon" style="background: rgba(34,197,94,0.1); color: #4ade80;">📄</div>
+              <div class="card-title">Markdown</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">react-markdown</span><span class="config-val">^10.1.0</span></div>
+              <div class="config-row"><span class="config-key">remark-gfm</span><span class="config-val">^4.0.1</span></div>
+            </div>
           </div>
         </div>
       </div>
@@ -420,790 +699,665 @@
   </div>
 
   <!-- ================================================ -->
-  <!-- SECTION 2: 18 Rotas -->
+  <!-- SECTION 2: Estrutura de Diretórios -->
   <!-- ================================================ -->
   <div class="section">
     <div class="section-title">
-      <div class="icon" style="background: var(--gradient-4);">&#128268;</div>
-      18 Rotas da Aplicacao
-    </div>
-
-    <div class="search-box" style="max-width:400px;">
-      <span class="search-icon">&#128269;</span>
-      <input type="text" placeholder="Filtrar rotas..." data-search-target="routes-table">
-    </div>
-
-    <div class="table-container" style="border-radius: 12px;">
-      <div id="routes-table">
-        <div class="route-row route-row-header">
-          <span>Rota</span>
-          <span>Componente</span>
-          <span>Descricao</span>
-        </div>
-
-        <!-- Core -->
-        <div class="route-group-label">&#127968; Core</div>
-        <div class="route-row">
-          <span class="route-path">/</span>
-          <span class="route-component">Dashboard</span>
-          <span class="route-desc">Stats em tempo real, graficos de execucoes, alertas e metricas de uso</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/login</span>
-          <span class="route-component">LoginPage</span>
-          <span class="route-desc">Autenticacao com email/senha</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/register</span>
-          <span class="route-component">RegisterPage</span>
-          <span class="route-desc">Cadastro de novo usuario</span>
-        </div>
-
-        <!-- Conversations -->
-        <div class="route-group-label">&#128172; Conversas</div>
-        <div class="route-row">
-          <span class="route-path">/conversations</span>
-          <span class="route-component">ConversationsList</span>
-          <span class="route-desc">Lista de conversas com busca, filtros e paginacao</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/conversations/:id</span>
-          <span class="route-component">ConversationDetail</span>
-          <span class="route-desc">Chat interface com streaming SSE em tempo real</span>
-        </div>
-
-        <!-- Workflows -->
-        <div class="route-group-label">&#9881; Workflows</div>
-        <div class="route-row">
-          <span class="route-path">/workflows</span>
-          <span class="route-component">WorkflowsList</span>
-          <span class="route-desc">Lista de workflows com status e acoes rapidas</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/workflows/new</span>
-          <span class="route-component">WorkflowWizard</span>
-          <span class="route-desc">Wizard de 3 fases para criacao de workflow</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/workflows/:id/edit</span>
-          <span class="route-component">WorkflowWizard</span>
-          <span class="route-desc">Edicao de workflow existente com pre-carregamento</span>
-        </div>
-
-        <!-- Executions -->
-        <div class="route-group-label">&#9654; Execucoes</div>
-        <div class="route-row">
-          <span class="route-path">/executions</span>
-          <span class="route-component">ExecutionHistory</span>
-          <span class="route-desc">Historico de todas as execucoes com timeline e logs</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/workflow-chat</span>
-          <span class="route-component">WorkflowChat</span>
-          <span class="route-desc">Agente conversacional para criacao/execucao de workflows</span>
-        </div>
-
-        <!-- Resources -->
-        <div class="route-group-label">&#128230; Recursos</div>
-        <div class="route-row">
-          <span class="route-path">/mcp-servers</span>
-          <span class="route-component">McpServersPage</span>
-          <span class="route-desc">Gerenciamento de servidores MCP conectados</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/skills</span>
-          <span class="route-component">SkillsPage</span>
-          <span class="route-desc">Biblioteca de skills reutilizaveis</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/agents</span>
-          <span class="route-component">AgentsPage</span>
-          <span class="route-desc">Configuracao de agentes Claude</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/rules</span>
-          <span class="route-component">RulesPage</span>
-          <span class="route-desc">Regras de negocio e restricoes para execucoes</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/plugins</span>
-          <span class="route-component">PluginsPage</span>
-          <span class="route-desc">Plugins para estender funcionalidades</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/hooks</span>
-          <span class="route-component">HooksPage</span>
-          <span class="route-desc">Hooks de lifecycle (pre/post execution)</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/webhooks</span>
-          <span class="route-component">WebhooksPage</span>
-          <span class="route-desc">Webhooks de entrada e saida para integracoes</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/step-templates</span>
-          <span class="route-component">StepTemplatesPage</span>
-          <span class="route-desc">Templates reutilizaveis de steps para workflows</span>
-        </div>
-
-        <!-- Admin -->
-        <div class="route-group-label">&#128272; Configuracao & Admin</div>
-        <div class="route-row">
-          <span class="route-path">/settings</span>
-          <span class="route-component">SettingsPage</span>
-          <span class="route-desc">API keys, budget de tokens, integracao Git</span>
-        </div>
-        <div class="route-row">
-          <span class="route-path">/admin/users</span>
-          <span class="route-component">AdminUsersPage</span>
-          <span class="route-desc">Gerenciamento de usuarios (admin only)</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Visual Route Map -->
-    <div class="card" style="margin-top: 1.5rem;">
-      <div class="card-header">
-        <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128506;</div>
-        <div class="card-title">Mapa Visual de Rotas</div>
-      </div>
-      <div style="padding: 0.5rem; overflow-x: auto;">
-        <svg viewBox="0 0 900 420" style="width:100%;max-width:900px;min-width:600px;" xmlns="http://www.w3.org/2000/svg">
-          <!-- Root -->
-          <rect x="370" y="10" width="160" height="36" rx="8" fill="#0d9488" fill-opacity="0.2" stroke="#0d9488" stroke-width="1.5"/>
-          <text x="450" y="33" text-anchor="middle" fill="#2dd4bf" font-size="13" font-weight="600" font-family="Inter, sans-serif">App Router</text>
-
-          <!-- Lines from root -->
-          <line x1="410" y1="46" x2="100" y2="80" stroke="#1e293b" stroke-width="1"/>
-          <line x1="430" y1="46" x2="300" y2="80" stroke="#1e293b" stroke-width="1"/>
-          <line x1="450" y1="46" x2="450" y2="80" stroke="#1e293b" stroke-width="1"/>
-          <line x1="470" y1="46" x2="610" y2="80" stroke="#1e293b" stroke-width="1"/>
-          <line x1="490" y1="46" x2="790" y2="80" stroke="#1e293b" stroke-width="1"/>
-
-          <!-- Group: Auth -->
-          <rect x="20" y="80" width="160" height="30" rx="6" fill="#8b5cf6" fill-opacity="0.15" stroke="#8b5cf6" stroke-width="1"/>
-          <text x="100" y="100" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600" font-family="Inter, sans-serif">Auth (public)</text>
-          <line x1="60" y1="110" x2="60" y2="135" stroke="#1e293b" stroke-width="1"/>
-          <line x1="140" y1="110" x2="140" y2="135" stroke="#1e293b" stroke-width="1"/>
-          <rect x="15" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="60" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/login</text>
-          <rect x="115" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="160" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/register</text>
-
-          <!-- Group: Core -->
-          <rect x="225" y="80" width="160" height="30" rx="6" fill="#0d9488" fill-opacity="0.15" stroke="#0d9488" stroke-width="1"/>
-          <text x="305" y="100" text-anchor="middle" fill="#2dd4bf" font-size="11" font-weight="600" font-family="Inter, sans-serif">Core</text>
-          <line x1="265" y1="110" x2="265" y2="135" stroke="#1e293b" stroke-width="1"/>
-          <line x1="345" y1="110" x2="345" y2="135" stroke="#1e293b" stroke-width="1"/>
-          <rect x="220" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="265" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/</text>
-          <rect x="320" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="365" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/settings</text>
-
-          <!-- Group: Conversations & Workflows -->
-          <rect x="370" y="80" width="160" height="30" rx="6" fill="#3b82f6" fill-opacity="0.15" stroke="#3b82f6" stroke-width="1"/>
-          <text x="450" y="100" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="600" font-family="Inter, sans-serif">Conversations</text>
-          <line x1="420" y1="110" x2="420" y2="135" stroke="#1e293b" stroke-width="1"/>
-          <line x1="480" y1="110" x2="480" y2="135" stroke="#1e293b" stroke-width="1"/>
-          <rect x="375" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="420" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/conversations</text>
-          <rect x="475" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="520" y="153" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono, monospace">/conversations/:id</text>
-
-          <!-- Group: Workflows -->
-          <rect x="530" y="80" width="160" height="30" rx="6" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="1"/>
-          <text x="610" y="100" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600" font-family="Inter, sans-serif">Workflows</text>
-          <line x1="570" y1="110" x2="570" y2="135" stroke="#1e293b" stroke-width="1"/>
-          <line x1="610" y1="110" x2="610" y2="135" stroke="#1e293b" stroke-width="1"/>
-          <line x1="650" y1="110" x2="650" y2="135" stroke="#1e293b" stroke-width="1"/>
-          <rect x="530" y="135" width="80" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="570" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/workflows</text>
-          <rect x="615" y="135" width="76" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="653" y="153" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono, monospace">/new /edit</text>
-
-          <!-- Group: Resources -->
-          <rect x="710" y="80" width="170" height="30" rx="6" fill="#ef4444" fill-opacity="0.12" stroke="#ef4444" stroke-width="1"/>
-          <text x="795" y="100" text-anchor="middle" fill="#f87171" font-size="11" font-weight="600" font-family="Inter, sans-serif">Resources (8)</text>
-
-          <!-- Resource children - 2 cols -->
-          <line x1="750" y1="110" x2="750" y2="135" stroke="#1e293b" stroke-width="1"/>
-          <line x1="840" y1="110" x2="840" y2="135" stroke="#1e293b" stroke-width="1"/>
-
-          <rect x="705" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="750" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/skills</text>
-          <rect x="800" y="135" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="845" y="153" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/agents</text>
-
-          <rect x="705" y="168" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="750" y="186" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/rules</text>
-          <rect x="800" y="168" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="845" y="186" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/plugins</text>
-
-          <rect x="705" y="201" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="750" y="219" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/hooks</text>
-          <rect x="800" y="201" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="845" y="219" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace">/webhooks</text>
-
-          <rect x="705" y="234" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="750" y="252" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono, monospace">/mcp-servers</text>
-          <rect x="800" y="234" width="90" height="26" rx="5" fill="#1a1f2e" stroke="#1e293b"/>
-          <text x="845" y="252" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="JetBrains Mono, monospace">/step-templates</text>
-
-          <!-- Extra: executions, workflow-chat, admin -->
-          <line x1="450" y1="46" x2="450" y2="300" stroke="#1e293b" stroke-width="1" stroke-dasharray="4,3"/>
-
-          <rect x="20" y="290" width="860" height="30" rx="6" fill="rgba(100,116,139,0.08)" stroke="#1e293b"/>
-          <text x="450" y="310" text-anchor="middle" fill="#64748b" font-size="11" font-weight="500" font-family="Inter, sans-serif">Rotas extras: /executions | /workflow-chat | /admin/users</text>
-        </svg>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================================================ -->
-  <!-- SECTION 3: Zustand Stores -->
-  <!-- ================================================ -->
-  <div class="section">
-    <div class="section-title">
-      <div class="icon" style="background: var(--gradient-2);">&#128202;</div>
-      8 Zustand Stores
-    </div>
-
-    <div class="grid-2">
-      <!-- Auth Store -->
-      <div class="store-card" style="border-left: 3px solid #0d9488;">
-        <div class="store-name">
-          <span style="color: var(--text-accent);">&#128274;</span>
-          Auth Store
-        </div>
-        <div class="store-state">
-          <div class="store-state-title">Estado</div>
-          <div class="store-item">user <span class="type">User | null</span></div>
-          <div class="store-item">token <span class="type">string | null</span></div>
-          <div class="store-item">isAuthenticated <span class="type">boolean</span></div>
-        </div>
-        <div class="store-actions">
-          <div class="store-actions-title">Acoes</div>
-          <div class="store-item"><span class="fn">login()</span> — autentica e salva token</div>
-          <div class="store-item"><span class="fn">logout()</span> — limpa estado e redireciona</div>
-          <div class="store-item"><span class="fn">checkAuth()</span> — valida token no servidor</div>
-        </div>
-      </div>
-
-      <!-- Conversations Store -->
-      <div class="store-card" style="border-left: 3px solid #3b82f6;">
-        <div class="store-name">
-          <span style="color: #60a5fa;">&#128172;</span>
-          Conversations Store
-        </div>
-        <div class="store-state">
-          <div class="store-state-title">Estado</div>
-          <div class="store-item">isStreaming <span class="type">boolean</span></div>
-          <div class="store-item">streamingPhase <span class="type">StreamPhase</span></div>
-          <div class="store-item">content <span class="type">string</span></div>
-          <div class="store-item">actions <span class="type">Action[]</span></div>
-          <div class="store-item">isPaused <span class="type">boolean</span></div>
-          <div class="store-item">stepStatuses <span class="type">Map&lt;string, Status&gt;</span></div>
-        </div>
-        <div class="store-actions">
-          <div class="store-actions-title">Acoes</div>
-          <div class="store-item"><span class="fn">startStream()</span> — inicia SSE connection</div>
-          <div class="store-item"><span class="fn">pauseStream()</span> / <span class="fn">resumeStream()</span></div>
-          <div class="store-item"><span class="fn">cancelExecution()</span></div>
-        </div>
-      </div>
-
-      <!-- Workflows Store -->
-      <div class="store-card" style="border-left: 3px solid #f59e0b;">
-        <div class="store-name">
-          <span style="color: #fbbf24;">&#9881;</span>
-          Workflows Store
-        </div>
-        <div class="store-state">
-          <div class="store-state-title">Estado</div>
-          <div class="store-item">currentPhase <span class="type">1 | 2 | 3</span></div>
-          <div class="store-item">basicInfo <span class="type">WorkflowBasicInfo</span></div>
-          <div class="store-item">formSteps <span class="type">StepConfig[]</span></div>
-          <div class="store-item">selectedStepIndex <span class="type">number</span></div>
-        </div>
-        <div class="store-actions">
-          <div class="store-actions-title">Acoes</div>
-          <div class="store-item"><span class="fn">setPhase()</span> — navega entre fases do wizard</div>
-          <div class="store-item"><span class="fn">addStep()</span> / <span class="fn">removeStep()</span></div>
-          <div class="store-item"><span class="fn">reorderSteps()</span></div>
-        </div>
-      </div>
-
-      <!-- Agents Store -->
-      <div class="store-card" style="border-left: 3px solid #8b5cf6;">
-        <div class="store-name">
-          <span style="color: #a78bfa;">&#129302;</span>
-          Agents Store
-        </div>
-        <div class="store-state">
-          <div class="store-state-title">Estado</div>
-          <div class="store-item">isModalOpen <span class="type">boolean</span></div>
-          <div class="store-item">editingResource <span class="type">Agent | null</span></div>
-        </div>
-        <div class="store-actions">
-          <div class="store-actions-title">Acoes</div>
-          <div class="store-item"><span class="fn">openModal()</span> / <span class="fn">closeModal()</span></div>
-          <div class="store-item"><span class="fn">setEditing()</span></div>
-        </div>
-      </div>
-
-      <!-- Skills Store -->
-      <div class="store-card" style="border-left: 3px solid #06b6d4;">
-        <div class="store-name">
-          <span style="color: #22d3ee;">&#129504;</span>
-          Skills Store
-        </div>
-        <div class="store-state">
-          <div class="store-state-title">Estado</div>
-          <div class="store-item">isModalOpen <span class="type">boolean</span></div>
-          <div class="store-item">editingResource <span class="type">Skill | null</span></div>
-        </div>
-        <div class="store-actions">
-          <div class="store-actions-title">Acoes</div>
-          <div class="store-item"><span class="fn">openModal()</span> / <span class="fn">closeModal()</span></div>
-          <div class="store-item"><span class="fn">setEditing()</span></div>
-        </div>
-      </div>
-
-      <!-- Rules Store -->
-      <div class="store-card" style="border-left: 3px solid #f43f5e;">
-        <div class="store-name">
-          <span style="color: #fb7185;">&#128208;</span>
-          Rules Store
-        </div>
-        <div class="store-state">
-          <div class="store-state-title">Estado</div>
-          <div class="store-item">isModalOpen <span class="type">boolean</span></div>
-          <div class="store-item">editingResource <span class="type">Rule | null</span></div>
-        </div>
-        <div class="store-actions">
-          <div class="store-actions-title">Acoes</div>
-          <div class="store-item"><span class="fn">openModal()</span> / <span class="fn">closeModal()</span></div>
-          <div class="store-item"><span class="fn">setEditing()</span></div>
-        </div>
-      </div>
-
-      <!-- Plugins Store -->
-      <div class="store-card" style="border-left: 3px solid #10b981;">
-        <div class="store-name">
-          <span style="color: #34d399;">&#129513;</span>
-          Plugins Store
-        </div>
-        <div class="store-state">
-          <div class="store-state-title">Estado</div>
-          <div class="store-item">isModalOpen <span class="type">boolean</span></div>
-          <div class="store-item">editingResource <span class="type">Plugin | null</span></div>
-        </div>
-        <div class="store-actions">
-          <div class="store-actions-title">Acoes</div>
-          <div class="store-item"><span class="fn">openModal()</span> / <span class="fn">closeModal()</span></div>
-          <div class="store-item"><span class="fn">setEditing()</span></div>
-        </div>
-      </div>
-
-      <!-- Hooks/MCP Store -->
-      <div class="store-card" style="border-left: 3px solid #64748b;">
-        <div class="store-name">
-          <span style="color: #94a3b8;">&#128268;</span>
-          Hooks & MCP Servers Store
-        </div>
-        <div class="store-state">
-          <div class="store-state-title">Estado</div>
-          <div class="store-item">isModalOpen <span class="type">boolean</span></div>
-          <div class="store-item">editingResource <span class="type">Hook | McpServer | null</span></div>
-        </div>
-        <div class="store-actions">
-          <div class="store-actions-title">Acoes</div>
-          <div class="store-item"><span class="fn">openModal()</span> / <span class="fn">closeModal()</span></div>
-          <div class="store-item"><span class="fn">setEditing()</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Store Interaction Diagram -->
-    <div class="card" style="margin-top: 1.5rem;">
-      <div class="card-header">
-        <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128260;</div>
-        <div class="card-title">Fluxo de Dados: Stores + React Query</div>
-      </div>
-      <div style="padding: 0.75rem 0;">
-        <svg viewBox="0 0 800 200" style="width:100%;max-width:800px;" xmlns="http://www.w3.org/2000/svg">
-          <!-- API -->
-          <rect x="10" y="75" width="120" height="50" rx="10" fill="#0d9488" fill-opacity="0.15" stroke="#0d9488" stroke-width="1.5"/>
-          <text x="70" y="105" text-anchor="middle" fill="#2dd4bf" font-size="12" font-weight="600" font-family="Inter, sans-serif">Backend API</text>
-
-          <!-- Arrow API -> React Query -->
-          <line x1="130" y1="100" x2="190" y2="100" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-          <text x="160" y="92" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">Axios</text>
-
-          <!-- React Query -->
-          <rect x="190" y="60" width="150" height="80" rx="10" fill="#3b82f6" fill-opacity="0.12" stroke="#3b82f6" stroke-width="1.5"/>
-          <text x="265" y="90" text-anchor="middle" fill="#60a5fa" font-size="12" font-weight="600" font-family="Inter, sans-serif">React Query</text>
-          <text x="265" y="108" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">cache + refetch</text>
-          <text x="265" y="122" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">staleTime: 30s</text>
-
-          <!-- Arrow React Query -> Components -->
-          <line x1="340" y1="85" x2="410" y2="55" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-          <line x1="340" y1="100" x2="410" y2="100" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-          <line x1="340" y1="115" x2="410" y2="145" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-
-          <!-- Components -->
-          <rect x="410" y="30" width="140" height="36" rx="8" fill="#8b5cf6" fill-opacity="0.12" stroke="#8b5cf6" stroke-width="1"/>
-          <text x="480" y="53" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="500" font-family="Inter, sans-serif">Page Components</text>
-
-          <rect x="410" y="82" width="140" height="36" rx="8" fill="#8b5cf6" fill-opacity="0.12" stroke="#8b5cf6" stroke-width="1"/>
-          <text x="480" y="105" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="500" font-family="Inter, sans-serif">Feature Components</text>
-
-          <rect x="410" y="132" width="140" height="36" rx="8" fill="#8b5cf6" fill-opacity="0.12" stroke="#8b5cf6" stroke-width="1"/>
-          <text x="480" y="155" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="500" font-family="Inter, sans-serif">UI Components</text>
-
-          <!-- Arrow Components <-> Zustand -->
-          <line x1="550" y1="100" x2="620" y2="100" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-          <text x="585" y="92" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">subscribe</text>
-
-          <!-- Zustand -->
-          <rect x="620" y="60" width="160" height="80" rx="10" fill="#f59e0b" fill-opacity="0.12" stroke="#f59e0b" stroke-width="1.5"/>
-          <text x="700" y="90" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="600" font-family="Inter, sans-serif">Zustand Stores</text>
-          <text x="700" y="108" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">UI state, forms</text>
-          <text x="700" y="122" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">streaming, auth</text>
-
-          <!-- SSE arrow -->
-          <line x1="70" y1="75" x2="70" y2="20" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,3"/>
-          <line x1="70" y1="20" x2="700" y2="20" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrowgreen)"/>
-          <text x="385" y="14" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="500" font-family="Inter, sans-serif">SSE Stream (real-time updates)</text>
-
-          <defs>
-            <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#1e293b"/>
-            </marker>
-            <marker id="arrowgreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" fill="#22c55e"/>
-            </marker>
-          </defs>
-        </svg>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================================================ -->
-  <!-- SECTION 4: Feature Organization -->
-  <!-- ================================================ -->
-  <div class="section">
-    <div class="section-title">
-      <div class="icon" style="background: var(--gradient-1);">&#128193;</div>
-      Feature Organization
+      <div class="icon" style="background: var(--gradient-2);">&#128193;</div>
+      Estrutura de Diretórios
     </div>
 
     <div class="grid-2">
       <div class="card">
         <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128449;</div>
-          <div class="card-title">Estrutura por Feature</div>
+          <div class="card-title">/src (Raiz)</div>
         </div>
-        <div style="padding: 0.25rem 0;">
-          <ul class="tree">
-            <li>
-              <span class="folder">src/features/{feature}/</span>
-              <ul class="tree">
-                <li><span class="folder">api/</span>
-                  <ul class="tree">
-                    <li><span class="file">{feature}.api.ts</span> — chamadas HTTP (Axios)</li>
-                  </ul>
-                </li>
-                <li><span class="folder">components/</span>
-                  <ul class="tree">
-                    <li><span class="file">FeatureList.tsx</span></li>
-                    <li><span class="file">FeatureForm.tsx</span></li>
-                    <li><span class="file">FeatureCard.tsx</span></li>
-                  </ul>
-                </li>
-                <li><span class="folder">hooks/</span>
-                  <ul class="tree">
-                    <li><span class="file">use-{feature}.ts</span> — React Query hooks</li>
-                  </ul>
-                </li>
-                <li><span class="folder">store/</span>
-                  <ul class="tree">
-                    <li><span class="file">{feature}.store.ts</span> — Zustand</li>
-                  </ul>
-                </li>
-                <li><span class="folder">types/</span>
-                  <ul class="tree">
-                    <li><span class="file">{feature}.types.ts</span></li>
-                  </ul>
-                </li>
-                <li><span class="file">{Feature}Page.tsx</span> — pagina principal</li>
-              </ul>
-            </li>
-          </ul>
-        </div>
+        <ul class="tree">
+          <li><span class="folder">app/</span> <span class="lines">(5 arquivos)</span>
+            <ul class="tree">
+              <li><span class="file">App.tsx</span> <span class="lines">(34 linhas)</span></li>
+              <li><span class="file">routes.tsx</span> <span class="lines">(246 linhas)</span></li>
+              <li><span class="file">app-layout.tsx</span> <span class="lines">(44 linhas)</span></li>
+              <li><span class="file">main.tsx</span> <span class="lines">(entry point)</span></li>
+              <li><span class="file">index.css</span> <span class="lines">(global styles)</span></li>
+            </ul>
+          </li>
+          <li><span class="folder">features/</span> <span class="lines">(16 domínios)</span>
+            <ul class="tree">
+              <li><span class="file">admin/</span> <span class="lines">(usuários)</span></li>
+              <li><span class="file">agents/</span> <span class="lines">(agentes IA)</span></li>
+              <li><span class="file">auth/</span> <span class="lines">(login/register)</span></li>
+              <li><span class="file">conversations/</span> <span class="lines">(~1500 linhas)</span></li>
+              <li><span class="file">dashboard/</span> <span class="lines">(analytics)</span></li>
+              <li><span class="file">executions/</span> <span class="lines">(histórico)</span></li>
+              <li><span class="file">hooks/</span> <span class="lines">(automações)</span></li>
+              <li><span class="file">mcp-servers/</span> <span class="lines">(MCP config)</span></li>
+              <li><span class="file">plugins/</span> <span class="lines">(plugins)</span></li>
+              <li><span class="file">rules/</span> <span class="lines">(regras)</span></li>
+              <li><span class="file">settings/</span> <span class="lines">(configurações)</span></li>
+              <li><span class="file">skills/</span> <span class="lines">(skills)</span></li>
+              <li><span class="file">step-templates/</span> <span class="lines">(templates)</span></li>
+              <li><span class="file">webhooks/</span> <span class="lines">(webhooks)</span></li>
+              <li><span class="file">workflow-chat/</span> <span class="lines">(chat direto)</span></li>
+              <li><span class="file">workflows/</span> <span class="lines">(~1000 linhas)</span></li>
+            </ul>
+          </li>
+          <li><span class="folder">shared/</span> <span class="lines">(reutilizável)</span>
+            <ul class="tree">
+              <li><span class="folder">components/</span>
+                <ul class="tree">
+                  <li><span class="folder">ui/</span> <span class="lines">(23 shadcn)</span></li>
+                  <li><span class="folder">common/</span> <span class="lines">(5 compos)</span></li>
+                  <li><span class="folder">layout/</span> <span class="lines">(sidebar)</span></li>
+                </ul>
+              </li>
+              <li><span class="folder">hooks/</span> <span class="lines">(3 custom)</span></li>
+              <li><span class="folder">lib/</span> <span class="lines">(utils)</span></li>
+            </ul>
+          </li>
+        </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#127760;</div>
-          <div class="card-title">Shared (src/shared/)</div>
+          <div class="card-title">Padrão de Feature</div>
         </div>
-        <div style="padding: 0.25rem 0;">
-          <ul class="tree">
-            <li>
-              <span class="folder">src/shared/</span>
-              <ul class="tree">
-                <li><span class="folder">components/</span>
-                  <ul class="tree">
-                    <li><span class="folder">ui/</span> — 23 componentes shadcn/ui
-                      <ul class="tree">
-                        <li><span class="file">button.tsx, input.tsx, card.tsx...</span></li>
-                      </ul>
-                    </li>
-                    <li><span class="folder">common/</span> — compostos reutilizaveis
-                      <ul class="tree">
-                        <li><span class="file">page-header.tsx</span></li>
-                        <li><span class="file">data-table.tsx</span></li>
-                        <li><span class="file">confirm-dialog.tsx</span></li>
-                        <li><span class="file">empty-state.tsx</span></li>
-                      </ul>
-                    </li>
-                  </ul>
-                </li>
-                <li><span class="folder">hooks/</span>
-                  <ul class="tree">
-                    <li><span class="file">useSearchPagination.ts</span></li>
-                    <li><span class="file">use-sse-stream.ts</span></li>
-                  </ul>
-                </li>
-                <li><span class="folder">lib/</span>
-                  <ul class="tree">
-                    <li><span class="file">axios.ts</span> — instancia configurada</li>
-                    <li><span class="file">utils.ts</span> — cn(), formatters</li>
-                    <li><span class="file">query-client.ts</span></li>
-                  </ul>
-                </li>
-              </ul>
-            </li>
-          </ul>
+        <div class="code-block" style="font-size: 0.75rem;">
+          <span class="keyword">feature/</span>
+          <br>  <span class="string">├── index.tsx</span>          <span class="comment"># Página principal</span>
+          <br>  <span class="string">├── api.ts</span>             <span class="comment"># Chamadas HTTP</span>
+          <br>  <span class="string">├── store.ts</span>           <span class="comment"># Zustand (opcional)</span>
+          <br>  <span class="string">├── types.ts</span>           <span class="comment"># Interfaces TS</span>
+          <br>  <span class="string">├── hooks/</span>
+          <br>  <span class="string">│   └── use-feature.ts</span>  <span class="comment"># React Query hooks</span>
+          <br>  <span class="string">└── components/</span>
+          <br>      <span class="string">├── FeatureCard.tsx</span>
+          <br>      <span class="string">├── FeatureTable.tsx</span>
+          <br>      <span class="string">├── FeatureForm.tsx</span>
+          <br>      <span class="string">└── FeatureModal.tsx</span>
         </div>
-      </div>
-    </div>
-
-    <!-- Features list -->
-    <div class="card" style="margin-top: 1.5rem;">
-      <div class="card-header">
-        <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#128204;</div>
-        <div class="card-title">Features Implementadas</div>
-      </div>
-      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
-        <span class="badge badge-teal">auth</span>
-        <span class="badge badge-blue">conversations</span>
-        <span class="badge badge-amber">workflows</span>
-        <span class="badge badge-purple">executions</span>
-        <span class="badge badge-green">skills</span>
-        <span class="badge badge-red">agents</span>
-        <span class="badge badge-gray">rules</span>
-        <span class="badge badge-teal">plugins</span>
-        <span class="badge badge-blue">hooks</span>
-        <span class="badge badge-amber">webhooks</span>
-        <span class="badge badge-purple">mcp-servers</span>
-        <span class="badge badge-green">step-templates</span>
-        <span class="badge badge-red">settings</span>
-        <span class="badge badge-gray">admin</span>
-        <span class="badge badge-teal">dashboard</span>
-        <span class="badge badge-blue">workflow-chat</span>
       </div>
     </div>
   </div>
 
   <!-- ================================================ -->
-  <!-- SECTION 5: SSE Streaming -->
+  <!-- SECTION 3: Sistema de Rotas -->
   <!-- ================================================ -->
   <div class="section">
     <div class="section-title">
-      <div class="icon" style="background: var(--gradient-3);">&#128225;</div>
-      SSE Streaming (Tempo Real)
+      <div class="icon" style="background: var(--gradient-3);">&#128205;</div>
+      Sistema de Rotas
+    </div>
+
+    <div class="tabs-container">
+      <div class="tabs-header">
+        <button class="tab-btn active" data-tab="tab-routes">Rotas</button>
+        <button class="tab-btn" data-tab="tab-guards">Guards & Auth</button>
+        <button class="tab-btn" data-tab="tab-lazy">Lazy Loading</button>
+      </div>
+
+      <div id="tab-routes" class="tab-content active">
+        <div class="table-container">
+          <table class="route-map">
+            <thead>
+              <tr class="route-row-header">
+                <th>Path</th>
+                <th>Componente</th>
+                <th>Descrição</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="route-group-label"><td colspan="4">Públicas</td></tr>
+              <tr class="route-row">
+                <td class="route-path">/login</td>
+                <td class="route-component">LoginPage</td>
+                <td class="route-desc">Formulário de autenticação</td>
+                <td class="route-badge"><span class="badge badge-gray">PUB</span></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/register</td>
+                <td class="route-component">RegisterPage</td>
+                <td class="route-desc">Formulário de registro</td>
+                <td class="route-badge"><span class="badge badge-gray">PUB</span></td>
+              </tr>
+
+              <tr class="route-group-label"><td colspan="4">Principais (Protegidas)</td></tr>
+              <tr class="route-row">
+                <td class="route-path">/</td>
+                <td class="route-component">DashboardPage</td>
+                <td class="route-desc">Dashboard com métricas e atalhos</td>
+                <td class="route-badge"><span class="badge badge-teal">MAIN</span></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/conversations</td>
+                <td class="route-component">ConversationsPage</td>
+                <td class="route-desc">Lista de conversas com busca</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/conversations/:id</td>
+                <td class="route-component">ConversationDetailPage</td>
+                <td class="route-desc">Chat com streaming SSE</td>
+                <td class="route-badge"><span class="badge badge-purple">SSE</span></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/workflows</td>
+                <td class="route-component">WorkflowsPage</td>
+                <td class="route-desc">Gerenciador de workflows</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/workflows/new</td>
+                <td class="route-component">WorkflowWizardPage</td>
+                <td class="route-desc">Wizard de criação (3 fases)</td>
+                <td class="route-badge"><span class="badge badge-amber">WIZ</span></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/workflows/:id/edit</td>
+                <td class="route-component">WorkflowWizardPage</td>
+                <td class="route-desc">Wizard de edição</td>
+                <td class="route-badge"><span class="badge badge-amber">WIZ</span></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/executions</td>
+                <td class="route-component">ExecutionsPage</td>
+                <td class="route-desc">Histórico de execuções</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/workflow-chat</td>
+                <td class="route-component">WorkflowChatPage</td>
+                <td class="route-desc">Chat direto com workflow</td>
+                <td class="route-badge"><span class="badge badge-purple">SSE</span></td>
+              </tr>
+
+              <tr class="route-group-label"><td colspan="4">Configuração (Protegidas)</td></tr>
+              <tr class="route-row">
+                <td class="route-path">/mcp-servers</td>
+                <td class="route-component">McpServersPage</td>
+                <td class="route-desc">Gerenciar servidores MCP</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/skills</td>
+                <td class="route-component">SkillsPage</td>
+                <td class="route-desc">Gerenciar skills</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/agents</td>
+                <td class="route-component">AgentsPage</td>
+                <td class="route-desc">Gerenciar agentes</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/rules</td>
+                <td class="route-component">RulesPage</td>
+                <td class="route-desc">Gerenciar regras</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/plugins</td>
+                <td class="route-component">PluginsPage</td>
+                <td class="route-desc">Gerenciar plugins</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/hooks</td>
+                <td class="route-component">HooksPage</td>
+                <td class="route-desc">Gerenciar hooks/automações</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/webhooks</td>
+                <td class="route-component">WebhooksPage</td>
+                <td class="route-desc">Configurar webhooks</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/step-templates</td>
+                <td class="route-component">StepTemplatesPage</td>
+                <td class="route-desc">Templates de steps</td>
+                <td class="route-badge"></td>
+              </tr>
+              <tr class="route-row">
+                <td class="route-path">/settings</td>
+                <td class="route-component">SettingsPage</td>
+                <td class="route-desc">Configurações (Git, API Keys)</td>
+                <td class="route-badge"></td>
+              </tr>
+
+              <tr class="route-group-label"><td colspan="4">Admin (Protegidas + Role)</td></tr>
+              <tr class="route-row">
+                <td class="route-path">/admin/users</td>
+                <td class="route-component">AdminPage</td>
+                <td class="route-desc">Gestão de usuários</td>
+                <td class="route-badge"><span class="badge badge-red">ADMIN</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-guards" class="tab-content">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">ProtectedRoute</div>
+              <div class="store-file">features/auth/protected-route.tsx</div>
+            </div>
+            <div class="card-desc">
+              <p style="margin-bottom: 1rem;">Wrapper que protege rotas requiring autenticação.</p>
+              <div class="code-block" style="font-size: 0.75rem;">
+                <span class="keyword">const</span> isAuthenticated = useAuthStore(s => s.isAuthenticated)<br>
+                <span class="keyword">const</span> isLoading = useAuthStore(s => s.isLoading)<br>
+                <br>
+                <span class="keyword">if</span> (isLoading) <span class="keyword">return</span> &lt;PageLoader /&gt;<br>
+                <span class="keyword">if</span> (!isAuthenticated) <span class="keyword">return</span> &lt;Navigate to=<span class="string">"/login"</span> /&gt;<br>
+                <span class="keyword">return</span> &lt;Outlet /&gt;
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Auth Guard</div>
+              <div class="store-file">features/auth/store.ts (54 linhas)</div>
+            </div>
+            <div class="store-state">
+              <div class="store-state-title">State</div>
+              <div class="store-item"><span class="type">user:</span> <span class="optional">AuthUser | null</span></div>
+              <div class="store-item"><span class="type">token:</span> <span class="optional">string | null</span></div>
+              <div class="store-item"><span class="type">isAuthenticated:</span> <span class="type">boolean</span></div>
+              <div class="store-item"><span class="type">isLoading:</span> <span class="type">boolean</span></div>
+            </div>
+            <div class="store-actions">
+              <div class="store-actions-title">Actions</div>
+              <div class="store-item"><span class="fn">login(email, password)</span></div>
+              <div class="store-item"><span class="fn">register(email, password, name?)</span></div>
+              <div class="store-item"><span class="fn">logout()</span> → limpa localStorage</div>
+              <div class="store-item"><span class="fn">checkAuth()</span> → valida token</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-lazy" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Lazy Loading com Retry</div>
+            <div class="store-file">app/routes.tsx</div>
+          </div>
+          <div class="card-desc">
+            <p style="margin-bottom: 1rem;">Todas as 16+ páginas são lazy-loaded com retry automático em 404 (stale chunks).</p>
+            <div class="code-block" style="font-size: 0.75rem;">
+              <span class="keyword">function</span> <span class="fn">lazyRetry</span>(componentImport) {<br>
+              &nbsp;&nbsp;<span class="keyword">return</span> <span class="fn">lazy</span>(<span class="keyword">async</span> () => {<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">const</span> alreadyRetried = sessionStorage.getItem(<span class="string">'retry'</span>)<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">try</span> {<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">const</span> component = <span class="keyword">await</span> <span class="fn">componentImport</span>()<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sessionStorage.<span class="fn">removeItem</span>(<span class="string">'retry'</span>)<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span> component<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;} <span class="keyword">catch</span> (error) {<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> (!alreadyRetried) {<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sessionStorage.<span class="fn">setItem</span>(<span class="string">'retry'</span>, <span class="string">'true'</span>)<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;window.location.<span class="fn">reload</span>()<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">throw</span> error<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+              &nbsp;&nbsp;})<br>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- SECTION 4: Estado (Zustand + React Query) -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-4);">&#128187;</div>
+      Gestão de Estado
+    </div>
+
+    <div class="tabs-container">
+      <div class="tabs-header">
+        <button class="tab-btn active" data-tab="tab-zustand">Zustand Stores</button>
+        <button class="tab-btn" data-tab="tab-reactquery">React Query</button>
+        <button class="tab-btn" data-tab="tab-hooks">Custom Hooks</button>
+      </div>
+
+      <div id="tab-zustand" class="tab-content active">
+        <div class="grid-2">
+          <!-- Auth Store -->
+          <div class="store-card">
+            <div class="store-name">🔐 useAuthStore</div>
+            <div class="store-file">features/auth/store.ts (54 linhas)</div>
+            <div class="store-state">
+              <div class="store-state-title">State</div>
+              <div class="store-item"><span class="type">user:</span> AuthUser | null</div>
+              <div class="store-item"><span class="type">token:</span> string | null</div>
+              <div class="store-item"><span class="type">isLoading:</span> boolean</div>
+              <div class="store-item"><span class="type">isAuthenticated:</span> boolean</div>
+            </div>
+            <div class="store-actions">
+              <div class="store-actions-title">Actions</div>
+              <div class="store-item"><span class="fn">login(email, password)</span></div>
+              <div class="store-item"><span class="fn">register(email, password, name?)</span></div>
+              <div class="store-item"><span class="fn">logout()</span></div>
+              <div class="store-item"><span class="fn">checkAuth()</span></div>
+            </div>
+          </div>
+
+          <!-- Conversations Store -->
+          <div class="store-card">
+            <div class="store-name">💬 useConversationsStore</div>
+            <div class="store-file">features/conversations/store.ts (133 linhas)</div>
+            <div class="store-state">
+              <div class="store-state-title">Streaming State</div>
+              <div class="store-item"><span class="type">isStreaming:</span> boolean</div>
+              <div class="store-item"><span class="type">streamingPhase:</span> 'idle'|'preparing'|'connecting'|'ai_thinking'|'streaming'</div>
+              <div class="store-item"><span class="type">streamingContent:</span> string</div>
+              <div class="store-item"><span class="type">streamingActions:</span> Action[]</div>
+              <div class="store-item"><span class="type">isPaused:</span> boolean</div>
+              <div class="store-item"><span class="type">pausedInfo:</span> PausedInfo | null</div>
+              <div class="store-item"><span class="type">stepStatuses:</span> Map&lt;stepId, status&gt;</div>
+              <div class="store-item"><span class="type">actionsCache:</span> Map&lt;msgId, Action[]&gt;</div>
+            </div>
+            <div class="store-actions">
+              <div class="store-actions-title">Methods (20+)</div>
+              <div class="store-item"><span class="fn">setStreaming(), appendStreamingContent()</span></div>
+              <div class="store-item"><span class="fn">setPaused(), setProgress()</span></div>
+              <div class="store-item"><span class="fn">setStepStatus(), initStepStatuses()</span></div>
+              <div class="store-item"><span class="fn">cacheActions(), getCachedActions()</span></div>
+            </div>
+          </div>
+
+          <!-- Workflows Store -->
+          <div class="store-card">
+            <div class="store-name">📋 useWorkflowsStore</div>
+            <div class="store-file">features/workflows/store.ts (227 linhas)</div>
+            <div class="store-state">
+              <div class="store-state-title">Wizard State</div>
+              <div class="store-item"><span class="type">currentPhase:</span> 1 | 2 | 3</div>
+              <div class="store-item"><span class="type">basicInfo:</span> {name, description, type}</div>
+              <div class="store-item"><span class="type">selectedStepIndex:</span> number</div>
+              <div class="store-item"><span class="type">formSteps:</span> WorkflowStep[]</div>
+              <div class="store-item"><span class="type">editingWorkflow:</span> Workflow | null</div>
+            </div>
+            <div class="store-actions">
+              <div class="store-actions-title">Methods (15+)</div>
+              <div class="store-item"><span class="fn">setPhase(), setBasicInfo()</span></div>
+              <div class="store-item"><span class="fn">moveStep(), duplicateStep()</span></div>
+              <div class="store-item"><span class="fn">addStep(), removeStep(), updateStep()</span></div>
+              <div class="store-item"><span class="fn">initCreate(), initEdit(), resetWizard()</span></div>
+            </div>
+          </div>
+
+          <!-- CRUD Stores Pattern -->
+          <div class="store-card">
+            <div class="store-name">🔄 CRUD Stores</div>
+            <div class="store-file">6 stores (32 linhas cada)</div>
+            <div class="card-desc" style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+              Padrão idêntico para: skills, agents, rules, plugins, hooks, mcp-servers
+            </div>
+            <div class="store-state">
+              <div class="store-state-title">Modal State</div>
+              <div class="store-item"><span class="type">isModalOpen:</span> boolean</div>
+              <div class="store-item"><span class="type">editingItem:</span> Item | null</div>
+              <div class="store-item"><span class="type">isLoadingEdit:</span> boolean</div>
+            </div>
+            <div class="store-actions">
+              <div class="store-actions-title">Actions</div>
+              <div class="store-item"><span class="fn">openCreateModal()</span></div>
+              <div class="store-item"><span class="fn">openEditModal(item) → load via API</span></div>
+              <div class="store-item"><span class="fn">closeModal()</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-reactquery" class="tab-content">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">QueryClient Config</div>
+              <div class="store-file">app/App.tsx</div>
+            </div>
+            <div class="card-desc">
+              <div class="config-row"><span class="config-key">staleTime</span><span class="config-val">30s (padrão)</span></div>
+              <div class="config-row"><span class="config-key">gcTime</span><span class="config-val">5min</span></div>
+              <div class="config-row"><span class="config-key">retry</span><span class="config-val">1 tentativa</span></div>
+              <div class="config-row"><span class="config-key">refetchOnWindowFocus</span><span class="config-val">false</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Padrões de Hook</div>
+            </div>
+            <div class="code-block" style="font-size: 0.72rem;">
+              <span class="comment">// Query Pattern</span><br>
+              <span class="keyword">useQuery</span>({<br>
+              &nbsp;&nbsp;queryKey: [<span class="string">'workflows'</span>],<br>
+              &nbsp;&nbsp;queryFn: () => api.<span class="fn">list</span>(),<br>
+              &nbsp;&nbsp;staleTime: 30000<br>
+              })<br><br>
+              <span class="comment">// Mutation Pattern</span><br>
+              <span class="keyword">useMutation</span>({<br>
+              &nbsp;&nbsp;mutationFn: (input) => api.<span class="fn">create</span>(input),<br>
+              &nbsp;&nbsp;onSuccess: () => {<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;queryClient.<span class="fn">invalidateQueries</span>({queryKey: [<span class="string">'workflows'</span>]})<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;toast.<span class="fn">success</span>(<span class="string">'Sucesso!'</span>)<br>
+              &nbsp;&nbsp;}<br>
+              })
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+          <h4 style="margin-bottom: 1rem; color: var(--text-accent);">Hooks por Feature</h4>
+          <div class="table-container">
+            <table class="endpoint-table">
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Feature</th>
+                  <th style="width: 35%;">Hooks</th>
+                  <th>Cache Key Pattern</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Conversations</strong></td>
+                  <td>useConversations, useConversation, useCreateConversation, useDeleteConversation, useCloneConversation, useCancelExecution, useAdvanceStep, useGoBackStep, useJumpToStep</td>
+                  <td><code>['conversations']</code>, <code>['conversations', id]</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Workflows</strong></td>
+                  <td>useWorkflows, useWorkflow, useCreateWorkflow, useUpdateWorkflow, useDeleteWorkflow, useDuplicateWorkflow</td>
+                  <td><code>['workflows']</code>, <code>['workflows', id]</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Executions</strong></td>
+                  <td>useExecutions, useExecutionSummary (refetch: 5s)</td>
+                  <td><code>['executions']</code>, <code>['execution-summary']</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Dashboard</strong></td>
+                  <td>useDailyMetrics, useWorkflowMetrics, useToolAnalytics, useMetricAlerts</td>
+                  <td><code>['metrics', type]</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Settings</strong></td>
+                  <td>useGit*, useApiKeys, useBudget</td>
+                  <td><code>['git']</code>, <code>['api-keys']</code>, <code>['budget']</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Admin</strong></td>
+                  <td>useAdminUsers, useUpdateUserRole, useDeleteUser</td>
+                  <td><code>['admin', 'users']</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-hooks" class="tab-content">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">useSSEStream</div>
+              <div class="store-file">conversations/hooks/use-sse-stream.ts (498 linhas)</div>
+            </div>
+            <div class="card-desc">
+              <p style="margin-bottom: 0.75rem;">Hook principal para streaming de conversas via SSE.</p>
+              <div class="phase-flow">
+                <div class="phase-node">preparing<div class="phase-label">1</div></div>
+                <div class="phase-arrow">→</div>
+                <div class="phase-node">connecting<div class="phase-label">2</div></div>
+                <div class="phase-arrow">→</div>
+                <div class="phase-node">ai_thinking<div class="phase-label">3</div></div>
+                <div class="phase-arrow">→</div>
+                <div class="phase-node">streaming<div class="phase-label">4</div></div>
+              </div>
+              <div style="margin-top: 1rem; font-size: 0.8rem;">
+                <span class="event-tag">step_start</span>
+                <span class="event-tag">stream</span>
+                <span class="event-tag">step_complete</span>
+                <span class="event-tag">paused</span>
+                <span class="event-tag">completed</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">useSearchPagination</div>
+              <div class="store-file">shared/components/common/search-pagination.tsx (288 linhas)</div>
+            </div>
+            <div class="card-desc">
+              <p style="margin-bottom: 0.75rem;">Hook compartilhado para listas com busca, filtros e paginação.</p>
+              <div class="code-block" style="font-size: 0.75rem;">
+                <span class="keyword">const</span> {<br>
+                &nbsp;&nbsp;filtered, paged, search, setSearch,<br>
+                &nbsp;&nbsp;page, setPage, pageSize, setPageSize,<br>
+                &nbsp;&nbsp;totalPages, activeFilters, setFilter<br>
+                } = <span class="fn">useSearchPagination</span>({<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;data: conversations,<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;searchFields: [<span class="string">'title'</span>, <span class="string">'workflowName'</span>],<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;pageSize: 12<br>
+                })
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">useLocalStorage</div>
+              <div class="store-file">shared/hooks/use-local-storage.ts (54 linhas)</div>
+            </div>
+            <div class="code-block" style="font-size: 0.75rem;">
+              <span class="keyword">const</span> [value, setValue] = <span class="fn">useLocalStorage</span>&lt;T&gt;(key, initialValue)<br><br>
+              <span class="comment">// Sincroniza entre abas via storage event</span><br>
+              <span class="comment">// SSR-safe</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">useDebounce</div>
+              <div class="store-file">shared/hooks/use-debounce.ts (17 linhas)</div>
+            </div>
+            <div class="code-block" style="font-size: 0.75rem;">
+              <span class="keyword">const</span> debouncedSearch = <span class="fn">useDebounce</span>(searchValue, 500)<br><br>
+              <span class="comment">// Delay de 500ms antes de atualizar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================ -->
+  <!-- SECTION 5: API Layer -->
+  <!-- ================================================ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="icon" style="background: var(--gradient-1);">&#128187;</div>
+      API Layer
     </div>
 
     <div class="grid-2">
       <div class="card">
         <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#9889;</div>
-          <div class="card-title">use-sse-stream.ts</div>
+          <div class="card-title">API Client</div>
+          <div class="store-file">shared/lib/api-client.ts (35 linhas)</div>
         </div>
         <div class="card-desc">
-          Hook principal que gerencia a conexao SSE com o backend. Recebe a URL de streaming e retorna estado reativo com fase atual, conteudo e controles.
-        </div>
-        <div style="margin-top: 1rem;">
-          <div class="code-block">
-<span class="keyword">const</span> { phase, content, actions, isStreaming, isPaused } = <span class="fn">useSSEStream</span>({
-  <span class="string">url</span>: <span class="string">`/api/executions/${id}/stream`</span>,
-  <span class="string">onEvent</span>: (event) => handleEvent(event),
-  <span class="string">autoReconnect</span>: <span class="keyword">true</span>,
-})
-          </div>
+          <div class="config-row"><span class="config-key">Base URL</span><span class="config-val">:3333 (proxy)</span></div>
+          <div class="config-row"><span class="config-key">Request Interceptor</span><span class="config-val">add Bearer token</span></div>
+          <div class="config-row"><span class="config-key">Response Interceptor</span><span class="config-val">401 → /login</span></div>
         </div>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-warning); color: #fbbf24;">&#128260;</div>
-          <div class="card-title">Funcionalidades</div>
+          <div class="card-title">SSE Client</div>
+          <div class="store-file">shared/lib/sse-client.ts (91 linhas)</div>
         </div>
-        <div class="card-desc" style="line-height: 2;">
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Auto-reconnect on page refresh (watchExecution)</div>
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Interrupt/cancel support via API</div>
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Pause/resume streaming</div>
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Step status tracking em tempo real</div>
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Error recovery com retry</div>
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> 16 tipos de eventos SSE processados</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Streaming Phases -->
-    <div class="card" style="margin-top: 1.5rem;">
-      <div class="card-header">
-        <div class="card-icon" style="background: var(--bg-success); color: #4ade80;">&#128336;</div>
-        <div class="card-title">Fases do Streaming</div>
-      </div>
-      <div class="phase-flow" style="justify-content: center;">
-        <div class="phase-node" style="border-color: #64748b;">
-          <div style="font-size: 1.1rem;">&#9898;</div>
-          <div>idle</div>
-          <div class="phase-label">Aguardando</div>
-        </div>
-        <div class="phase-arrow">&#8594;</div>
-        <div class="phase-node" style="border-color: #f59e0b;">
-          <div style="font-size: 1.1rem;">&#9881;</div>
-          <div>preparing</div>
-          <div class="phase-label">Config steps</div>
-        </div>
-        <div class="phase-arrow">&#8594;</div>
-        <div class="phase-node" style="border-color: #3b82f6;">
-          <div style="font-size: 1.1rem;">&#128268;</div>
-          <div>connecting</div>
-          <div class="phase-label">Abrindo SSE</div>
-        </div>
-        <div class="phase-arrow">&#8594;</div>
-        <div class="phase-node" style="border-color: #8b5cf6;">
-          <div style="font-size: 1.1rem;">&#129504;</div>
-          <div>ai_thinking</div>
-          <div class="phase-label">Claude processando</div>
-        </div>
-        <div class="phase-arrow">&#8594;</div>
-        <div class="phase-node active-phase">
-          <div style="font-size: 1.1rem;">&#9889;</div>
-          <div>streaming</div>
-          <div class="phase-label">Dados fluindo</div>
-        </div>
-        <div class="phase-arrow">&#8594;</div>
-        <div class="phase-node" style="border-color: #22c55e;">
-          <div style="font-size: 1.1rem;">&#10004;</div>
-          <div>idle</div>
-          <div class="phase-label">Completo</div>
+        <div class="card-desc">
+          <p style="margin-bottom: 0.5rem; font-size: 0.85rem;">Implementação low-level de SSE via fetch (não usa EventSource).</p>
+          <div class="code-block" style="font-size: 0.75rem;">
+            <span class="keyword">async function</span> <span class="fn">createSSEConnection</span>(options: {<br>
+            &nbsp;&nbsp;url, method?: <span class="string">'GET'|'POST'</span>, body?, headers?,<br>
+            &nbsp;&nbsp;onEvent, onError?, onComplete?<br>
+            }) => AbortController
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 16 SSE Events -->
-    <div class="card" style="margin-top: 1.5rem;">
-      <div class="card-header">
-        <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128276;</div>
-        <div class="card-title">16 Eventos SSE Processados</div>
-      </div>
-
-      <div class="table-container" style="margin-top: 0.75rem;">
-        <table>
+    <div style="margin-top: 1.5rem;">
+      <h4 style="margin-bottom: 1rem; color: var(--text-accent);">Endpoints Principais</h4>
+      <div class="table-container">
+        <table class="endpoint-table">
           <thead>
             <tr>
-              <th>Evento</th>
-              <th>Descricao</th>
-              <th>Acao no Frontend</th>
+              <th style="width: 10%;">Método</th>
+              <th style="width: 35%;">Endpoint</th>
+              <th>Descrição</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td><span class="event-tag">execution:started</span></td>
-              <td>Execucao iniciou</td>
-              <td>Define fase = connecting, mostra timeline</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">execution:progress</span></td>
-              <td>Progresso geral</td>
-              <td>Atualiza barra de progresso</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">execution:completed</span></td>
-              <td>Todas as steps finalizaram</td>
-              <td>Define fase = idle, mostra resultado final</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">execution:failed</span></td>
-              <td>Execucao falhou</td>
-              <td>Mostra erro, habilita retry</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">execution:cancelled</span></td>
-              <td>Usuario cancelou</td>
-              <td>Limpa streaming, volta ao idle</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">step:started</span></td>
-              <td>Step individual iniciou</td>
-              <td>Marca step como "running" na timeline</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">step:progress</span></td>
-              <td>Progresso do step</td>
-              <td>Atualiza % do step individual</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">step:completed</span></td>
-              <td>Step finalizou com sucesso</td>
-              <td>Marca step como "done", mostra output</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">step:failed</span></td>
-              <td>Step falhou</td>
-              <td>Marca step como "failed" com erro</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">step:skipped</span></td>
-              <td>Step pulado (condicao nao atendida)</td>
-              <td>Marca step como "skipped" na timeline</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">stream:chunk</span></td>
-              <td>Chunk de texto do Claude</td>
-              <td>Appenda texto ao conteudo de streaming</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">stream:action</span></td>
-              <td>Acao executada pelo Claude</td>
-              <td>Adiciona acao a lista de acoes</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">stream:thinking</span></td>
-              <td>Claude processando</td>
-              <td>Define fase = ai_thinking</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">token:usage</span></td>
-              <td>Consumo de tokens</td>
-              <td>Atualiza metricas de custo</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">heartbeat</span></td>
-              <td>Keep-alive da conexao</td>
-              <td>Reseta timeout de desconexao</td>
-            </tr>
-            <tr>
-              <td><span class="event-tag">error</span></td>
-              <td>Erro generico</td>
-              <td>Mostra toast de erro, tenta reconectar</td>
-            </tr>
+            <tr><td colspan="3" style="background: var(--bg-secondary); font-size: 0.75rem; padding: 0.4rem 1rem;">Auth</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td class="path">/auth/register</td><td>Criar conta</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td class="path">/auth/login</td><td>Fazer login</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td class="path">/auth/me</td><td>Usuário atual</td></tr>
+
+            <tr><td colspan="3" style="background: var(--bg-secondary); font-size: 0.75rem; padding: 0.4rem 1rem;">Conversations</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td class="path">/folders</td><td>Listar pastas</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td class="path">/conversations</td><td>Listar conversas</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td class="path">/conversations/{id}</td><td>Detalhe da conversa</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td class="path">/conversations</td><td>Criar conversa</td></tr>
+            <tr><td><span class="method DELETE">DELETE</span></td><td class="path">/conversations/{id}</td><td>Deletar conversa</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td class="path">/conversations/{id}/messages/stream</td><td>Enviar mensagem (SSE)</td></tr>
+
+            <tr><td colspan="3" style="background: var(--bg-secondary); font-size: 0.75rem; padding: 0.4rem 1rem;">Workflows</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td class="path">/workflows</td><td>Listar workflows</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td class="path">/workflows/{id}</td><td>Detalhe workflow</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td class="path">/workflows</td><td>Criar workflow</td></tr>
+            <tr><td><span class="method PUT">PUT</span></td><td class="path">/workflows/{id}</td><td>Atualizar workflow</td></tr>
+            <tr><td><span class="method DELETE">DELETE</span></td><td class="path">/workflows/{id}</td><td>Deletar workflow</td></tr>
+
+            <tr><td colspan="3" style="background: var(--bg-secondary); font-size: 0.75rem; padding: 0.4rem 1rem;">Recursos (padrão CRUD)</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td class="path">/agents | /skills | /rules | /hooks</td><td>Listar</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td class="path">/agents | /skills | /rules | /hooks</td><td>Criar</td></tr>
+            <tr><td><span class="method PUT">PUT</span></td><td class="path">/{resource}/{id}</td><td>Atualizar</td></tr>
+            <tr><td><span class="method PATCH">PATCH</span></td><td class="path">/{resource}/{id}/toggle</td><td>Ativar/desativar</td></tr>
           </tbody>
         </table>
       </div>
@@ -1211,446 +1365,354 @@
   </div>
 
   <!-- ================================================ -->
-  <!-- SECTION 6: shadcn/ui Components -->
+  <!-- SECTION 6: Componentes UI -->
   <!-- ================================================ -->
   <div class="section">
     <div class="section-title">
       <div class="icon" style="background: var(--gradient-2);">&#127912;</div>
-      23 Componentes shadcn/ui
+      Biblioteca de Componentes
     </div>
 
-    <div class="comp-grid">
-      <div class="comp-chip">&#128316; Button</div>
-      <div class="comp-chip">&#9998; Input</div>
-      <div class="comp-chip">&#127991; Label</div>
-      <div class="comp-chip">&#128196; Card</div>
-      <div class="comp-chip">&#128194; Dialog</div>
-      <div class="comp-chip">&#9660; Select</div>
-      <div class="comp-chip">&#128209; Tabs</div>
-      <div class="comp-chip">&#127991; Badge</div>
-      <div class="comp-chip">&#9745; Checkbox</div>
-      <div class="comp-chip">&#8860; Switch</div>
-      <div class="comp-chip">&#9888; Alert</div>
-      <div class="comp-chip">&#128680; AlertDialog</div>
-      <div class="comp-chip">&#9617; Skeleton</div>
-      <div class="comp-chip">&#128220; ScrollArea</div>
-      <div class="comp-chip">&#9473; Separator</div>
-      <div class="comp-chip">&#9608; Progress</div>
-      <div class="comp-chip">&#128100; Avatar</div>
-      <div class="comp-chip">&#128172; Tooltip</div>
-      <div class="comp-chip">&#9660; Collapsible</div>
-      <div class="comp-chip">&#9644; Slider</div>
-      <div class="comp-chip">&#9776; DropdownMenu</div>
-      <div class="comp-chip">&#128276; Sonner</div>
-      <div class="comp-chip">&#9998; Textarea</div>
-    </div>
-
-    <div class="card" style="margin-top: 1.5rem;">
-      <div class="card-header">
-        <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128736;</div>
-        <div class="card-title">Composicao de Componentes</div>
+    <div class="tabs-container">
+      <div class="tabs-header">
+        <button class="tab-btn active" data-tab="tab-shadcn">shadcn/ui (23)</button>
+        <button class="tab-btn" data-tab="tab-common">Comuns (5)</button>
+        <button class="tab-btn" data-tab="tab-layout">Layout</button>
       </div>
-      <div style="padding: 0.5rem 0;">
-        <svg viewBox="0 0 750 220" style="width:100%;max-width:750px;" xmlns="http://www.w3.org/2000/svg">
-          <!-- Radix Primitives -->
-          <rect x="10" y="160" width="730" height="45" rx="10" fill="rgba(100,116,139,0.08)" stroke="#1e293b"/>
-          <text x="375" y="187" text-anchor="middle" fill="#64748b" font-size="12" font-weight="600" font-family="Inter, sans-serif">Radix UI Primitives (headless, accessible)</text>
 
-          <!-- shadcn/ui layer -->
-          <rect x="40" y="95" width="670" height="45" rx="10" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.3)"/>
-          <text x="375" y="122" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="600" font-family="Inter, sans-serif">shadcn/ui — 23 componentes estilizados com Tailwind CSS</text>
+      <div id="tab-shadcn" class="tab-content active">
+        <div class="comp-grid">
+          <span class="comp-chip">Button</span>
+          <span class="comp-chip">Input</span>
+          <span class="comp-chip">Textarea</span>
+          <span class="comp-chip">Label</span>
+          <span class="comp-chip">Card</span>
+          <span class="comp-chip">Dialog</span>
+          <span class="comp-chip">AlertDialog</span>
+          <span class="comp-chip">Select</span>
+          <span class="comp-chip">DropdownMenu</span>
+          <span class="comp-chip">Tabs</span>
+          <span class="comp-chip">Badge</span>
+          <span class="comp-chip">Avatar</span>
+          <span class="comp-chip">Alert</span>
+          <span class="comp-chip">Progress</span>
+          <span class="comp-chip">ScrollArea</span>
+          <span class="comp-chip">Slider</span>
+          <span class="comp-chip">Switch</span>
+          <span class="comp-chip">Checkbox</span>
+          <span class="comp-chip">Tooltip</span>
+          <span class="comp-chip">Separator</span>
+          <span class="comp-chip">Skeleton</span>
+          <span class="comp-chip">Collapsible</span>
+          <span class="comp-chip">Sonner</span>
+        </div>
 
-          <!-- Arrows up -->
-          <line x1="375" y1="160" x2="375" y2="140" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <div style="margin-top: 1.5rem;">
+          <h4 style="margin-bottom: 1rem;">Variantes do Button</h4>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="comp-chip" style="background: var(--bg-accent-subtle); color: var(--text-accent);">default</span>
+            <span class="comp-chip" style="background: rgba(239,68,68,0.1); color: #f87171;">destructive</span>
+            <span class="comp-chip">outline</span>
+            <span class="comp-chip">secondary</span>
+            <span class="comp-chip">ghost</span>
+            <span class="comp-chip">link</span>
+          </div>
+        </div>
+      </div>
 
-          <!-- Feature Components -->
-          <rect x="80" y="30" width="180" height="45" rx="10" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.3)"/>
-          <text x="170" y="57" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="600" font-family="Inter, sans-serif">Feature Components</text>
+      <div id="tab-common" class="tab-content">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">ConfirmDialog</div>
+              <div class="store-file">shared/components/common/confirm-dialog.tsx (52 linhas)</div>
+            </div>
+            <div class="card-desc">Wrapper de AlertDialog para confirmações com labels customizáveis.</div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">SearchPagination</div>
+              <div class="store-file">shared/components/common/search-pagination.tsx (288 linhas)</div>
+            </div>
+            <div class="card-desc">Tabela com busca, filtros e paginação. Usado em todas as listagens.</div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">LoadingSkeleton</div>
+              <div class="store-file">shared/components/common/loading-skeleton.tsx (38 linhas)</div>
+            </div>
+            <div class="card-desc">Skeletons para cards e listas. LoadingSkeleton, CardSkeleton, ListSkeleton.</div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">EmptyState</div>
+              <div class="store-file">shared/components/common/empty-state.tsx (28 linhas)</div>
+            </div>
+            <div class="card-desc">Estado vazio com ícone, título, descrição e ação opcional.</div>
+          </div>
+        </div>
+      </div>
 
-          <rect x="290" y="30" width="180" height="45" rx="10" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)"/>
-          <text x="380" y="57" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600" font-family="Inter, sans-serif">Common Components</text>
-
-          <rect x="500" y="30" width="180" height="45" rx="10" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.3)"/>
-          <text x="590" y="57" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="600" font-family="Inter, sans-serif">Page Components</text>
-
-          <!-- Arrows down -->
-          <line x1="170" y1="75" x2="270" y2="95" stroke="#1e293b" stroke-width="1" marker-end="url(#arrowhead)"/>
-          <line x1="380" y1="75" x2="375" y2="95" stroke="#1e293b" stroke-width="1" marker-end="url(#arrowhead)"/>
-          <line x1="590" y1="75" x2="490" y2="95" stroke="#1e293b" stroke-width="1" marker-end="url(#arrowhead)"/>
-        </svg>
+      <div id="tab-layout" class="tab-content">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">AppLayout</div>
+              <div class="store-file">app/app-layout.tsx (44 linhas)</div>
+            </div>
+            <div class="card-desc">
+              Layout 2-pane com Sidebar colapsável + Main content area.
+              Sidebar: 240px (w-60), transição suave ao colapsar.
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Sidebar</div>
+              <div class="store-file">shared/components/layout/sidebar.tsx (245 linhas)</div>
+            </div>
+            <div class="card-desc">
+              Menu lateral com navegação em 3 seções:<br>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">
+              • Menu (5): Dashboard, Conversas, Workflows, Execuções, Workflow Chat<br>
+              • Config (8): MCP Servers, Skills, Agents, Rules, Plugins, Hooks, Webhooks, Templates<br>
+              • Admin (1): Usuários (condicional a role='admin')
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- ================================================ -->
-  <!-- SECTION 7: Dark Mode -->
+  <!-- SECTION 7: Design Tokens -->
   <!-- ================================================ -->
   <div class="section">
     <div class="section-title">
-      <div class="icon" style="background: linear-gradient(135deg, #1e293b, #475569);">&#127763;</div>
-      Dark Mode
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon" style="background: rgba(100,116,139,0.15); color: #94a3b8;">&#127912;</div>
-          <div class="card-title">Implementacao</div>
-        </div>
-        <div class="card-desc" style="line-height: 2;">
-          <div><span class="badge badge-teal">CSS class-based</span> — <code class="mono" style="font-size:0.82rem;color:#67e8f9;">darkMode: 'class'</code> no Tailwind</div>
-          <div><span class="badge badge-purple">CSS Variables</span> — variaveis separadas para light/dark</div>
-          <div><span class="badge badge-blue">localStorage</span> — persistencia da preferencia</div>
-          <div><span class="badge badge-amber">Toggle</span> — botao no header para alternar</div>
-          <div><span class="badge badge-green">Default: Dark</span> — dark mode e o padrao inicial</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#127912;</div>
-          <div class="card-title">Paleta de Cores</div>
-        </div>
-        <div style="padding: 0.25rem 0;">
-          <div class="color-swatch">
-            <div class="swatch" style="background: hsl(173, 80%, 40%);"></div>
-            <div>
-              <div style="font-weight:600;font-size:0.88rem;">Primary — Teal</div>
-              <div style="color:var(--text-muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">hsl(173, 80%, 40%) — 173deg</div>
-            </div>
-          </div>
-          <div class="color-swatch">
-            <div class="swatch" style="background: #0a0e1a;"></div>
-            <div>
-              <div style="font-weight:600;font-size:0.88rem;">Background Dark</div>
-              <div style="color:var(--text-muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">#0a0e1a</div>
-            </div>
-          </div>
-          <div class="color-swatch">
-            <div class="swatch" style="background: #1a1f2e;"></div>
-            <div>
-              <div style="font-weight:600;font-size:0.88rem;">Card Background</div>
-              <div style="color:var(--text-muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">#1a1f2e</div>
-            </div>
-          </div>
-          <div class="color-swatch">
-            <div class="swatch" style="background: #f1f5f9;"></div>
-            <div>
-              <div style="font-weight:600;font-size:0.88rem;">Text Primary</div>
-              <div style="color:var(--text-muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">#f1f5f9</div>
-            </div>
-          </div>
-          <div class="color-swatch">
-            <div class="swatch" style="background: #2dd4bf;"></div>
-            <div>
-              <div style="font-weight:600;font-size:0.88rem;">Text Accent</div>
-              <div style="color:var(--text-muted);font-size:0.8rem;font-family:'JetBrains Mono',monospace;">#2dd4bf</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- CSS Variables Code -->
-    <div class="card" style="margin-top: 1.5rem;">
-      <div class="card-header">
-        <div class="card-icon" style="background: rgba(139,92,246,0.1); color: #a78bfa;">&#128196;</div>
-        <div class="card-title">CSS Variables (globals.css)</div>
-      </div>
-      <div class="code-block" style="margin-top: 0.5rem;">
-<span class="comment">/* Light mode */</span>
-<span class="keyword">:root</span> {
-  <span class="string">--background</span>: 0 0% 100%;
-  <span class="string">--foreground</span>: 222.2 84% 4.9%;
-  <span class="string">--primary</span>: 173 80% 40%;     <span class="comment">/* Teal */</span>
-  <span class="string">--primary-foreground</span>: 0 0% 100%;
-  <span class="string">--card</span>: 0 0% 100%;
-  <span class="string">--border</span>: 214.3 31.8% 91.4%;
-}
-
-<span class="comment">/* Dark mode */</span>
-<span class="keyword">.dark</span> {
-  <span class="string">--background</span>: 222.2 84% 4.9%;
-  <span class="string">--foreground</span>: 210 40% 98%;
-  <span class="string">--primary</span>: 173 80% 40%;     <span class="comment">/* Teal (same hue) */</span>
-  <span class="string">--primary-foreground</span>: 0 0% 100%;
-  <span class="string">--card</span>: 222.2 84% 6.9%;
-  <span class="string">--border</span>: 217.2 32.6% 17.5%;
-}
-      </div>
-    </div>
-  </div>
-
-  <!-- ================================================ -->
-  <!-- SECTION 8: API Integration -->
-  <!-- ================================================ -->
-  <div class="section">
-    <div class="section-title">
-      <div class="icon" style="background: var(--gradient-4);">&#128268;</div>
-      API Integration
+      <div class="icon" style="background: var(--gradient-3);">&#127912;</div>
+      Design Tokens & Tema
     </div>
 
     <div class="grid-3">
       <div class="card">
         <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128229;</div>
-          <div class="card-title">Axios Instance</div>
+          <div class="card-title">Cores Primárias</div>
         </div>
-        <div class="card-desc">Instancia centralizada com base URL do backend, interceptors de autenticacao (inject token no header) e interceptor de resposta para tratamento de erros.</div>
-        <div class="code-block" style="margin-top: 0.75rem; font-size: 0.8rem;">
-<span class="keyword">const</span> api = axios.<span class="fn">create</span>({
-  <span class="string">baseURL</span>: API_URL,
-  <span class="string">headers</span>: { <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span> }
-})
-
-<span class="comment">// Request interceptor</span>
-api.interceptors.request.<span class="fn">use</span>((config) => {
-  <span class="keyword">const</span> token = localStorage.<span class="fn">getItem</span>(<span class="string">'token'</span>)
-  <span class="keyword">if</span> (token) config.headers.Authorization = <span class="string">`Bearer ${token}`</span>
-  <span class="keyword">return</span> config
-})
+        <div class="color-swatch">
+          <div class="swatch" style="background: hsl(173, 80%, 40%);"></div>
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 600;">Primary (Teal)</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">hsl(173, 80%, 40%)</div>
+          </div>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#128259;</div>
-          <div class="card-title">React Query Config</div>
+        <div class="color-swatch">
+          <div class="swatch" style="background: hsl(199, 89%, 48%);"></div>
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 600;">Info (Blue)</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">hsl(199, 89%, 48%)</div>
+          </div>
         </div>
-        <div style="margin-top: 0.5rem;">
-          <div class="config-row">
-            <span class="config-key">staleTime</span>
-            <span class="config-val">30s</span>
+        <div class="color-swatch">
+          <div class="swatch" style="background: hsl(160, 84%, 39%);"></div>
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 600;">Success</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">hsl(160, 84%, 39%)</div>
           </div>
-          <div class="config-row">
-            <span class="config-key">gcTime</span>
-            <span class="config-val">5min</span>
+        </div>
+        <div class="color-swatch">
+          <div class="swatch" style="background: hsl(38, 92%, 50%);"></div>
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 600;">Warning</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">hsl(38, 92%, 50%)</div>
           </div>
-          <div class="config-row">
-            <span class="config-key">retry</span>
-            <span class="config-val">1</span>
-          </div>
-          <div class="config-row">
-            <span class="config-key">refetchOnWindowFocus</span>
-            <span class="config-val">true</span>
-          </div>
-          <div class="config-row">
-            <span class="config-key">refetchOnReconnect</span>
-            <span class="config-val">true</span>
+        </div>
+        <div class="color-swatch">
+          <div class="swatch" style="background: hsl(0, 84%, 60%);"></div>
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 600;">Destructive</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">hsl(0, 84%, 60%)</div>
           </div>
         </div>
       </div>
 
       <div class="card">
         <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-danger); color: #f87171;">&#128274;</div>
-          <div class="card-title">401 Handling</div>
+          <div class="card-title">Dark Mode</div>
         </div>
-        <div class="card-desc">Quando o backend retorna 401 (token expirado ou invalido):</div>
-        <div style="margin-top: 0.75rem;">
-          <div class="flow-container" style="padding: 0.5rem 0; flex-wrap: wrap;">
-            <div class="flow-node" style="font-size: 0.8rem;">
-              <span style="color: #f87171;">&#128680;</span> 401 Response
-            </div>
-            <span class="flow-arrow" style="font-size: 1rem;">&#8594;</span>
-            <div class="flow-node" style="font-size: 0.8rem;">
-              <span style="color: #fbbf24;">&#128465;</span> Clear token
-            </div>
-            <span class="flow-arrow" style="font-size: 1rem;">&#8594;</span>
-            <div class="flow-node" style="font-size: 0.8rem;">
-              <span style="color: #a78bfa;">&#128260;</span> Reset auth store
-            </div>
-            <span class="flow-arrow" style="font-size: 1rem;">&#8594;</span>
-            <div class="flow-node" style="font-size: 0.8rem;">
-              <span style="color: #2dd4bf;">&#128682;</span> Redirect /login
-            </div>
-          </div>
+        <div class="card-desc" style="font-size: 0.85rem;">
+          <div class="config-row"><span class="config-key">Estratégia</span><span class="config-val">class-based</span></div>
+          <div class="config-row"><span class="config-key">Padrão</span><span class="config-val">dark ativo</span></div>
+          <div class="config-row"><span class="config-key">Toggle</span><span class="config-val">localStorage</span></div>
         </div>
-        <div class="code-block" style="margin-top: 0.5rem; font-size: 0.78rem;">
-<span class="comment">// Response interceptor</span>
-api.interceptors.response.<span class="fn">use</span>(
-  (res) => res,
-  (error) => {
-    <span class="keyword">if</span> (error.response?.status === <span class="number">401</span>) {
-      useAuthStore.<span class="fn">getState</span>().<span class="fn">logout</span>()
-      window.location.href = <span class="string">'/login'</span>
-    }
-    <span class="keyword">return</span> Promise.<span class="fn">reject</span>(error)
-  }
-)
+        <div class="code-block" style="font-size: 0.75rem; margin-top: 1rem;">
+          <span class="comment">// Tailwind config</span><br>
+          darkMode: [<span class="string">'class'</span>]<br><br>
+          <span class="comment">// HTML</span><br>
+          &lt;<span class="type">html</span> class=<span class="string">"dark"</span>&gt;
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Animações</div>
+        </div>
+        <div class="card-desc" style="font-size: 0.8rem;">
+          <div class="config-row"><span class="config-key">fade-in</span><span class="config-val">0.3s ease</span></div>
+          <div class="config-row"><span class="config-key">slide-up</span><span class="config-val">0.3s ease</span></div>
+          <div class="config-row"><span class="config-key">accordion-down</span><span class="config-val">0.2s ease</span></div>
+          <div class="config-row"><span class="config-key">thinking-dot</span><span class="config-val">1.4s pulse</span></div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- ================================================ -->
-  <!-- SECTION 9: Workflow Wizard -->
+  <!-- SECTION 8: Data Flow -->
   <!-- ================================================ -->
   <div class="section">
     <div class="section-title">
-      <div class="icon" style="background: var(--gradient-1);">&#129497;</div>
-      Workflow Wizard
+      <div class="icon" style="background: var(--gradient-4);">&#10162;</div>
+      Fluxo de Dados
     </div>
 
-    <p class="card-desc" style="margin-bottom: 1.25rem;">
-      Formulario de 3 fases para criacao e edicao de workflows. Cada fase valida antes de avancar.
-      O estado e mantido no Workflows Store (Zustand) para persistir entre navegacoes.
-    </p>
-
-    <!-- 3-Phase Wizard -->
-    <div class="wizard-flow">
-      <div class="wizard-step" style="border-left: 3px solid #0d9488;">
-        <div class="wizard-step-num" style="background: var(--bg-accent-subtle); color: var(--text-accent);">1</div>
-        <div class="wizard-step-title">Basic Info</div>
-        <div class="wizard-step-desc">
-          Nome, descricao, tags, agente padrao, modelo de IA, prioridade e configuracao geral do workflow.
-        </div>
-        <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
-          <span class="badge badge-teal">Nome</span>
-          <span class="badge badge-teal">Descricao</span>
-          <span class="badge badge-teal">Tags</span>
-          <span class="badge badge-teal">Agent</span>
-          <span class="badge badge-teal">Model</span>
-          <span class="badge badge-teal">Priority</span>
-        </div>
+    <div class="flow-diagram">
+      <div class="flow-row">
+        <div class="flow-box">Usuário Ação</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Componente React</div>
       </div>
-      <div class="wizard-connector"></div>
-      <div class="wizard-step" style="border-left: 3px solid #3b82f6;">
-        <div class="wizard-step-num" style="background: var(--bg-info); color: #60a5fa;">2</div>
-        <div class="wizard-step-title">Step Builder</div>
-        <div class="wizard-step-desc">
-          Construtor visual de steps com drag-and-drop. Cada step define: prompt, agent, skills, rules, timeout e dependencias.
-        </div>
-        <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
-          <span class="badge badge-blue">Add Step</span>
-          <span class="badge badge-blue">Reorder</span>
-          <span class="badge badge-blue">Config</span>
-          <span class="badge badge-blue">Dependencies</span>
-          <span class="badge badge-blue">Templates</span>
-        </div>
+      <div class="flow-row">
+        <span class="flow-label">click, input, submit</span>
       </div>
-      <div class="wizard-connector"></div>
-      <div class="wizard-step" style="border-left: 3px solid #8b5cf6;">
-        <div class="wizard-step-num" style="background: rgba(139,92,246,0.1); color: #a78bfa;">3</div>
-        <div class="wizard-step-title">Review</div>
-        <div class="wizard-step-desc">
-          Revisao final com preview visual do fluxo, validacao de dependencias, estimativa de tokens e confirmacao.
-        </div>
-        <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.35rem;">
-          <span class="badge badge-purple">Flow Preview</span>
-          <span class="badge badge-purple">Validation</span>
-          <span class="badge badge-purple">Token Est.</span>
-          <span class="badge badge-purple">Save</span>
-        </div>
+      <div class="flow-row">
+        <div class="flow-arrow">↓</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-box">Zustand Store</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">React Query Mutation</div>
+      </div>
+      <div class="flow-row">
+        <span class="flow-label">estado local imediato</span>
+        <span class="flow-label" style="margin-left: auto;">chamada API</span>
+      </div>
+      <div class="flow-row">
+        <div class="flow-arrow">↓</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-box">API Client (Axios)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Backend (:3333)</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-arrow">↓</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-box">invalidateQueries</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">React Query Refetch</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-arrow">↓</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-box">UI Atualizada</div>
       </div>
     </div>
 
-    <!-- Wizard Architecture -->
-    <div class="grid-2" style="margin-top: 1.5rem;">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-accent-subtle); color: var(--text-accent);">&#128065;</div>
-          <div class="card-title">Visual Flow Preview</div>
+    <div style="margin-top: 2rem;">
+      <h4 style="margin-bottom: 1rem; color: var(--text-accent);">SSE Streaming Flow</h4>
+      <div class="flow-diagram">
+        <div class="flow-row">
+          <div class="flow-box">sendMessage()</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">POST /stream</div>
         </div>
-        <div class="card-desc">
-          Na fase de Review, o wizard renderiza um preview visual do workflow com:
+        <div class="flow-row">
+          <div class="flow-arrow">↓</div>
         </div>
-        <div style="margin-top: 0.75rem; line-height: 2;">
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Nodes representando cada step</div>
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Setas de dependencia entre steps</div>
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Cores por status (pending, ready)</div>
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Tooltip com detalhes do step</div>
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#10003;</span> Deteccao de ciclos/erros</div>
+        <div class="flow-row">
+          <div class="flow-box">SSE Connection</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">Event Stream</div>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon" style="background: var(--bg-info); color: #60a5fa;">&#128204;</div>
-          <div class="card-title">Resource Selection Panel</div>
+        <div class="flow-row">
+          <div class="flow-arrow">↓</div>
         </div>
-        <div class="card-desc">
-          Painel lateral no Step Builder para selecionar recursos por step:
+        <div class="flow-row">
+          <div class="flow-box">useSSEStream Hook</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">ConversationsStore</div>
         </div>
-        <div style="margin-top: 0.75rem; line-height: 2;">
-          <div><span class="badge badge-teal" style="margin-right:0.3rem;">&#129302;</span> Agents — seleciona agente para o step</div>
-          <div><span class="badge badge-blue" style="margin-right:0.3rem;">&#129504;</span> Skills — associa skills ao step</div>
-          <div><span class="badge badge-amber" style="margin-right:0.3rem;">&#128208;</span> Rules — aplica regras de negocio</div>
-          <div><span class="badge badge-purple" style="margin-right:0.3rem;">&#129513;</span> Plugins — estende funcionalidade</div>
-          <div><span class="badge badge-green" style="margin-right:0.3rem;">&#128268;</span> MCP Servers — ferramentas externas</div>
-          <div><span class="badge badge-red" style="margin-right:0.3rem;">&#128195;</span> Step Templates — templates prontos</div>
+        <div class="flow-row">
+          <div class="flow-arrow">↓</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-box">Real-time UI Update</div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- ================================================ -->
-  <!-- Summary / Architecture Overview -->
+  <!-- SECTION 9: Padrões & Convenções -->
   <!-- ================================================ -->
   <div class="section">
     <div class="section-title">
-      <div class="icon" style="background: var(--gradient-1);">&#128200;</div>
-      Visao Geral da Arquitetura Frontend
+      <div class="icon" style="background: var(--gradient-1);">&#128214;</div>
+      Padrões & Convenções
     </div>
 
-    <div class="card">
-      <div style="padding: 0.5rem; overflow-x: auto;">
-        <svg viewBox="0 0 900 340" style="width:100%;max-width:900px;min-width:600px;" xmlns="http://www.w3.org/2000/svg">
-          <!-- Browser -->
-          <rect x="20" y="10" width="860" height="40" rx="8" fill="rgba(100,116,139,0.08)" stroke="#1e293b"/>
-          <text x="450" y="35" text-anchor="middle" fill="#94a3b8" font-size="13" font-weight="600" font-family="Inter, sans-serif">Browser (React 18 SPA)</text>
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Componentes</div>
+        </div>
+        <div class="card-desc" style="font-size: 0.85rem;">
+          <div style="margin-bottom: 0.5rem;">• PascalCase para nomes</div>
+          <div style="margin-bottom: 0.5rem;">• 1 componente por arquivo</div>
+          <div style="margin-bottom: 0.5rem;">• Export default</div>
+          <div style="margin-bottom: 0.5rem;">• React.forwardRef para refs</div>
+          <div>• DisplayName para debugging</div>
+        </div>
+      </div>
 
-          <!-- React Router -->
-          <rect x="350" y="65" width="200" height="32" rx="6" fill="rgba(13,148,136,0.1)" stroke="#0d9488"/>
-          <text x="450" y="86" text-anchor="middle" fill="#2dd4bf" font-size="11" font-weight="600" font-family="Inter, sans-serif">React Router 7 — 18 rotas</text>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Estilos</div>
+        </div>
+        <div class="card-desc" style="font-size: 0.85rem;">
+          <div style="margin-bottom: 0.5rem;">• Tailwind classes</div>
+          <div style="margin-bottom: 0.5rem;">• cn() para merge</div>
+          <div style="margin-bottom: 0.5rem;">• cva para variantes</div>
+          <div>• CSS vars para tema</div>
+        </div>
+      </div>
 
-          <!-- Arrow down -->
-          <line x1="450" y1="97" x2="450" y2="115" stroke="#1e293b" stroke-width="1.5"/>
-
-          <!-- Pages -->
-          <rect x="150" y="115" width="600" height="35" rx="6" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.3)"/>
-          <text x="450" y="137" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="500" font-family="Inter, sans-serif">Page Components (Dashboard, Conversations, Workflows, Settings...)</text>
-
-          <!-- Arrows down to 3 layers -->
-          <line x1="250" y1="150" x2="150" y2="175" stroke="#1e293b" stroke-width="1"/>
-          <line x1="450" y1="150" x2="450" y2="175" stroke="#1e293b" stroke-width="1"/>
-          <line x1="650" y1="150" x2="750" y2="175" stroke="#1e293b" stroke-width="1"/>
-
-          <!-- Zustand -->
-          <rect x="40" y="175" width="220" height="55" rx="8" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)"/>
-          <text x="150" y="198" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="600" font-family="Inter, sans-serif">Zustand Stores (8)</text>
-          <text x="150" y="216" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">auth, conversations, workflows...</text>
-
-          <!-- React Query -->
-          <rect x="290" y="175" width="320" height="55" rx="8" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.3)"/>
-          <text x="450" y="198" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="600" font-family="Inter, sans-serif">TanStack React Query 5</text>
-          <text x="450" y="216" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">staleTime: 30s | gcTime: 5min | retry: 1</text>
-
-          <!-- shadcn/ui -->
-          <rect x="640" y="175" width="220" height="55" rx="8" fill="rgba(139,92,246,0.08)" stroke="rgba(139,92,246,0.3)"/>
-          <text x="750" y="198" text-anchor="middle" fill="#a78bfa" font-size="11" font-weight="600" font-family="Inter, sans-serif">shadcn/ui (23 components)</text>
-          <text x="750" y="216" text-anchor="middle" fill="#64748b" font-size="9" font-family="Inter, sans-serif">Radix + Tailwind CSS 3.4</text>
-
-          <!-- Arrow down from React Query -->
-          <line x1="450" y1="230" x2="450" y2="255" stroke="#1e293b" stroke-width="1.5"/>
-
-          <!-- Axios + SSE -->
-          <rect x="200" y="255" width="210" height="40" rx="8" fill="rgba(13,148,136,0.1)" stroke="#0d9488"/>
-          <text x="305" y="280" text-anchor="middle" fill="#2dd4bf" font-size="11" font-weight="600" font-family="Inter, sans-serif">Axios (HTTP Client)</text>
-
-          <rect x="440" y="255" width="210" height="40" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.3)"/>
-          <text x="545" y="280" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="600" font-family="Inter, sans-serif">SSE Stream (16 events)</text>
-
-          <!-- Arrow down to Backend -->
-          <line x1="305" y1="295" x2="400" y2="315" stroke="#1e293b" stroke-width="1.5"/>
-          <line x1="545" y1="295" x2="480" y2="315" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,3"/>
-
-          <!-- Backend -->
-          <rect x="340" y="315" width="220" height="32" rx="6" fill="rgba(239,68,68,0.08)" stroke="rgba(239,68,68,0.3)"/>
-          <text x="450" y="336" text-anchor="middle" fill="#f87171" font-size="11" font-weight="600" font-family="Inter, sans-serif">Fastify Backend (port 3333)</text>
-        </svg>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Data Fetching</div>
+        </div>
+        <div class="card-desc" style="font-size: 0.85rem;">
+          <div style="margin-bottom: 0.5rem;">• Query keys canônicas</div>
+          <div style="margin-bottom: 0.5rem;">• Stale time 30s</div>
+          <div style="margin-bottom: 0.5rem;">• Auto-invalidation</div>
+          <div>• Toast notifications</div>
+        </div>
       </div>
     </div>
+  </div>
+
+  <!-- Footer Navigation -->
+  <div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+    <a href="05-motor-execucao.html" style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-accent)'" onmouseout="this.style.color='var(--text-secondary)'">
+      <span>‹</span>
+      <span>05 — Motor Execução</span>
+    </a>
+    <a href="07-seguranca.html" style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--text-accent)'" onmouseout="this.style.color='var(--text-secondary)'">
+      <span>07 — Segurança</span>
+      <span>›</span>
+    </a>
   </div>
 
 </div>
