@@ -6,6 +6,11 @@ interface DagStep {
   dependsOn: string[] // step IDs
 }
 
+function parseDependsOn(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string')
+}
+
 export class DAGExecutor {
   private graph: Map<string, DagStep> = new Map()
   private completed = new Set<string>()
@@ -14,7 +19,7 @@ export class DAGExecutor {
   constructor(steps: WorkflowStep[]) {
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i]
-      const deps: string[] = (step.dependsOn as string[] || [])
+      const deps = parseDependsOn(step.dependsOn)
       this.graph.set(step.id, { step, index: i, dependsOn: deps })
     }
   }
@@ -37,7 +42,8 @@ export class DAGExecutor {
       if (visited.has(id)) return false
       visited.add(id)
       inStack.add(id)
-      const node = this.graph.get(id)!
+      const node = this.graph.get(id)
+      if (!node) return false
       for (const dep of node.dependsOn) {
         if (hasCycle(dep)) return true
       }
@@ -97,8 +103,5 @@ export class DAGExecutor {
 }
 
 export function isDAGWorkflow(steps: WorkflowStep[]): boolean {
-  return steps.some(step => {
-    const deps = step.dependsOn as string[] || []
-    return Array.isArray(deps) && deps.length > 0
-  })
+  return steps.some(step => parseDependsOn(step.dependsOn).length > 0)
 }
