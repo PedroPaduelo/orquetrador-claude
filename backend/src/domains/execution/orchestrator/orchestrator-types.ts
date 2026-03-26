@@ -18,6 +18,8 @@ export interface ExecutionContext {
   projectPath: string
   attachments?: MessageAttachment[]
   userId?: string
+  /** Max parallel steps for DAG execution. 0 or undefined = unlimited. */
+  maxConcurrency?: number
 }
 
 export interface OrchestratorDeps {

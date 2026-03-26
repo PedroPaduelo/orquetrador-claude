@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, chmodSync, statSync } from 'fs'
 import { join } from 'path'
 import { StreamParser, type Action } from './stream-parser.js'
 import type { CliEngine, EngineExecuteOptions, EngineExecuteResult } from '../types.js'
+import { circuitBreaker, isApiError, CircuitState } from '../circuit-breaker.js'
+import { PROMPT_CACHE_ENABLED } from '../base-system-prompt.js'
 
 const USER_INPUT_TOOLS = new Set([
   'AskUserQuestion',
@@ -162,6 +164,27 @@ export class ClaudeCodeEngine implements CliEngine {
         error: 'Este step nao tem uma Base URL configurada. Configure a URL no step do workflow antes de executar.',
       }
     }
+
+    // --- Circuit Breaker: check before spawning process ---
+    const cbRejection = circuitBreaker.canExecute(apiBaseUrl)
+    if (cbRejection) {
+      return {
+        content: '',
+        resumeToken: null,
+        actions: [],
+        timedOut: false,
+        cancelled: false,
+        needsUserInput: false,
+        error: cbRejection,
+      }
+    }
+
+    // Track if we are probing in HALF_OPEN state
+    const cbState = circuitBreaker.getState(apiBaseUrl)
+    if (cbState.state === CircuitState.HALF_OPEN) {
+      circuitBreaker.recordHalfOpenAttempt(apiBaseUrl)
+    }
+
     env.ANTHROPIC_BASE_URL = apiBaseUrl
 
     if (SANDBOX_ENABLED) {
@@ -215,7 +238,10 @@ export class ClaudeCodeEngine implements CliEngine {
       })
     }
 
-    emitDebug(`Starting claude CLI - cwd: ${resolvedCwd}, session: ${resumeToken || 'new'}, baseUrl: ${apiBaseUrl}, model: ${model || 'default'}, sandbox: ${SANDBOX_ENABLED ? SANDBOX_USER : 'disabled'}`)
+    const promptCacheActive = options.promptCacheEnabled ?? PROMPT_CACHE_ENABLED
+    const systemPromptLen = systemPrompt ? systemPrompt.length : 0
+
+    emitDebug(`Starting claude CLI - cwd: ${resolvedCwd}, session: ${resumeToken || 'new'}, baseUrl: ${apiBaseUrl}, model: ${model || 'default'}, sandbox: ${SANDBOX_ENABLED ? SANDBOX_USER : 'disabled'}, promptCache: ${promptCacheActive ? 'on' : 'off'}, systemPromptLen: ${systemPromptLen}`)
 
     return new Promise((resolve) => {
       let spawnCmd: string
@@ -382,7 +408,7 @@ export class ClaudeCodeEngine implements CliEngine {
         }
         finalContent = finalContent || ''
 
-        resolve({
+        const result: EngineExecuteResult = {
           content: finalContent,
           resumeToken: sessionId,
           actions,
@@ -394,7 +420,20 @@ export class ClaudeCodeEngine implements CliEngine {
           error: interruptMessage !== undefined ? undefined : finalError,
           interrupted: interruptMessage !== undefined,
           interruptMessage: interruptMessage,
-        })
+        }
+
+        // --- Circuit Breaker: record outcome ---
+        if (apiBaseUrl) {
+          if (isApiError(result)) {
+            circuitBreaker.recordFailure(apiBaseUrl)
+            emitDebug(`[CircuitBreaker] Recorded API failure for ${apiBaseUrl} (failures: ${circuitBreaker.getState(apiBaseUrl).consecutiveFailures})`)
+          } else if (!result.cancelled && !result.interrupted && !result.needsUserInput) {
+            circuitBreaker.recordSuccess(apiBaseUrl)
+          }
+          // Note: cancelled, interrupted, needsUserInput are NOT counted (neither success nor failure)
+        }
+
+        resolve(result)
       })
 
       // Handle process error
@@ -404,7 +443,7 @@ export class ClaudeCodeEngine implements CliEngine {
 
         console.error(`${logPrefix} Process spawn error: ${err.message}`)
 
-        resolve({
+        const spawnErrorResult: EngineExecuteResult = {
           content,
           resumeToken: sessionId,
           actions,
@@ -414,7 +453,15 @@ export class ClaudeCodeEngine implements CliEngine {
           exitCode: null,
           signal: null,
           error: `Erro ao iniciar processo: ${err.message}`,
-        })
+        }
+
+        // --- Circuit Breaker: record spawn error as failure ---
+        if (apiBaseUrl && isApiError(spawnErrorResult)) {
+          circuitBreaker.recordFailure(apiBaseUrl)
+          emitDebug(`[CircuitBreaker] Recorded spawn failure for ${apiBaseUrl}`)
+        }
+
+        resolve(spawnErrorResult)
       })
     })
   }

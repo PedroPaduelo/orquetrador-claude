@@ -183,7 +183,7 @@
         <span class="text-teal-400 font-bold text-sm">ROUTING LAYER</span>
         <span class="text-[10px] font-mono text-slate-500">app/routes.tsx</span>
       </div>
-      <p class="text-slate-300 text-sm mb-2">React Router v7 com 20 rotas lazy-loaded. ProtectedRoute via JWT. Retry automatico em chunk 404 (stale deploys via <code class="text-teal-400 text-xs">lazyRetry</code>). Suspense boundary unico com <code class="text-teal-400 text-xs">PageLoader</code>.</p>
+      <p class="text-slate-300 text-sm mb-2">React Router v7 com 22 rotas lazy-loaded (19 protected + 2 publicas + 1 catch-all). ProtectedRoute via JWT. Retry automatico em chunk 404 (stale deploys via <code class="text-teal-400 text-xs">lazyRetry</code>). Suspense boundary unico com <code class="text-teal-400 text-xs">PageLoader</code>.</p>
       <div class="flex flex-wrap gap-2 text-[10px]">
         <span class="px-2 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">BrowserRouter</span>
         <span class="px-2 py-0.5 rounded bg-teal-500/10 text-teal-400 font-mono">React.lazy()</span>
@@ -370,7 +370,7 @@
     <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm font-bold">3</span>
     Sistema de Rotas
   </h2>
-  <p class="text-slate-400 mb-8">20 rotas lazy-loaded com guards, retry automatico e code splitting</p>
+  <p class="text-slate-400 mb-8">22 rotas lazy-loaded com guards, retry automatico e code splitting</p>
 
   <!-- lazyRetry -->
   <div class="glass rounded-xl p-5 mb-4 border-l-4 border-purple-500">
@@ -580,7 +580,7 @@
     <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 text-white text-sm font-bold">5</span>
     SSE Streaming Deep Dive
   </h2>
-  <p class="text-slate-400 mb-8">useSSEStream — o hook mais complexo do projeto: streaming bidirecional com 18 eventos, auto-reconnect e interrupt</p>
+  <p class="text-slate-400 mb-8">useSSEStream — o hook mais complexo do projeto (498L): streaming bidirecional com 16 event types + no_active_execution, auto-reconnect e interrupt</p>
 
   <!-- State Machine -->
   <div class="glass rounded-xl p-6 mb-6 glow-pink">
@@ -652,7 +652,7 @@
   <!-- SSE Events Table -->
   <div class="glass rounded-xl overflow-hidden">
     <div class="px-4 py-3 border-b border-slate-700/50">
-      <h4 class="text-sm font-bold text-slate-300">18 Eventos SSE Processados</h4>
+      <h4 class="text-sm font-bold text-slate-300">16 Event Types no Switch + no_active_execution no Watch</h4>
     </div>
     <div class="overflow-x-auto">
     <table class="sse-table text-sm">
@@ -1558,58 +1558,86 @@
     <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500 to-red-500 text-white text-sm font-bold">15</span>
     Arquivos-Chave
   </h2>
-  <p class="text-slate-400 mb-8">Os arquivos mais importantes do frontend — por complexidade e criticidade</p>
+  <p class="text-slate-400 mb-8">Os arquivos mais importantes do frontend — por complexidade e criticidade (line counts verificados)</p>
 
   <div class="glass rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
     <table class="sse-table text-sm">
       <thead>
         <tr>
           <th class="text-slate-400">Arquivo</th>
+          <th class="text-slate-400">Linhas</th>
           <th class="text-slate-400 hidden md:table-cell">Responsabilidade</th>
           <th class="text-slate-400">Criticidade</th>
         </tr>
       </thead>
       <tbody>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">hooks/use-sse-stream.ts</td><td class="text-slate-400 hidden md:table-cell">SSE streaming bidirecional, 18 eventos, reconnect, cancel, interrupt</td><td><span class="mini-badge bg-red-500/20 text-red-400">CRITICAL</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">conversations/store.ts</td><td class="text-slate-400 hidden md:table-cell">Streaming state machine (phases, pause, step statuses, actions cache)</td><td><span class="mini-badge bg-red-500/20 text-red-400">CRITICAL</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/chat-container.tsx</td><td class="text-slate-400 hidden md:table-cell">Container de chat (messages, streaming, auto-scroll, scroll button)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/message-bubble.tsx</td><td class="text-slate-400 hidden md:table-cell">Renderizacao de mensagens (markdown, actions, AskUserQuestion, feedback)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/message-input.tsx</td><td class="text-slate-400 hidden md:table-cell">Input com upload de imagens, voice recognition, multiline, attachments</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/step-panel.tsx</td><td class="text-slate-400 hidden md:table-cell">Painel lateral com step indicators, nav, timeline tab, token usage</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">workflows/store.ts</td><td class="text-slate-400 hidden md:table-cell">Wizard state (3 fases, steps[], resources, move/dup/add/remove steps)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">workflow-chat/index.tsx</td><td class="text-slate-400 hidden md:table-cell">Chat direto com workflow (SSE v1 endpoint, hook dedicado)</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">shared/lib/sse-client.ts</td><td class="text-slate-400 hidden md:table-cell">SSE generico via fetch ReadableStream (nao EventSource nativo)</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">shared/lib/api-client.ts</td><td class="text-slate-400 hidden md:table-cell">Axios com interceptors (auto JWT, 401→redirect /login)</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">app/routes.tsx</td><td class="text-slate-400 hidden md:table-cell">20 rotas lazy-loaded com lazyRetry e Suspense boundary</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">common/search-pagination.tsx</td><td class="text-slate-400 hidden md:table-cell">Hook + componentes reutilizaveis de busca/filtro/paginacao</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">layout/sidebar.tsx</td><td class="text-slate-400 hidden md:table-cell">Navegacao principal, 3 secoes, NavLink, role-based, logo</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
-        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">auth/store.ts + protected-route.tsx</td><td class="text-slate-400 hidden md:table-cell">Zustand auth + JWT guard com auto checkAuth() on mount</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr><td colspan="4" class="!bg-red-500/5 !border-red-500/20 text-red-400 font-semibold text-xs uppercase tracking-wider">Criticos — Core do Streaming</td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">hooks/use-sse-stream.ts</td><td class="text-slate-300 font-mono text-xs">498</td><td class="text-slate-400 hidden md:table-cell">SSE streaming bidirecional, 17 event types + no_active_execution, 5 endpoints (stream, watch, interrupt, cancel, execution-status), auto-reconnect on mount, AbortController cancel</td><td><span class="mini-badge bg-red-500/20 text-red-400">CRITICAL</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">conversations/store.ts</td><td class="text-slate-300 font-mono text-xs">133</td><td class="text-slate-400 hidden md:table-cell">Zustand store com 11 state fields (streaming, phases, pause, stepStatuses Map, actionsCache Map) e 14 action methods. StreamingPhase: 5 valores. StepStatus: 8 valores</td><td><span class="mini-badge bg-red-500/20 text-red-400">CRITICAL</span></td></tr>
+
+        <tr><td colspan="4" class="!bg-orange-500/5 !border-orange-500/20 text-orange-400 font-semibold text-xs uppercase tracking-wider">Alta Criticidade — Conversation UI</td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/message-bubble.tsx</td><td class="text-slate-300 font-mono text-xs">389</td><td class="text-slate-400 hidden md:table-cell">Renderiza mensagens user/assistant: markdown com syntax highlight, actions collapsible (tool_use, thinking), UserQuestionCard interativo, copy button, MessageFeedback (thumbs). Componente memoizado</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/step-panel.tsx</td><td class="text-slate-300 font-mono text-xs">361</td><td class="text-slate-400 hidden md:table-cell">Painel lateral: tab switcher (Steps/Timeline), step indicators com status badges, progress bar %, token count por step, nav buttons (Back/Forward step_by_step), jump-to-step, reset session</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/usage-stats-dialog.tsx</td><td class="text-slate-300 font-mono text-xs">361</td><td class="text-slate-400 hidden md:table-cell">Modal de metricas: token counts (input/output/cache), custo USD, performance (API duration, turns), tool usage breakdown, steps breakdown expandivel, session info (model, version)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/execution-timeline.tsx</td><td class="text-slate-300 font-mono text-xs">339</td><td class="text-slate-400 hidden md:table-cell">Timeline visual de traces agrupados por execution: waterfall duration bars, status dots, action counts, expandible details (model, tokens, exit code, TTFB/TTFC, errors)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/chat-container.tsx</td><td class="text-slate-300 font-mono text-xs">299</td><td class="text-slate-400 hidden md:table-cell">Container de chat: message list, SSE streaming display, auto-scroll, scroll-to-bottom button, suggested prompts on empty, completion sound, step initialization</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">components/message-input.tsx</td><td class="text-slate-300 font-mono text-xs">275</td><td class="text-slate-400 hidden md:table-cell">Input multiline auto-resize, upload de imagens (drag/paste), Web Speech API voice input, Shift+Enter para newline, Enter para enviar, attachments preview, estados dinamicos (streaming, paused)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">workflows/store.ts</td><td class="text-slate-300 font-mono text-xs">227</td><td class="text-slate-400 hidden md:table-cell">Zustand wizard: 7 state fields (currentPhase 1|2|3, basicInfo, formSteps[], selectedStepIndex, editingWorkflow, isLoadingEdit, isModalOpen), 15 actions (moveStep, duplicateStep, addStep, removeStep, initCreate, initEdit, resetWizard, closeModal)</td><td><span class="mini-badge bg-orange-500/20 text-orange-400">HIGH</span></td></tr>
+
+        <tr><td colspan="4" class="!bg-yellow-500/5 !border-yellow-500/20 text-yellow-400 font-semibold text-xs uppercase tracking-wider">Media Criticidade — Infra & Shared</td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">workflow-chat/index.tsx</td><td class="text-slate-300 font-mono text-xs">504</td><td class="text-slate-400 hidden md:table-cell">Chat direto com workflow: SSE via /api/v1/workflows/{id}/execute/stream, workflow/folder selection, markdown com copy em code blocks, streaming phases (connecting/thinking/streaming)</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">common/search-pagination.tsx</td><td class="text-slate-300 font-mono text-xs">288</td><td class="text-slate-400 hidden md:table-cell">Hook useSearchPagination + 3 componentes (SearchBar, FilterBar, Pagination). Busca multi-campo, filtros declarativos com predicates, page size persistido em localStorage</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">app/routes.tsx</td><td class="text-slate-300 font-mono text-xs">246</td><td class="text-slate-400 hidden md:table-cell">22 rotas (19 protected + 2 publicas + 1 catch-all), todas lazy-loaded com lazyRetry (sessionStorage retry 1x), Suspense boundary com PageLoader</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">layout/sidebar.tsx</td><td class="text-slate-300 font-mono text-xs">245</td><td class="text-slate-400 hidden md:table-cell">Navegacao 3 secoes: Menu (5 NavLinks), Config (8 itens), Admin (condicional user.role === 'admin'). Logo "Execut", user avatar, logout. isActive styling</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">shared/lib/sse-client.ts</td><td class="text-slate-300 font-mono text-xs">91</td><td class="text-slate-400 hidden md:table-cell">SSE generico via fetch + ReadableStream + TextDecoder. Suporta GET/POST, headers custom, line buffering, JSON parse, retorna AbortController</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">features/auth/store.ts</td><td class="text-slate-300 font-mono text-xs">54</td><td class="text-slate-400 hidden md:table-cell">Zustand auth: user, token, isAuthenticated, isLoading. Actions: login, register, logout, checkAuth. Token persiste em localStorage</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">shared/lib/api-client.ts</td><td class="text-slate-300 font-mono text-xs">35</td><td class="text-slate-400 hidden md:table-cell">Axios instance: baseURL via VITE_API_URL (fallback localhost:3333). Request interceptor: Bearer token. Response interceptor: 401 → remove token → redirect /login</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
+        <tr class="endpoint-row"><td class="font-mono text-teal-400 text-xs">features/auth/protected-route.tsx</td><td class="text-slate-300 font-mono text-xs">26</td><td class="text-slate-400 hidden md:table-cell">Guard: checkAuth() on mount via useEffect, loading spinner enquanto verifica, Navigate to /login se nao autenticado</td><td><span class="mini-badge bg-yellow-500/20 text-yellow-400">MEDIUM</span></td></tr>
       </tbody>
     </table>
+    </div>
   </div>
 
   <!-- Storage mechanisms -->
   <div class="grid md:grid-cols-3 gap-3 mt-4">
     <div class="glass rounded-xl p-4">
-      <h4 class="text-teal-400 font-bold text-xs uppercase mb-2">localStorage</h4>
+      <h4 class="text-teal-400 font-bold text-xs uppercase mb-2">localStorage (10 keys)</h4>
       <div class="space-y-0.5 text-[10px] text-slate-400 font-mono">
-        <div>token → JWT bearer token</div>
-        <div>page-size → items por pagina</div>
-        <div>*-view → grid | table por feature</div>
+        <div><span class="text-teal-400">token</span> → JWT bearer token (auth)</div>
+        <div><span class="text-teal-400">page-size</span> → items por pagina (SearchPagination)</div>
+        <div><span class="text-teal-400">workflows-view</span> → grid | table</div>
+        <div><span class="text-teal-400">conversations-view</span> → grid | table</div>
+        <div><span class="text-teal-400">agents-view</span> → grid | table</div>
+        <div><span class="text-teal-400">skills-view</span> → grid | table</div>
+        <div><span class="text-teal-400">rules-view</span> → grid | table</div>
+        <div><span class="text-teal-400">plugins-view</span> → grid | table</div>
+        <div><span class="text-teal-400">mcp-servers-view</span> → grid | table</div>
+        <div><span class="text-teal-400">hooks-view</span> → grid | table</div>
       </div>
     </div>
     <div class="glass rounded-xl p-4">
       <h4 class="text-purple-400 font-bold text-xs uppercase mb-2">React Query Cache</h4>
       <div class="space-y-0.5 text-[10px] text-slate-400 font-mono">
-        <div>staleTime: 30s (queries)</div>
-        <div>gcTime: 5min (garbage collect)</div>
-        <div>refetchOnWindowFocus: true</div>
+        <div><span class="text-purple-400">staleTime:</span> 30s (default queries)</div>
+        <div><span class="text-purple-400">gcTime:</span> 5min (garbage collect)</div>
+        <div><span class="text-purple-400">retry:</span> 1 queries / 0 mutations</div>
+        <div><span class="text-purple-400">refetchOnWindowFocus:</span> true</div>
+        <div class="mt-1 text-slate-500 font-semibold">Overrides por hook:</div>
+        <div><span class="text-pink-400">Infinity</span> → hookTemplates, hookEvents, msgFeedback</div>
+        <div><span class="text-pink-400">refetch 5s</span> → executions, executionSummary</div>
+        <div><span class="text-pink-400">refetch 30s</span> → budget</div>
+        <div><span class="text-pink-400">refetch 60s</span> → dailyMetrics, workflowMetrics, alerts, toolAnalytics</div>
+        <div><span class="text-pink-400">stale 60s</span> → traceDetail</div>
+        <div><span class="text-pink-400">stale 15s</span> → webhookDeliveries</div>
+        <div><span class="text-pink-400">refetch false</span> → conversation, tokenUsage, executionStats</div>
       </div>
     </div>
     <div class="glass rounded-xl p-4">
       <h4 class="text-orange-400 font-bold text-xs uppercase mb-2">sessionStorage</h4>
       <div class="space-y-0.5 text-[10px] text-slate-400 font-mono">
-        <div>lazyRetry keys → chunk reload once</div>
+        <div><span class="text-orange-400">lazyRetry:{route}</span> → chunk reload flag</div>
+        <div class="text-slate-500 mt-1">Cada rota lazy-loaded tem sua propria key. Valor '1' indica que ja tentou reload 1x nesta sessao. Previne loop infinito em deploys com chunks antigos.</div>
       </div>
     </div>
   </div>

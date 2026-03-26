@@ -203,6 +203,7 @@ model Workflow {
   type           String         @default("sequential")
   status         WorkflowStatus @default(active)
   tags           Json           @default("[]")
+  config         Json           @default("{}")
   lastExecutedAt DateTime?      @map("last_executed_at")
   executionCount Int            @default(0) @map("execution_count")
   createdAt      DateTime       @default(now()) @map("created_at")

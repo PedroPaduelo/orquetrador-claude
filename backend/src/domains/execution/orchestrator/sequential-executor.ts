@@ -4,6 +4,7 @@ import { executionStateManager } from './execution-state.js'
 import { orchestratorEvents } from './events.js'
 import { isStepError, getErrorMessage, decideOnError, FALLBACK_MESSAGE } from './step-error-handler.js'
 import { runValidators } from '../validators/validator-runner.js'
+import { validateStepOutput, buildSchemaRetryMessage } from './output-validator.js'
 import { webhooksService } from '../../webhooks/webhooks.service.js'
 import type { ValidatorConfig } from '../validators/types.js'
 import type { Prisma } from '@prisma/client'
@@ -211,6 +212,56 @@ export async function executeSequential(
           )
           i++
           continue
+        }
+      }
+
+      // Run outputSchema validation (Structured Outputs)
+      const outputSchema = step.outputSchema as Record<string, unknown> | null
+      if (outputSchema && Object.keys(outputSchema).length > 0 && result.content) {
+        const schemaValidation = validateStepOutput(result.content, outputSchema)
+        if (!schemaValidation.valid) {
+          const feedback = schemaValidation.errors.join('; ')
+          orchestratorEvents.emitValidationFailed({
+            executionId, conversationId,
+            stepId: step.id, stepName: step.name,
+            validatorType: 'output_schema',
+            feedback,
+          })
+
+          const retryKey = `outputSchema_${step.id}`
+          const currentRetry = (retryCounts[retryKey] || 0) + 1
+          const maxRetries = step.maxRetries || 2
+
+          if (currentRetry < maxRetries) {
+            retryCounts[retryKey] = currentRetry
+            await backoffDelay(currentRetry)
+            currentInput = buildSchemaRetryMessage(currentInput, schemaValidation.errors, outputSchema)
+
+            orchestratorEvents.emitStepStream({
+              executionId, conversationId, stepId: step.id,
+              type: 'action',
+              action: {
+                type: 'system',
+                content: `Output Schema validation failed (attempt ${currentRetry}/${maxRetries}): ${feedback}. Retrying...`,
+              },
+            })
+
+            continue
+          }
+
+          // Max retries exhausted - clean up and proceed with warning
+          delete retryCounts[retryKey]
+          orchestratorEvents.emitStepStream({
+            executionId, conversationId, stepId: step.id,
+            type: 'action',
+            action: {
+              type: 'system',
+              content: `Output Schema validation failed after ${maxRetries} attempts. Proceeding with unvalidated output.`,
+            },
+          })
+        } else {
+          // Clean up retry counter on success
+          delete retryCounts[`outputSchema_${step.id}`]
         }
       }
 

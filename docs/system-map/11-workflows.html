@@ -2305,6 +2305,458 @@ setFormSteps, initCreate, initEdit, resetWizard
   </div>
 </section>
 
+<!-- ============================================= -->
+<!-- 21. MELHORIAS IDENTIFICADAS -->
+<!-- ============================================= -->
+<section class="reveal">
+  <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
+    <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-orange-500 text-white text-sm font-bold">21</span>
+    Melhorias Identificadas
+  </h2>
+  <p class="text-slate-400 mb-8">Analise profunda do codigo-fonte revelou oportunidades concretas de melhoria organizadas por severidade e categoria</p>
+
+  <!-- Severity Legend -->
+  <div class="flex gap-3 mb-6 flex-wrap">
+    <div class="flex items-center gap-1.5 text-xs"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span><span class="text-red-400 font-semibold">Critico</span></div>
+    <div class="flex items-center gap-1.5 text-xs"><span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span><span class="text-orange-400 font-semibold">Alto</span></div>
+    <div class="flex items-center gap-1.5 text-xs"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span><span class="text-amber-400 font-semibold">Medio</span></div>
+    <div class="flex items-center gap-1.5 text-xs"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span><span class="text-blue-400 font-semibold">Baixo</span></div>
+  </div>
+
+  <!-- ========== SEGURANCA ========== -->
+  <div class="glass rounded-2xl p-6 mb-4 glow-red">
+    <h3 class="text-lg font-bold text-red-300 mb-4 flex items-center gap-2">
+      <span class="text-xl">&#x1F6E1;</span> Seguranca
+    </h3>
+
+    <!-- Git injection -->
+    <div class="rounded-xl p-4 bg-red-500/5 border border-red-500/20 mb-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+        <span class="font-bold text-sm text-red-300">Command Injection no Git Config</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-300 border border-red-500/20 font-mono">step-executor.ts:87-88</span>
+      </div>
+      <p class="text-xs text-slate-400 mb-2">O <code class="bg-slate-800 px-1 rounded">execSync(`git config user.name "${userName}"`)</code> so escapa aspas duplas mas nao outros metacaracteres shell. Um userName como <code class="bg-slate-800 px-1 rounded">test$(whoami)</code> executa o comando dentro do <code class="bg-slate-800 px-1 rounded">$()</code>.</p>
+      <div class="rounded-lg bg-slate-800/80 p-3 text-[11px]">
+        <div class="text-red-400 mb-1">Atual (vulneravel):</div>
+        <code class="text-slate-400">execSync(`git config user.name "${userName.replace(/"/g, '\\"')}"`, { cwd })</code>
+        <div class="text-emerald-400 mt-2 mb-1">Correcao recomendada:</div>
+        <code class="text-slate-400">execFileSync('git', ['config', 'user.name', userName], { cwd })</code>
+      </div>
+    </div>
+
+    <!-- ReDoS -->
+    <div class="rounded-xl p-4 bg-orange-500/5 border border-orange-500/20 mb-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+        <span class="font-bold text-sm text-orange-300">ReDoS em Conditions Regex</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-orange-500/10 text-orange-300 border border-orange-500/20 font-mono">conditions-evaluator.ts:65-72</span>
+      </div>
+      <p class="text-xs text-slate-400 mb-2">Regex user-provided sem limite de complexidade ou timeout. Padroes como <code class="bg-slate-800 px-1 rounded">(a+)+b</code> com conteudo grande causam catastrophic backtracking (CPU hang). Nao ha limite de tamanho do content antes de testar.</p>
+      <div class="rounded-lg bg-slate-800/80 p-3 text-[11px]">
+        <div class="text-emerald-400 mb-1">Correcoes recomendadas:</div>
+        <code class="text-slate-400">1. Usar RE2 (Google safe regex engine) em vez de RegExp nativo<br>
+2. Limitar content a 10KB antes de aplicar regex<br>
+3. Timeout de 100ms por avaliacao de regex</code>
+      </div>
+    </div>
+
+    <!-- Input validation -->
+    <div class="rounded-xl p-4 bg-orange-500/5 border border-orange-500/20">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+        <span class="font-bold text-sm text-orange-300">Validacao de Input Insuficiente</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-orange-500/10 text-orange-300 border border-orange-500/20 font-mono">workflow-api.routes.ts</span>
+      </div>
+      <p class="text-xs text-slate-400">Campo <code class="bg-slate-800 px-1 rounded">message</code> no body do execute nao tem limite de tamanho (poderia ser 100MB). <code class="bg-slate-800 px-1 rounded">conversationId</code> nao validado como UUID antes de query ao DB. <code class="bg-slate-800 px-1 rounded">parseInt(rule.match)</code> em conditions retorna NaN sem erro para valores nao-numericos.</p>
+    </div>
+  </div>
+
+  <!-- ========== ESCALABILIDADE ========== -->
+  <div class="glass rounded-2xl p-6 mb-4 glow-orange">
+    <h3 class="text-lg font-bold text-orange-300 mb-4 flex items-center gap-2">
+      <span class="text-xl">&#x1F4C8;</span> Escalabilidade
+    </h3>
+
+    <!-- In-memory Map -->
+    <div class="rounded-xl p-4 bg-red-500/5 border border-red-500/20 mb-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+        <span class="font-bold text-sm text-red-300">Execucoes Ativas em Memoria</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-red-500/10 text-red-300 border border-red-500/20 font-mono">task-orchestrator.ts:16</span>
+      </div>
+      <p class="text-xs text-slate-400 mb-2"><code class="bg-slate-800 px-1 rounded">private activeExecutions = new Map&lt;string, boolean&gt;()</code> e single-process. Se escalar para multiplas instancias, cada servidor tera seu proprio Map. Se o servidor crashar, execucoes ficam "orfas" sem cleanup.</p>
+      <div class="grid sm:grid-cols-2 gap-2 text-[10px]">
+        <div class="rounded-lg bg-red-500/5 border border-red-500/10 p-2">
+          <div class="text-red-300 font-semibold mb-1">Impacto</div>
+          <div class="text-slate-500">Impossibilita horizontal scaling, load balancing e failover. getActiveCount() so conta execucoes locais.</div>
+        </div>
+        <div class="rounded-lg bg-emerald-500/5 border border-emerald-500/10 p-2">
+          <div class="text-emerald-300 font-semibold mb-1">Correcao</div>
+          <div class="text-slate-500">Migrar para Redis SET/HASH com TTL. Ou usar ExecutionState table (ja existe) como fonte de verdade.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ProjectPath Lock -->
+    <div class="rounded-xl p-4 bg-orange-500/5 border border-orange-500/20 mb-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+        <span class="font-bold text-sm text-orange-300">Lock de Projeto In-Memory</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-orange-500/10 text-orange-300 border border-orange-500/20 font-mono">project-path-lock.ts</span>
+      </div>
+      <p class="text-xs text-slate-400"><code class="bg-slate-800 px-1 rounded">projectPathLock</code> usa Mutex do pacote <code class="bg-slate-800 px-1 rounded">async-mutex</code> em memoria. Nao e distribuido. Se escalar para 2+ servidores, dois podem editar o mesmo projeto simultaneamente. Timeout de 30min pode causar deadlock se processo morrer.</p>
+    </div>
+
+    <!-- Per-user concurrency -->
+    <div class="rounded-xl p-4 bg-orange-500/5 border border-orange-500/20">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+        <span class="font-bold text-sm text-orange-300">Concorrencia Por Usuario Nao Enforced</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-orange-500/10 text-orange-300 border border-orange-500/20 font-mono">schema: User.maxConcurrentExecutions</span>
+      </div>
+      <p class="text-xs text-slate-400">O campo <code class="bg-slate-800 px-1 rounded">maxConcurrentExecutions</code> existe no schema do User mas <strong class="text-orange-300">nunca e verificado</strong> antes de iniciar execucao. Um usuario pode starvar todos os slots de execucao. BullMQ usa <code class="bg-slate-800 px-1 rounded">EXECUTION_CONCURRENCY</code> global (default 3) sem distincao por usuario.</p>
+    </div>
+  </div>
+
+  <!-- ========== CONFIABILIDADE ========== -->
+  <div class="glass rounded-2xl p-6 mb-4 glow-amber">
+    <h3 class="text-lg font-bold text-amber-300 mb-4 flex items-center gap-2">
+      <span class="text-xl">&#x26A0;</span> Confiabilidade
+    </h3>
+
+    <!-- Silent errors -->
+    <div class="rounded-xl p-4 bg-red-500/5 border border-red-500/20 mb-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+        <span class="font-bold text-sm text-red-300">Erros Silenciosos (.catch(() => {}))</span>
+      </div>
+      <p class="text-xs text-slate-400 mb-2">Multiplos locais engolem erros sem logging. Falhas em webhooks, checkpoints e marcacao de estado ficam invisiveis.</p>
+      <div class="overflow-x-auto">
+        <table class="sse-table text-[10px] w-full">
+          <thead><tr><th>Arquivo</th><th>Linha(s)</th><th>O que falha silenciosamente</th></tr></thead>
+          <tbody>
+            <tr><td class="font-mono text-slate-400">sequential-executor.ts</td><td class="text-slate-500">315, 431, 438</td><td class="text-slate-500">Checkpoint save, webhook dispatch</td></tr>
+            <tr><td class="font-mono text-slate-400">dag-workflow-executor.ts</td><td class="text-slate-500">251, 258</td><td class="text-slate-500">Webhook dispatch execution:complete e step:error</td></tr>
+            <tr><td class="font-mono text-slate-400">execution-resumer.ts</td><td class="text-slate-500">209, 380, 390</td><td class="text-slate-500">Checkpoint save, webhook dispatch</td></tr>
+            <tr><td class="font-mono text-slate-400">task-orchestrator.ts</td><td class="text-slate-500">65, 69, 71</td><td class="text-slate-500">Session cleanup, marcacao de cancelamento</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="rounded-lg bg-slate-800/80 p-2 mt-2 text-[10px]">
+        <span class="text-emerald-400">Fix:</span> <span class="text-slate-400">Substituir <code class="bg-slate-800 px-1 rounded">.catch(() => {})</code> por <code class="bg-slate-800 px-1 rounded">.catch(e => logger.warn('...', e))</code> + metricas de falha</span>
+      </div>
+    </div>
+
+    <!-- Session retry -->
+    <div class="rounded-xl p-4 bg-amber-500/5 border border-amber-500/20 mb-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+        <span class="font-bold text-sm text-amber-300">Retry de Sessao Sem Backoff</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">step-executor.ts:259-285</span>
+      </div>
+      <p class="text-xs text-slate-400">Quando sessao expira (<code class="bg-slate-800 px-1 rounded">isSessionNotFoundError</code>), retenta imediatamente sem backoff e sem limite de tentativas. Se o Claude CLI estiver fora do ar, entra em loop infinito de retry.</p>
+    </div>
+
+    <!-- Checkpoint -->
+    <div class="rounded-xl p-4 bg-amber-500/5 border border-amber-500/20 mb-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+        <span class="font-bold text-sm text-amber-300">Falha de Checkpoint Invisivel</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">sequential-executor.ts:315</span>
+      </div>
+      <p class="text-xs text-slate-400"><code class="bg-slate-800 px-1 rounded">saveCheckpoint(...).catch(() => {})</code> &mdash; se o save falhar (disco cheio, DB down), o usuario acha que o progresso esta salvo. Se o processo crashar no proximo step, o resume volta ao ultimo checkpoint valido, perdendo steps intermediarios.</p>
+    </div>
+
+    <!-- Stale execution -->
+    <div class="rounded-xl p-4 bg-amber-500/5 border border-amber-500/20 mb-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+        <span class="font-bold text-sm text-amber-300">Recovery de Execucoes Orfas Incompleto</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">recovery.ts</span>
+      </div>
+      <p class="text-xs text-slate-400"><code class="bg-slate-800 px-1 rounded">recoverStaleExecutions()</code> so marca como failed, mas nao limpa sessoes, nao notifica clientes, nao dispara webhooks e nao libera locks. Deve ser chamado manualmente &mdash; sem invocacao automatica no startup detectada.</p>
+    </div>
+
+    <!-- DAG race -->
+    <div class="rounded-xl p-4 bg-amber-500/5 border border-amber-500/20 mb-3">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+        <span class="font-bold text-sm text-amber-300">Race Condition no DAG Executor</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">dag-workflow-executor.ts:145-241</span>
+      </div>
+      <p class="text-xs text-slate-400">Todos os steps do batch executam via Promise.all(), mas <code class="bg-slate-800 px-1 rounded">dag.markCompleted()</code> so e chamado DEPOIS que todos terminam. Se um step falhar com handler='fail', o return e imediato mas outros steps do batch podem ainda estar rodando &mdash; sem cleanup.</p>
+    </div>
+
+    <!-- Dep context size -->
+    <div class="rounded-xl p-4 bg-amber-500/5 border border-amber-500/20">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+        <span class="font-bold text-sm text-amber-300">Contexto de Dependencia Sem Limite</span>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono">dag-executor.ts:92-105</span>
+      </div>
+      <p class="text-xs text-slate-400"><code class="bg-slate-800 px-1 rounded">getDependencyContext()</code> concatena outputs de todas as dependencias sem limite de tamanho. Se um step produz 100MB de output e e dependencia de 10 steps, cada recebe 100MB no input. Pode exceder limites de token do Claude silenciosamente.</p>
+    </div>
+  </div>
+
+  <!-- ========== BANCO DE DADOS ========== -->
+  <div class="glass rounded-2xl p-6 mb-4 glow-blue">
+    <h3 class="text-lg font-bold text-blue-300 mb-4 flex items-center gap-2">
+      <span class="text-xl">&#x1F5C4;</span> Banco de Dados & Schema
+    </h3>
+
+    <div class="grid sm:grid-cols-2 gap-3 mb-4">
+      <!-- Missing indexes -->
+      <div class="rounded-xl p-4 bg-amber-500/5 border border-amber-500/20">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+          <span class="font-bold text-xs text-amber-300">Indexes Compostos Faltando</span>
+        </div>
+        <div class="text-[10px] text-slate-400 space-y-1">
+          <div><code class="bg-slate-800 px-1 rounded">Workflow</code>: [userId, createdAt] para listagem ordenada</div>
+          <div><code class="bg-slate-800 px-1 rounded">Conversation</code>: [userId, workflowId, createdAt]</div>
+          <div><code class="bg-slate-800 px-1 rounded">WorkflowStep</code>: [templateId] para busca por template</div>
+          <div><code class="bg-slate-800 px-1 rounded">ExecutionTrace</code>: [conversationId, resultStatus, createdAt]</div>
+        </div>
+      </div>
+
+      <!-- No soft delete -->
+      <div class="rounded-xl p-4 bg-orange-500/5 border border-orange-500/20">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+          <span class="font-bold text-xs text-orange-300">Sem Soft Delete</span>
+        </div>
+        <div class="text-[10px] text-slate-400">Nenhum modelo tem <code class="bg-slate-800 px-1 rounded">deletedAt</code>. Hard deletes cascateiam por 15+ relacoes. Deletar um workflow apaga steps, conversations, traces, versions &mdash; sem possibilidade de recovery. Recomendado para: Workflow, Conversation, Agent, Skill.</div>
+      </div>
+
+      <!-- Missing audit -->
+      <div class="rounded-xl p-4 bg-blue-500/5 border border-blue-500/20">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+          <span class="font-bold text-xs text-blue-300">Campos de Auditoria Faltando</span>
+        </div>
+        <div class="text-[10px] text-slate-400">Apenas <code class="bg-slate-800 px-1 rounded">PromptVersion</code> tem <code class="bg-slate-800 px-1 rounded">createdBy</code>. Modelos como Workflow, Agent, Skill, Rule, Hook, Plugin nao rastreiam quem criou ou modificou. Importante para workspaces multi-usuario.</div>
+      </div>
+
+      <!-- JSON normalization -->
+      <div class="rounded-xl p-4 bg-blue-500/5 border border-blue-500/20">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+          <span class="font-bold text-xs text-blue-300">Campos JSON Grandes</span>
+        </div>
+        <div class="text-[10px] text-slate-400">Candidatos a normalizacao: <code class="bg-slate-800 px-1 rounded">conditions</code> (10+ KB), <code class="bg-slate-800 px-1 rounded">validators[]</code>, <code class="bg-slate-800 px-1 rounded">parsedEvents[]</code> (100+ KB), <code class="bg-slate-800 px-1 rounded">retryCounts</code>. Poderiam ser tabelas separadas para queries mais eficientes e integridade referencial.</div>
+      </div>
+    </div>
+
+    <!-- String constraints -->
+    <div class="rounded-xl p-4 bg-blue-500/5 border border-blue-500/20">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+        <span class="font-bold text-xs text-blue-300">Campos String Sem Limite</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="sse-table text-[10px]">
+          <thead><tr><th>Campo</th><th>Atual</th><th>Recomendado</th></tr></thead>
+          <tbody>
+            <tr><td class="text-slate-400">Workflow.name</td><td class="text-slate-500">String (ilimitado)</td><td class="text-slate-500">@db.VarChar(255) + check >= 1</td></tr>
+            <tr><td class="text-slate-400">Message.content</td><td class="text-slate-500">String (ilimitado)</td><td class="text-slate-500">@db.Text (explicito)</td></tr>
+            <tr><td class="text-slate-400">ExecutionTrace.stdoutRaw</td><td class="text-slate-500">String (ilimitado)</td><td class="text-slate-500">@db.Text (pode exceder 1MB)</td></tr>
+            <tr><td class="text-slate-400">Hook.timeout</td><td class="text-slate-500">Int default 60000</td><td class="text-slate-500">check >= 1000 (min 1s)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== FRONTEND ========== -->
+  <div class="glass rounded-2xl p-6 mb-4 glow-purple">
+    <h3 class="text-lg font-bold text-purple-300 mb-4 flex items-center gap-2">
+      <span class="text-xl">&#x1F3A8;</span> Frontend & UX
+    </h3>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+      <div class="rounded-xl p-3 bg-orange-500/5 border border-orange-500/20">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+          <span class="font-bold text-[11px] text-orange-300">Sem Editor Visual de DAG</span>
+        </div>
+        <p class="text-[10px] text-slate-400">Apenas preview linear (setas esquerda-direita). Nao existe canvas com nodos e arestas para configurar dependencias visualmente. <code class="bg-slate-800 px-1 rounded">dependsOn</code> so e configuravel via badges.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-orange-500/5 border border-orange-500/20">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+          <span class="font-bold text-[11px] text-orange-300">Sem Drag-and-Drop de Steps</span>
+        </div>
+        <p class="text-[10px] text-slate-400">StepListSidebar nao tem drag-and-drop para reordenar steps. So tem <code class="bg-slate-800 px-1 rounded">moveStep(from, to)</code> no store mas sem indicadores visuais de drag/drop.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-orange-500/5 border border-orange-500/20">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+          <span class="font-bold text-[11px] text-orange-300">Sem Builder de Conditions</span>
+        </div>
+        <p class="text-[10px] text-slate-400">Types <code class="bg-slate-800 px-1 rounded">StepConditions</code> e <code class="bg-slate-800 px-1 rounded">ConditionRule</code> existem, mas <strong class="text-orange-300">nao ha UI</strong> para criar/editar regras de conditions. Steps sempre iniciam com <code class="bg-slate-800 px-1 rounded">{ rules: [], default: 'next' }</code>.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-amber-500/5 border border-amber-500/20">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span class="font-bold text-[11px] text-amber-300">8 Campos Avancados Sem UI</span>
+        </div>
+        <p class="text-[10px] text-slate-400">Types incluem <code class="bg-slate-800 px-1 rounded">templateId</code>, <code class="bg-slate-800 px-1 rounded">outputVariables</code>, <code class="bg-slate-800 px-1 rounded">inputVariables</code>, <code class="bg-slate-800 px-1 rounded">backend</code>, <code class="bg-slate-800 px-1 rounded">timeout</code>, <code class="bg-slate-800 px-1 rounded">errorHandler</code>, <code class="bg-slate-800 px-1 rounded">skipCondition</code>, <code class="bg-slate-800 px-1 rounded">subWorkflowId</code> mas o wizard <strong class="text-amber-300">nao expoe esses campos</strong> na UI.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-amber-500/5 border border-amber-500/20">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span class="font-bold text-[11px] text-amber-300">Sem Undo/Redo</span>
+        </div>
+        <p class="text-[10px] text-slate-400">Zustand store nao tem mecanismo de historico. Alteracoes no wizard nao sao reversiveis. Sem stack de undo. Fechar sem salvar perde tudo.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-amber-500/5 border border-amber-500/20">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span class="font-bold text-[11px] text-amber-300">Sem Validacao Inline</span>
+        </div>
+        <p class="text-[10px] text-slate-400">Validacao so acontece ao mudar de fase ou submeter. Nome vazio so mostra erro apos clicar "Next". Sem feedback em tempo real, sem deteccao de dependencias circulares.</p>
+      </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-3">
+      <div class="rounded-xl p-3 bg-blue-500/5 border border-blue-500/20">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          <span class="font-bold text-[11px] text-blue-300">Acessibilidade Limitada</span>
+        </div>
+        <p class="text-[10px] text-slate-400">Faltam <code class="bg-slate-800 px-1 rounded">aria-label</code> em elementos interativos, <code class="bg-slate-800 px-1 rounded">role="button"</code> em divs clicaveis, <code class="bg-slate-800 px-1 rounded">role="tablist"</code> no wizard stepper. Apenas Enter key handler em variable-config. Sem keyboard shortcuts.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-blue-500/5 border border-blue-500/20">
+        <div class="flex items-center gap-1.5 mb-2">
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          <span class="font-bold text-[11px] text-blue-300">Review Nao Mostra Validators</span>
+        </div>
+        <p class="text-[10px] text-slate-400"><code class="bg-slate-800 px-1 rounded">ValidatorConfigPanel</code> permite configurar validators, mas <code class="bg-slate-800 px-1 rounded">PhaseReview</code> nao exibe resumo dos validators configurados. Usuario nao ve o que configurou antes de salvar.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== FEATURES AUSENTES ========== -->
+  <div class="glass rounded-2xl p-6 mb-4 glow-cyan">
+    <h3 class="text-lg font-bold text-cyan-300 mb-4 flex items-center gap-2">
+      <span class="text-xl">&#x1F680;</span> Features Ausentes
+    </h3>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div class="rounded-xl p-3 bg-cyan-500/5 border border-cyan-500/20">
+        <div class="font-bold text-[11px] text-cyan-300 mb-1">Export/Import de Workflows</div>
+        <p class="text-[10px] text-slate-400">Nao existe export JSON/YAML de workflows. <code class="bg-slate-800 px-1 rounded">WorkflowVersion.snapshot</code> ja armazena estado completo mas nao ha endpoint de export. Sem import de arquivo.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-cyan-500/5 border border-cyan-500/20">
+        <div class="font-bold text-[11px] text-cyan-300 mb-1">Estimativa de Custo Pre-Execucao</div>
+        <p class="text-[10px] text-slate-400">Tokens sao trackeados pos-execucao e budget e enforced. Mas nao existe dry-run ou estimativa de custo antes de executar baseada em complexidade + tamanho da mensagem + modelo.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-cyan-500/5 border border-cyan-500/20">
+        <div class="font-bold text-[11px] text-cyan-300 mb-1">Replay/Debug de Execucao</div>
+        <p class="text-[10px] text-slate-400">Nao ha forma de re-executar um workflow com os mesmos inputs. Sem modo debug step-by-step com breakpoints. Sem "what-if" para testar mudancas sem commitar.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-cyan-500/5 border border-cyan-500/20">
+        <div class="font-bold text-[11px] text-cyan-300 mb-1">Webhooks Outbound Nao Integrados</div>
+        <p class="text-[10px] text-slate-400">Modelo <code class="bg-slate-800 px-1 rounded">Webhook</code> + <code class="bg-slate-800 px-1 rounded">WebhookDelivery</code> existem no schema mas nenhum codigo dispara webhooks em eventos de workflow/execucao. Infrastructure pronta mas sem integracao.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-cyan-500/5 border border-cyan-500/20">
+        <div class="font-bold text-[11px] text-cyan-300 mb-1">A/B Testing de Versoes</div>
+        <p class="text-[10px] text-slate-400">Versioning com snapshots existe, mas sem capacidade de dividir trafego entre duas versoes para comparar performance. Sem metricas por variante.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-cyan-500/5 border border-cyan-500/20">
+        <div class="font-bold text-[11px] text-cyan-300 mb-1">Marketplace/Compartilhamento</div>
+        <p class="text-[10px] text-slate-400">Workflows sao per-user. Sem mecanismo de compartilhamento entre usuarios, galeria de templates publicos ou sistema de ratings.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-cyan-500/5 border border-cyan-500/20">
+        <div class="font-bold text-[11px] text-cyan-300 mb-1">MCP Tools para Versoes e Triggers</div>
+        <p class="text-[10px] text-slate-400">MCP tem 6 tools de workflow + 6 de conversation, mas faltam tools para: listar/rollback versoes, gerenciar triggers (CRUD), e monitorar execucoes ativas.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-cyan-500/5 border border-cyan-500/20">
+        <div class="font-bold text-[11px] text-cyan-300 mb-1">Cleanup/Archival Configuravel</div>
+        <p class="text-[10px] text-slate-400">Traces deletados apos 7 dias (hardcoded). Sem archival para cold storage. Sem retencao configuravel por usuario (7/30/90 dias). Sem export antes de deletar.</p>
+      </div>
+      <div class="rounded-xl p-3 bg-cyan-500/5 border border-cyan-500/20">
+        <div class="font-bold text-[11px] text-cyan-300 mb-1">Teste de Triggers</div>
+        <p class="text-[10px] text-slate-400">Triggers (cron, webhook, event) existem mas sem endpoint de preview/validacao, sem test de webhook (simular request), sem dry-run de cron expression.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== HARDCODED VALUES ========== -->
+  <div class="glass rounded-2xl p-6 mb-4">
+    <h3 class="text-lg font-bold text-slate-300 mb-4 flex items-center gap-2">
+      <span class="text-xl">&#x1F527;</span> Valores Hardcoded
+    </h3>
+    <p class="text-xs text-slate-400 mb-4">Valores que deveriam ser configuraveis via env vars ou settings do usuario:</p>
+    <div class="overflow-x-auto">
+      <table class="sse-table text-[10px]">
+        <thead><tr><th>Valor</th><th>Arquivo</th><th>Atual</th><th>Ideal</th></tr></thead>
+        <tbody>
+          <tr><td class="text-slate-300">Max backoff delay</td><td class="font-mono text-slate-500">orchestrator-utils.ts</td><td class="text-slate-500">30s fixo</td><td class="text-slate-500">Configuravel por workflow</td></tr>
+          <tr><td class="text-slate-300">Case sensitivity</td><td class="font-mono text-slate-500">conditions-evaluator.ts</td><td class="text-slate-500">Sempre lowercase</td><td class="text-slate-500">Flag caseSensitive por rule</td></tr>
+          <tr><td class="text-slate-300">Max stdout/stderr</td><td class="font-mono text-slate-500">execution-monitor.ts</td><td class="text-slate-500">50KB fixo</td><td class="text-slate-500">Configuravel via env</td></tr>
+          <tr><td class="text-slate-300">Default max retries</td><td class="font-mono text-slate-500">conditions-evaluator.ts</td><td class="text-slate-500">3 fixo</td><td class="text-slate-500">Configuravel por workflow</td></tr>
+          <tr><td class="text-slate-300">SSE heartbeat</td><td class="font-mono text-slate-500">workflow-api.routes.ts</td><td class="text-slate-500">15s fixo</td><td class="text-slate-500">Configuravel via env</td></tr>
+          <tr><td class="text-slate-300">Trace retention</td><td class="font-mono text-slate-500">trace-cleanup.ts</td><td class="text-slate-500">7 dias fixo</td><td class="text-slate-500">Per-user preference</td></tr>
+          <tr><td class="text-slate-300">Execution concurrency</td><td class="font-mono text-slate-500">execution-worker.ts</td><td class="text-slate-500">3 global</td><td class="text-slate-500">Per-user limit</td></tr>
+          <tr><td class="text-slate-300">LLM Judge output</td><td class="font-mono text-slate-500">llm-judge-validator.ts</td><td class="text-slate-500">5000 chars</td><td class="text-slate-500">Configuravel por validator</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ========== RESUMO PRIORIZADO ========== -->
+  <div class="glass rounded-2xl p-6 glow-purple">
+    <h3 class="text-lg font-bold text-purple-300 mb-4 flex items-center gap-2">
+      <span class="text-xl">&#x1F4CB;</span> Resumo Priorizado
+    </h3>
+
+    <div class="grid md:grid-cols-3 gap-4">
+      <!-- Must Fix -->
+      <div class="rounded-xl p-4 bg-red-500/5 border border-red-500/20">
+        <div class="font-bold text-sm text-red-300 mb-3">Must Fix (Critico)</div>
+        <div class="space-y-2 text-[10px] text-slate-400">
+          <div class="flex items-start gap-2"><span class="text-red-400 mt-0.5">1</span><div>Fix command injection no git config (<code class="bg-slate-800 px-1 rounded">execFileSync</code>)</div></div>
+          <div class="flex items-start gap-2"><span class="text-red-400 mt-0.5">2</span><div>Proteger regex com RE2 ou timeout</div></div>
+          <div class="flex items-start gap-2"><span class="text-red-400 mt-0.5">3</span><div>Migrar activeExecutions para Redis</div></div>
+          <div class="flex items-start gap-2"><span class="text-red-400 mt-0.5">4</span><div>Enforcar maxConcurrentExecutions por usuario</div></div>
+          <div class="flex items-start gap-2"><span class="text-red-400 mt-0.5">5</span><div>Substituir .catch(() => {}) por logging</div></div>
+        </div>
+      </div>
+
+      <!-- Should Fix -->
+      <div class="rounded-xl p-4 bg-amber-500/5 border border-amber-500/20">
+        <div class="font-bold text-sm text-amber-300 mb-3">Should Fix (Alto)</div>
+        <div class="space-y-2 text-[10px] text-slate-400">
+          <div class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">6</span><div>Adicionar soft delete em Workflow/Conversation</div></div>
+          <div class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">7</span><div>Criar indexes compostos faltantes</div></div>
+          <div class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">8</span><div>Implementar UI de conditions builder</div></div>
+          <div class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">9</span><div>Expor 8 campos avancados do step no wizard</div></div>
+          <div class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">10</span><div>Limitar tamanho do dependency context (DAG)</div></div>
+          <div class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">11</span><div>Backoff + max retries no session recovery</div></div>
+          <div class="flex items-start gap-2"><span class="text-amber-400 mt-0.5">12</span><div>Recovery automatico de execucoes orfas no startup</div></div>
+        </div>
+      </div>
+
+      <!-- Nice to Have -->
+      <div class="rounded-xl p-4 bg-blue-500/5 border border-blue-500/20">
+        <div class="font-bold text-sm text-blue-300 mb-3">Nice to Have (Medio/Baixo)</div>
+        <div class="space-y-2 text-[10px] text-slate-400">
+          <div class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">13</span><div>Export/import de workflows JSON</div></div>
+          <div class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">14</span><div>Estimativa de custo pre-execucao</div></div>
+          <div class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">15</span><div>Editor visual DAG (canvas)</div></div>
+          <div class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">16</span><div>Drag-and-drop de steps</div></div>
+          <div class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">17</span><div>Undo/redo no wizard</div></div>
+          <div class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">18</span><div>MCP tools para versoes e triggers</div></div>
+          <div class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">19</span><div>Webhooks outbound integrados</div></div>
+          <div class="flex items-start gap-2"><span class="text-blue-400 mt-0.5">20</span><div>Marketplace de workflows</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 </main>
 
 <script src="shared.js"></script>

@@ -31,6 +31,8 @@ import { closeAllRedis } from './lib/redis.js'
 import { startTriggerScheduler, stopTriggerScheduler } from './domains/triggers/trigger-scheduler.js'
 import { recoverStaleExecutions } from './domains/execution/orchestrator/recovery.js'
 import { startMetricsAggregation, stopMetricsAggregation } from './domains/execution/monitoring/metrics-aggregator.js'
+import { startRealtimeMetrics, stopRealtimeMetrics } from './domains/execution/monitoring/realtime-metrics-aggregator.js'
+import { initDistributedEvents, shutdownDistributedEvents } from './domains/execution/orchestrator/distributed-events.js'
 
 const app = Fastify({
   logger: {
@@ -187,6 +189,12 @@ async function start() {
 
     startTraceCleanup()
     startMetricsAggregation()
+    startRealtimeMetrics()
+
+    // Enable distributed event bus (Redis PubSub) if DISTRIBUTED_EVENTS=true
+    try { await initDistributedEvents() } catch (err) {
+      console.warn('[Server] Distributed events failed to initialise:', (err as Error).message)
+    }
 
     // Recover stale executions from previous server crash
     await recoverStaleExecutions()
@@ -228,6 +236,7 @@ signals.forEach((signal) => {
     // 1. Stop accepting new executions
     projectPathLock.cleanup()
     try { stopMetricsAggregation() } catch { /* ignore */ }
+    try { stopRealtimeMetrics() } catch { /* ignore */ }
 
     // 2. Wait for active executions to drain (max 30s)
     const { taskOrchestrator } = await import('./domains/execution/orchestrator/task-orchestrator.js')
@@ -242,6 +251,7 @@ signals.forEach((signal) => {
     }
 
     // 3. Shutdown infrastructure
+    try { await shutdownDistributedEvents() } catch { /* ignore */ }
     try { await stopTriggerScheduler() } catch { /* ignore */ }
     try { await stopExecutionWorker() } catch { /* ignore */ }
     try { await closeExecutionQueue() } catch { /* ignore */ }

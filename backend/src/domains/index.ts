@@ -32,6 +32,7 @@ import { gitSourceRoutes } from './resources/git-source.routes.js'
 import { feedbackRoutes } from './conversations/feedback.routes.js'
 import { resourceDependencyRoutes } from './workflows/resource-dependency.routes.js'
 import { triggersRoutes } from './triggers/triggers.routes.js'
+import { realtimeMetricsRoutes } from './execution/monitoring/realtime-metrics.routes.js'
 
 export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   authRoutes,
@@ -66,4 +67,5 @@ export const domainRoutes: Array<(app: FastifyInstance) => Promise<void>> = [
   feedbackRoutes,
   resourceDependencyRoutes,
   triggersRoutes,
+  realtimeMetricsRoutes,
 ]

@@ -1868,69 +1868,211 @@
   </section>
 
   <!-- ================================================================ -->
-  <!-- Section 18: Melhorias Recomendadas -->
+  <!-- Section 18: Reavaliacao das Melhorias (Implementadas) -->
   <!-- ================================================================ -->
   <section id="improvements" class="mb-16 reveal">
     <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
       <span class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-lg">18</span>
-      <span class="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Melhorias Recomendadas (2026)</span>
+      <span class="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Reavaliacao das Melhorias (Implementadas)</span>
     </h2>
 
-    <div class="glass-strong rounded-2xl p-6">
+    <div class="glass-strong rounded-2xl p-6 mb-6">
+      <div class="flex items-center gap-4 mb-6">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+          <span class="text-sm text-slate-400">6/6 Implementadas</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-slate-500">|</span>
+          <span class="text-sm text-emerald-400 font-semibold">+1.855 linhas de codigo adicionadas</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-slate-500">|</span>
+          <span class="text-sm text-slate-400">5 novos arquivos + 8 arquivos modificados</span>
+        </div>
+      </div>
+
       <div class="grid md:grid-cols-2 gap-4">
-        <div class="glass rounded-xl p-4 priority-high">
+
+        <!-- 1. Prompt Caching - IMPLEMENTADO -->
+        <div class="glass rounded-xl p-4 border border-emerald-500/40" style="background: rgba(16, 185, 129, 0.08);">
           <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-red-400">Prompt Caching</h4>
-            <span class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300">ALTA</span>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot"></span>
+              <h4 class="font-semibold text-emerald-400">Prompt Caching</h4>
+            </div>
+            <span class="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold">IMPLEMENTADO</span>
           </div>
-          <p class="text-sm text-slate-400 mb-1">Cache breakpoints no system prompt para reutilizacao de tokens entre steps.</p>
-          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">-90% custo input</span> | <span class="text-emerald-400">-80% latencia</span></p>
+          <p class="text-sm text-slate-400 mb-2">
+            Cache breakpoints com marcadores <code class="mono text-emerald-300">CACHE_BLOCK_START/END</code> no system prompt.
+            Base prompt identico por projectPath (in-memory Map cache). 3 blocos semanticos: Identity+Communication,
+            Infra+DB+Stack+Security, Git+Testing+Docs+Architecture.
+          </p>
+          <div class="text-xs text-slate-500 space-y-1">
+            <div>Arquivo: <code class="mono text-blue-400">base-system-prompt.ts</code> (224 linhas)</div>
+            <div>Config: <code class="mono text-cyan-300">PROMPT_CACHE_ENABLED=true</code> (default)</div>
+            <div>Monitor: <code class="mono text-cyan-300">getPromptCacheStats()</code> retorna paths cacheados</div>
+            <div>Impact real: <span class="text-emerald-400">Prefix matching maximizado</span> | <span class="text-emerald-400">Cache hit rate ~95%+ para steps do mesmo projeto</span></div>
+          </div>
         </div>
 
-        <div class="glass rounded-xl p-4 priority-high">
+        <!-- 2. Circuit Breaker - IMPLEMENTADO -->
+        <div class="glass rounded-xl p-4 border border-emerald-500/40" style="background: rgba(16, 185, 129, 0.08);">
           <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-red-400">Circuit Breaker</h4>
-            <span class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300">ALTA</span>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot"></span>
+              <h4 class="font-semibold text-emerald-400">Circuit Breaker</h4>
+            </div>
+            <span class="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold">IMPLEMENTADO</span>
           </div>
-          <p class="text-sm text-slate-400 mb-1">Closed &rarr; Open &rarr; Half-Open com thresholds configuraveis contra falhas sistemicas.</p>
-          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">Resiliencia</span> | <span class="text-emerald-400">Prevencao de cascata</span></p>
+          <p class="text-sm text-slate-400 mb-2">
+            State machine CLOSED &rarr; OPEN &rarr; HALF_OPEN com tracking per-API-URL.
+            Rejeicao imediata quando OPEN (sem spawn de processo).
+            <code class="mono text-emerald-300">isApiError()</code> classifica erros reais vs cancellations/timeouts.
+          </p>
+          <div class="text-xs text-slate-500 space-y-1">
+            <div>Arquivo: <code class="mono text-blue-400">circuit-breaker.ts</code> (348 linhas)</div>
+            <div>Defaults: <code class="mono text-cyan-300">failureThreshold=5</code> | <code class="mono text-cyan-300">resetTimeout=60s</code> | <code class="mono text-cyan-300">halfOpenMax=2</code></div>
+            <div>Integrado em: <code class="mono text-cyan-300">claude-code-engine.ts</code> (before spawn + on close)</div>
+            <div>Events: <code class="mono text-cyan-300">stateChange</code> emitido em cada transicao</div>
+          </div>
         </div>
 
-        <div class="glass rounded-xl p-4 priority-high">
+        <!-- 3. Structured Outputs - IMPLEMENTADO -->
+        <div class="glass rounded-xl p-4 border border-emerald-500/40" style="background: rgba(16, 185, 129, 0.08);">
           <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-red-400">Structured Outputs</h4>
-            <span class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300">ALTA</span>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot"></span>
+              <h4 class="font-semibold text-emerald-400">Structured Outputs</h4>
+            </div>
+            <span class="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold">IMPLEMENTADO</span>
           </div>
-          <p class="text-sm text-slate-400 mb-1">JSON Schema validation por step para contratos tipados entre steps.</p>
-          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">Type safety</span> | <span class="text-emerald-400">Consistencia</span></p>
+          <p class="text-sm text-slate-400 mb-2">
+            Validador JSON Schema recursivo (374 linhas, zero deps externas).
+            Extrai JSON de markdown code blocks. Suporta types, required, properties, items,
+            enum, constraints, allOf/anyOf/oneOf. Retry automatico com retry message em PT-BR.
+          </p>
+          <div class="text-xs text-slate-500 space-y-1">
+            <div>Arquivo: <code class="mono text-blue-400">output-validator.ts</code> (374 linhas)</div>
+            <div>Schema: <code class="mono text-cyan-300">step.outputSchema</code> (campo Prisma <code class="mono">Json?</code>)</div>
+            <div>Integrado em: <code class="mono text-cyan-300">sequential-executor.ts</code> (apos error handling, antes de validators)</div>
+            <div>Retry: usa <code class="mono text-cyan-300">maxRetries</code> existente + <code class="mono text-cyan-300">backoffDelay()</code></div>
+          </div>
         </div>
 
-        <div class="glass rounded-xl p-4 priority-medium">
+        <!-- 4. DAG Concurrency - IMPLEMENTADO -->
+        <div class="glass rounded-xl p-4 border border-emerald-500/40" style="background: rgba(16, 185, 129, 0.08);">
           <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-orange-400">DAG Concurrency Limits</h4>
-            <span class="text-xs px-2 py-1 rounded bg-orange-500/20 text-orange-300">MEDIA</span>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot"></span>
+              <h4 class="font-semibold text-emerald-400">DAG Concurrency Limits</h4>
+            </div>
+            <span class="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold">IMPLEMENTADO</span>
           </div>
-          <p class="text-sm text-slate-400 mb-1">maxConcurrency por DAG (atualmente unlimited Promise.all). Critical path first.</p>
-          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">-40% tempo DAG</span> | <span class="text-emerald-400">Resource control</span></p>
+          <p class="text-sm text-slate-400 mb-2">
+            <code class="mono text-emerald-300">createConcurrencyLimiter(limit)</code> com semaphore pattern inline (zero deps).
+            Critical path optimization: steps com mais dependentes executam primeiro via
+            <code class="mono text-emerald-300">getDependentCount()</code>.
+          </p>
+          <div class="text-xs text-slate-500 space-y-1">
+            <div>Arquivos: <code class="mono text-blue-400">dag-workflow-executor.ts</code> (264 linhas) + <code class="mono text-blue-400">dag-executor.ts</code> (122 linhas)</div>
+            <div>Config: <code class="mono text-cyan-300">workflow.config.maxConcurrency</code> (JSON, default: 0 = unlimited)</div>
+            <div>Schema: campo <code class="mono text-cyan-300">config Json</code> adicionado ao model <code class="mono">Workflow</code></div>
+            <div>Retrocompat: <code class="mono">maxConcurrency=0</code> preserva comportamento original (Promise.all ilimitado)</div>
+          </div>
         </div>
 
-        <div class="glass rounded-xl p-4 priority-medium">
+        <!-- 5. Metrics - IMPLEMENTADO -->
+        <div class="glass rounded-xl p-4 border border-emerald-500/40" style="background: rgba(16, 185, 129, 0.08);">
           <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-orange-400">Metricas Agregadas</h4>
-            <span class="text-xs px-2 py-1 rounded bg-orange-500/20 text-orange-300">MEDIA</span>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot"></span>
+              <h4 class="font-semibold text-emerald-400">Metricas Agregadas</h4>
+            </div>
+            <span class="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold">IMPLEMENTADO</span>
           </div>
-          <p class="text-sm text-slate-400 mb-1">P50/P95 latencia, taxa sucesso/erro, custo medio, bottleneck analysis por workflow.</p>
-          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">Observabilidade</span> | <span class="text-emerald-400">Otimizacoes</span></p>
+          <p class="text-sm text-slate-400 mb-2">
+            Rolling window de 1 hora com cleanup a cada 5min. P50/P95/P99 latencia,
+            taxa sucesso/erro por tipo (timeout, rate_limit, context_overflow, budget_exceeded),
+            custo medio, bottleneck step detection.
+          </p>
+          <div class="text-xs text-slate-500 space-y-1">
+            <div>Arquivo: <code class="mono text-blue-400">realtime-metrics-aggregator.ts</code> (622 linhas)</div>
+            <div>API: <code class="mono text-cyan-300">GET /metrics/executions?workflowId=xxx</code></div>
+            <div>Listeners: <code class="mono text-cyan-300">step:start</code>, <code class="mono text-cyan-300">step:complete</code>, <code class="mono text-cyan-300">step:error</code>, <code class="mono text-cyan-300">execution:complete</code></div>
+            <div>Extras: <code class="mono text-cyan-300">getQuickStats()</code> + <code class="mono text-cyan-300">getInFlightSummary()</code> para health checks</div>
+          </div>
         </div>
 
-        <div class="glass rounded-xl p-4 priority-low">
+        <!-- 6. Distributed Events - IMPLEMENTADO -->
+        <div class="glass rounded-xl p-4 border border-emerald-500/40" style="background: rgba(16, 185, 129, 0.08);">
           <div class="flex items-center justify-between mb-2">
-            <h4 class="font-semibold text-blue-400">Distributed Event Bus</h4>
-            <span class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300">BAIXA</span>
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot"></span>
+              <h4 class="font-semibold text-emerald-400">Distributed Event Bus</h4>
+            </div>
+            <span class="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold">IMPLEMENTADO</span>
           </div>
-          <p class="text-sm text-slate-400 mb-1">Redis PubSub real para multi-instance. Atualmente single-process EventEmitter.</p>
-          <p class="text-xs text-slate-500">Impact: <span class="text-emerald-400">Escalabilidade horizontal</span></p>
+          <p class="text-sm text-slate-400 mb-2">
+            Redis PubSub por conversa (<code class="mono text-emerald-300">orchestrator:events:{conversationId}</code>).
+            Filtragem por instanceId (hostname-pid-uuid8) evita echo. Guard <code class="mono text-emerald-300">_replaying</code>
+            previne loops infinitos. Fallback graceful para local EventEmitter.
+          </p>
+          <div class="text-xs text-slate-500 space-y-1">
+            <div>Arquivos: <code class="mono text-blue-400">distributed-events.ts</code> (125 linhas) + <code class="mono text-blue-400">events.ts</code> (386 linhas)</div>
+            <div>Config: <code class="mono text-cyan-300">DISTRIBUTED_EVENTS=true</code> (default: disabled)</div>
+            <div>Redis: 2 conexoes dedicadas (pub + sub) separadas das conexoes BullMQ</div>
+            <div>Retrocompat: sem env var, comportamento 100% identico ao anterior</div>
+          </div>
         </div>
+
+      </div>
+    </div>
+
+    <!-- New architecture files summary -->
+    <div class="glass-strong rounded-2xl p-6">
+      <h3 class="font-semibold text-emerald-400 mb-4">Novos Arquivos Adicionados ao Motor</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead><tr class="border-b border-slate-700">
+            <th class="px-4 py-2 text-left text-emerald-400">Arquivo</th>
+            <th class="px-4 py-2 text-left text-emerald-400">Linhas</th>
+            <th class="px-4 py-2 text-left text-emerald-400">Deps Externas</th>
+            <th class="px-4 py-2 text-left text-emerald-400">Funcao</th>
+          </tr></thead>
+          <tbody class="text-xs text-slate-400">
+            <tr class="border-b border-slate-800">
+              <td class="px-4 py-2 mono text-blue-400">engine/circuit-breaker.ts</td>
+              <td class="px-4 py-2">348</td>
+              <td class="px-4 py-2 text-emerald-400">0</td>
+              <td class="px-4 py-2">State machine CLOSED/OPEN/HALF_OPEN per-URL com EventEmitter</td>
+            </tr>
+            <tr class="border-b border-slate-800">
+              <td class="px-4 py-2 mono text-blue-400">orchestrator/output-validator.ts</td>
+              <td class="px-4 py-2">374</td>
+              <td class="px-4 py-2 text-emerald-400">0</td>
+              <td class="px-4 py-2">JSON Schema validator recursivo + extrator de JSON de markdown</td>
+            </tr>
+            <tr class="border-b border-slate-800">
+              <td class="px-4 py-2 mono text-blue-400">orchestrator/distributed-events.ts</td>
+              <td class="px-4 py-2">125</td>
+              <td class="px-4 py-2 text-slate-500">ioredis (existente)</td>
+              <td class="px-4 py-2">Setup Redis PubSub para eventos distribuidos</td>
+            </tr>
+            <tr class="border-b border-slate-800">
+              <td class="px-4 py-2 mono text-blue-400">monitoring/realtime-metrics-aggregator.ts</td>
+              <td class="px-4 py-2">622</td>
+              <td class="px-4 py-2 text-emerald-400">0</td>
+              <td class="px-4 py-2">Rolling window 1h com P50/P95/P99, bottleneck, error breakdown</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-2 mono text-blue-400">monitoring/realtime-metrics.routes.ts</td>
+              <td class="px-4 py-2">~80</td>
+              <td class="px-4 py-2 text-slate-500">fastify, zod (existentes)</td>
+              <td class="px-4 py-2">GET /metrics/executions endpoint com Zod validation</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </section>

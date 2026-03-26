@@ -4,6 +4,7 @@ import { prisma } from '../../lib/prisma.js'
 import { triggersRepository } from './triggers.repository.js'
 import { taskOrchestrator } from '../execution/orchestrator/task-orchestrator.js'
 import { isDAGWorkflow } from '../execution/orchestrator/dag-executor.js'
+import { getMaxConcurrency } from '../execution/orchestrator/orchestrator-utils.js'
 import { conversationsRepository } from '../conversations/conversations.repository.js'
 
 const PROJECT_BASE_PATH = process.env.PROJECT_BASE_PATH || '/workspace/temp-orquestrador'
@@ -159,6 +160,7 @@ async function executeTriggeredWorkflow(scheduled: Awaited<ReturnType<typeof tri
     steps: fullWorkflow.steps,
     projectPath: conversation.projectPath || PROJECT_BASE_PATH,
     userId,
+    maxConcurrency: getMaxConcurrency(fullWorkflow.config),
   }
 
   // Execute based on workflow type

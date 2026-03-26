@@ -5,11 +5,14 @@ import { prisma } from '../../lib/prisma.js'
 import { taskOrchestrator } from '../execution/orchestrator/task-orchestrator.js'
 import { orchestratorEvents } from '../execution/orchestrator/events.js'
 import { isDAGWorkflow } from '../execution/orchestrator/dag-executor.js'
+import { getMaxConcurrency } from '../execution/orchestrator/orchestrator-utils.js'
 import { validateProjectPath } from '../../lib/validation.js'
 import { projectPathLock } from '../execution/lock/project-path-lock.js'
 import { tokenBudgetService } from '../execution/budget/token-budget-service.js'
 import { conversationsRepository } from '../conversations/conversations.repository.js'
 import { NotFoundError, BadRequestError } from '../../http/errors/index.js'
+import { enqueueExecution } from '../execution/queue/execution-queue.js'
+import type { ExecutionJobData } from '../execution/queue/execution-queue.js'
 import type {
   StepErrorEvent,
   ExecutionCompleteEvent,
@@ -75,6 +78,76 @@ async function collectExecutionResult(conversationId: string) {
     content: lastMessage?.content ?? '',
     steps,
     messagesCount: messages.length,
+  }
+}
+
+/** Build jobData for the execution queue from conversation context */
+function buildJobData(opts: {
+  conversation: Awaited<ReturnType<typeof getOrCreateConversation>>
+  userId: string
+  message: string
+  projectPath: string
+  pausedExecution?: {
+    executionId: string
+    stepIndex: number
+    stepId: string
+    resumeToken: string | null
+    askUserQuestion?: { question: string; options?: Array<{ label: string; description?: string }> }
+  } | null
+}): ExecutionJobData {
+  const { conversation, userId, message, projectPath, pausedExecution } = opts
+  const currentIndex = conversation.currentStepId
+    ? conversation.workflow.steps.findIndex((s) => s.id === conversation.currentStepId)
+    : 0
+
+  return {
+    conversationId: conversation.id,
+    workflowId: conversation.workflowId,
+    userId,
+    content: message,
+    projectPath,
+    workflowType: conversation.workflow.type,
+    maxConcurrency: getMaxConcurrency(conversation.workflow.config),
+    stepIndex: Math.max(0, currentIndex),
+    ...(pausedExecution ? {
+      isResume: true,
+      pausedExecutionId: pausedExecution.executionId,
+      pausedStepIndex: pausedExecution.stepIndex,
+      pausedStepId: pausedExecution.stepId,
+      pausedResumeToken: pausedExecution.resumeToken,
+      pausedAskUserQuestion: pausedExecution.askUserQuestion,
+    } : {}),
+  }
+}
+
+/** Fallback: run execution directly via taskOrchestrator (used when Redis/queue is unavailable) */
+async function executeDirectFallback(
+  conversation: Awaited<ReturnType<typeof getOrCreateConversation>>,
+  message: string,
+  projectPath: string,
+  userId: string,
+): Promise<void> {
+  const context = {
+    conversationId: conversation.id,
+    workflowId: conversation.workflowId,
+    steps: conversation.workflow.steps,
+    projectPath,
+    userId,
+    maxConcurrency: getMaxConcurrency(conversation.workflow.config),
+  }
+
+  const pausedExecution = await taskOrchestrator.getPausedExecution(conversation.id)
+  if (pausedExecution) {
+    await taskOrchestrator.resumeExecution(context, message, pausedExecution)
+  } else if (conversation.workflow.type === 'sequential' && isDAGWorkflow(conversation.workflow.steps)) {
+    await taskOrchestrator.executeDAG(context, message)
+  } else if (conversation.workflow.type === 'sequential') {
+    await taskOrchestrator.executeSequential(context, message)
+  } else {
+    const currentIndex = conversation.currentStepId
+      ? conversation.workflow.steps.findIndex((s) => s.id === conversation.currentStepId)
+      : 0
+    await taskOrchestrator.executeStepByStep(context, message, Math.max(0, currentIndex))
   }
 }
 
@@ -198,29 +271,16 @@ export async function workflowApiRoutes(app: FastifyInstance) {
           orchestratorEvents.on('execution:cancelled', onCancelled)
           orchestratorEvents.on('execution:paused', onPaused)
 
-          // Start execution
-          const context = {
-            conversationId: conversation.id,
-            workflowId: conversation.workflowId,
-            steps: conversation.workflow.steps,
-            projectPath,
-            userId,
-          }
-
-          const run = async () => {
+          // Start execution via BullMQ queue (with direct fallback)
+          const startExecution = async () => {
             try {
               const pausedExecution = await taskOrchestrator.getPausedExecution(conversation.id)
-              if (pausedExecution) {
-                await taskOrchestrator.resumeExecution(context, message, pausedExecution)
-              } else if (conversation.workflow.type === 'sequential' && isDAGWorkflow(conversation.workflow.steps)) {
-                await taskOrchestrator.executeDAG(context, message)
-              } else if (conversation.workflow.type === 'sequential') {
-                await taskOrchestrator.executeSequential(context, message)
-              } else {
-                const currentIndex = conversation.currentStepId
-                  ? conversation.workflow.steps.findIndex((s) => s.id === conversation.currentStepId)
-                  : 0
-                await taskOrchestrator.executeStepByStep(context, message, Math.max(0, currentIndex))
+              const jobData = buildJobData({ conversation, userId, message, projectPath, pausedExecution })
+              try {
+                await enqueueExecution(jobData)
+              } catch (queueErr) {
+                console.warn('[WorkflowAPI] Queue unavailable, falling back to direct execution:', (queueErr as Error).message)
+                await executeDirectFallback(conversation, message, projectPath, userId)
               }
             } catch (err) {
               cleanup()
@@ -231,7 +291,7 @@ export async function workflowApiRoutes(app: FastifyInstance) {
             }
           }
 
-          run()
+          startExecution()
         })
 
         const executionResult = await collectExecutionResult(conversation.id)
@@ -356,26 +416,29 @@ export async function workflowApiRoutes(app: FastifyInstance) {
       try {
         releaseLock = await projectPathLock.acquire(projectPath)
 
-        const context = {
-          conversationId: conversation.id,
-          workflowId: conversation.workflowId,
-          steps: conversation.workflow.steps,
-          projectPath,
-          userId,
-        }
-
         const pausedExecution = await taskOrchestrator.getPausedExecution(conversation.id)
-        if (pausedExecution) {
-          await taskOrchestrator.resumeExecution(context, message, pausedExecution)
-        } else if (conversation.workflow.type === 'sequential' && isDAGWorkflow(conversation.workflow.steps)) {
-          await taskOrchestrator.executeDAG(context, message)
-        } else if (conversation.workflow.type === 'sequential') {
-          await taskOrchestrator.executeSequential(context, message)
-        } else {
-          const currentIndex = conversation.currentStepId
-            ? conversation.workflow.steps.findIndex((s) => s.id === conversation.currentStepId)
-            : 0
-          await taskOrchestrator.executeStepByStep(context, message, Math.max(0, currentIndex))
+        const jobData = buildJobData({ conversation, userId, message, projectPath, pausedExecution })
+
+        try {
+          await enqueueExecution(jobData)
+          // Worker runs in same process, events fire locally via EventEmitter.
+          // The SSE handlers above will receive events and stream them to the client.
+          // We wait for completion/error/cancel via a one-shot promise.
+          await new Promise<void>((resolve) => {
+            const onDone = (data: { conversationId?: string }) => {
+              if (data.conversationId !== conversation.id) return
+              orchestratorEvents.off('execution:complete', onDone)
+              orchestratorEvents.off('step:error', onDone)
+              orchestratorEvents.off('execution:cancelled', onDone)
+              resolve()
+            }
+            orchestratorEvents.on('execution:complete', onDone)
+            orchestratorEvents.on('step:error', onDone)
+            orchestratorEvents.on('execution:cancelled', onDone)
+          })
+        } catch (queueErr) {
+          console.warn('[WorkflowAPI] Queue unavailable for SSE, falling back to direct execution:', (queueErr as Error).message)
+          await executeDirectFallback(conversation, message, projectPath, userId)
         }
       } catch (error) {
         sendEvent('error', {
@@ -433,41 +496,27 @@ export async function workflowApiRoutes(app: FastifyInstance) {
         await new Promise((r) => setTimeout(r, 500))
       }
 
-      // Fire and forget — run execution in background
-      const runInBackground = async () => {
-        let releaseLock: (() => void) | null = null
-        try {
-          releaseLock = await projectPathLock.acquire(projectPath)
-
-          const context = {
-            conversationId: conversation.id,
-            workflowId: conversation.workflowId,
-            steps: conversation.workflow.steps,
-            projectPath,
-            userId,
+      // Fire and forget — enqueue via BullMQ (with direct fallback)
+      try {
+        const pausedExecution = await taskOrchestrator.getPausedExecution(conversation.id)
+        const jobData = buildJobData({ conversation, userId, message, projectPath, pausedExecution })
+        await enqueueExecution(jobData)
+      } catch (queueErr) {
+        console.warn('[WorkflowAPI] Queue unavailable for async, falling back to direct execution:', (queueErr as Error).message)
+        // Fire and forget with direct execution
+        const runInBackground = async () => {
+          let releaseLock: (() => void) | null = null
+          try {
+            releaseLock = await projectPathLock.acquire(projectPath)
+            await executeDirectFallback(conversation, message, projectPath, userId)
+          } catch (err) {
+            console.error(`[WorkflowAPI] Background execution error for ${conversation.id}:`, err)
+          } finally {
+            if (releaseLock) releaseLock()
           }
-
-          const pausedExecution = await taskOrchestrator.getPausedExecution(conversation.id)
-          if (pausedExecution) {
-            await taskOrchestrator.resumeExecution(context, message, pausedExecution)
-          } else if (conversation.workflow.type === 'sequential' && isDAGWorkflow(conversation.workflow.steps)) {
-            await taskOrchestrator.executeDAG(context, message)
-          } else if (conversation.workflow.type === 'sequential') {
-            await taskOrchestrator.executeSequential(context, message)
-          } else {
-            const currentIndex = conversation.currentStepId
-              ? conversation.workflow.steps.findIndex((s) => s.id === conversation.currentStepId)
-              : 0
-            await taskOrchestrator.executeStepByStep(context, message, Math.max(0, currentIndex))
-          }
-        } catch (err) {
-          console.error(`[WorkflowAPI] Background execution error for ${conversation.id}:`, err)
-        } finally {
-          if (releaseLock) releaseLock()
         }
+        runInBackground()
       }
-
-      runInBackground()
 
       return reply.status(202).send({
         conversationId: conversation.id,
@@ -749,28 +798,25 @@ export async function workflowApiRoutes(app: FastifyInstance) {
           orchestratorEvents.on('execution:cancelled', onCancelled)
           orchestratorEvents.on('execution:paused', onPaused)
 
-          const context = {
-            conversationId,
-            workflowId: conversation.workflowId,
-            steps: conversation.workflow.steps,
-            projectPath,
-            userId,
-          }
-
-          const run = async () => {
+          // Start execution via BullMQ queue (with direct fallback)
+          const startExecution = async () => {
             try {
               const pausedExecution = await taskOrchestrator.getPausedExecution(conversationId)
-              if (pausedExecution) {
-                await taskOrchestrator.resumeExecution(context, message, pausedExecution)
-              } else if (conversation.workflow.type === 'sequential' && isDAGWorkflow(conversation.workflow.steps)) {
-                await taskOrchestrator.executeDAG(context, message)
-              } else if (conversation.workflow.type === 'sequential') {
-                await taskOrchestrator.executeSequential(context, message)
-              } else {
-                const currentIndex = conversation.currentStepId
-                  ? conversation.workflow.steps.findIndex((s) => s.id === conversation.currentStepId)
-                  : 0
-                await taskOrchestrator.executeStepByStep(context, message, Math.max(0, currentIndex))
+              const jobData = buildJobData({
+                conversation: conversation as Awaited<ReturnType<typeof getOrCreateConversation>>,
+                userId,
+                message,
+                projectPath,
+                pausedExecution,
+              })
+              try {
+                await enqueueExecution(jobData)
+              } catch (queueErr) {
+                console.warn('[WorkflowAPI] Queue unavailable for message endpoint, falling back to direct execution:', (queueErr as Error).message)
+                await executeDirectFallback(
+                  conversation as Awaited<ReturnType<typeof getOrCreateConversation>>,
+                  message, projectPath, userId,
+                )
               }
             } catch (err) {
               cleanup()
@@ -778,7 +824,7 @@ export async function workflowApiRoutes(app: FastifyInstance) {
             }
           }
 
-          run()
+          startExecution()
         })
 
         const executionResult = await collectExecutionResult(conversationId)

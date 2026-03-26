@@ -21,6 +21,8 @@ export interface EngineExecuteOptions {
   attachments?: EngineAttachment[]
   resumeToken?: string | null
   githubToken?: string
+  /** Se true, indica que o system prompt foi estruturado para prompt caching */
+  promptCacheEnabled?: boolean
   onEvent?: (event: import('./claude/stream-parser.js').StreamEvent) => void
   onRawStdout?: (chunk: string) => void
   onRawStderr?: (chunk: string) => void

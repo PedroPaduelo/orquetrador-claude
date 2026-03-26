@@ -9,12 +9,63 @@ import type { ExecutionContext, OrchestratorDeps } from './orchestrator-types.js
 import { executeStep } from './step-executor.js'
 import { finalizeExecution } from './orchestrator-utils.js'
 
+// ---------------------------------------------------------------------------
+// Inline concurrency limiter (semaphore pattern) — avoids external deps
+// ---------------------------------------------------------------------------
+
+interface ConcurrencyLimiter {
+  <T>(fn: () => Promise<T>): Promise<T>
+}
+
+/**
+ * Creates a concurrency limiter that allows at most `limit` tasks to run
+ * simultaneously. When `limit <= 0` the limiter is effectively unlimited
+ * (all tasks start immediately).
+ */
+function createConcurrencyLimiter(limit: number): ConcurrencyLimiter {
+  // Unlimited — just call fn directly
+  if (limit <= 0) {
+    return <T>(fn: () => Promise<T>) => fn()
+  }
+
+  let running = 0
+  const queue: Array<() => void> = []
+
+  function release() {
+    running--
+    if (queue.length > 0) {
+      const next = queue.shift()!
+      next()
+    }
+  }
+
+  return <T>(fn: () => Promise<T>): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
+      const run = () => {
+        running++
+        fn().then(resolve, reject).finally(release)
+      }
+
+      if (running < limit) {
+        run()
+      } else {
+        queue.push(run)
+      }
+    })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// DAG Workflow Executor
+// ---------------------------------------------------------------------------
+
 export async function executeDAGWorkflow(
   deps: OrchestratorDeps,
   context: ExecutionContext,
   userInput: string,
 ): Promise<void> {
   const { conversationId, steps, projectPath, attachments, userId } = context
+  const maxConcurrency = context.maxConcurrency ?? 0
 
   if (deps.activeExecutions.get(conversationId)) {
     throw new Error('Execution already in progress for this conversation')
@@ -31,6 +82,13 @@ export async function executeDAGWorkflow(
     await executionStateManager.markFailed(executionId, validation.error || 'Invalid DAG')
     deps.activeExecutions.delete(conversationId)
     throw new Error(validation.error || 'Invalid DAG')
+  }
+
+  // Create the concurrency limiter for this execution
+  const limiter = createConcurrencyLimiter(maxConcurrency)
+
+  if (maxConcurrency > 0) {
+    console.log(`[DAG] Concurrency limit set to ${maxConcurrency} for conversation ${conversationId}`)
   }
 
   const userMessage = await prisma.message.create({
@@ -84,83 +142,88 @@ export async function executeDAGWorkflow(
         batchIndex,
       })
 
+      // Execute ready steps through the concurrency limiter.
+      // When maxConcurrency > 0, at most that many steps run simultaneously.
+      // When maxConcurrency = 0 (unlimited), all ready steps start at once (same as before).
       const results = await Promise.all(
-        readySteps.map(async (dagStep) => {
-          const depContext = dag.getDependencyContext(dagStep.step.id)
-          const input = depContext ? `${userInput}\n\n${depContext}` : userInput
+        readySteps.map((dagStep) =>
+          limiter(async () => {
+            const depContext = dag.getDependencyContext(dagStep.step.id)
+            const input = depContext ? `${userInput}\n\n${depContext}` : userInput
 
-          orchestratorEvents.emitStepStart({
-            executionId, conversationId,
-            stepId: dagStep.step.id,
-            stepName: dagStep.step.name,
-            stepOrder: dagStep.index + 1,
-            totalSteps: dag.totalSteps,
-          })
-
-          let result = await executeStep(
-            deps, executionId, conversationId, dagStep.step, input, projectPath,
-            dagStep.index === 0 ? attachments : undefined, userId,
-          )
-
-          if (isStepError(result)) {
-            const decision = decideOnError(dagStep.step, result)
-            const errMsg = getErrorMessage(result)
-            console.warn(decision.logMessage)
-
-            orchestratorEvents.emitStepError({
-              executionId, conversationId,
-              stepId: dagStep.step.id, stepName: dagStep.step.name,
-              error: `[${decision.action}] ${errMsg}`,
-            })
-
-            if (decision.action === 'fallback') {
-              const fbResult = await executeStep(
-                deps, executionId, conversationId, dagStep.step,
-                FALLBACK_MESSAGE, projectPath, undefined, userId,
-              )
-              if (!isStepError(fbResult)) {
-                result = fbResult
-              }
-            }
-          }
-
-          if (!isStepError(result) || resolveErrorHandler(dagStep.step) !== 'fail') {
-            const msg = await prisma.message.create({
-              data: {
-                conversationId,
-                stepId: dagStep.step.id,
-                role: 'assistant',
-                content: result.content,
-                metadata: {
-                  actions: result.actions,
-                  sessionId: result.resumeToken,
-                  stepName: dagStep.step.name,
-                  stepOrder: dagStep.index + 1,
-                } as unknown as Prisma.InputJsonValue,
-              },
-            })
-            orchestratorEvents.emitMessageSaved({
-              executionId, conversationId,
-              messageId: msg.id,
-              role: 'assistant',
-              content: result.content,
-              stepId: dagStep.step.id,
-              stepName: dagStep.step.name,
-            })
-
-            orchestratorEvents.emitStepComplete({
+            orchestratorEvents.emitStepStart({
               executionId, conversationId,
               stepId: dagStep.step.id,
               stepName: dagStep.step.name,
               stepOrder: dagStep.index + 1,
-              content: result.content,
-              sessionId: result.resumeToken || undefined,
-              finished: false,
+              totalSteps: dag.totalSteps,
             })
-          }
 
-          return { dagStep, result }
-        }),
+            let result = await executeStep(
+              deps, executionId, conversationId, dagStep.step, input, projectPath,
+              dagStep.index === 0 ? attachments : undefined, userId,
+            )
+
+            if (isStepError(result)) {
+              const decision = decideOnError(dagStep.step, result)
+              const errMsg = getErrorMessage(result)
+              console.warn(decision.logMessage)
+
+              orchestratorEvents.emitStepError({
+                executionId, conversationId,
+                stepId: dagStep.step.id, stepName: dagStep.step.name,
+                error: `[${decision.action}] ${errMsg}`,
+              })
+
+              if (decision.action === 'fallback') {
+                const fbResult = await executeStep(
+                  deps, executionId, conversationId, dagStep.step,
+                  FALLBACK_MESSAGE, projectPath, undefined, userId,
+                )
+                if (!isStepError(fbResult)) {
+                  result = fbResult
+                }
+              }
+            }
+
+            if (!isStepError(result) || resolveErrorHandler(dagStep.step) !== 'fail') {
+              const msg = await prisma.message.create({
+                data: {
+                  conversationId,
+                  stepId: dagStep.step.id,
+                  role: 'assistant',
+                  content: result.content,
+                  metadata: {
+                    actions: result.actions,
+                    sessionId: result.resumeToken,
+                    stepName: dagStep.step.name,
+                    stepOrder: dagStep.index + 1,
+                  } as unknown as Prisma.InputJsonValue,
+                },
+              })
+              orchestratorEvents.emitMessageSaved({
+                executionId, conversationId,
+                messageId: msg.id,
+                role: 'assistant',
+                content: result.content,
+                stepId: dagStep.step.id,
+                stepName: dagStep.step.name,
+              })
+
+              orchestratorEvents.emitStepComplete({
+                executionId, conversationId,
+                stepId: dagStep.step.id,
+                stepName: dagStep.step.name,
+                stepOrder: dagStep.index + 1,
+                content: result.content,
+                sessionId: result.resumeToken || undefined,
+                finished: false,
+              })
+            }
+
+            return { dagStep, result }
+          }),
+        ),
       )
 
       for (const { dagStep, result } of results) {

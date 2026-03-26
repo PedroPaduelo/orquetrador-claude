@@ -4,7 +4,7 @@ import { memoryManager } from '../memory/memory-manager.js'
 import { orchestratorEvents } from './events.js'
 import { fileSyncService } from '../file-sync/file-sync-service.js'
 import { ExecutionMonitor } from '../monitoring/execution-monitor.js'
-import { buildSystemPrompt } from '../engine/base-system-prompt.js'
+import { buildSystemPrompt, PROMPT_CACHE_ENABLED } from '../engine/base-system-prompt.js'
 import { getStepTimeout } from './step-error-handler.js'
 import { execSync } from 'child_process'
 import type { Prisma, WorkflowStep } from '@prisma/client'
@@ -141,6 +141,7 @@ export async function executeStep(
           attachments: currentAttachments,
           resumeToken,
           githubToken,
+          promptCacheEnabled: PROMPT_CACHE_ENABLED,
           onEvent: makeOnEvent(currentMonitor),
           onRawStdout: (chunk) => currentMonitor.onStdout(chunk),
           onRawStderr: (chunk) => currentMonitor.onStderr(chunk),
@@ -355,6 +356,7 @@ export async function executeStep(
         attachments: currentAttachments,
         resumeToken: null,
         githubToken,
+        promptCacheEnabled: PROMPT_CACHE_ENABLED,
         onEvent: makeOnEvent(retryMonitor),
         onRawStdout: (chunk) => retryMonitor.onStdout(chunk),
         onRawStderr: (chunk) => retryMonitor.onStderr(chunk),

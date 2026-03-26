@@ -5,6 +5,12 @@ import type { ExecutionJobData } from './execution-queue.js'
 
 const CONCURRENCY = parseInt(process.env.EXECUTION_CONCURRENCY || '3', 10)
 
+// How often BullMQ checks for stalled jobs (ms). Default in BullMQ is 30s.
+const STALLED_INTERVAL = parseInt(process.env.EXECUTION_STALLED_INTERVAL || '30000', 10)
+
+// Max times a job can be stalled before being marked as failed
+const MAX_STALLED_COUNT = parseInt(process.env.EXECUTION_MAX_STALLED_COUNT || '1', 10)
+
 let _worker: Worker<ExecutionJobData> | null = null
 
 export function startExecutionWorker(): void {
@@ -17,6 +23,8 @@ export function startExecutionWorker(): void {
       {
         connection: getRedis() as any,
         concurrency: CONCURRENCY,
+        stalledInterval: STALLED_INTERVAL,
+        maxStalledCount: MAX_STALLED_COUNT,
       }
     )
 
@@ -28,11 +36,18 @@ export function startExecutionWorker(): void {
       console.error(`[ExecutionWorker] Job ${job?.id} failed:`, err.message)
     })
 
+    _worker.on('stalled', (jobId) => {
+      console.warn(`[ExecutionWorker] Job ${jobId} stalled — it may have exceeded the lock duration or the process crashed`)
+    })
+
     _worker.on('error', (err) => {
       console.error(`[ExecutionWorker] Error:`, err.message)
     })
 
-    console.log(`[ExecutionWorker] Started with concurrency=${CONCURRENCY}`)
+    console.log(
+      `[ExecutionWorker] Started with concurrency=${CONCURRENCY}, ` +
+      `stalledInterval=${STALLED_INTERVAL}ms, maxStalledCount=${MAX_STALLED_COUNT}`,
+    )
   } catch (err) {
     console.warn(`[ExecutionWorker] Failed to start (Redis unavailable), queue disabled:`, (err as Error).message)
     _worker = null

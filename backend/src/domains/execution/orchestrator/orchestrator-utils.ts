@@ -71,3 +71,17 @@ export function backoffDelay(attempt: number): Promise<void> {
   const ms = Math.min(Math.pow(2, attempt) * 1000, 30000)
   return new Promise(resolve => setTimeout(resolve, ms))
 }
+
+/**
+ * Safely extract maxConcurrency from a workflow's config JSON field.
+ * Returns 0 (unlimited) if not set or invalid.
+ */
+export function getMaxConcurrency(config: unknown): number {
+  if (config && typeof config === 'object' && !Array.isArray(config)) {
+    const val = (config as Record<string, unknown>).maxConcurrency
+    if (typeof val === 'number' && Number.isFinite(val) && val >= 0) {
+      return Math.floor(val)
+    }
+  }
+  return 0
+}

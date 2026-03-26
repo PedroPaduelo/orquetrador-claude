@@ -66,7 +66,22 @@ export class DAGExecutor {
       const allDepsCompleted = node.dependsOn.every(dep => this.completed.has(dep))
       if (allDepsCompleted) ready.push(node)
     }
-    return ready
+    // Critical path optimization: sort by number of dependents DESC
+    // Steps with more downstream dependents execute first to unblock more work
+    return ready.sort((a, b) => this.getDependentCount(b.step.id) - this.getDependentCount(a.step.id))
+  }
+
+  /**
+   * Count how many incomplete steps (directly or transitively) depend on a given step.
+   * Used for critical-path prioritization.
+   */
+  private getDependentCount(stepId: string): number {
+    let count = 0
+    for (const [id, node] of this.graph) {
+      if (id === stepId || this.completed.has(id)) continue
+      if (node.dependsOn.includes(stepId)) count++
+    }
+    return count
   }
 
   markCompleted(stepId: string, output: string): void {

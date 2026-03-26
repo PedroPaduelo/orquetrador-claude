@@ -10,7 +10,9 @@ import { validateProjectPath } from '../../lib/validation.js'
 import { projectPathLock } from './lock/project-path-lock.js'
 import { tokenBudgetService } from './budget/token-budget-service.js'
 import { isDAGWorkflow } from './orchestrator/dag-executor.js'
+import { getMaxConcurrency } from './orchestrator/orchestrator-utils.js'
 import { executionStateManager } from './orchestrator/execution-state.js'
+import { enqueueExecution } from './queue/execution-queue.js'
 
 const attachmentSchema = z.object({
   id: z.string(),
@@ -205,33 +207,83 @@ export async function executionRoutes(app: FastifyInstance) {
         // Acquire lock for project path
         releaseLock = await projectPathLock.acquire(projectPath)
 
-        const context = {
+        // Build job data for BullMQ queue
+        const pausedExecution = await taskOrchestrator.getPausedExecution(id)
+        const jobData: import('./queue/execution-queue.js').ExecutionJobData = {
           conversationId: id,
           workflowId: conversation.workflowId,
-          steps: conversation.workflow.steps,
-          projectPath,
-          attachments,
           userId,
+          content,
+          stepIndex,
+          projectPath,
+          workflowType: conversation.workflow.type,
+          attachments,
+          maxConcurrency: getMaxConcurrency(conversation.workflow.config),
+          // Resume fields
+          isResume: !!pausedExecution,
+          ...(pausedExecution ? {
+            pausedExecutionId: pausedExecution.executionId,
+            pausedStepIndex: pausedExecution.stepIndex,
+            pausedStepId: pausedExecution.stepId,
+            pausedResumeToken: pausedExecution.resumeToken,
+            pausedAskUserQuestion: pausedExecution.askUserQuestion,
+          } : {}),
         }
 
-        // Check if there's a paused execution to resume
-        const pausedExecution = await taskOrchestrator.getPausedExecution(id)
-        if (pausedExecution) {
-          // User is responding to a paused execution — resume it
-          console.log(`[executionRoutes] Resuming paused execution ${pausedExecution.executionId} for conversation ${id} at step ${pausedExecution.stepIndex}`)
-          await taskOrchestrator.resumeExecution(context, content, pausedExecution)
-        } else if (conversation.workflow.type === 'sequential' && isDAGWorkflow(conversation.workflow.steps)) {
-          await taskOrchestrator.executeDAG(context, content)
-        } else if (conversation.workflow.type === 'sequential') {
-          await taskOrchestrator.executeSequential(context, content)
+        // Attempt to enqueue via BullMQ; fall back to direct orchestrator if Redis is down
+        let enqueued = false
+        try {
+          const job = await enqueueExecution(jobData)
+          enqueued = true
+          console.log(`[executionRoutes] Enqueued job ${job.id} for conversation ${id}`)
+        } catch (err) {
+          console.warn(`[executionRoutes] BullMQ enqueue failed, falling back to direct execution:`, (err as Error).message)
+        }
+
+        if (enqueued) {
+          // Wait for execution to finish — events are emitted by the worker in the same process via EventEmitter
+          await new Promise<void>((resolve) => {
+            const onDone = (data: unknown) => {
+              const d = data as { conversationId?: string }
+              if (d.conversationId === id) {
+                orchestratorEvents.off('execution:complete', onDone)
+                orchestratorEvents.off('execution:cancelled', onDone)
+                orchestratorEvents.off('execution:paused', onDone)
+                resolve()
+              }
+            }
+            orchestratorEvents.on('execution:complete', onDone)
+            orchestratorEvents.on('execution:cancelled', onDone)
+            orchestratorEvents.on('execution:paused', onDone)
+          })
         } else {
-          // step_by_step mode
-          const currentIndex =
-            stepIndex ??
-            (conversation.currentStepId
-              ? conversation.workflow.steps.findIndex((s) => s.id === conversation.currentStepId)
-              : 0)
-          await taskOrchestrator.executeStepByStep(context, content, Math.max(0, currentIndex))
+          // Fallback: direct orchestrator call (same behaviour as before BullMQ)
+          const context = {
+            conversationId: id,
+            workflowId: conversation.workflowId,
+            steps: conversation.workflow.steps,
+            projectPath,
+            attachments,
+            userId,
+            maxConcurrency: getMaxConcurrency(conversation.workflow.config),
+          }
+
+          if (pausedExecution) {
+            console.log(`[executionRoutes] Resuming paused execution ${pausedExecution.executionId} for conversation ${id} at step ${pausedExecution.stepIndex}`)
+            await taskOrchestrator.resumeExecution(context, content, pausedExecution)
+          } else if (conversation.workflow.type === 'sequential' && isDAGWorkflow(conversation.workflow.steps)) {
+            await taskOrchestrator.executeDAG(context, content)
+          } else if (conversation.workflow.type === 'sequential') {
+            await taskOrchestrator.executeSequential(context, content)
+          } else {
+            // step_by_step mode
+            const currentIndex =
+              stepIndex ??
+              (conversation.currentStepId
+                ? conversation.workflow.steps.findIndex((s) => s.id === conversation.currentStepId)
+                : 0)
+            await taskOrchestrator.executeStepByStep(context, content, Math.max(0, currentIndex))
+          }
         }
       } catch (error) {
         sendEvent('error', {
